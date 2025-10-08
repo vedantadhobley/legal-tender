@@ -16,21 +16,35 @@ headers = {"X-Api-Key": CONGRESS_API_KEY} if CONGRESS_API_KEY else {}
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("congress_api")
 
-def get_members(congress: str = "118", chamber: str = "house") -> Optional[Dict[str, Any]]:
+def get_members(congress: str = "118", chamber: str = "house") -> Optional[list[dict]]:
     """
-    Get a list of members of Congress for a given session and chamber.
+    Get all current members of Congress for a given session and chamber, handling pagination.
     Args:
         congress: Congress session number as string (e.g., "118").
         chamber: "house" or "senate".
     Returns:
-        JSON response as dict, or None if error.
+        List of member dicts, or None if error.
     """
     url = f"{BASE_URL}/member"
-    params = {"congress": congress, "chamber": chamber, "limit": 250}
+    limit = 250
+    offset = 0
+    all_members = []
+    params = {"congress": congress, "chamber": chamber, "limit": limit, "currentMember": "true", "offset": offset}
     try:
-        resp = requests.get(url, headers=headers, params=params, timeout=10)
-        resp.raise_for_status()
-        return resp.json()
+        while True:
+            params["offset"] = offset
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            members = data.get("members", [])
+            if not members:
+                break
+            all_members.extend(members)
+            if len(members) < limit:
+                break
+            offset += limit
+        logger.info(f"Fetched {len(all_members)} current members.")
+        return all_members
     except Exception as e:
         logger.error(f"Error fetching members: {e}")
         return None
