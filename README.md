@@ -5,7 +5,7 @@
 Legal Tender analyzes the influence of donors on US politicians by orchestrating data collection, enrichment, and AI-driven analysis. The project aims to:
 
 1. Collect and keep up-to-date a list of all current US Congress members (House & Senate).
-2. Gather and update donor data for each politician (amounts, names, organizations) using the FEC API.
+2. Gather and update donor data for each politician (amounts, names, organizations) using the Election (FEC) API.
 3. Profile each unique donor to determine which policies they support or oppose (using AI/NLP and web research).
 4. Fetch and update upcoming bills and voting data from the Congress.gov API.
 5. Use AI to compare each bill with donor policy stances, scoring each bill for each donor (+1 to -1 scale).
@@ -20,7 +20,7 @@ Legal Tender analyzes the influence of donors on US politicians by orchestrating
 
 2. **Donor Data**
 	- List of donors for each politician, including donation amounts.
-	- Source: [FEC API](https://api.open.fec.gov/developers/)
+	- Source: [Election (FEC) API](https://api.open.fec.gov/developers/)
 
 3. **Upcoming Bills**
 	- Data on upcoming bills, including text, summaries, and voting records.

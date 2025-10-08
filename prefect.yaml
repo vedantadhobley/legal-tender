@@ -15,6 +15,6 @@ deployments:
       name: api-pool
       type: process
     tags: [test, api]
-    description: Test all API keys and endpoints for Congress, FEC, and Lobbying APIs.
+    description: Test all API keys and endpoints for Congress, Election, and Lobbying APIs.
     parameters: {}
     schedule: null

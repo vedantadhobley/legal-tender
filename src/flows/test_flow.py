@@ -7,7 +7,7 @@ def run_online_preflight():
     ok, errors = preflight.validate_api_keys(online=True)
     if ok:
         print("Congress API: Success")
-        print("FEC API: Success")
+        print("Election API: Success")
         print("Lobbying API: Success")
     else:
         print("Online preflight failures:")

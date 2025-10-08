@@ -9,7 +9,7 @@ import os
 
 
 CONGRESS_API_KEY = os.getenv("CONGRESS_API_KEY")
-FEC_API_KEY = os.getenv("FEC_API_KEY")
+ELECTION_API_KEY = os.getenv("ELECTION_API_KEY")
 LOBBYING_API_KEY = os.getenv("LOBBYING_API_KEY")
 
 
@@ -37,8 +37,8 @@ def check_keys_presence() -> Tuple[bool, List[str]]:
     errors: List[str] = []
     if not CONGRESS_API_KEY:
         errors.append("CONGRESS_API_KEY missing")
-    if not FEC_API_KEY:
-        errors.append("FEC_API_KEY missing")
+    if not ELECTION_API_KEY:
+        errors.append("ELECTION_API_KEY missing")
     # Lobbying key may be optional in this project; warn but do not fail presence check
     if not LOBBYING_API_KEY:
         print("[preflight] Warning: LOBBYING_API_KEY not set; lobbying client may not require a key.")
@@ -75,16 +75,16 @@ def validate_api_keys(online: bool = False) -> Tuple[bool, List[str]]:
         # FEC
         try:
             url = "https://api.open.fec.gov/v1/committee/search"
-            params = {"api_key": FEC_API_KEY, "per_page": 1}
+            params = {"api_key": ELECTION_API_KEY, "per_page": 1}
             resp = _request_with_retries("GET", url, params=params, retries=2)
             if resp is None:
-                errors.append("FEC API check returned no response")
+                errors.append("Election API check returned no response")
             else:
                 status = getattr(resp, "status_code", None)
                 if status in (401, 403):
-                    errors.append(f"FEC API returned {status}; check FEC_API_KEY; text={resp.text[:200]}")
+                    errors.append(f"Election API returned {status}; check ELECTION_API_KEY; text={resp.text[:200]}")
         except Exception as e:
-            errors.append(f"FEC API check failed: {e}")
+            errors.append(f"Election API check failed: {e}")
 
         # Lobbying public endpoint
         try:

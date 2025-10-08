@@ -9,25 +9,25 @@ try:
 except ImportError:
     pass
 
-FEC_API_KEY = os.getenv("FEC_API_KEY")
+ELECTION_API_KEY = os.getenv("ELECTION_API_KEY")
 
 BASE_URL = "https://api.open.fec.gov/v1/"
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("fec_api")
+logger = logging.getLogger("election_api")
 
 def get_candidate_committees(candidate_id: str, cycle: int = 2024) -> Optional[List[str]]:
     """
-    Get committee IDs for a candidate by FEC candidate ID.
+    Get committee IDs for a candidate by election candidate ID.
     Args:
-        candidate_id: FEC candidate ID string.
+        candidate_id: Election candidate ID string.
         cycle: Election cycle year (e.g., 2024).
     Returns:
         List of committee IDs, or None if error.
     """
     url = f"{BASE_URL}candidate/{candidate_id}/committees/"
     params = {
-        "api_key": FEC_API_KEY,
+        "api_key": ELECTION_API_KEY,
         "cycle": cycle,
         "per_page": 20
     }
@@ -45,7 +45,7 @@ def get_committee_contributions(committee_id: str, cycle: int = 2024, per_page: 
     """
     Get contributions for a committee by FEC committee ID.
     Args:
-        committee_id: FEC committee ID string.
+        committee_id: Election committee ID string.
         cycle: Election cycle year (e.g., 2024).
         per_page: Number of results per page.
     Returns:
@@ -53,7 +53,7 @@ def get_committee_contributions(committee_id: str, cycle: int = 2024, per_page: 
     """
     url = f"{BASE_URL}schedules/schedule_a/"
     params = {
-        "api_key": FEC_API_KEY,
+        "api_key": ELECTION_API_KEY,
         "committee_id": committee_id,
         "cycle": cycle,
         "per_page": per_page
