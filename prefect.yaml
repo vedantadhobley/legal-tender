@@ -18,3 +18,12 @@ deployments:
     description: Test all API keys and endpoints for Congress, Election, and Lobbying APIs.
     parameters: {}
     schedule: null
+  - name: member-ingestion
+    entrypoint: src/flows/member_ingestion_flow.py:member_ingestion_flow
+    work_pool:
+      name: api-pool
+      type: process
+    tags: [ingestion, members]
+    description: Ingests all current members from the Congress API and upserts them into the MongoDB 'members' collection.
+    parameters: {}
+    schedule: null

@@ -20,7 +20,7 @@ services:
     networks:
       - legal-tender-network
   prefect-worker:
-    image: prefecthq/prefect:3.4.22-python3.11
+    build: .
     container_name: legal-tender-prefect-worker
     command: prefect worker start --pool "api-pool"
     env_file:
@@ -34,6 +34,8 @@ services:
     networks:
       - legal-tender-network
     working_dir: /app
+    volumes:
+      - .:/app
   setup:
     build: .
     container_name: legal-tender-setup
@@ -50,6 +52,8 @@ services:
     restart: "no"
     networks:
       - legal-tender-network
+    volumes:
+      - .:/app
 
   mongo:
     image: mongo:7

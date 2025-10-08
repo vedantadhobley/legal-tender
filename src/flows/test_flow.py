@@ -17,7 +17,7 @@ def run_online_preflight():
         raise RuntimeError("Online preflight failed; see logs for details")
 
 
-@flow(name="Test API Keys Flow")
+@flow(name="API Test Flow")
 def test_api_keys_flow():
     run_online_preflight()
 
