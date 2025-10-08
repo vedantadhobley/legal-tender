@@ -1,10 +1,17 @@
 import requests
 import logging
 from typing import Optional, Dict, Any
-from src.config import CONGRESS_API_KEY
+import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+CONGRESS_API_KEY = os.getenv("CONGRESS_API_KEY")
 
 BASE_URL = "https://api.congress.gov/v3"
-headers = {"X-Api-Key": CONGRESS_API_KEY}
+headers = {"X-Api-Key": CONGRESS_API_KEY} if CONGRESS_API_KEY else {}
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("congress_api")
