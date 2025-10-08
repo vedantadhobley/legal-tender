@@ -1,0 +1,5 @@
+# This file tells Docker what to ignore
+__pycache__/
+*.pyc
+.env
+.venv/
