@@ -25,11 +25,11 @@ preflight = importlib.import_module("src.utils.preflight")
 load_dotenv()
 
 CONGRESS_API_KEY = os.getenv("CONGRESS_API_KEY")
-FEC_API_KEY = os.getenv("FEC_API_KEY")
+ELECTION_API_KEY = os.getenv("ELECTION_API_KEY")
 LOBBYING_API_KEY = os.getenv("LOBBYING_API_KEY")
 
-if not (CONGRESS_API_KEY and FEC_API_KEY):
-    print("Warning: One or more API keys are missing (CONGRESS/FEC). Please check your .env file.")
+if not (CONGRESS_API_KEY and ELECTION_API_KEY):
+    print("Warning: One or more API keys are missing (CONGRESS/ELECTION). Please check your .env file.")
 
 
 def run(cmd, check=True):
