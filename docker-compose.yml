@@ -1,22 +1,76 @@
 services:
-  app:
-    build: .
-    container_name: legal-tender-app
+  prefect-server:
+    image: prefecthq/prefect:3.4.22-python3.11
+    container_name: legal-tender-prefect-server
+    command: prefect server start --host 0.0.0.0 --port 4200
+    ports:
+      - "4200:4200"  # Prefect UI and API
+    environment:
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+      - PREFECT_UI_API_URL=http://localhost:4200/api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - legal-tender-network
+  prefect-worker:
+    image: prefecthq/prefect:3.4.22-python3.11
+    container_name: legal-tender-prefect-worker
+    command: prefect worker start --pool "api-pool"
     env_file:
       - .env
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - legal-tender-network
     volumes:
       - ./src:/app/src
+    working_dir: /app
+  setup:
+    build: .
+    container_name: legal-tender-setup
+    env_file:
+      - .env
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
     depends_on:
-      - mongo
-    command: ["python", "-m", "src"]
+      prefect-server:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    command: ["python", "/app/src/setup.py"]
+    restart: "no"
+    networks:
+      - legal-tender-network
+
   mongo:
     image: mongo:7
     container_name: legal-tender-mongo
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=founduser
+      - MONGO_INITDB_ROOT_PASSWORD=footypass
+      - MONGO_INITDB_DATABASE=found_footy
+    command: >
+      mongod
+      --setParameter logComponentVerbosity={network:{verbosity:0},storage:{verbosity:0}}
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - legal-tender-network
   mongo-express:
     image: mongo-express:1.0.2-20
     container_name: legal-tender-mongo-express
@@ -30,5 +84,16 @@ services:
       - ME_CONFIG_BASICAUTH_PASSWORD=admin
     depends_on:
       - mongo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - legal-tender-network
 volumes:
   mongo_data:
+  
+networks:
+  legal-tender-network:

@@ -2,7 +2,14 @@
 import requests
 import logging
 from typing import Optional, Dict, Any, List
-from src.config import FEC_API_KEY
+import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+FEC_API_KEY = os.getenv("FEC_API_KEY")
 
 BASE_URL = "https://api.open.fec.gov/v1/"
 

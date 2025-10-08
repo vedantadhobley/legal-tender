@@ -1,0 +1,20 @@
+# Prefect project configuration for legal-tender
+
+# Project-level settings
+name: legal-tender
+prefect-version: ">=3.0.0,<4.0.0"
+
+# Work pool configuration
+default-work-pool: api-pool
+
+# Deployments
+deployments:
+  - name: test-api-keys
+    entrypoint: src/flows/test_flow.py:test_api_keys_flow
+    work_pool:
+      name: api-pool
+      type: process
+    tags: [test, api]
+    description: Test all API keys and endpoints for Congress, FEC, and Lobbying APIs.
+    parameters: {}
+    schedule: null
