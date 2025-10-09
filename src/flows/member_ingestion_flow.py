@@ -1,7 +1,6 @@
 from prefect import flow, task
 from pymongo import MongoClient
 import os
-from datetime import datetime, timezone
 from src.api.congress_api import get_members
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://ltuser:ltpass@mongo:27017/admin")
@@ -14,6 +13,7 @@ def upsert_members(members):
     collection = db["members"]
     upserted = 0
     skipped = 0
+    current_ids = set()
     for member in members:
         member_doc = dict(member)
         member_id = member_doc.get("bioguideId")
@@ -24,12 +24,14 @@ def upsert_members(members):
         member_doc["_id"] = member_id
         collection.replace_one({"_id": member_doc["_id"]}, member_doc, upsert=True)
         upserted += 1
-    print(f"Upserted {upserted} members, skipped {skipped} with missing bioguideId.")
+        current_ids.add(member_id)
+    # Remove any members not in the current API response
+    result = collection.delete_many({"_id": {"$nin": list(current_ids)}})
+    print(f"Upserted {upserted} members, skipped {skipped} with missing bioguideId. Deleted {result.deleted_count} no-longer-current members.")
     client.close()
 
 @flow(name="Member Ingestion Flow")
 def member_ingestion_flow():
-    now = datetime.now(timezone.utc)
-    flow_run_name = now.strftime("member-ingestion %Y-%m-%d %H:%M:%S UTC")
+    # Dynamic run naming must be set in deployment, not in code (Prefect 3.x)
     members = get_members() or []
-    upsert_members.with_options(name=f"Upsert Members ({flow_run_name})")(members)
+    upsert_members(members)
