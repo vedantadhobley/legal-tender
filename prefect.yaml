@@ -27,3 +27,4 @@ deployments:
     description: Ingests all current members from the Congress API and upserts them into the MongoDB 'members' collection.
     parameters: {}
     schedule: null
+    # run_name_template: "member-ingestion {{ timestamp('%Y-%m-%d %H:%M:%S UTC') }}"

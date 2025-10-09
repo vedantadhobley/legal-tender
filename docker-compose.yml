@@ -19,6 +19,7 @@ services:
       - mongo_data:/data/db
     networks:
       - legal-tender-network
+
   prefect-worker:
     build: .
     container_name: legal-tender-prefect-worker
@@ -36,6 +37,7 @@ services:
     working_dir: /app
     volumes:
       - .:/app
+
   setup:
     build: .
     container_name: legal-tender-setup
@@ -75,6 +77,7 @@ services:
       start_period: 10s
     networks:
       - legal-tender-network
+
   mongo-express:
     image: mongo-express:1.0.2-20
     container_name: legal-tender-mongo-express
@@ -100,6 +103,7 @@ services:
       start_period: 10s
     networks:
       - legal-tender-network
+
 volumes:
   mongo_data:
   
