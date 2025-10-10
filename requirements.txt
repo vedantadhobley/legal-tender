@@ -2,5 +2,6 @@ pymongo
 # Python dependencies
 requests
 python-dotenv
-prefect>=3.0.0,<4.0.0
-pymongo
+dagster
+dagster-webserver
+dagster-postgres

@@ -32,7 +32,7 @@ Legal Tender analyzes the influence of donors on US politicians by orchestrating
 
 ## Orchestration & Automation
 
-- **Prefect** is used to orchestrate and schedule all data fetches, updates, and AI analysis flows.
+- **Dagster** is used to orchestrate and schedule all data fetches, updates, and AI analysis flows.
 - Data syncs (e.g., for politicians, bills, donors) run on a daily schedule, ensuring MongoDB always reflects the latest state.
 - Each entity (politician, donor, bill) is upserted by its unique ID for reliability and auditability.
 - Audit fields (e.g., last_updated) and change logs are maintained for traceability.
@@ -46,71 +46,101 @@ Legal Tender analyzes the influence of donors on US politicians by orchestrating
 
 ## Next Steps
 
-1. Implement Prefect flows for:
+1. Implement Dagster jobs for:
 	- Fetching/updating Congress members
 	- Fetching/updating donor data
 	- Fetching/updating bills and votes
 	- AI/NLP donor and bill analysis
 2. Store and audit all data in MongoDB.
 3. Build scoring, prediction, and visualization modules.
-4. Document and test all flows for reliability.
+4. Document and test all jobs for reliability.
 
 
-## Prefect Registration Workflow
+## Dagster Workflow
 
-
-# Prefect Registration Workflow
-
-This project uses a dedicated **setup container** to register all Prefect flows and deployments. This ensures that all orchestration is managed by Prefect, and no legacy app logic runs by default.
+This project uses **Dagster** for workflow orchestration with a lightweight, dockerized setup.
 
 ## How It Works
 
-- The `setup` service in `docker-compose.yml` builds the project image and runs `setup.py`.
-- `setup.py` scans the `src/flows/` directory and registers each flow as a Prefect deployment.
-- The setup container exits after registration, ensuring idempotency and auditability.
+- Dagster provides a UI (Dagit) to visualize, monitor, and execute data pipelines
+- All jobs are defined in `src/flows/` using Dagster's `@op` and `@job` decorators
+- The `src/__init__.py` file exports a `Definitions` object that Dagster discovers automatically
+- PostgreSQL is used for Dagster's run storage and event logs
+
+## Architecture
+
+- **dagster-webserver**: Serves the Dagit UI and handles job execution
+- **dagster-daemon**: Runs background processes for schedules and sensors
+- **dagster-postgres**: Stores Dagster metadata (run history, logs, etc.)
+- **mongo**: Stores application data (members, bills, etc.)
 
 ## Step-by-Step Usage
 
-1. **Build and Start Services**
+1. **Start All Services**
 
 	```bash
-	docker compose up --build prefect-server mongo mongo-express
-	# Wait for Prefect server and MongoDB to be ready (see logs)
+	docker compose up --build -d
 	```
 
-2. **Register Prefect Flows/Deployments**
+	This will start:
+	- Dagster webserver (UI)
+	- Dagster daemon (for schedules)
+	- PostgreSQL (for Dagster metadata)
+	- MongoDB (for application data)
+	- Mongo Express (database UI)
 
-	```bash
-	docker compose run --rm setup
-	# This runs setup.py, which registers all flows in src/flows/ as Prefect deployments
-	# The container will exit after registration
-	```
+2. **Access Dagster UI**
 
+	- Open http://localhost:3000 to view and manage jobs
+	- View job definitions, execution history, and logs
 
-3. **Start Prefect Worker**
+3. **Access MongoDB UI**
 
-	```bash
-	docker compose up -d prefect-worker
-	# The worker will pick up scheduled or manual flow runs
-	```
+	- Open http://localhost:8081 for Mongo Express
+	- View stored data (members, bills, etc.)
 
-4. **Access Prefect UI**
+## Running Jobs
 
-	- Open http://localhost:4200 to view and manage flows, deployments, and runs.
+### Via Dagster UI
+
+1. Navigate to http://localhost:3000
+2. Click on a job (e.g., `member_ingestion_job` or `api_test_job`)
+3. Click "Launch Run" to execute the job
+4. Monitor progress in real-time
+
+### Via Command Line
+
+```bash
+# Run a specific job
+docker compose exec dagster-webserver dagster job execute -m src -j member_ingestion_job
+
+# List all jobs
+docker compose exec dagster-webserver dagster job list -m src
+```
+
+## Adding New Jobs
+
+1. Create a new file in `src/flows/` (e.g., `my_new_flow.py`)
+2. Define your ops and job using Dagster decorators:
+   ```python
+   from dagster import op, job, OpExecutionContext
+
+   @op
+   def my_op(context: OpExecutionContext):
+       context.log.info("Running my op")
+
+   @job
+   def my_job():
+       my_op()
+   ```
+3. Import the job in `src/__init__.py` and add it to the `Definitions` object
+4. Restart Dagster: `docker compose restart dagster-webserver dagster-daemon`
+5. The new job will appear in the Dagster UI
 
 ## Notes
 
-- **Idempotency:** Running the setup container multiple times is safe; it will re-register flows as needed.
-- **Adding New Flows:** Add new flow scripts to `src/flows/` and re-run the setup container to register them.
-- **No Legacy Entrypoint:** The setup container does not run any legacy app logic; all execution is Prefect-driven.
-
-## Example: Registering a New Flow
-
-1. Add `src/flows/my_new_flow.py`.
-2. Run:
-	```bash
-	docker compose run --rm setup
-	```
-3. The new flow will appear in the Prefect UI as a deployment.
+- **No manual registration needed**: Jobs are automatically discovered from `src/__init__.py`
+- **All jobs are declarative**: Define everything in Python code
+- **Lightweight**: No cloud dependencies, runs entirely in Docker
 
 ---

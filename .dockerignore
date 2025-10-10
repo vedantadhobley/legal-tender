@@ -1,5 +1,53 @@
-# This file tells Docker what to ignore
+# Python
 __pycache__/
-*.pyc
-.env
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
 .venv/
+venv/
+ENV/
+
+# Dagster
+.dagster/
+dagster_home/storage/
+dagster_home/history/
+dagster_home/schedules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose.yml.backup
+Dockerfile.backup
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+tests/
+*.test.py
+*.spec.py
+
+# Misc
+.DS_Store
+*.log
+tmp/

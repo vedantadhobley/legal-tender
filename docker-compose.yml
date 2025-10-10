@@ -1,69 +1,86 @@
+# Base Docker Compose configuration for Legal Tender
+# This file contains the core services needed for the application
+
 services:
-  prefect-server:
-    image: prefecthq/prefect:3.4.22-python3.11
-    container_name: legal-tender-prefect-server
-    command: prefect server start --host 0.0.0.0 --port 4200
-    ports:
-      - "4200:4200"  # Prefect UI and API
+  # PostgreSQL database for Dagster metadata storage
+  dagster-postgres:
+    image: postgres:15-alpine
+    container_name: legal-tender-dagster-postgres
     environment:
-      - PREFECT_SERVER_API_HOST=0.0.0.0
-      - PREFECT_UI_API_URL=http://localhost:4200/api
+      POSTGRES_USER: ltuser
+      POSTGRES_PASSWORD: ltpass
+      POSTGRES_DB: dagster
+    volumes:
+      - dagster_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ltuser -d dagster"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - legal-tender-network
+
+  # Dagster webserver (UI)
+  dagster-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: legal-tender:latest
+    container_name: legal-tender-dagster-webserver
+    command: dagster-webserver -h 0.0.0.0 -p 3000 -w /app/workspace.yaml
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      DAGSTER_HOME: /app/dagster_home
+    depends_on:
+      dagster-postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/server_info"]
       interval: 10s
       timeout: 5s
       retries: 15
       start_period: 60s
-    volumes:
-      - mongo_data:/data/db
     networks:
       - legal-tender-network
+    volumes:
+      - dagster_home:/app/dagster_home
 
-  prefect-worker:
-    build: .
-    container_name: legal-tender-prefect-worker
-    command: prefect worker start --pool "api-pool"
+  # Dagster daemon (for schedules and sensors)
+  dagster-daemon:
+    image: legal-tender:latest
+    container_name: legal-tender-dagster-daemon
+    command: dagster-daemon run
     env_file:
       - .env
     environment:
-      - PREFECT_API_URL=http://prefect-server:4200/api
+      DAGSTER_HOME: /app/dagster_home
     depends_on:
-      prefect-server:
+      dagster-postgres:
+        condition: service_healthy
+      dagster-webserver:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - legal-tender-network
-    working_dir: /app
     volumes:
-      - .:/app
+      - dagster_home:/app/dagster_home
 
-  setup:
-    build: .
-    container_name: legal-tender-setup
-    env_file:
-      - .env
-    environment:
-      - PREFECT_API_URL=http://prefect-server:4200/api
-    depends_on:
-      prefect-server:
-        condition: service_healthy
-      mongo:
-        condition: service_healthy
-    command: ["python", "/app/src/setup.py"]
-    restart: "no"
-    networks:
-      - legal-tender-network
-    volumes:
-      - .:/app
-
+  # MongoDB for application data
   mongo:
-    image: mongo:7
+    image: mongo:7-jammy
     container_name: legal-tender-mongo
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=ltuser
-      - MONGO_INITDB_ROOT_PASSWORD=ltpass
-      - MONGO_INITDB_DATABASE=legal_tender
+      MONGO_INITDB_ROOT_USERNAME: ltuser
+      MONGO_INITDB_ROOT_PASSWORD: ltpass
+      MONGO_INITDB_DATABASE: legal_tender
     command: >
       mongod
       --setParameter logComponentVerbosity={network:{verbosity:0},storage:{verbosity:0}}
@@ -78,25 +95,26 @@ services:
     networks:
       - legal-tender-network
 
+  # Mongo Express (database UI)
   mongo-express:
-    image: mongo-express:1.0.2-20
+    image: mongo-express:1.0.2-20-alpine3.19
     container_name: legal-tender-mongo-express
     restart: unless-stopped
     ports:
       - "8081:8081"
     environment:
-      - ME_CONFIG_MONGODB_SERVER=mongo
-      - ME_CONFIG_MONGODB_PORT=27017
-      # Authenticate mongo-express against Mongo when auth is enabled
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=ltuser
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=ltpass
-      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
-      - ME_CONFIG_BASICAUTH_USERNAME=ltuser
-      - ME_CONFIG_BASICAUTH_PASSWORD=ltpass
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ltuser
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ltpass
+      ME_CONFIG_MONGODB_AUTH_DATABASE: admin
+      ME_CONFIG_BASICAUTH_USERNAME: ltuser
+      ME_CONFIG_BASICAUTH_PASSWORD: ltpass
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -106,6 +124,12 @@ services:
 
 volumes:
   mongo_data:
-  
+    driver: local
+  dagster_postgres_data:
+    driver: local
+  dagster_home:
+    driver: local
+
 networks:
   legal-tender-network:
+    driver: bridge
