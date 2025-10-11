@@ -160,10 +160,7 @@ docker compose exec dagster-webserver dagster asset list -m src
 
 ### Available Jobs
 
-**Utility Jobs:**
-- **`api_test_job`**: Validates API connectivity for Congress, Election, and Lobbying APIs
-
-**Asset Materialization Jobs** (explicit production jobs):
+**Asset Materialization Jobs:**
 - **`congress_pipeline`**: Refreshes congress_members data only
 - **`donor_pipeline`**: Refreshes member_donor_data only (requires congress_members)
 - **`full_pipeline`**: Refreshes all data in dependency order (recommended for scheduled runs)
@@ -188,8 +185,8 @@ legal-tender/
 │   ├── assets/               # Data assets (data products)
 │   │   ├── congress.py       # congress_members asset
 │   │   └── donors.py         # member_donor_data asset
-│   ├── jobs/                 # Legacy job definitions
-│   │   └── api_test.py       # API validation job
+│   ├── jobs/                 # Asset materialization jobs
+│   │   └── asset_jobs.py     # congress_pipeline, donor_pipeline, full_pipeline
 │   ├── resources/            # Shared resources
 │   │   └── mongo.py          # MongoDB resource
 │   ├── api/                  # API clients (Congress, Election, Lobbying)

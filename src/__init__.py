@@ -13,7 +13,6 @@ Architecture:
 from dagster import Definitions
 from src.assets import congress_members_asset, member_donor_data_asset
 from src.jobs import (
-    api_test_job,
     congress_pipeline_job,
     donor_pipeline_job,
     full_pipeline_job,
@@ -33,7 +32,6 @@ defs = Definitions(
         "mongo": mongo_resource,
     },
     jobs=[
-        api_test_job,
         congress_pipeline_job,
         donor_pipeline_job,
         full_pipeline_job,
