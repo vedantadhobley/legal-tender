@@ -131,36 +131,67 @@ Legal Tender analyzes the influence of donors on US politicians by orchestrating
 - **Benefits**: Code changes apply instantly (no rebuild), database ports exposed for local tools
 - **Trade-off**: Less isolated (your local code folder is mounted in container)
 
-## Running Jobs
+## Working with Data Assets
+
+### Available Assets
+- **`congress_members`**: Current members of U.S. Congress (House + Senate) from Congress.gov API
+- **`member_donor_data`**: Donor contributions for all Congress members from OpenFEC API (depends on congress_members)
+
+### Materializing Assets (Refreshing Data)
+
+**Via Dagster UI** (Recommended):
+1. Open http://localhost:3000
+2. Navigate to **"Assets"** tab
+3. Click on an asset to view details
+4. Click **"Materialize"** to refresh the data
+5. View metadata, lineage graph, and run history
+
+**Via Command Line:**
+```bash
+# Materialize a specific asset
+docker compose exec dagster-webserver dagster asset materialize --select congress_members -m src
+
+# Materialize all assets
+docker compose exec dagster-webserver dagster asset materialize --select "*" -m src
+
+# List all assets
+docker compose exec dagster-webserver dagster asset list -m src
+```
 
 ### Available Jobs
+
+**Utility Jobs:**
 - **`api_test_job`**: Validates API connectivity for Congress, Election, and Lobbying APIs
-- **`member_ingestion_job`**: Fetches current Congress members and syncs to MongoDB
 
-### Via Dagster UI (Recommended)
-1. Open http://localhost:3000
-2. Navigate to "Jobs" → Select a job → Click "Launch Run"
-3. Monitor execution and view logs in real-time
+**Asset Materialization Jobs** (explicit production jobs):
+- **`congress_pipeline`**: Refreshes congress_members data only
+- **`donor_pipeline`**: Refreshes member_donor_data only (requires congress_members)
+- **`full_pipeline`**: Refreshes all data in dependency order (recommended for scheduled runs)
 
-### Via Command Line
+**Via Command Line:**
 ```bash
-# List all available jobs
-docker compose exec dagster-webserver dagster job list -m src
+# Run a specific job
+docker compose exec dagster-webserver dagster job execute -m src -j full_pipeline
 
-# Execute a specific job
-docker compose exec dagster-webserver dagster job execute -m src -j api_test_job
-docker compose exec dagster-webserver dagster job execute -m src -j member_ingestion_job
+# List all jobs
+docker compose exec dagster-webserver dagster job list -m src
 ```
+
+**Note**: The auto-generated `__ASSET_JOB` appears in the job list but is redundant - use the explicit jobs above instead.
 
 ## Project Structure
 
 ```
 legal-tender/
 ├── src/
-│   ├── __init__.py           # Dagster definitions (jobs export)
-│   ├── jobs/                 # Job definitions
-│   │   ├── api_test.py       # API validation job
-│   │   └── member_ingestion.py  # Congress member sync job
+│   ├── __init__.py           # Dagster definitions (assets, jobs, resources)
+│   ├── assets/               # Data assets (data products)
+│   │   ├── congress.py       # congress_members asset
+│   │   └── donors.py         # member_donor_data asset
+│   ├── jobs/                 # Legacy job definitions
+│   │   └── api_test.py       # API validation job
+│   ├── resources/            # Shared resources
+│   │   └── mongo.py          # MongoDB resource
 │   ├── api/                  # API clients (Congress, Election, Lobbying)
 │   └── utils/                # Utility functions
 ├── dagster.yaml              # Dagster instance configuration
@@ -172,35 +203,59 @@ legal-tender/
 
 ## Development
 
-### Adding New Jobs
+### Adding New Assets
 
-1. **Create a job file** in `src/jobs/` (e.g., `my_feature.py`):
+1. **Create an asset file** in `src/assets/` (e.g., `bills.py`):
    ```python
-   from dagster import job, op, OpExecutionContext
+   from dagster import asset, AssetExecutionContext, Output, MetadataValue
+   from src.resources.mongo import MongoDBResource
+   from src.api.congress_api import get_bills
 
-   @op
-   def do_something(context: OpExecutionContext):
-       context.log.info("Doing something...")
-       # Your logic here
-
-   @job
-   def my_feature_job():
-       """Job description."""
-       do_something()
+   @asset(
+       name="congress_bills",
+       description="Current bills from Congress.gov API",
+       group_name="congress",
+       compute_kind="api",
+   )
+   def congress_bills_asset(
+       context: AssetExecutionContext,
+       mongo: MongoDBResource
+   ) -> Output[list]:
+       """Fetch and persist current bills."""
+       bills = get_bills()
+       
+       with mongo.get_client() as client:
+           collection = mongo.get_collection(client, "bills")
+           # Store bills...
+       
+       return Output(
+           value=bills,
+           metadata={
+               "total_bills": len(bills),
+               "preview": MetadataValue.json(bills[:3]),
+           }
+       )
    ```
 
-2. **Export the job** in `src/jobs/__init__.py`:
+2. **Export the asset** in `src/assets/__init__.py`:
    ```python
-   from src.jobs.my_feature import my_feature_job
+   from src.assets.bills import congress_bills_asset
    
-   __all__ = ["api_test_job", "member_ingestion_job", "my_feature_job"]
+   __all__ = [
+       "congress_members_asset",
+       "member_donor_data_asset",
+       "congress_bills_asset",
+   ]
    ```
 
 3. **Update definitions** in `src/__init__.py`:
    ```python
-   from src.jobs import api_test_job, member_ingestion_job, my_feature_job
+   from src.assets import congress_members_asset, member_donor_data_asset, congress_bills_asset
    
-   defs = Definitions(jobs=[api_test_job, member_ingestion_job, my_feature_job])
+   defs = Definitions(
+       assets=[congress_members_asset, member_donor_data_asset, congress_bills_asset],
+       resources={"mongo": mongo_resource},
+   )
    ```
 
 4. **Restart services**:
@@ -208,10 +263,18 @@ legal-tender/
    docker compose restart dagster-webserver dagster-daemon
    ```
 
-### Naming Convention
-- **File name**: `my_feature.py`
-- **Job function**: `my_feature_job()`
-- **Pattern**: File name matches job name (minus `_job` suffix)
+5. **Materialize in UI**: Go to Assets tab → Click your new asset → Materialize
+
+### Asset Dependencies
+
+To make an asset depend on another:
+```python
+@asset
+def donor_analysis(congress_members, member_donor_data):
+    # This asset depends on both congress_members and member_donor_data
+    # Dagster will automatically materialize them first
+    pass
+```
 
 ### Viewing Data
 
