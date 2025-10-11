@@ -9,16 +9,14 @@ services:
       dockerfile: Dockerfile
       target: development
     volumes:
-      # Mount source code for hot reloading
+      # Mount source code for live editing (no rebuild needed)
       - .:/app
-      - dagster_home:/app/dagster_home
-      # Exclude Python cache
+      # Exclude Python cache and venv
       - /app/.venv
       - /app/__pycache__
       - /app/src/__pycache__
     environment:
-      # Enable debug logging
-      DAGSTER_HOME: /app/dagster_home
+      DAGSTER_HOME: /app
       PYTHONUNBUFFERED: "1"
     # Override restart policy for faster development iteration
     restart: "no"
@@ -30,24 +28,23 @@ services:
       dockerfile: Dockerfile
       target: development
     volumes:
-      # Mount source code for hot reloading
+      # Mount source code for live editing (no rebuild needed)
       - .:/app
-      - dagster_home:/app/dagster_home
-      # Exclude Python cache
+      # Exclude Python cache and venv
       - /app/.venv
       - /app/__pycache__
       - /app/src/__pycache__
     environment:
-      DAGSTER_HOME: /app/dagster_home
+      DAGSTER_HOME: /app
       PYTHONUNBUFFERED: "1"
     restart: "no"
 
-  # Expose MongoDB port for local development tools
+  # Expose MongoDB port for local development tools (if needed)
   mongo:
     ports:
       - "27017:27017"
 
-  # Expose PostgreSQL port for local development tools
+  # Expose PostgreSQL port for local development tools (if needed)
   dagster-postgres:
     ports:
       - "5432:5432"
