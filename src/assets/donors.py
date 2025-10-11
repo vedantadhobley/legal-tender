@@ -1,139 +1,240 @@
-"""Election/donor-related data assets."""
+"""Finance-related data assets for tracking money influence in Congress."""
 from typing import List, Dict, Any
 
-from dagster import asset, AssetExecutionContext, AssetIn, MetadataValue, Output
-from src.api.election_api import get_candidate_committees, get_committee_contributions
+from dagster import asset, AssetExecutionContext, AssetIn, Output
+from src.api.election_api import (
+    search_candidate_by_name,
+    get_candidate_committees,
+    get_candidate_financial_summary,
+    get_committee_contributions_paginated,
+    get_independent_expenditures_for_candidate,
+    aggregate_contributions_by_donor,
+    aggregate_independent_expenditures_by_committee
+)
 from src.resources.mongo import MongoDBResource
 
 
 @asset(
-    name="member_donor_data",
-    description="Donor contributions for all Congress members from OpenFEC API",
-    group_name="donors",
+    name="member_fec_mapping",
+    description="Maps Congress bioguideId to FEC candidate_id for all 538 members",
+    group_name="finance",
     compute_kind="api",
     ins={
-        "congress_members": AssetIn(key="congress_members"),  # Depends on congress_members asset
+        "congress_members": AssetIn(key="congress_members"),
+    },
+    metadata={
+        "source": "OpenFEC API",
+    }
+)
+def member_fec_mapping_asset(
+    context: AssetExecutionContext,
+    congress_members: List[Dict[str, Any]]
+) -> Output[Dict[str, Any]]:
+    """Map all Congress members to their FEC candidate IDs."""
+    context.log.info("=" * 80)
+    context.log.info("🗺️  MAPPING CONGRESS MEMBERS TO FEC CANDIDATE IDS")
+    context.log.info("=" * 80)
+    
+    mapping = {}
+    mapped_count = 0
+    failed_count = 0
+    
+    for idx, member in enumerate(congress_members, 1):
+        bioguide_id = member.get("bioguideId")
+        first_name = member.get("firstName", "")
+        last_name = member.get("lastName", "")
+        state = member.get("state", "")
+        office = "H" if "House" in str(member.get("terms", [])) else "S"
+        
+        if not bioguide_id or not last_name:
+            failed_count += 1
+            continue
+        
+        context.log.info(f"[{idx}/{len(congress_members)}] {last_name}, {first_name} ({state}-{office})")
+        
+        candidates = search_candidate_by_name(last_name, state=state, office=office)
+        
+        if not candidates:
+            context.log.warning("  ❌ Not found")
+            failed_count += 1
+            mapping[bioguide_id] = {
+                "bioguide_id": bioguide_id,
+                "member_name": f"{last_name}, {first_name}",
+                "state": state,
+                "office": office,
+                "fec_candidate_id": None,
+                "fec_committees": [],
+                "mapping_status": "not_found"
+            }
+            continue
+        
+        candidate = candidates[0]
+        fec_candidate_id = candidate.get("candidate_id")
+        if not fec_candidate_id:
+            context.log.warning("  ❌ No candidate_id in result")
+            failed_count += 1
+            mapping[bioguide_id] = {
+                "bioguide_id": bioguide_id,
+                "member_name": f"{last_name}, {first_name}",
+                "state": state,
+                "office": office,
+                "fec_candidate_id": None,
+                "fec_committees": [],
+                "mapping_status": "no_candidate_id"
+            }
+            continue
+        
+        committees = get_candidate_committees(fec_candidate_id, cycle=2024) or []
+        
+        context.log.info(f"  ✅ {fec_candidate_id} ({len(committees)} committees)")
+        mapped_count += 1
+        
+        mapping[bioguide_id] = {
+            "bioguide_id": bioguide_id,
+            "member_name": f"{last_name}, {first_name}",
+            "state": state,
+            "office": office,
+            "fec_candidate_id": fec_candidate_id,
+            "fec_committees": [
+                {
+                    "committee_id": c.get("committee_id"),
+                    "committee_name": c.get("name"),
+                    "committee_type": c.get("committee_type_full")
+                }
+                for c in committees
+            ],
+            "mapping_status": "mapped"
+        }
+    
+    context.log.info("")
+    context.log.info(f"✅ Mapped: {mapped_count}, ❌ Failed: {failed_count}")
+    
+    return Output(
+        value=mapping,
+        metadata={
+            "mapped_count": mapped_count,
+            "failed_count": failed_count
+        }
+    )
+
+
+@asset(
+    name="member_finance",
+    description="Complete financial profile for all Congress members",
+    group_name="finance",
+    compute_kind="api",
+    ins={
+        "member_fec_mapping": AssetIn(key="member_fec_mapping"),
     },
     metadata={
         "source": "OpenFEC API",
         "cycle": "2024",
     }
 )
-def member_donor_data_asset(
+def member_finance_asset(
     context: AssetExecutionContext,
     mongo: MongoDBResource,
-    congress_members: List[Dict[str, Any]]
-) -> Output[List[Dict[str, Any]]]:
-    """Fetch donor data for all Congress members and persist to MongoDB.
+    member_fec_mapping: Dict[str, Any]
+) -> Output[int]:
+    """Fetch complete financial data for all members and store in MongoDB."""
+    context.log.info("=" * 80)
+    context.log.info("💰 FETCHING COMPLETE FINANCIAL DATA")
+    context.log.info("=" * 80)
     
-    This asset:
-    1. Takes congress_members as input (Dagster tracks this dependency!)
-    2. For each member, fetches their FEC candidate committees
-    3. For each committee, fetches contribution data
-    4. Stores all donations in MongoDB with member references
-    5. Returns metadata about the operation
-    
-    Args:
-        congress_members: List of member dicts (from upstream asset)
-        
-    Returns:
-        List of donation records with metadata
-    """
-    context.log.info("=" * 60)
-    context.log.info("💰 FETCHING DONOR DATA FOR CONGRESS MEMBERS")
-    context.log.info("=" * 60)
-    context.log.info(f"📊 Processing {len(congress_members)} members...")
-    context.log.info("")
-    
-    all_donations = []
-    members_with_data = 0
-    members_without_data = 0
-    total_donations_fetched = 0
+    members_to_process = [m for m in member_fec_mapping.values() if m.get("fec_candidate_id")]
+    processed_count = 0
     
     with mongo.get_client() as client:
-        donations_collection = mongo.get_collection(client, "donations")
+        collection = mongo.get_collection(client, "member_finance")
         
-        for idx, member in enumerate(congress_members, 1):
-            member_id = member.get("bioguideId")
-            member_name = f"{member.get('firstName', '')} {member.get('lastName', '')}".strip()
-            fec_candidate_id = member.get("fecCandidateId")  # If available in Congress API
+        for idx, member in enumerate(members_to_process, 1):
+            bioguide_id = member["bioguide_id"]
+            member_name = member["member_name"]
+            fec_candidate_id = member["fec_candidate_id"]
+            committees = member.get("fec_committees", [])
             
-            if not member_id:
-                continue
+            context.log.info(f"[{idx}/{len(members_to_process)}] {member_name}")
             
-            context.log.info(f"[{idx}/{len(congress_members)}] Processing {member_name} ({member_id})...")
+            # Get financial summary
+            financial_summary = get_candidate_financial_summary(fec_candidate_id, cycle=2024)
+            if financial_summary:
+                context.log.info(f"  💵 ${financial_summary.get('receipts', 0):,.0f}")
             
-            # Skip if no FEC candidate ID (you might need to match by name or skip)
-            if not fec_candidate_id:
-                context.log.warning(f"   ⚠️  No FEC candidate ID for {member_name}")
-                members_without_data += 1
-                continue
+            # Get direct contributions (limit 10 pages)
+            all_contributions = []
+            for committee in committees[:1]:
+                contributions = list(get_committee_contributions_paginated(
+                    committee["committee_id"],
+                    two_year_period=2024,
+                    max_pages=10
+                ))
+                all_contributions.extend(contributions)
             
-            # Get committees for this candidate
-            committees = get_candidate_committees(fec_candidate_id, cycle=2024)
+            donor_aggregates = aggregate_contributions_by_donor(all_contributions) if all_contributions else {}
+            top_donors = sorted(donor_aggregates.values(), key=lambda x: x["total_amount"], reverse=True)[:100]
             
-            if not committees:
-                context.log.warning(f"   ⚠️  No committees found for {member_name}")
-                members_without_data += 1
-                continue
+            context.log.info(f"  👥 {len(all_contributions)} contributions")
             
-            context.log.info(f"   ✅ Found {len(committees)} committees")
+            # Get independent expenditures
+            independent_exp = list(get_independent_expenditures_for_candidate(
+                fec_candidate_id,
+                two_year_period=2024,
+                max_pages=10
+            ))
             
-            # Fetch contributions for each committee
-            for committee_id in committees:
-                contributions = get_committee_contributions(committee_id, cycle=2024)
-                
-                if not contributions or "results" not in contributions:
-                    continue
-                
-                results = contributions["results"]
-                context.log.info(f"      💵 {len(results)} contributions from {committee_id}")
-                
-                # Store each contribution with member reference
-                for contribution in results:
-                    donation_doc = {
-                        **contribution,
-                        "member_bioguide_id": member_id,
-                        "member_name": member_name,
-                        "committee_id": committee_id,
-                        "cycle": 2024,
-                    }
-                    
-                    # Use a unique ID if available, otherwise create one
-                    donation_id = contribution.get("sub_id") or f"{committee_id}_{contribution.get('contributor_id', idx)}"
-                    donation_doc["_id"] = donation_id
-                    
-                    donations_collection.replace_one(
-                        {"_id": donation_id},
-                        donation_doc,
-                        upsert=True
-                    )
-                    
-                    all_donations.append(donation_doc)
-                    total_donations_fetched += 1
+            committee_aggregates = aggregate_independent_expenditures_by_committee(independent_exp) if independent_exp else {}
+            spenders_for = [c for c in committee_aggregates.values() if c["net_support"] > 0]
+            spenders_against = [c for c in committee_aggregates.values() if c["net_support"] < 0]
             
-            members_with_data += 1
+            total_for = sum(c["support_amount"] for c in spenders_for)
+            total_against = sum(c["oppose_amount"] for c in spenders_against)
+            
+            if independent_exp:
+                context.log.info(f"  🎯 FOR: ${total_for:,.0f}, AGAINST: ${total_against:,.0f}")
+            
+            # Build document
+            finance_doc = {
+                "_id": bioguide_id,
+                "bioguide_id": bioguide_id,
+                "member_name": member_name,
+                "state": member.get("state"),
+                "office": member.get("office"),
+                "fec_candidate_id": fec_candidate_id,
+                "fec_committees": committees,
+                "financial_summary": {
+                    "total_receipts": financial_summary.get("receipts", 0) if financial_summary else 0,
+                    "total_disbursements": financial_summary.get("disbursements", 0) if financial_summary else 0,
+                    "cash_on_hand": financial_summary.get("cash_on_hand_end_period", 0) if financial_summary else 0,
+                    "debts_owed": financial_summary.get("debts_owed_by_committee", 0) if financial_summary else 0,
+                } if financial_summary else {},
+                "direct_contributions": {
+                    "total_amount": sum(c["contribution_receipt_amount"] for c in all_contributions),
+                    "contribution_count": len(all_contributions),
+                    "unique_donor_count": len(donor_aggregates),
+                    "top_donors": top_donors,
+                },
+                "independent_expenditures": {
+                    "for": {
+                        "total_amount": total_for,
+                        "expenditure_count": sum(c["support_count"] for c in spenders_for),
+                        "top_spenders": sorted(spenders_for, key=lambda x: x["support_amount"], reverse=True)[:20]
+                    },
+                    "against": {
+                        "total_amount": total_against,
+                        "expenditure_count": sum(c["oppose_count"] for c in spenders_against),
+                        "top_spenders": sorted(spenders_against, key=lambda x: x["oppose_amount"], reverse=True)[:20]
+                    },
+                    "net_support": total_for - total_against
+                },
+                "election_cycle": 2024
+            }
+            
+            collection.replace_one({"_id": bioguide_id}, finance_doc, upsert=True)
+            processed_count += 1
     
-    context.log.info("")
-    context.log.info("📊 DONOR DATA SYNC SUMMARY:")
-    context.log.info("-" * 60)
-    context.log.info(f"   ✅ Members with data: {members_with_data}")
-    context.log.info(f"   ⚠️  Members without data: {members_without_data}")
-    context.log.info(f"   💵 Total donations fetched: {total_donations_fetched}")
-    context.log.info("-" * 60)
-    context.log.info("🎉 DONOR DATA SYNC COMPLETE!")
-    context.log.info("=" * 60)
+    context.log.info(f"✅ Processed {processed_count} members")
     
-    # Return with metadata
     return Output(
-        value=all_donations,
-        metadata={
-            "members_processed": len(congress_members),
-            "members_with_data": members_with_data,
-            "members_without_data": members_without_data,
-            "total_donations": total_donations_fetched,
-            "avg_donations_per_member": total_donations_fetched / members_with_data if members_with_data > 0 else 0,
-            "sample_donation": MetadataValue.json(all_donations[0] if all_donations else {}),
-            "cycle": "2024",
-        }
+        value=processed_count,
+        metadata={"members_processed": processed_count}
     )

@@ -2,33 +2,49 @@
 
 ## Project Overview
 
-Legal Tender analyzes the influence of donors on US politicians by orchestrating data collection, enrichment, and AI-driven analysis. The project aims to:
+Legal Tender analyzes financial influence on US politicians by tracking ALL money flows - not just direct donations, but the far more powerful independent expenditures (Super PAC spending) that determine who gets elected in the first place. The project:
 
-1. Collect and keep up-to-date a list of all current US Congress members (House & Senate).
-2. Gather and update donor data for each politician (amounts, names, organizations) using the Election (FEC) API.
-3. Profile each unique donor to determine which policies they support or oppose (using AI/NLP and web research).
-4. Fetch and update upcoming bills and voting data from the Congress.gov API.
-5. Use AI to compare each bill with donor policy stances, scoring each bill for each donor (+1 to -1 scale).
-6. Aggregate scores and donation amounts to predict how politicians may vote and quantify donor influence.
-7. Store all data in MongoDB for auditability, traceability, and further analysis.
+1. **Collects Congress member data**: All current House & Senate members from Congress.gov API
+2. **Maps to FEC records**: Links each member to their FEC candidate ID and campaign committees
+3. **Tracks comprehensive financial influence**:
+   - **Financial summaries**: Total receipts, disbursements, cash on hand, debt
+   - **Direct contributions** (Schedule A): Who donates TO campaigns (limited: $3,300 individual, $5,000 PAC)
+   - **Independent expenditures** (Schedule E): Who spends FOR/AGAINST candidates (UNLIMITED - this is where real power lies)
+   - Future: Loans, party coordinated spending, electioneering (dark money ads)
+4. **Reveals power dynamics**: Super PACs like AIPAC's "United Democracy Project" spent $26M to defeat ONE candidate (Cori Bush) - that's not influence, that's choosing who can even vote in Congress
+5. **Enables analysis**: With complete financial profiles stored in MongoDB, we can identify which donors/Super PACs control which politicians and predict voting behavior
 
-## Data Requirements
+## Data Sources & Money Flows
 
-1. **Current Politicians**
-	- List of all current US Congress members (House & Senate).
-	- Source: [Congress.gov API](https://api.congress.gov/)
+### 1. Congress Members
+- **Source**: [Congress.gov API](https://api.congress.gov/)
+- **Data**: All current House & Senate members with bioguide IDs
 
-2. **Donor Data**
-	- List of donors for each politician, including donation amounts.
-	- Source: [Election (FEC) API](https://api.open.fec.gov/developers/)
+### 2. Financial Influence Tracking
+- **Source**: [OpenFEC API](https://api.open.fec.gov/developers/)
+- **Money Vehicles**:
+  - **Schedule A** (Direct Contributions): Donations TO campaigns
+    - Individuals: $3,300 max per election
+    - PACs: $5,000 max per election
+    - These buy access but don't determine WHO gets elected
+  - **Schedule E** (Independent Expenditures): Spending FOR/AGAINST candidates
+    - **UNLIMITED** spending by Super PACs, unions, corporations
+    - Cannot coordinate with campaigns but can spend infinite money
+    - **This is real power**: Determines primary winners, removes incumbents
+    - Example: AIPAC's "United Democracy Project" spent $26M AGAINST Cori Bush, $12M AGAINST Jamaal Bowman - both defeated
+  - **Financial Summaries**: Total raised, spent, cash on hand, debt
+  - **Future additions**:
+    - Schedule C (Loans): Self-funding and loan patterns
+    - Schedule F (Party Coordinated Spending): National party support
+    - Electioneering Communications: Dark money "issue ads"
 
-3. **Upcoming Bills**
-	- Data on upcoming bills, including text, summaries, and voting records.
-	- Source: [Congress.gov API](https://api.congress.gov/)
+### 3. Bills & Voting (Future)
+- **Source**: [Congress.gov API](https://api.congress.gov/)
+- **Data**: Bill text, votes, sponsorship - to correlate with financial influence
 
-4. **Lobbying Data**
-	- Federal lobbying filings and clients.
-	- Source: [Senate LDA API](https://lda.senate.gov/api/redoc/v1/)
+### 4. Lobbying Data (Future)
+- **Source**: [Senate LDA API](https://lda.senate.gov/api/redoc/v1/)
+- **Data**: Federal lobbying filings to complete the influence picture
 
 ## Orchestration & Automation
 
@@ -37,23 +53,115 @@ Legal Tender analyzes the influence of donors on US politicians by orchestrating
 - Each entity (politician, donor, bill) is upserted by its unique ID for reliability and auditability.
 - Audit fields (e.g., last_updated) and change logs are maintained for traceability.
 
-## AI/NLP Workflow
+## MongoDB Collections
 
-1. For each unique donor, use AI/NLP to generate a profile of policy stances (FOR/AGAINST tables) using web research and public data.
-2. For each new or updated bill, use AI/NLP to extract key policy areas and compare them to donor stances.
-3. Score each bill for each donor (+1 to -1) based on alignment.
-4. Aggregate scores and donation amounts to predict politician voting behavior and donor influence.
+### `members`
+Complete Congress member data from Congress.gov API with bioguide IDs, party, state, district, etc.
+
+### `member_finance`
+Financial profile for each member with FEC data:
+```javascript
+{
+  bioguide_id: "B001230",  // Tammy Baldwin
+  member_name: "Baldwin, Tammy",
+  fec_candidate_id: "S2WI00094",
+  
+  financial_summary: {
+    total_receipts: 15234567.89,
+    total_disbursements: 12345678.90,
+    cash_on_hand: 2888888.99,
+    debts_owed: 0,
+    coverage_end_date: "2024-09-30"
+  },
+  
+  direct_contributions: {
+    total_contributors: 10000,
+    total_amount: 5234567.89,
+    top_donors: [
+      {
+        name: "ActBlue",
+        total: 1234567.89,
+        contribution_count: 2500
+      }
+      // ... top 100 donors
+    ]
+  },
+  
+  independent_expenditures: {
+    for: {  // Spending TO SUPPORT this candidate
+      total_amount: 8765432.10,
+      total_expenditures: 150,
+      top_spenders: [
+        {
+          committee_name: "Senate Majority PAC",
+          committee_id: "C00484642",
+          total: 3456789.12,
+          expenditure_count: 45
+        }
+        // ... top 20 Super PACs supporting
+      ]
+    },
+    against: {  // Spending TO OPPOSE this candidate
+      total_amount: 1234567.89,
+      total_expenditures: 25,
+      top_spenders: [
+        {
+          committee_name: "Conservative Group",
+          committee_id: "C00123456",
+          total: 876543.21,
+          expenditure_count: 15
+        }
+        // ... top 20 Super PACs opposing
+      ]
+    }
+  },
+  
+  last_updated: "2024-10-11T12:34:56Z"
+}
+```
+
+### Future Collections
+- **`unique_donors`**: Aggregate view of all individual/organizational donors across all members
+- **`super_pacs`**: Super PAC profiles with all candidates they support/oppose and total spending
+- **`bills`**: Upcoming bills, votes, sponsors
+- **`lobbying`**: Federal lobbying filings
+
+## Understanding the Power Dynamic
+
+### Direct Contributions (Limited Influence)
+- Individual donors: Max $3,300 per election
+- PACs: Max $5,000 per election
+- **Purpose**: Buy access, influence HOW elected officials vote
+- **Example**: Tech industry donates to both parties to get favorable regulations
+
+### Independent Expenditures (Ultimate Power)
+- Super PACs, unions, corporations: **UNLIMITED** spending
+- Cannot coordinate with campaigns but can spend any amount FOR or AGAINST
+- **Purpose**: Determine WHO gets elected in the first place
+- **Example**: AIPAC's "United Democracy Project" (Committee C00799031):
+  - Spent $26M AGAINST Cori Bush → She lost her primary
+  - Spent $12M AGAINST Jamaal Bowman → He lost his primary
+  - Spent $34M FOR Jimmy Gomez → He won
+  - **This isn't lobbying, it's choosing who sits in Congress**
+
+### Why This Matters
+If you can spend unlimited money to elect/defeat candidates, you don't need to lobby them later. You already own them. This is why tracking Schedule E (independent expenditures) is more important than Schedule A (direct contributions).
 
 ## Next Steps
 
-1. Implement Dagster jobs for:
-	- Fetching/updating Congress members
-	- Fetching/updating donor data
-	- Fetching/updating bills and votes
-	- AI/NLP donor and bill analysis
-2. Store and audit all data in MongoDB.
-3. Build scoring, prediction, and visualization modules.
-4. Document and test all jobs for reliability.
+**Current Phase (Complete)**:
+- ✅ Map all 538 Congress members to FEC candidate IDs
+- ✅ Collect financial summaries for all members
+- ✅ Track direct contributions (Schedule A, top 100 donors)
+- ✅ Track independent expenditures (Schedule E, top 20 spenders, separate for/against)
+
+**Next Phase**:
+1. Run full_pipeline job to populate MongoDB with all financial data
+2. Verify AIPAC/UDP spending appears correctly for targeted members
+3. Create aggregate collections (unique_donors, super_pacs)
+4. Add additional money vehicles (loans, party spending, electioneering)
+5. Fetch bill and voting data to correlate with financial influence
+6. Build analysis/visualization layer to show who controls which politicians
 
 
 ## Technology Stack
@@ -135,7 +243,12 @@ Legal Tender analyzes the influence of donors on US politicians by orchestrating
 
 ### Available Assets
 - **`congress_members`**: Current members of U.S. Congress (House + Senate) from Congress.gov API
-- **`member_donor_data`**: Donor contributions for all Congress members from OpenFEC API (depends on congress_members)
+- **`member_fec_mapping`**: Maps each Congress member to their FEC candidate ID and campaign committees (depends on congress_members)
+- **`member_finance`**: Complete financial profile for each member including:
+  - Financial summary (receipts, disbursements, cash on hand, debt)
+  - Direct contributions (Schedule A - top 100 donors)
+  - Independent expenditures (Schedule E - Super PAC spending FOR/AGAINST, top 20 spenders)
+  - Future: loans, party spending, electioneering
 
 ### Materializing Assets (Refreshing Data)
 
@@ -162,8 +275,9 @@ docker compose exec dagster-webserver dagster asset list -m src
 
 **Asset Materialization Jobs:**
 - **`congress_pipeline`**: Refreshes congress_members data only
-- **`donor_pipeline`**: Refreshes member_donor_data only (requires congress_members)
-- **`full_pipeline`**: Refreshes all data in dependency order (recommended for scheduled runs)
+- **`finance_mapping`**: Maps all Congress members to FEC candidate IDs (depends on congress_members)
+- **`finance_pipeline`**: Fetches complete financial data for all mapped members (depends on member_fec_mapping)
+- **`full_pipeline`**: Runs complete pipeline: congress_members → member_fec_mapping → member_finance (recommended for scheduled runs)
 
 **Via Command Line:**
 ```bash
@@ -184,12 +298,15 @@ legal-tender/
 │   ├── __init__.py           # Dagster definitions (assets, jobs, resources)
 │   ├── assets/               # Data assets (data products)
 │   │   ├── congress.py       # congress_members asset
-│   │   └── donors.py         # member_donor_data asset
+│   │   └── donors.py         # member_fec_mapping + member_finance assets
 │   ├── jobs/                 # Asset materialization jobs
-│   │   └── asset_jobs.py     # congress_pipeline, donor_pipeline, full_pipeline
+│   │   └── asset_jobs.py     # congress_pipeline, finance_mapping, finance_pipeline, full_pipeline
 │   ├── resources/            # Shared resources
 │   │   └── mongo.py          # MongoDB resource
-│   ├── api/                  # API clients (Congress, Election, Lobbying)
+│   ├── api/                  # API clients
+│   │   ├── congress_api.py   # Congress.gov API client
+│   │   ├── election_api.py   # OpenFEC API client (all FEC schedules)
+│   │   └── lobbying_api.py   # Senate LDA API client
 │   └── utils/                # Utility functions
 ├── dagster.yaml              # Dagster instance configuration
 ├── workspace.yaml            # Code location configuration
@@ -277,8 +394,28 @@ def donor_analysis(congress_members, member_donor_data):
 
 Access MongoDB via Mongo Express at http://localhost:8081:
 - **Database**: `legal_tender`
-- **Collections**: `members`, `bills`, etc.
+- **Collections**: `members`, `member_finance`, etc.
 - **Credentials**: `ltuser` / `ltpass`
+
+**Query Examples** (via mongosh):
+```javascript
+// Find members with AIPAC opposition spending
+db.member_finance.find({
+  "independent_expenditures.against.top_spenders": {
+    $elemMatch: { committee_name: /United Democracy Project/i }
+  }
+})
+
+// Top 10 members by Super PAC support
+db.member_finance.find({}).sort({
+  "independent_expenditures.for.total_amount": -1
+}).limit(10)
+
+// Members with most total debt
+db.member_finance.find({}).sort({
+  "financial_summary.debts_owed": -1
+}).limit(10)
+```
 
 ## Configuration
 

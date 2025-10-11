@@ -11,10 +11,11 @@ Architecture:
 """
 
 from dagster import Definitions
-from src.assets import congress_members_asset, member_donor_data_asset
+from src.assets import congress_members_asset, member_fec_mapping_asset, member_finance_asset
 from src.jobs import (
     congress_pipeline_job,
-    donor_pipeline_job,
+    finance_mapping_job,
+    finance_pipeline_job,
     full_pipeline_job,
 )
 from src.resources import mongo_resource
@@ -26,14 +27,16 @@ from src.resources import mongo_resource
 defs = Definitions(
     assets=[
         congress_members_asset,
-        member_donor_data_asset,
+        member_fec_mapping_asset,
+        member_finance_asset,
     ],
     resources={
         "mongo": mongo_resource,
     },
     jobs=[
         congress_pipeline_job,
-        donor_pipeline_job,
+        finance_mapping_job,
+        finance_pipeline_job,
         full_pipeline_job,
     ],
     

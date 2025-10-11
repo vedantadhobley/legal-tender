@@ -24,15 +24,25 @@ congress_pipeline_job = define_asset_job(
     },
 )
 
-donor_pipeline_job = define_asset_job(
-    name="donor_pipeline",
-    description="Fetch donor contributions for all Congress members from OpenFEC API",
-    selection=AssetSelection.keys("member_donor_data"),
+finance_mapping_job = define_asset_job(
+    name="finance_mapping",
+    description="Map all Congress members to their FEC candidate IDs",
+    selection=AssetSelection.keys("congress_members", "member_fec_mapping"),
+    tags={
+        "team": "data-engineering",
+        "source": "openfec-api",
+        "priority": "high",
+    },
+)
+
+finance_pipeline_job = define_asset_job(
+    name="finance_pipeline",
+    description="Fetch complete financial data for all Congress members (contributions + Super PAC spending)",
+    selection=AssetSelection.keys("member_fec_mapping", "member_finance"),
     tags={
         "team": "data-engineering",
         "source": "openfec-api",
         "priority": "medium",
-        "depends_on": "congress_members",
     },
 )
 
@@ -42,10 +52,8 @@ donor_pipeline_job = define_asset_job(
 
 full_pipeline_job = define_asset_job(
     name="full_pipeline",
-    description="Refresh all congressional data: members + donor contributions (in dependency order)",
-    # Be explicit about which assets instead of using .all()
-    # This prevents accidentally materializing future assets
-    selection=AssetSelection.keys("congress_members", "member_donor_data"),
+    description="Complete data refresh: Congress members + FEC mapping + financial influence data",
+    selection=AssetSelection.keys("congress_members", "member_fec_mapping", "member_finance"),
     tags={
         "team": "data-engineering",
         "pipeline": "full-refresh",
