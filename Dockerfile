@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for Legal Tender
 
 # Base stage with common dependencies
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ ENV PYTHONPATH=/app
 ENV DAGSTER_HOME=/app
 
 # Production stage
-FROM base as production
+FROM base AS production
 
 # Copy Dagster configuration files
 COPY workspace.yaml ./
@@ -44,7 +44,7 @@ USER dagster
 CMD ["dagster", "dev", "-h", "0.0.0.0", "-p", "3000"]
 
 # Development stage (for local development with hot reloading)
-FROM base as development
+FROM base AS development
 
 # Copy Dagster configuration files
 COPY workspace.yaml ./
