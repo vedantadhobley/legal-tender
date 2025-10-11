@@ -11,11 +11,12 @@ build/
 venv/
 ENV/
 
-# Dagster
+# Dagster (runtime directories only - config files are needed)
 .dagster/
-dagster_home/storage/
-dagster_home/history/
-dagster_home/schedules/
+storage/
+history/
+schedules/
+compute_logs/
 
 # Environment
 .env

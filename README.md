@@ -56,91 +56,212 @@ Legal Tender analyzes the influence of donors on US politicians by orchestrating
 4. Document and test all jobs for reliability.
 
 
-## Dagster Workflow
+## Technology Stack
 
-This project uses **Dagster** for workflow orchestration with a lightweight, dockerized setup.
-
-## How It Works
-
-- Dagster provides a UI (Dagit) to visualize, monitor, and execute data pipelines
-- All jobs are defined in `src/flows/` using Dagster's `@op` and `@job` decorators
-- The `src/__init__.py` file exports a `Definitions` object that Dagster discovers automatically
-- PostgreSQL is used for Dagster's run storage and event logs
+- **Orchestration**: Dagster (workflow scheduling and monitoring)
+- **Data Storage**: MongoDB (application data), PostgreSQL (Dagster metadata)
+- **Containerization**: Docker & Docker Compose
+- **Language**: Python 3.11
 
 ## Architecture
 
-- **dagster-webserver**: Serves the Dagit UI and handles job execution
-- **dagster-daemon**: Runs background processes for schedules and sensors
-- **dagster-postgres**: Stores Dagster metadata (run history, logs, etc.)
-- **mongo**: Stores application data (members, bills, etc.)
+```
+┌─────────────────────────────────────────────────────────────┐
+│               Dagster Webserver (Port 3000)                  │
+│                     User Interface & API                     │
+└────────────┬───────────────────────────┬────────────────────┘
+             │                           │
+   ┌─────────▼─────────┐       ┌────────▼──────────┐
+   │  Dagster Daemon   │       │  PostgreSQL       │
+   │  - Schedules      │       │  - Run Storage    │
+   │  - Sensors        │       │  - Event Logs     │
+   │  - Run Queues     │       │  - Asset Metadata │
+   └─────────┬─────────┘       └───────────────────┘
+             │
+   ┌─────────▼─────────┐       ┌───────────────────┐
+   │    MongoDB        │       │  Mongo Express    │
+   │  - Members        │◄──────┤  (Port 8081)      │
+   │  - Bills          │       │  Admin UI         │
+   │  - Donations      │       └───────────────────┘
+   └───────────────────┘
+```
 
-## Step-by-Step Usage
+## Quick Start
 
-1. **Start All Services**
+### Prerequisites
+- Docker and Docker Compose
+- `.env` file with API keys (see `.env.example`)
 
-	```bash
-	docker compose up --build -d
-	```
+### Start Services
 
-	This will start:
-	- Dagster webserver (UI)
-	- Dagster daemon (for schedules)
-	- PostgreSQL (for Dagster metadata)
-	- MongoDB (for application data)
-	- Mongo Express (database UI)
+**Production Mode** (default - isolated, secure):
+```bash
+./start.sh
+# or manually: docker compose up -d
+```
 
-2. **Access Dagster UI**
+**Development Mode** (hot-reload, code changes apply instantly):
+```bash
+./start.sh -dev
+# or manually: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
 
-	- Open http://localhost:3000 to view and manage jobs
-	- View job definitions, execution history, and logs
+**Wipe & Restart** (clear all data):
+```bash
+./start.sh -v           # Production mode, wipe volumes
+./start.sh -dev -v      # Dev mode, wipe volumes
+```
 
-3. **Access MongoDB UI**
+### Access Applications
+- **Dagster UI**: http://localhost:3000 (job management and monitoring)
+- **Mongo Express**: http://localhost:8081 (database UI, credentials: `ltuser`/`ltpass`)
 
-	- Open http://localhost:8081 for Mongo Express
-	- View stored data (members, bills, etc.)
+### Development vs Production Mode
+
+**Use Production Mode** (`./start.sh`) when:
+- Running in production/staging environments
+- You want isolated, secure containers
+- Code changes are infrequent
+- **Trade-off**: Must rebuild after each code change (~30-60s)
+
+**Use Development Mode** (`./start.sh -dev`) when:
+- Actively developing and testing jobs
+- Making frequent code changes
+- Debugging issues locally
+- **Benefits**: Code changes apply instantly (no rebuild), database ports exposed for local tools
+- **Trade-off**: Less isolated (your local code folder is mounted in container)
 
 ## Running Jobs
 
-### Via Dagster UI
+### Available Jobs
+- **`api_test_job`**: Validates API connectivity for Congress, Election, and Lobbying APIs
+- **`member_ingestion_job`**: Fetches current Congress members and syncs to MongoDB
 
-1. Navigate to http://localhost:3000
-2. Click on a job (e.g., `member_ingestion_job` or `api_test_job`)
-3. Click "Launch Run" to execute the job
-4. Monitor progress in real-time
+### Via Dagster UI (Recommended)
+1. Open http://localhost:3000
+2. Navigate to "Jobs" → Select a job → Click "Launch Run"
+3. Monitor execution and view logs in real-time
 
 ### Via Command Line
-
 ```bash
-# Run a specific job
-docker compose exec dagster-webserver dagster job execute -m src -j member_ingestion_job
-
-# List all jobs
+# List all available jobs
 docker compose exec dagster-webserver dagster job list -m src
+
+# Execute a specific job
+docker compose exec dagster-webserver dagster job execute -m src -j api_test_job
+docker compose exec dagster-webserver dagster job execute -m src -j member_ingestion_job
 ```
 
-## Adding New Jobs
+## Project Structure
 
-1. Create a new file in `src/flows/` (e.g., `my_new_flow.py`)
-2. Define your ops and job using Dagster decorators:
+```
+legal-tender/
+├── src/
+│   ├── __init__.py           # Dagster definitions (jobs export)
+│   ├── jobs/                 # Job definitions
+│   │   ├── api_test.py       # API validation job
+│   │   └── member_ingestion.py  # Congress member sync job
+│   ├── api/                  # API clients (Congress, Election, Lobbying)
+│   └── utils/                # Utility functions
+├── dagster.yaml              # Dagster instance configuration
+├── workspace.yaml            # Code location configuration
+├── docker-compose.yml        # Service definitions
+├── Dockerfile                # Multi-stage container build
+└── requirements.txt          # Python dependencies
+```
+
+## Development
+
+### Adding New Jobs
+
+1. **Create a job file** in `src/jobs/` (e.g., `my_feature.py`):
    ```python
-   from dagster import op, job, OpExecutionContext
+   from dagster import job, op, OpExecutionContext
 
    @op
-   def my_op(context: OpExecutionContext):
-       context.log.info("Running my op")
+   def do_something(context: OpExecutionContext):
+       context.log.info("Doing something...")
+       # Your logic here
 
    @job
-   def my_job():
-       my_op()
+   def my_feature_job():
+       """Job description."""
+       do_something()
    ```
-3. Import the job in `src/__init__.py` and add it to the `Definitions` object
-4. Restart Dagster: `docker compose restart dagster-webserver dagster-daemon`
-5. The new job will appear in the Dagster UI
 
-## Notes
+2. **Export the job** in `src/jobs/__init__.py`:
+   ```python
+   from src.jobs.my_feature import my_feature_job
+   
+   __all__ = ["api_test_job", "member_ingestion_job", "my_feature_job"]
+   ```
 
-- **No manual registration needed**: Jobs are automatically discovered from `src/__init__.py`
-- **All jobs are declarative**: Define everything in Python code
-- **Lightweight**: No cloud dependencies, runs entirely in Docker
+3. **Update definitions** in `src/__init__.py`:
+   ```python
+   from src.jobs import api_test_job, member_ingestion_job, my_feature_job
+   
+   defs = Definitions(jobs=[api_test_job, member_ingestion_job, my_feature_job])
+   ```
+
+4. **Restart services**:
+   ```bash
+   docker compose restart dagster-webserver dagster-daemon
+   ```
+
+### Naming Convention
+- **File name**: `my_feature.py`
+- **Job function**: `my_feature_job()`
+- **Pattern**: File name matches job name (minus `_job` suffix)
+
+### Viewing Data
+
+Access MongoDB via Mongo Express at http://localhost:8081:
+- **Database**: `legal_tender`
+- **Collections**: `members`, `bills`, etc.
+- **Credentials**: `ltuser` / `ltpass`
+
+## Configuration
+
+### Credentials
+All services use standardized credentials:
+- **Username**: `ltuser`
+- **Password**: `ltpass`
+
+### Environment Variables
+Required in `.env`:
+- `CONGRESS_API_KEY`: Congress.gov API key
+- `ELECTION_API_KEY`: OpenFEC API key  
+- `LOBBYING_API_KEY`: Senate LDA API key
+- `MONGO_URI`: MongoDB connection string (default: `mongodb://ltuser:ltpass@mongo:27017/admin`)
+
+## Troubleshooting
+
+### Services won't start
+```bash
+# Check logs
+docker compose logs
+
+# Restart services
+docker compose restart
+
+# Clean restart
+docker compose down -v && docker compose up -d
+```
+
+### Permission errors
+All containers run as non-root user `dagster` (UID 1000). If you encounter permission issues, rebuild:
+```bash
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Database connection issues
+```bash
+# Check PostgreSQL
+docker compose exec dagster-postgres pg_isready -U ltuser -d dagster
+
+# Check MongoDB
+docker compose exec mongo mongosh --eval "db.adminCommand('ping')"
+```
 
 ---

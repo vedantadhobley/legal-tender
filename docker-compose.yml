@@ -35,7 +35,7 @@ services:
     env_file:
       - .env
     environment:
-      DAGSTER_HOME: /app/dagster_home
+      DAGSTER_HOME: /app
     depends_on:
       dagster-postgres:
         condition: service_healthy
@@ -50,8 +50,6 @@ services:
       start_period: 60s
     networks:
       - legal-tender-network
-    volumes:
-      - dagster_home:/app/dagster_home
 
   # Dagster daemon (for schedules and sensors)
   dagster-daemon:
@@ -61,7 +59,7 @@ services:
     env_file:
       - .env
     environment:
-      DAGSTER_HOME: /app/dagster_home
+      DAGSTER_HOME: /app
     depends_on:
       dagster-postgres:
         condition: service_healthy
@@ -70,8 +68,6 @@ services:
     restart: unless-stopped
     networks:
       - legal-tender-network
-    volumes:
-      - dagster_home:/app/dagster_home
 
   # MongoDB for application data
   mongo:
@@ -126,8 +122,6 @@ volumes:
   mongo_data:
     driver: local
   dagster_postgres_data:
-    driver: local
-  dagster_home:
     driver: local
 
 networks:
