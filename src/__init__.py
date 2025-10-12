@@ -11,11 +11,23 @@ Architecture:
 """
 
 from dagster import Definitions
-from src.assets import congress_members_asset, member_donor_data_asset
+from src.assets import (
+    congress_members_asset,
+    member_donor_data_asset,
+    member_fec_mapping_asset,
+    data_sync_asset,
+)
 from src.jobs import (
     congress_pipeline_job,
     donor_pipeline_job,
     full_pipeline_job,
+    member_fec_mapping_job,
+    refactored_pipeline_job,
+    data_sync_job,
+)
+from src.schedules import (
+    weekly_data_sync_schedule,
+    weekly_pipeline_schedule,
 )
 from src.resources import mongo_resource
 
@@ -27,6 +39,8 @@ defs = Definitions(
     assets=[
         congress_members_asset,
         member_donor_data_asset,
+        member_fec_mapping_asset,  # NEW: Refactored bulk data approach
+        data_sync_asset,  # NEW: Independent data download/sync
     ],
     resources={
         "mongo": mongo_resource,
@@ -35,17 +49,12 @@ defs = Definitions(
         congress_pipeline_job,
         donor_pipeline_job,
         full_pipeline_job,
+        member_fec_mapping_job,  # NEW: Individual FEC mapping job
+        refactored_pipeline_job,  # NEW: Full refactored pipeline (data_sync + mapping)
+        data_sync_job,  # NEW: Download-only job
     ],
-    
-    # TODO: Add schedules for automated execution
-    # schedules=[
-    #     ScheduleDefinition(
-    #         job=full_pipeline_job,
-    #         cron_schedule="0 2 * * *",  # Daily at 2 AM
-    #         default_status=DefaultScheduleStatus.RUNNING,
-    #     ),
-    # ],
-    
-    # TODO: Add sensors for event-driven execution
-    # sensors=[...],
+    schedules=[
+        weekly_data_sync_schedule,  # Downloads fresh data every Sunday 2 AM
+        weekly_pipeline_schedule,   # Full pipeline every Sunday 3 AM
+    ],
 )
