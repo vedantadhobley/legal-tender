@@ -227,3 +227,6 @@ docker-compose.yml.backup
 
 # Old flow files (migrated to jobs)
 src/flows/
+
+# FEC bulk data cache (large files, don't commit to git)
+data/fec_cache/

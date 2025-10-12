@@ -2,15 +2,7 @@
 from typing import List, Dict, Any
 
 from dagster import asset, AssetExecutionContext, AssetIn, Output
-from src.api.election_api import (
-    search_candidate_by_name,
-    get_candidate_committees,
-    get_candidate_financial_summary,
-    get_committee_contributions_paginated,
-    get_independent_expenditures_for_candidate,
-    aggregate_contributions_by_donor,
-    aggregate_independent_expenditures_by_committee
-)
+from src.api.fec_bulk_data import get_cache
 from src.resources.mongo import MongoDBResource
 
 
@@ -47,13 +39,29 @@ def member_fec_mapping_asset(
     context: AssetExecutionContext,
     congress_members: List[Dict[str, Any]]
 ) -> Output[Dict[str, Any]]:
-    """Map all Congress members to their FEC candidate IDs."""
+    """Map all Congress members to their FEC candidate IDs using bulk data."""
     context.log.info("=" * 80)
-    context.log.info("🗺️  MAPPING CONGRESS MEMBERS TO FEC CANDIDATE IDS")
+    context.log.info("🗺️  MAPPING CONGRESS MEMBERS TO FEC CANDIDATE IDS (BULK DATA)")
     context.log.info("=" * 80)
     
-    # Just process everyone - turns out filtering by year is dumb
-    # Most members should have FEC data by now (October 2025)
+    # Load FEC bulk data for available cycles
+    cache = get_cache()
+    context.log.info("Loading FEC bulk data...")
+    
+    # Try to load 2024 cycle (should always exist)
+    if not cache.load_cycle(2024):
+        raise Exception("Failed to load 2024 cycle data")
+    
+    # Try to load 2026 cycle (may not exist yet)
+    cycles_to_search = [2024]
+    if cache.load_cycle(2026):
+        context.log.info("✅ Loaded 2026 cycle data")
+        cycles_to_search.append(2026)
+    else:
+        context.log.warning("⚠️  2026 cycle data not available yet, using 2024 only")
+    
+    context.log.info(f"✅ Bulk data loaded for cycles: {cycles_to_search}")
+    
     members_to_map = congress_members
     context.log.info(f"Processing all {len(members_to_map)} members")
     
@@ -66,8 +74,11 @@ def member_fec_mapping_asset(
         name = member.get("name", "")
         state_name = member.get("state", "")
         
-        # Convert state name to two-letter code for FEC API
-        state_code = STATE_NAME_TO_CODE.get(state_name, state_name)
+        # Convert state name to two-letter code for FEC bulk data
+        state_code = STATE_NAME_TO_CODE.get(state_name, state_name) or ""
+        if not state_code:
+            failed_count += 1
+            continue
         
         # Determine office from current (latest) term
         terms = member.get("terms", {})
@@ -89,17 +100,12 @@ def member_fec_mapping_asset(
         last_name = name.split(",")[0].strip() if "," in name else name.split()[-1]
         
         context.log.info(f"[{idx}/{len(congress_members)}] {name} ({state_name}-{office})")
-        context.log.info(f"  Searching FEC API: last_name='{last_name}', state={state_code}, office={office}")
         
-        candidates = search_candidate_by_name(last_name, state=state_code, office=office)
+        # Search in bulk data (no rate limits!)
+        candidate = cache.search_candidate(last_name, state_code, office, cycles=cycles_to_search)
         
-        context.log.info(f"  API returned: {type(candidates).__name__} with {len(candidates) if candidates else 0} results")
-        
-        if not candidates:
-            if candidates is None:
-                context.log.warning("  ❌ API Error (returned None)")
-            else:
-                context.log.warning("  ❌ Not found (empty results)")
+        if not candidate:
+            context.log.warning("  ❌ Not found")
             failed_count += 1
             mapping[bioguide_id] = {
                 "bioguide_id": bioguide_id,
@@ -112,7 +118,6 @@ def member_fec_mapping_asset(
             }
             continue
         
-        candidate = candidates[0]
         fec_candidate_id = candidate.get("candidate_id")
         if not fec_candidate_id:
             context.log.warning("  ❌ No candidate_id in result")
@@ -128,7 +133,10 @@ def member_fec_mapping_asset(
             }
             continue
         
-        committees = get_candidate_committees(fec_candidate_id, cycle=2024) or []
+        # Get committees from bulk data (try both 2024 and 2026 cycles)
+        committees = cache.get_candidate_committees(fec_candidate_id, 2026)
+        if not committees:
+            committees = cache.get_candidate_committees(fec_candidate_id, 2024)
         
         context.log.info(f"  ✅ {fec_candidate_id} ({len(committees)} committees)")
         mapped_count += 1
@@ -143,7 +151,7 @@ def member_fec_mapping_asset(
                 {
                     "committee_id": c.get("committee_id"),
                     "committee_name": c.get("name"),
-                    "committee_type": c.get("committee_type_full")
+                    "committee_type": c.get("type")  # Bulk data uses "type" not "committee_type_full"
                 }
                 for c in committees
             ],
@@ -182,10 +190,48 @@ def member_finance_asset(
     mongo: MongoDBResource,
     member_fec_mapping: Dict[str, Any]
 ) -> Output[int]:
-    """Fetch complete financial data for all members and store in MongoDB."""
+    """Fetch complete financial data for all members using bulk data."""
     context.log.info("=" * 80)
-    context.log.info("💰 FETCHING COMPLETE FINANCIAL DATA")
+    context.log.info("💰 FETCHING FINANCIAL DATA (BULK)")
     context.log.info("=" * 80)
+    
+    # Load bulk financial data
+    cache = get_cache()
+    context.log.info("Loading FEC bulk financial data...")
+    
+    # Determine which cycles are available
+    cycles_available = [2024]
+    
+    # Load candidate summaries (fast, ~50MB each)
+    cache.load_candidate_summaries(2024)
+    if cache.load_candidate_summaries(2026):
+        context.log.info("✅ Loaded 2026 candidate summaries")
+        cycles_available.append(2026)
+    else:
+        context.log.warning("⚠️  2026 cycle not available, using 2024 only")
+    
+    # Load committee summaries (fast, ~100MB)
+    context.log.info("Loading committee financial summaries...")
+    cache.load_committee_summaries(2024)
+    
+    # Load PAC summaries (fast, ~50MB)
+    context.log.info("Loading PAC/party financial summaries...")
+    cache.load_pac_summaries(2024)
+    
+    # Load individual contributions (slow, ~4GB)
+    # NOTE: You can add max_records=100000 for testing to limit size
+    context.log.info("Loading individual contributions (this will take several minutes)...")
+    cache.load_individual_contributions(2024)  # Full 2024 cycle
+    
+    # Load independent expenditures (Super PAC spending - THE AIPAC DATA!)
+    context.log.info("Loading independent expenditures/Super PAC spending...")
+    cache.load_independent_expenditures(2024)  # Full 2024 cycle
+    
+    # Load committee-to-committee transfers (shows money flow networks)
+    context.log.info("Loading committee-to-committee transfers...")
+    cache.load_committee_transfers(2024)  # Full 2024 cycle
+    
+    context.log.info("✅ All bulk financial data loaded")
     
     members_to_process = [m for m in member_fec_mapping.values() if m.get("fec_candidate_id")]
     processed_count = 0
@@ -201,42 +247,52 @@ def member_finance_asset(
             
             context.log.info(f"[{idx}/{len(members_to_process)}] {member_name}")
             
-            # Get financial summary
-            financial_summary = get_candidate_financial_summary(fec_candidate_id, cycle=2024)
+            # Get financial summary from bulk data (try most recent cycle first)
+            financial_summary = None
+            for cycle in sorted(cycles_available, reverse=True):
+                financial_summary = cache.get_candidate_summary(fec_candidate_id, cycle)
+                if financial_summary:
+                    break
+            
             if financial_summary:
-                context.log.info(f"  💵 ${financial_summary.get('receipts', 0):,.0f}")
+                context.log.info(f"  💵 ${financial_summary.get('total_receipts', 0):,.0f}")
             
-            # Get direct contributions (limit 10 pages)
+            # Get direct contributions from bulk data
             all_contributions = []
-            for committee in committees[:1]:
-                contributions = list(get_committee_contributions_paginated(
-                    committee["committee_id"],
-                    two_year_period=2024,
-                    max_pages=10
-                ))
-                all_contributions.extend(contributions)
+            for committee in committees:
+                contribs = cache.get_contributions_for_committee(committee["committee_id"], 2024)
+                all_contributions.extend(contribs)
             
-            donor_aggregates = aggregate_contributions_by_donor(all_contributions) if all_contributions else {}
-            top_donors = sorted(donor_aggregates.values(), key=lambda x: x["total_amount"], reverse=True)[:100]
+            # Aggregate contributions by donor
+            donor_totals = {}
+            for contrib in all_contributions:
+                donor_name = contrib["contributor_name"].upper().strip()
+                if donor_name not in donor_totals:
+                    donor_totals[donor_name] = {
+                        "donor_name": donor_name,
+                        "total_amount": 0,
+                        "contribution_count": 0,
+                        "employer": contrib["employer"],
+                        "occupation": contrib["occupation"],
+                    }
+                donor_totals[donor_name]["total_amount"] += contrib["amount"]
+                donor_totals[donor_name]["contribution_count"] += 1
             
-            context.log.info(f"  👥 {len(all_contributions)} contributions")
+            top_donors = sorted(donor_totals.values(), key=lambda x: x["total_amount"], reverse=True)[:100]
             
-            # Get independent expenditures
-            independent_exp = list(get_independent_expenditures_for_candidate(
-                fec_candidate_id,
-                two_year_period=2024,
-                max_pages=10
-            ))
+            context.log.info(f"  👥 {len(all_contributions):,} contributions from {len(donor_totals)} donors")
             
-            committee_aggregates = aggregate_independent_expenditures_by_committee(independent_exp) if independent_exp else {}
+            # Get independent expenditures (Super PAC spending) from bulk data
+            committee_aggregates = cache.aggregate_expenditures_by_committee_for_candidate(fec_candidate_id, 2024)
+            
             spenders_for = [c for c in committee_aggregates.values() if c["net_support"] > 0]
             spenders_against = [c for c in committee_aggregates.values() if c["net_support"] < 0]
             
             total_for = sum(c["support_amount"] for c in spenders_for)
             total_against = sum(c["oppose_amount"] for c in spenders_against)
             
-            if independent_exp:
-                context.log.info(f"  🎯 FOR: ${total_for:,.0f}, AGAINST: ${total_against:,.0f}")
+            if committee_aggregates:
+                context.log.info(f"  🎯 Super PAC - FOR: ${total_for:,.0f}, AGAINST: ${total_against:,.0f}")
             
             # Build document
             finance_doc = {
@@ -248,15 +304,16 @@ def member_finance_asset(
                 "fec_candidate_id": fec_candidate_id,
                 "fec_committees": committees,
                 "financial_summary": {
-                    "total_receipts": financial_summary.get("receipts", 0) if financial_summary else 0,
-                    "total_disbursements": financial_summary.get("disbursements", 0) if financial_summary else 0,
-                    "cash_on_hand": financial_summary.get("cash_on_hand_end_period", 0) if financial_summary else 0,
-                    "debts_owed": financial_summary.get("debts_owed_by_committee", 0) if financial_summary else 0,
+                    "total_receipts": financial_summary.get("total_receipts", 0) if financial_summary else 0,
+                    "total_disbursements": financial_summary.get("total_disbursements", 0) if financial_summary else 0,
+                    "cash_on_hand": financial_summary.get("cash_on_hand", 0) if financial_summary else 0,
+                    "debts_owed": financial_summary.get("debts_owed", 0) if financial_summary else 0,
+                    "total_individual_contributions": financial_summary.get("total_individual_contributions", 0) if financial_summary else 0,
                 } if financial_summary else {},
                 "direct_contributions": {
-                    "total_amount": sum(c["contribution_receipt_amount"] for c in all_contributions),
+                    "total_amount": sum(c["amount"] for c in all_contributions),
                     "contribution_count": len(all_contributions),
-                    "unique_donor_count": len(donor_aggregates),
+                    "unique_donor_count": len(donor_totals),
                     "top_donors": top_donors,
                 },
                 "independent_expenditures": {
