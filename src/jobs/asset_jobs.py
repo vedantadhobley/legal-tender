@@ -37,6 +37,22 @@ donor_pipeline_job = define_asset_job(
 )
 
 # ============================================================================
+# FEC MAPPING JOB (NEW - REFACTORED APPROACH)
+# ============================================================================
+
+member_fec_mapping_job = define_asset_job(
+    name="member_fec_mapping",
+    description="Build complete member->FEC mapping from legislators file + FEC bulk data + ProPublica API",
+    selection=AssetSelection.keys("member_fec_mapping"),
+    tags={
+        "team": "data-engineering",
+        "source": "bulk-data",
+        "priority": "high",
+        "approach": "hybrid-bulk",
+    },
+)
+
+# ============================================================================
 # FULL PIPELINE JOB
 # ============================================================================
 
@@ -51,5 +67,38 @@ full_pipeline_job = define_asset_job(
         "pipeline": "full-refresh",
         "priority": "high",
         "schedule": "daily",
+    },
+)
+
+# ============================================================================
+# DATA SYNC JOB (DOWNLOADS ONLY)
+# ============================================================================
+
+data_sync_job = define_asset_job(
+    name="data_sync",
+    description="Download and sync all external data sources (legislators, FEC bulk data)",
+    selection=AssetSelection.keys("data_sync"),
+    tags={
+        "team": "data-engineering",
+        "type": "download",
+        "priority": "high",
+        "schedule": "weekly-sunday",
+    },
+)
+
+# ============================================================================
+# NEW REFACTORED PIPELINE (BULK DATA APPROACH)
+# ============================================================================
+
+refactored_pipeline_job = define_asset_job(
+    name="refactored_pipeline",
+    description="Complete pipeline: Download data (data_sync) + Build member FEC mapping",
+    selection=AssetSelection.keys("data_sync", "member_fec_mapping"),
+    tags={
+        "team": "data-engineering",
+        "pipeline": "refactored",
+        "priority": "high",
+        "approach": "bulk-data",
+        "schedule": "weekly-sunday",
     },
 )

@@ -1,5 +1,7 @@
 # Legal Tender
 
+> **Latest Update**: Implemented organized data repository with smart downloads that check `Last-Modified` headers. Downloads are now independent assets with weekly scheduling. See [Data Repository](#data-repository) and [Data Sync Strategy](#data-sync-strategy) sections below.
+
 ## Project Overview
 
 Legal Tender analyzes the influence of donors on US politicians by orchestrating data collection, enrichment, and AI-driven analysis. The project aims to:
@@ -86,6 +88,31 @@ Legal Tender analyzes the influence of donors on US politicians by orchestrating
    └───────────────────┘
 ```
 
+### Data Pipeline Flow
+
+```
+Weekly Schedule (Sunday 2 AM UTC)
+         │
+         ▼
+   data_sync_asset
+   • Check Last-Modified headers
+   • Download if remote newer
+   • Legislators file (1MB)
+   • FEC bulk data (~4MB)
+         │
+         │ Dependencies
+         ▼
+   member_fec_mapping_asset
+   • Load cached data
+   • Build member→FEC mapping
+   • Extract committee IDs
+   • Validate FEC IDs
+         │
+         ▼
+     MongoDB
+   Collection: member_fec_mapping
+```
+
 ## Quick Start
 
 ### Prerequisites
@@ -134,8 +161,10 @@ Legal Tender analyzes the influence of donors on US politicians by orchestrating
 ## Working with Data Assets
 
 ### Available Assets
+- **`data_sync`**: Downloads and syncs all external data (legislators, FEC bulk data) - checks Last-Modified headers, only downloads if remote is newer
 - **`congress_members`**: Current members of U.S. Congress (House + Senate) from Congress.gov API
 - **`member_donor_data`**: Donor contributions for all Congress members from OpenFEC API (depends on congress_members)
+- **`member_fec_mapping`**: Complete member→FEC mapping from legislators file + FEC bulk data (depends on data_sync)
 
 ### Materializing Assets (Refreshing Data)
 
@@ -161,42 +190,141 @@ docker compose exec dagster-webserver dagster asset list -m src
 ### Available Jobs
 
 **Asset Materialization Jobs:**
+- **`data_sync_job`**: Downloads only - syncs legislators and FEC bulk data
 - **`congress_pipeline`**: Refreshes congress_members data only
 - **`donor_pipeline`**: Refreshes member_donor_data only (requires congress_members)
-- **`full_pipeline`**: Refreshes all data in dependency order (recommended for scheduled runs)
+- **`member_fec_mapping_job`**: Builds member FEC mapping (requires data_sync)
+- **`refactored_pipeline`**: Complete pipeline - downloads data + builds member FEC mapping (recommended)
+- **`full_pipeline`**: Original pipeline - refreshes congress_members + donor data
 
 **Via Command Line:**
 ```bash
-# Run a specific job
-docker compose exec dagster-webserver dagster job execute -m src -j full_pipeline
+# Run the new refactored pipeline (data sync + FEC mapping)
+docker compose exec dagster-webserver dagster job execute -m src -j refactored_pipeline
+
+# Run just the data sync
+docker compose exec dagster-webserver dagster job execute -m src -j data_sync_job
 
 # List all jobs
 docker compose exec dagster-webserver dagster job list -m src
 ```
 
-**Note**: The auto-generated `__ASSET_JOB` appears in the job list but is redundant - use the explicit jobs above instead.
+### Schedules
+
+**Weekly Sunday Schedules** (must be enabled in Dagster UI):
+- **`weekly_data_sync_schedule`**: Downloads fresh data every Sunday at 2 AM UTC
+- **`weekly_pipeline_schedule`**: Full pipeline (download + process) every Sunday at 3 AM UTC
+
+To enable:
+1. Open Dagster UI → **Overview** → **Schedules**
+2. Find `weekly_pipeline_schedule`
+3. Click **Start Schedule**
 
 ## Project Structure
 
 ```
 legal-tender/
+├── data/                     # Local data repository (mounted in Docker)
+│   ├── legislators/          # GitHub legislators data
+│   │   ├── current.yaml      # Current members with FEC IDs
+│   │   └── metadata.json
+│   ├── fec/                  # FEC bulk data
+│   │   ├── 2024/             # 2024 election cycle
+│   │   │   ├── candidates.zip
+│   │   │   ├── committees.zip
+│   │   │   ├── linkages.zip
+│   │   │   ├── summaries/
+│   │   │   └── transactions/
+│   │   └── 2026/             # 2026 election cycle
+│   └── congress_api/         # ProPublica API cache
 ├── src/
-│   ├── __init__.py           # Dagster definitions (assets, jobs, resources)
-│   ├── assets/               # Data assets (data products)
+│   ├── __init__.py           # Dagster definitions (assets, jobs, schedules)
+│   ├── assets/               # Data assets
+│   │   ├── data_sync.py      # Downloads & syncs external data
+│   │   ├── member_mapping.py # Builds member→FEC mapping
 │   │   ├── congress.py       # congress_members asset
 │   │   └── donors.py         # member_donor_data asset
-│   ├── jobs/                 # Asset materialization jobs
-│   │   └── asset_jobs.py     # congress_pipeline, donor_pipeline, full_pipeline
+│   ├── jobs/                 # Asset jobs
+│   │   └── asset_jobs.py     # All job definitions
+│   ├── schedules/            # Automated schedules
+│   │   └── __init__.py       # Weekly Sunday schedules
+│   ├── data/                 # Data repository management
+│   │   └── repository.py     # DataRepository class
 │   ├── resources/            # Shared resources
 │   │   └── mongo.py          # MongoDB resource
-│   ├── api/                  # API clients (Congress, Election, Lobbying)
+│   ├── api/                  # API clients
+│   │   ├── congress_legislators.py  # GitHub legislators API
+│   │   ├── fec_bulk_data.py         # FEC bulk data API
+│   │   ├── congress_api.py          # ProPublica Congress API
+│   │   ├── election_api.py          # OpenFEC API
+│   │   └── lobbying_api.py          # Senate LDA API
 │   └── utils/                # Utility functions
+├── inspect_data.py           # Repository inspection tool
 ├── dagster.yaml              # Dagster instance configuration
 ├── workspace.yaml            # Code location configuration
 ├── docker-compose.yml        # Service definitions
 ├── Dockerfile                # Multi-stage container build
 └── requirements.txt          # Python dependencies
 ```
+
+## Data Repository
+
+All downloaded data is organized in the `data/` directory with a clean structure:
+
+### Directory Layout
+- **`data/legislators/`**: Congress members data from GitHub (1MB)
+- **`data/fec/2024/`**: 2024 election cycle FEC bulk data
+- **`data/fec/2026/`**: 2026 election cycle FEC bulk data
+- **`data/congress_api/`**: Cached ProPublica API responses
+
+### File Naming
+Friendly names instead of cryptic FEC codes:
+- `candidates.zip` (was `cn24.zip`)
+- `committees.zip` (was `cm24.zip`)
+- `linkages.zip` (was `ccl24.zip`)
+- `independent_expenditures.zip` (was `oppexp24.zip`)
+
+### Inspection Tools
+
+**`inspect_data.py`** - View repository contents and stats:
+```bash
+python3 inspect_data.py              # Overview of downloaded files
+python3 inspect_data.py --metadata   # Detailed metadata
+python3 inspect_data.py --json       # JSON output
+```
+
+**`test_data_repository.py`** - Test downloads and structure:
+```bash
+python3 test_data_repository.py      # Test structure + optional downloads
+```
+
+## Data Sync Strategy
+
+### Smart Downloads
+The `data_sync` asset checks remote `Last-Modified` headers before downloading:
+1. If local file doesn't exist → download
+2. Check remote `Last-Modified` timestamp
+3. Compare to local file modification time
+4. Only download if remote is newer
+5. Fallback to 7-day age check if remote check fails
+
+### Configuration
+```python
+DataSyncConfig(
+    force_refresh=False,           # Force re-download
+    cycles=["2024", "2026"],       # FEC cycles to sync
+    sync_legislators=True,         # Legislators file
+    sync_fec_core=True,            # Core files (~4MB)
+    sync_fec_summaries=False,      # Summaries (~7MB)
+    sync_fec_transactions=False,   # Transactions (~4GB)
+    check_remote_modified=True,    # Check Last-Modified headers
+)
+```
+
+### Presets
+- **Minimal** (fast, ~4MB): legislators + core FEC files
+- **Standard** (recommended, ~11MB): + summaries
+- **Complete** (large, ~4GB): + transaction files
 
 ## Development
 
