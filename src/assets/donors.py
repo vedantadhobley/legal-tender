@@ -14,6 +14,23 @@ from src.api.election_api import (
 from src.resources.mongo import MongoDBResource
 
 
+# State name to two-letter code mapping for FEC API
+STATE_NAME_TO_CODE = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR", "California": "CA",
+    "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE", "Florida": "FL", "Georgia": "GA",
+    "Hawaii": "HI", "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA",
+    "Kansas": "KS", "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS", "Missouri": "MO",
+    "Montana": "MT", "Nebraska": "NE", "Nevada": "NV", "New Hampshire": "NH", "New Jersey": "NJ",
+    "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH",
+    "Oklahoma": "OK", "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT", "Vermont": "VT",
+    "Virginia": "VA", "Washington": "WA", "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
+    "District of Columbia": "DC", "Puerto Rico": "PR", "Guam": "GU", "Virgin Islands": "VI",
+    "American Samoa": "AS", "Northern Mariana Islands": "MP"
+}
+
+
 @asset(
     name="member_fec_mapping",
     description="Maps Congress bioguideId to FEC candidate_id for all 538 members",
@@ -35,32 +52,59 @@ def member_fec_mapping_asset(
     context.log.info("🗺️  MAPPING CONGRESS MEMBERS TO FEC CANDIDATE IDS")
     context.log.info("=" * 80)
     
+    # Just process everyone - turns out filtering by year is dumb
+    # Most members should have FEC data by now (October 2025)
+    members_to_map = congress_members
+    context.log.info(f"Processing all {len(members_to_map)} members")
+    
     mapping = {}
     mapped_count = 0
     failed_count = 0
     
-    for idx, member in enumerate(congress_members, 1):
+    for idx, member in enumerate(members_to_map, 1):
         bioguide_id = member.get("bioguideId")
-        first_name = member.get("firstName", "")
-        last_name = member.get("lastName", "")
-        state = member.get("state", "")
-        office = "H" if "House" in str(member.get("terms", [])) else "S"
+        name = member.get("name", "")
+        state_name = member.get("state", "")
         
-        if not bioguide_id or not last_name:
+        # Convert state name to two-letter code for FEC API
+        state_code = STATE_NAME_TO_CODE.get(state_name, state_name)
+        
+        # Determine office from current (latest) term
+        terms = member.get("terms", {})
+        term_items = terms.get("item", []) if isinstance(terms, dict) else []
+        if not term_items:
             failed_count += 1
             continue
         
-        context.log.info(f"[{idx}/{len(congress_members)}] {last_name}, {first_name} ({state}-{office})")
+        # Get the latest term (last in the list)
+        current_term = term_items[-1] if isinstance(term_items, list) else term_items
+        chamber = current_term.get("chamber", "")
+        office = "S" if "Senate" in chamber else "H"
         
-        candidates = search_candidate_by_name(last_name, state=state, office=office)
+        # Extract last name from full name (format: "Last, First")
+        if not bioguide_id or not name:
+            failed_count += 1
+            continue
+        
+        last_name = name.split(",")[0].strip() if "," in name else name.split()[-1]
+        
+        context.log.info(f"[{idx}/{len(congress_members)}] {name} ({state_name}-{office})")
+        context.log.info(f"  Searching FEC API: last_name='{last_name}', state={state_code}, office={office}")
+        
+        candidates = search_candidate_by_name(last_name, state=state_code, office=office)
+        
+        context.log.info(f"  API returned: {type(candidates).__name__} with {len(candidates) if candidates else 0} results")
         
         if not candidates:
-            context.log.warning("  ❌ Not found")
+            if candidates is None:
+                context.log.warning("  ❌ API Error (returned None)")
+            else:
+                context.log.warning("  ❌ Not found (empty results)")
             failed_count += 1
             mapping[bioguide_id] = {
                 "bioguide_id": bioguide_id,
-                "member_name": f"{last_name}, {first_name}",
-                "state": state,
+                "member_name": name,
+                "state": state_code,
                 "office": office,
                 "fec_candidate_id": None,
                 "fec_committees": [],
@@ -75,8 +119,8 @@ def member_fec_mapping_asset(
             failed_count += 1
             mapping[bioguide_id] = {
                 "bioguide_id": bioguide_id,
-                "member_name": f"{last_name}, {first_name}",
-                "state": state,
+                "member_name": name,
+                "state": state_code,
                 "office": office,
                 "fec_candidate_id": None,
                 "fec_committees": [],
@@ -91,8 +135,8 @@ def member_fec_mapping_asset(
         
         mapping[bioguide_id] = {
             "bioguide_id": bioguide_id,
-            "member_name": f"{last_name}, {first_name}",
-            "state": state,
+            "member_name": name,
+            "state": state_code,
             "office": office,
             "fec_candidate_id": fec_candidate_id,
             "fec_committees": [
@@ -107,13 +151,15 @@ def member_fec_mapping_asset(
         }
     
     context.log.info("")
-    context.log.info(f"✅ Mapped: {mapped_count}, ❌ Failed: {failed_count}")
+    context.log.info(f"✅ Mapped: {mapped_count}, ❌ Failed: {failed_count}, ⏭️  Skipped: {len(congress_members) - len(members_to_map)}")
     
     return Output(
         value=mapping,
         metadata={
             "mapped_count": mapped_count,
-            "failed_count": failed_count
+            "failed_count": failed_count,
+            "skipped_new_members": len(congress_members) - len(members_to_map),
+            "total_members": len(congress_members)
         }
     )
 

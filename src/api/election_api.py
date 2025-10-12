@@ -34,8 +34,9 @@ def search_candidate_by_name(name: str, state: Optional[str] = None, office: Opt
     params = {
         "api_key": ELECTION_API_KEY,
         "name": name,
-        "is_active_candidate": "true",
         "per_page": 10
+        # NOTE: Removed is_active_candidate=true filter - it's too restrictive
+        # and misses many current Congress members
     }
     
     if state:
@@ -43,14 +44,52 @@ def search_candidate_by_name(name: str, state: Optional[str] = None, office: Opt
     if office:
         params["office"] = office
     
-    try:
-        resp = requests.get(url, params=params, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("results", [])
-    except Exception as e:
-        logger.error(f"Error searching candidate by name '{name}': {e}")
-        return None
+    max_retries = 3
+    retry_delay = 2.0
+    
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(url, params=params, timeout=15)
+            
+            # Handle rate limiting with exponential backoff
+            if resp.status_code == 429:
+                wait_time = retry_delay * (2 ** attempt)  # Exponential backoff: 2s, 4s, 8s
+                logger.warning(f"Rate limit hit for '{name}' (attempt {attempt+1}/{max_retries}). Waiting {wait_time}s...")
+                time.sleep(wait_time)
+                if attempt < max_retries - 1:
+                    continue
+                else:
+                    logger.error(f"Rate limit persists after {max_retries} attempts for '{name}'")
+                    return None
+            
+            resp.raise_for_status()
+            data = resp.json()
+            results = data.get("results", [])
+            logger.info(f"FEC API search '{name}' (state={state}, office={office}) -> {len(results)} results")
+            time.sleep(30.0)  # Rate limiting: 120 req/hour = 30s between requests minimum
+            return results
+            
+        except requests.exceptions.Timeout as e:
+            logger.error(f"TIMEOUT searching candidate by name '{name}' (state={state}, office={office}): {e}")
+            time.sleep(3.0)
+            if attempt < max_retries - 1:
+                continue
+            return None
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code != 429:  # Already handled 429 above
+                logger.error(f"HTTP ERROR searching candidate by name '{name}' (state={state}, office={office}): {e.response.status_code} - {e}")
+                time.sleep(3.0)
+            if attempt < max_retries - 1:
+                continue
+            return None
+        except Exception as e:
+            logger.error(f"UNEXPECTED ERROR searching candidate by name '{name}' (state={state}, office={office}): {type(e).__name__} - {e}")
+            time.sleep(3.0)
+            if attempt < max_retries - 1:
+                continue
+            return None
+    
+    return None
 
 
 def get_candidate_committees(candidate_id: str, cycle: int = 2024) -> Optional[List[Dict[str, Any]]]:
