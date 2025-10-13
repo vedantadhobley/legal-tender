@@ -116,6 +116,7 @@ def should_download_file(
 
 
 @asset(
+    name="data_sync",
     group_name="data_sync",
     compute_kind="download",
     description="Syncs all external data sources (legislators, FEC bulk data) on a weekly schedule"

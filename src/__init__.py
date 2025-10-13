@@ -18,12 +18,14 @@ from src.assets import (
     data_sync_asset,
 )
 from src.jobs import (
+    # Current jobs (bulk data approach)
+    data_sync_job,
+    member_fec_mapping_job,
+    bulk_data_pipeline_job,
+    # Deprecated jobs (API-based approach)
     congress_pipeline_job,
     donor_pipeline_job,
     full_pipeline_job,
-    member_fec_mapping_job,
-    refactored_pipeline_job,
-    data_sync_job,
 )
 from src.schedules import (
     weekly_data_sync_schedule,
@@ -46,12 +48,14 @@ defs = Definitions(
         "mongo": mongo_resource,
     },
     jobs=[
+        # Current jobs (bulk data approach)
+        data_sync_job,
+        member_fec_mapping_job,
+        bulk_data_pipeline_job,
+        # Deprecated jobs (API-based approach, kept for compatibility)
         congress_pipeline_job,
         donor_pipeline_job,
         full_pipeline_job,
-        member_fec_mapping_job,  # NEW: Individual FEC mapping job
-        refactored_pipeline_job,  # NEW: Full refactored pipeline (data_sync + mapping)
-        data_sync_job,  # NEW: Download-only job
     ],
     schedules=[
         weekly_data_sync_schedule,  # Downloads fresh data every Sunday 2 AM
