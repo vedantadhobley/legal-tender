@@ -49,10 +49,22 @@ member_fec_mapping_job = define_asset_job(
     },
 )
 
+member_financial_summary_job = define_asset_job(
+    name="member_financial_summary_job",
+    description="Load aggregated financial summaries (total raised/spent/cash) for all members from FEC pas2 files",
+    selection=AssetSelection.keys("member_financial_summary"),
+    tags={
+        "team": "data-engineering",
+        "source": "fec-pas2",
+        "priority": "high",
+        "status": "active",
+    },
+)
+
 bulk_data_pipeline_job = define_asset_job(
     name="bulk_data_pipeline_job",
-    description="Complete pipeline: Download data (data_sync) + Build member FEC mapping",
-    selection=AssetSelection.keys("data_sync", "member_fec_mapping"),
+    description="Complete pipeline: Download data (data_sync) + Build member FEC mapping + Load financial summaries",
+    selection=AssetSelection.keys("data_sync", "member_fec_mapping", "member_financial_summary"),
     tags={
         "team": "data-engineering",
         "pipeline": "bulk-data",

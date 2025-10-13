@@ -16,11 +16,13 @@ from src.assets import (
     member_donor_data_asset,
     member_fec_mapping_asset,
     data_sync_asset,
+    member_financial_summary_asset,
 )
 from src.jobs import (
     # Current jobs (bulk data approach)
     data_sync_job,
     member_fec_mapping_job,
+    member_financial_summary_job,
     bulk_data_pipeline_job,
     # Deprecated jobs (API-based approach)
     congress_pipeline_job,
@@ -43,6 +45,7 @@ defs = Definitions(
         member_donor_data_asset,
         member_fec_mapping_asset,  # NEW: Refactored bulk data approach
         data_sync_asset,  # NEW: Independent data download/sync
+        member_financial_summary_asset,  # NEW: Aggregated FEC financial data
     ],
     resources={
         "mongo": mongo_resource,
@@ -51,6 +54,7 @@ defs = Definitions(
         # Current jobs (bulk data approach)
         data_sync_job,
         member_fec_mapping_job,
+        member_financial_summary_job,
         bulk_data_pipeline_job,
         # Deprecated jobs (API-based approach, kept for compatibility)
         congress_pipeline_job,
