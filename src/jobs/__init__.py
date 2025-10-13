@@ -4,6 +4,7 @@ from src.jobs.asset_jobs import (
     # Current jobs (bulk data approach)
     data_sync_job,
     member_fec_mapping_job,
+    member_financial_summary_job,
     bulk_data_pipeline_job,
     # Deprecated jobs (API-based approach)
     congress_pipeline_job,
@@ -15,6 +16,7 @@ __all__ = [
     # Current jobs
     "data_sync_job",
     "member_fec_mapping_job",
+    "member_financial_summary_job",
     "bulk_data_pipeline_job",
     # Deprecated jobs
     "congress_pipeline_job",
