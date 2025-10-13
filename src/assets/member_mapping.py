@@ -37,7 +37,7 @@ class MemberMappingConfig(Config):
     """Configuration for member mapping asset."""
     
     force_refresh: bool = False  # Force re-download of all cached data
-    skip_propublica: bool = False  # Skip ProPublica API calls (faster, but no photos)
+    skip_propublica: bool = True  # Skip ProPublica API calls (we have all data from legislators file)
     cycles: List[str] = ["2024", "2026"]  # FEC cycles to load
 
 

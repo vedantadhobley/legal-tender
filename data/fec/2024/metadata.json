@@ -1,0 +1,22 @@
+{
+  "files": {
+    "cn": {
+      "downloaded_at": "2025-10-12T22:59:03.006914",
+      "size_bytes": 356794,
+      "url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip",
+      "updated_at": "2025-10-12T22:59:03.006943"
+    },
+    "cm": {
+      "downloaded_at": "2025-10-12T22:59:04.016885",
+      "size_bytes": 883333,
+      "url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip",
+      "updated_at": "2025-10-12T22:59:04.016960"
+    },
+    "ccl": {
+      "downloaded_at": "2025-10-12T22:59:04.649770",
+      "size_bytes": 94353,
+      "url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip",
+      "updated_at": "2025-10-12T22:59:04.649842"
+    }
+  }
+}

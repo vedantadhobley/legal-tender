@@ -161,10 +161,21 @@ Weekly Schedule (Sunday 2 AM UTC)
 ## Working with Data Assets
 
 ### Available Assets
-- **`data_sync`**: Downloads and syncs all external data (legislators, FEC bulk data) - checks Last-Modified headers, only downloads if remote is newer
-- **`congress_members`**: Current members of U.S. Congress (House + Senate) from Congress.gov API
-- **`member_donor_data`**: Donor contributions for all Congress members from OpenFEC API (depends on congress_members)
-- **`member_fec_mapping`**: Complete member→FEC mapping from legislators file + FEC bulk data (depends on data_sync)
+
+**Current Pipeline (Bulk Data Approach):**
+- **`data_sync`**: Downloads legislators file + FEC bulk data (~4MB). Smart caching with Last-Modified headers - only downloads if remote files are newer than local cache.
+- **`member_fec_mapping`**: Builds complete member profiles (~538 docs in MongoDB). For each member, creates:
+  - Validated FEC candidate IDs (their campaign committees)
+  - Committee IDs (PACs and other committees they control)
+  - Bio info (name, party, state, district, term dates)
+  - External IDs (bioguide, govtrack, opensecrets, etc.)
+  - Optional: Photo URL, social media, office contact (via ProPublica API)
+  
+  **Output**: MongoDB collection `member_fec_mapping` - the foundation for connecting members to financial data.
+
+**Legacy Assets (API-based, deprecated):**
+- **`congress_members`**: Fetches members from ProPublica Congress API
+- **`member_donor_data`**: Fetches donor data from OpenFEC API (depends on congress_members)
 
 ### Materializing Assets (Refreshing Data)
 
@@ -189,21 +200,24 @@ docker compose exec dagster-webserver dagster asset list -m src
 
 ### Available Jobs
 
-**Asset Materialization Jobs:**
-- **`data_sync_job`**: Downloads only - syncs legislators and FEC bulk data
-- **`congress_pipeline`**: Refreshes congress_members data only
-- **`donor_pipeline`**: Refreshes member_donor_data only (requires congress_members)
-- **`member_fec_mapping_job`**: Builds member FEC mapping (requires data_sync)
-- **`refactored_pipeline`**: Complete pipeline - downloads data + builds member FEC mapping (recommended)
-- **`full_pipeline`**: Original pipeline - refreshes congress_members + donor data
+**Current Jobs (Bulk Data Approach - Recommended):**
+- **`data_sync_job`**: Downloads legislators file + FEC bulk data (~4MB). Smart caching checks remote Last-Modified headers.
+- **`member_fec_mapping_job`**: Builds complete member→FEC mapping (~538 profiles) with validated FEC IDs and committee IDs. Takes ~30 seconds (or ~5 min with ProPublica enhancement).
+- **`bulk_data_pipeline_job`**: Complete pipeline - runs data_sync + member_fec_mapping in sequence. **Use this for full refresh.**
+
+**Legacy Jobs (API-based, deprecated):**
+- **`congress_pipeline`**: Fetches members from ProPublica API
+- **`donor_pipeline`**: Fetches donor data from OpenFEC API
+- **`full_pipeline`**: Legacy pipeline combining congress + donor jobs
 
 **Via Command Line:**
 ```bash
-# Run the new refactored pipeline (data sync + FEC mapping)
-docker compose exec dagster-webserver dagster job execute -m src -j refactored_pipeline
+# Run the complete bulk data pipeline (recommended)
+docker compose exec dagster-webserver dagster job execute -m src -j bulk_data_pipeline_job
 
-# Run just the data sync
+# Or run individual jobs:
 docker compose exec dagster-webserver dagster job execute -m src -j data_sync_job
+docker compose exec dagster-webserver dagster job execute -m src -j member_fec_mapping_job
 
 # List all jobs
 docker compose exec dagster-webserver dagster job list -m src
@@ -211,14 +225,17 @@ docker compose exec dagster-webserver dagster job list -m src
 
 ### Schedules
 
-**Weekly Sunday Schedules** (must be enabled in Dagster UI):
-- **`weekly_data_sync_schedule`**: Downloads fresh data every Sunday at 2 AM UTC
-- **`weekly_pipeline_schedule`**: Full pipeline (download + process) every Sunday at 3 AM UTC
+**Weekly Sunday Schedules** (must be manually enabled in Dagster UI):
+- **`weekly_data_sync`**: Downloads fresh data every Sunday at 2 AM UTC (~4MB download, ~30 seconds)
+- **`weekly_bulk_data_pipeline`**: Complete pipeline every Sunday at 3 AM UTC (download + mapping, ~5-6 minutes with ProPublica)
 
-To enable:
+**To enable a schedule:**
 1. Open Dagster UI → **Overview** → **Schedules**
-2. Find `weekly_pipeline_schedule`
-3. Click **Start Schedule**
+2. Find the schedule (e.g., `weekly_bulk_data_pipeline`)
+3. Toggle **Start Schedule**
+4. Verify it shows as **RUNNING**
+
+Once enabled, the pipeline will automatically refresh your data every Sunday morning.
 
 ## Project Structure
 

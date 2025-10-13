@@ -97,8 +97,13 @@ def download_fec_file(
     return cache_path
 
 
-def parse_fec_file(zip_path: Path) -> List[Dict[str, str]]:
-    """Parse a FEC bulk data ZIP file."""
+def parse_fec_candidates_file(zip_path: Path) -> List[Dict[str, str]]:
+    """Parse FEC candidate master file (cn.txt).
+    
+    Format: CAND_ID|CAND_NAME|CAND_PTY_AFFILIATION|CAND_ELECTION_YR|CAND_OFFICE_ST|
+            CAND_OFFICE|CAND_OFFICE_DISTRICT|CAND_ICI|CAND_STATUS|CAND_PCC|
+            CAND_ST1|CAND_ST2|CAND_CITY|CAND_ST|CAND_ZIP
+    """
     records = []
     with zipfile.ZipFile(zip_path) as zf:
         txt_files = [name for name in zf.namelist() if name.endswith('.txt')]
@@ -106,20 +111,60 @@ def parse_fec_file(zip_path: Path) -> List[Dict[str, str]]:
             return records
         
         with zf.open(txt_files[0]) as f:
-            content = f.read().decode('utf-8')
+            content = f.read().decode('utf-8', errors='ignore')
             lines = content.strip().split('\n')
-            if len(lines) < 2:
-                return records
             
-            header = lines[0].split('|')
-            for line in lines[1:]:
+            for line in lines:
                 if not line.strip():
                     continue
                 parts = line.split('|')
-                record = {header[i]: parts[i] if i < len(parts) else '' for i in range(len(header))}
-                records.append(record)
+                if len(parts) >= 15:  # Ensure we have all columns
+                    records.append({
+                        'CAND_ID': parts[0],
+                        'CAND_NAME': parts[1],
+                        'CAND_PTY_AFFILIATION': parts[2],
+                        'CAND_ELECTION_YR': parts[3],
+                        'CAND_OFFICE_ST': parts[4],
+                        'CAND_OFFICE': parts[5],
+                        'CAND_OFFICE_DISTRICT': parts[6],
+                        'CAND_ICI': parts[7],  # Incumbent/Challenger/Open
+                        'CAND_STATUS': parts[8],
+                        'CAND_PCC': parts[9],  # Principal Campaign Committee
+                    })
     
-    print(f"Parsed {len(records)} records")
+    return records
+
+
+def parse_fec_linkages_file(zip_path: Path) -> List[Dict[str, str]]:
+    """Parse FEC candidate-committee linkages file (ccl.txt).
+    
+    Format: CAND_ID|CAND_ELECTION_YR|FEC_ELECTION_YR|CMTE_ID|CMTE_TP|CMTE_DSGN|LINKAGE_ID
+    """
+    records = []
+    with zipfile.ZipFile(zip_path) as zf:
+        txt_files = [name for name in zf.namelist() if name.endswith('.txt')]
+        if not txt_files:
+            return records
+        
+        with zf.open(txt_files[0]) as f:
+            content = f.read().decode('utf-8', errors='ignore')
+            lines = content.strip().split('\n')
+            
+            for line in lines:
+                if not line.strip():
+                    continue
+                parts = line.split('|')
+                if len(parts) >= 7:
+                    records.append({
+                        'CAND_ID': parts[0],
+                        'CAND_ELECTION_YR': parts[1],
+                        'FEC_ELECTION_YR': parts[2],
+                        'CMTE_ID': parts[3],
+                        'CMTE_TP': parts[4],
+                        'CMTE_DSGN': parts[5],
+                        'LINKAGE_ID': parts[6],
+                    })
+    
     return records
 
 
@@ -140,7 +185,7 @@ def load_fec_candidates(
         Dict mapping candidate ID to candidate data
     """
     zip_path = download_fec_file('cn', cycle, force_refresh, repository)
-    records = parse_fec_file(zip_path)
+    records = parse_fec_candidates_file(zip_path)
     
     candidates = {}
     for record in records:
@@ -177,7 +222,7 @@ def load_committee_linkages(
         Dict mapping candidate ID to list of committee IDs
     """
     zip_path = download_fec_file('ccl', cycle, force_refresh, repository)
-    records = parse_fec_file(zip_path)
+    records = parse_fec_linkages_file(zip_path)
     
     linkages = {}
     for record in records:
@@ -212,10 +257,22 @@ def load_independent_expenditures(
         repository: DataRepository instance
         
     Returns:
-        List of expenditure records
+        List of expenditure records (raw pipe-delimited data)
     """
     zip_path = download_fec_file('oppexp', cycle, force_refresh, repository)
-    records = parse_fec_file(zip_path)
+    
+    # For now, return raw records - we'll add proper parsing when we need it
+    records = []
+    with zipfile.ZipFile(zip_path) as zf:
+        txt_files = [name for name in zf.namelist() if name.endswith('.txt')]
+        if txt_files:
+            with zf.open(txt_files[0]) as f:
+                content = f.read().decode('utf-8', errors='ignore')
+                lines = content.strip().split('\n')
+                for line in lines:
+                    if line.strip():
+                        records.append({'raw': line})
+    
     print(f"✓ Loaded {len(records)} independent expenditures")
     return records
 
