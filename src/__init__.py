@@ -11,11 +11,21 @@ Architecture:
 """
 
 from dagster import Definitions
-from src.assets import congress_members_asset, member_donor_data_asset
+from src.assets import (
+    # Bulk data assets (active)
+    member_fec_mapping_asset,
+    data_sync_asset,
+    member_financial_summary_asset,
+)
 from src.jobs import (
-    congress_pipeline_job,
-    donor_pipeline_job,
-    full_pipeline_job,
+    # Current jobs (bulk data approach)
+    data_sync_job,
+    member_fec_mapping_job,
+    member_financial_summary_job,
+    bulk_data_pipeline_job,
+)
+from src.schedules import (
+    weekly_pipeline_schedule,
 )
 from src.resources import mongo_resource
 
@@ -25,27 +35,22 @@ from src.resources import mongo_resource
 
 defs = Definitions(
     assets=[
-        congress_members_asset,
-        member_donor_data_asset,
+        # Active assets (bulk data approach)
+        data_sync_asset,  # Downloads legislators + FEC bulk files
+        member_fec_mapping_asset,  # Builds member→FEC mapping
+        member_financial_summary_asset,  # Aggregated financial summaries
     ],
     resources={
         "mongo": mongo_resource,
     },
     jobs=[
-        congress_pipeline_job,
-        donor_pipeline_job,
-        full_pipeline_job,
+        # Bulk data jobs (active)
+        data_sync_job,
+        member_fec_mapping_job,
+        member_financial_summary_job,
+        bulk_data_pipeline_job,
     ],
-    
-    # TODO: Add schedules for automated execution
-    # schedules=[
-    #     ScheduleDefinition(
-    #         job=full_pipeline_job,
-    #         cron_schedule="0 2 * * *",  # Daily at 2 AM
-    #         default_status=DefaultScheduleStatus.RUNNING,
-    #     ),
-    # ],
-    
-    # TODO: Add sensors for event-driven execution
-    # sensors=[...],
+    schedules=[
+        weekly_pipeline_schedule,   # Full pipeline (download + mapping + aggregation) every Sunday 2 AM
+    ],
 )
