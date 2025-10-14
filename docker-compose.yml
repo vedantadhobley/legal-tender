@@ -36,6 +36,8 @@ services:
       - .env
     environment:
       DAGSTER_HOME: /app
+    volumes:
+      - ./data:/app/data  # Mount data directory for file downloads
     depends_on:
       dagster-postgres:
         condition: service_healthy
@@ -60,6 +62,8 @@ services:
       - .env
     environment:
       DAGSTER_HOME: /app
+    volumes:
+      - ./data:/app/data  # Mount data directory for file downloads
     depends_on:
       dagster-postgres:
         condition: service_healthy

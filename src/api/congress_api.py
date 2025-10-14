@@ -103,3 +103,36 @@ def get_votes(congress: str = "118", chamber: str = "house") -> Optional[Dict[st
     except Exception as e:
         logger.error(f"Error fetching votes: {e}")
         return None
+
+def get_member(bioguide_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get detailed information for a specific member by bioguide ID.
+    
+    This endpoint provides:
+    - Photo URL (image_url)
+    - Official website URL
+    - Office address and phone
+    - Social media accounts (twitter, facebook, youtube)
+    
+    Args:
+        bioguide_id: Bioguide ID for the member (e.g., "B000944")
+        
+    Returns:
+        Member details dict, or None if error
+    """
+    url = f"{BASE_URL}/member/{bioguide_id}"
+    try:
+        resp = requests.get(url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        # Extract member details from response
+        if 'member' in data:
+            return data['member']
+        else:
+            logger.warning(f"No member data found for {bioguide_id}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error fetching member {bioguide_id}: {e}")
+        return None
