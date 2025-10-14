@@ -1,678 +1,1353 @@
-# Legal Tender 💰🏛️# Legal Tender
+# Legal Tender# Legal Tender 💰🏛️# Legal Tender
 
 
 
-> **Track the money. Follow the influence. Expose the connections.**> **Latest Update**: Implemented organized data repository with smart downloads that check `Last-Modified` headers. Downloads are now independent assets with weekly scheduling. See [Data Repository](#data-repository) and [Data Sync Strategy](#data-sync-strategy) sections below.
+**Follow the money. Map the influence. Expose the connections.**
 
 
 
-A comprehensive system for analyzing financial influence in US politics by connecting campaign finance, lobbying activity, and voting records.## Project Overview
+Legal Tender is a data pipeline and analysis system that traces financial influence in US politics by connecting campaign donations to voting behavior through AI-powered bill analysis.> **Track the money. Follow the influence. Expose the connections.**> **Latest Update**: Implemented organized data repository with smart downloads that check `Last-Modified` headers. Downloads are now independent assets with weekly scheduling. See [Data Repository](#data-repository) and [Data Sync Strategy](#data-sync-strategy) sections below.
 
 
 
----Legal Tender analyzes the influence of donors on US politicians by orchestrating data collection, enrichment, and AI-driven analysis. The project aims to:
+---
 
 
 
-## 🎯 Project Vision1. Collect and keep up-to-date a list of all current US Congress members (House & Senate).
+## The Big PictureA comprehensive system for analyzing financial influence in US politics by connecting campaign finance, lobbying activity, and voting records.## Project Overview
 
-2. Gather and update donor data for each politician (amounts, names, organizations) using the Election (FEC) API.
+
+
+### What We're Building
+
+
+
+A system that answers one fundamental question: **"Does money influence how politicians vote?"**---Legal Tender analyzes the influence of donors on US politicians by orchestrating data collection, enrichment, and AI-driven analysis. The project aims to:
+
+
+
+Here's how:
+
+
+
+1. **Track the Money**: Collect campaign finance data (who donated how much to which politicians)## 🎯 Project Vision1. Collect and keep up-to-date a list of all current US Congress members (House & Senate).
+
+2. **Profile the Donors**: Use AI to generate policy preferences for each donor (what they want/don't want in legislation)
+
+3. **Analyze the Bills**: Use AI to score each bill against every donor's preferences2. Gather and update donor data for each politician (amounts, names, organizations) using the Election (FEC) API.
+
+4. **Map the Influence**: Connect donations → politicians → votes to quantify donor influence
 
 Legal Tender reveals the hidden connections between money and power in Congress by:3. Profile each unique donor to determine which policies they support or oppose (using AI/NLP and web research).
 
+### The Core Insight
+
 4. Fetch and update upcoming bills and voting data from the Congress.gov API.
 
-1. **Tracking Campaign Finance**: Who donates to politicians? How much? From which industries?5. Use AI to compare each bill with donor policy stances, scoring each bill for each donor (+1 to -1 scale).
+Every donor has policy goals. When they donate to a politician, they're (theoretically) trying to influence policy outcomes. By using AI to:
 
-2. **Monitoring Lobbying**: Which corporations and interest groups are lobbying which members on which bills?6. Aggregate scores and donation amounts to predict how politicians may vote and quantify donor influence.
+- **Profile donors** (what policies do they support/oppose?)1. **Tracking Campaign Finance**: Who donates to politicians? How much? From which industries?5. Use AI to compare each bill with donor policy stances, scoring each bill for each donor (+1 to -1 scale).
 
-3. **Analyzing Votes**: How do donations and lobbying correlate with voting behavior?7. Store all data in MongoDB for auditability, traceability, and further analysis.
+- **Analyze bills** (does this bill align with donor X's interests?)
 
-4. **Scoring Influence**: Quantify donor influence on policy decisions using AI-driven analysis.
+- **Track votes** (did the politician vote in line with their donors' interests?)2. **Monitoring Lobbying**: Which corporations and interest groups are lobbying which members on which bills?6. Aggregate scores and donation amounts to predict how politicians may vote and quantify donor influence.
 
-## Data Requirements
 
-### The Goal
 
-Build a transparent, auditable system that answers questions like:1. **Current Politicians**
+We can create an **influence score** that shows how strongly donations correlate with voting behavior.3. **Analyzing Votes**: How do donations and lobbying correlate with voting behavior?7. Store all data in MongoDB for auditability, traceability, and further analysis.
 
-- "Does this senator vote in favor of their top donors?"	- List of all current US Congress members (House & Senate).
 
-- "Which industries have the most influence on this committee?"	- Source: [Congress.gov API](https://api.congress.gov/)
 
-- "Are lobbying dollars predictive of bill outcomes?"
+### Example Flow4. **Scoring Influence**: Quantify donor influence on policy decisions using AI-driven analysis.
+
+
+
+```mermaid## Data Requirements
+
+graph LR
+
+    A[Pharmaceutical Company] -->|$500K donation| B[Senator X]### The Goal
+
+    C[Healthcare Bill] -->|AI Analysis| D[Scores +0.8 for pharma interests]
+
+    B -->|Votes YES| CBuild a transparent, auditable system that answers questions like:1. **Current Politicians**
+
+    D -->|Maps to| A
+
+    - "Does this senator vote in favor of their top donors?"	- List of all current US Congress members (House & Senate).
+
+    style A fill:#f96,stroke:#333,stroke-width:2px
+
+    style B fill:#69f,stroke:#333,stroke-width:2px- "Which industries have the most influence on this committee?"	- Source: [Congress.gov API](https://api.congress.gov/)
+
+    style C fill:#9f6,stroke:#333,stroke-width:2px
+
+    style D fill:#ff9,stroke:#333,stroke-width:2px- "Are lobbying dollars predictive of bill outcomes?"
+
+```
 
 2. **Donor Data**
 
+**Result**: We can say "Senator X received $500K from pharma and voted in favor of a bill that scores +0.8 for pharma interests."
+
 ---	- List of donors for each politician, including donation amounts.
+
+---
 
 	- Source: [Election (FEC) API](https://api.open.fec.gov/developers/)
 
+## System Architecture
+
 ## 📊 Current Status (October 2025)
+
+### High-Level Overview
 
 3. **Upcoming Bills**
 
-### ✅ What's Working	- Data on upcoming bills, including text, summaries, and voting records.
+```mermaid
 
-	- Source: [Congress.gov API](https://api.congress.gov/)
+graph TB### ✅ What's Working	- Data on upcoming bills, including text, summaries, and voting records.
 
-**Campaign Finance Pipeline** (Bulk FEC Data)
+    subgraph "Data Collection"
 
-- ✅ **538 members** with validated FEC candidate IDs4. **Lobbying Data**
+        A[FEC Campaign Finance Data]	- Source: [Congress.gov API](https://api.congress.gov/)
 
-- ✅ **4 election cycles** tracked (2020, 2022, 2024, 2026) = 8 years of data	- Federal lobbying filings and clients.
+        B[Congress Member Info]
 
-- ✅ **Per-cycle financial summaries**: total raised, spent, cash on hand, debts	- Source: [Senate LDA API](https://lda.senate.gov/api/redoc/v1/)
+        C[Bill Text & Votes]**Campaign Finance Pipeline** (Bulk FEC Data)
 
-- ✅ **Career totals**: aggregated across all cycles for rankings
+    end
 
-- ✅ **Smart downloads**: Only fetches data when remote files are updated## Orchestration & Automation
+    - ✅ **538 members** with validated FEC candidate IDs4. **Lobbying Data**
 
-- ✅ **Weekly automation**: Scheduled pipeline runs every Sunday at 2 AM UTC
+    subgraph "Storage"
 
-- **Dagster** is used to orchestrate and schedule all data fetches, updates, and AI analysis flows.
+        D[(MongoDB)]- ✅ **4 election cycles** tracked (2020, 2022, 2024, 2026) = 8 years of data	- Federal lobbying filings and clients.
 
-**Data Coverage**- Data syncs (e.g., for politicians, bills, donors) run on a daily schedule, ensuring MongoDB always reflects the latest state.
+    end
 
-- 🏛️ All current House members (435)- Each entity (politician, donor, bill) is upserted by its unique ID for reliability and auditability.
+    - ✅ **Per-cycle financial summaries**: total raised, spent, cash on hand, debts	- Source: [Senate LDA API](https://lda.senate.gov/api/redoc/v1/)
 
-- 🏛️ All current Senators (100) including Class 3 (not running until 2028)- Audit fields (e.g., last_updated) and change logs are maintained for traceability.
+    subgraph "AI Analysis"
 
-- 💰 Financial summaries from FEC webl files (~2-3MB per cycle)
+        E[Donor Profiler]- ✅ **Career totals**: aggregated across all cycles for rankings
 
-- 🗂️ Member→FEC mapping with validated candidate and committee IDs## AI/NLP Workflow
+        F[Bill Analyzer]
 
+        G[Influence Scorer]- ✅ **Smart downloads**: Only fetches data when remote files are updated## Orchestration & Automation
 
+    end
 
-**Architecture**1. For each unique donor, use AI/NLP to generate a profile of policy stances (FOR/AGAINST tables) using web research and public data.
+    - ✅ **Weekly automation**: Scheduled pipeline runs every Sunday at 2 AM UTC
+
+    subgraph "Pipeline Orchestration"
+
+        H[Dagster]- **Dagster** is used to orchestrate and schedule all data fetches, updates, and AI analysis flows.
+
+    end
+
+    **Data Coverage**- Data syncs (e.g., for politicians, bills, donors) run on a daily schedule, ensuring MongoDB always reflects the latest state.
+
+    A --> H
+
+    B --> H- 🏛️ All current House members (435)- Each entity (politician, donor, bill) is upserted by its unique ID for reliability and auditability.
+
+    C --> H
+
+    H --> D- 🏛️ All current Senators (100) including Class 3 (not running until 2028)- Audit fields (e.g., last_updated) and change logs are maintained for traceability.
+
+    D --> E
+
+    D --> F- 💰 Financial summaries from FEC webl files (~2-3MB per cycle)
+
+    E --> G
+
+    F --> G- 🗂️ Member→FEC mapping with validated candidate and committee IDs## AI/NLP Workflow
+
+    G --> D
+
+    
+
+    style H fill:#69f,stroke:#333,stroke-width:3px
+
+    style D fill:#f96,stroke:#333,stroke-width:3px**Architecture**1. For each unique donor, use AI/NLP to generate a profile of policy stances (FOR/AGAINST tables) using web research and public data.
+
+```
 
 - 🐳 Fully Dockerized with Dagster orchestration2. For each new or updated bill, use AI/NLP to extract key policy areas and compare them to donor stances.
 
+### Technical Stack
+
 - 🗄️ MongoDB for application data, PostgreSQL for Dagster metadata3. Score each bill for each donor (+1 to -1) based on alignment.
 
-- 📅 Automated weekly schedules (deactivated by default for manual control)4. Aggregate scores and donation amounts to predict politician voting behavior and donor influence.
+```mermaid
 
-- 🔍 Clean data repository structure with smart caching
+graph LR- 📅 Automated weekly schedules (deactivated by default for manual control)4. Aggregate scores and donation amounts to predict politician voting behavior and donor influence.
 
-## Next Steps
+    A[Docker Compose] --> B[Dagster Orchestration]
 
-### 🚧 What's Next
+    A --> C[MongoDB Storage]- 🔍 Clean data repository structure with smart caching
 
-1. Implement Dagster jobs for:
+    A --> D[PostgreSQL Metadata]
 
-**Phase 1: Individual Donor Data** (Next Priority)	- Fetching/updating Congress members
+    ## Next Steps
 
-- 📥 Download FEC `indiv` files (~1.5GB per cycle)	- Fetching/updating donor data
+    B --> E[Python Pipeline]
 
-- 👤 Parse individual contribution records (donor names, employers, amounts, dates)	- Fetching/updating bills and votes
+    E --> F[FEC Data Parser]### 🚧 What's Next
 
-- 🏢 Link donors to industries/organizations	- AI/NLP donor and bill analysis
+    E --> G[AI Models]
 
-- 💵 Enable "which industries fund this person?" analysis2. Store and audit all data in MongoDB.
+    E --> H[Analysis Engine]1. Implement Dagster jobs for:
 
-3. Build scoring, prediction, and visualization modules.
+    
+
+    style A fill:#2496ed,color:#fff**Phase 1: Individual Donor Data** (Next Priority)	- Fetching/updating Congress members
+
+    style B fill:#654ff0,color:#fff
+
+    style C fill:#47a248,color:#fff- 📥 Download FEC `indiv` files (~1.5GB per cycle)	- Fetching/updating donor data
+
+    style D fill:#336791,color:#fff
+
+```- 👤 Parse individual contribution records (donor names, employers, amounts, dates)	- Fetching/updating bills and votes
+
+
+
+**Core Technologies**:- 🏢 Link donors to industries/organizations	- AI/NLP donor and bill analysis
+
+- **Dagster**: Orchestrates data pipelines, schedules jobs, monitors runs
+
+- **MongoDB**: Stores members, donors, bills, financial data, analysis results- 💵 Enable "which industries fund this person?" analysis2. Store and audit all data in MongoDB.
+
+- **PostgreSQL**: Stores Dagster metadata (run history, logs, events)
+
+- **Docker**: Containerizes everything for consistent deployment3. Build scoring, prediction, and visualization modules.
+
+- **Python 3.11**: All data processing and AI integration
 
 **Phase 2: PAC & Transfer Data**4. Document and test all jobs for reliability.
 
+---
+
 - 📥 Download FEC `pas2` files (~700MB per cycle)
+
+## Current Status (October 2025)
 
 - 🔗 Track PAC→Candidate transfers
 
+### ✅ Phase 0: Foundation (COMPLETE)
+
 - 🎯 Identify corporate PAC influence## Technology Stack
 
-- 📊 Separate individual vs organizational money
+**What's Working**:
 
-- **Orchestration**: Dagster (workflow scheduling and monitoring)
+- Complete campaign finance data pipeline (FEC bulk data)- 📊 Separate individual vs organizational money
 
-**Phase 3: Independent Expenditures (Dark Money)**- **Data Storage**: MongoDB (application data), PostgreSQL (Dagster metadata)
+- 538 members with validated FEC candidate IDs
 
-- 📥 Download FEC `oppexp` files (~300MB per cycle)- **Containerization**: Docker & Docker Compose
+- 4 election cycles tracked (2020, 2022, 2024, 2026) = 8 years of financial data- **Orchestration**: Dagster (workflow scheduling and monitoring)
 
-- 💸 Track Super PAC spending FOR/AGAINST candidates- **Language**: Python 3.11
+- Per-cycle financial summaries (total raised, spent, cash on hand, debts)
 
-- 🕵️ Uncover "dark money" influence (often exceeds candidate's own spending)
+- Career totals aggregated across all cycles**Phase 3: Independent Expenditures (Dark Money)**- **Data Storage**: MongoDB (application data), PostgreSQL (Dagster metadata)
 
-## Architecture
+- Smart caching (only downloads when remote files update)
 
-**Phase 4: Lobbying Data Integration**
+- Weekly automation (scheduled for Sunday 2 AM UTC)- 📥 Download FEC `oppexp` files (~300MB per cycle)- **Containerization**: Docker & Docker Compose
+
+
+
+**MongoDB Collections**:- 💸 Track Super PAC spending FOR/AGAINST candidates- **Language**: Python 3.11
+
+- `member_fec_mapping`: 538 members with FEC IDs, bio info, external identifiers
+
+- `member_financial_summary`: Per-cycle financial data with career totals- 🕵️ Uncover "dark money" influence (often exceeds candidate's own spending)
+
+
+
+**Data Coverage**:## Architecture
+
+- All 435 House members
+
+- All 100 Senators (including all 3 election classes)**Phase 4: Lobbying Data Integration**
+
+- Financial summaries from webl files (~2-3MB per cycle)
 
 - 📥 Fetch Senate LDA API lobbying disclosures```
 
+---
+
 - 🏢 Link corporations to lobbyists to bills┌─────────────────────────────────────────────────────────────┐
+
+## The Pipeline: 6 Phases
 
 - 📋 Track which bills are being lobbied on│               Dagster Webserver (Port 3000)                  │
 
+### Phase 1: Individual Donor Data (NEXT)
+
 - 🔗 Connect donors → lobbying → votes│                     User Interface & API                     │
+
+**Goal**: Build a master donor list with contribution details
 
 └────────────┬───────────────────────────┬────────────────────┘
 
-**Phase 5: Bill Voting Records**             │                           │
+**Tasks**:
 
-- 📥 Fetch Congress.gov API voting data   ┌─────────▼─────────┐       ┌────────▼──────────┐
+- Download FEC `indiv` files (~1.5GB per cycle, 4 cycles = 6GB)**Phase 5: Bill Voting Records**             │                           │
 
-- 🗳️ Track how members vote on bills   │  Dagster Daemon   │       │  PostgreSQL       │
+- Parse individual contribution records (name, employer, occupation, amount, date)
 
-- 🧮 Correlate donations/lobbying with votes   │  - Schedules      │       │  - Run Storage    │
+- Link donors to members via committee IDs- 📥 Fetch Congress.gov API voting data   ┌─────────▼─────────┐       ┌────────▼──────────┐
 
-- 🎯 Score donor influence on policy outcomes   │  - Sensors        │       │  - Event Logs     │
+- Deduplicate donors across cycles (same person/org = one entity)
+
+- Create master donor list with aggregated contribution totals- 🗳️ Track how members vote on bills   │  Dagster Daemon   │       │  PostgreSQL       │
+
+
+
+**Output**: - 🧮 Correlate donations/lobbying with votes   │  - Schedules      │       │  - Run Storage    │
+
+- `donors` collection: Master list of unique donors
+
+- `contributions` collection: Transaction-level donation records- 🎯 Score donor influence on policy outcomes   │  - Sensors        │       │  - Event Logs     │
+
+- Each politician links to their donors with amounts
 
    │  - Run Queues     │       │  - Asset Metadata │
 
+---
+
 **Phase 6: AI/NLP Analysis**   └─────────┬─────────┘       └───────────────────┘
+
+### Phase 2: AI Donor Profiling (THE CORE INNOVATION)
 
 - 🤖 Profile donors by policy stances (FOR/AGAINST)             │
 
+**Goal**: Use AI to generate policy preference profiles for each donor
+
 - 📄 Analyze bill text for policy alignment   ┌─────────▼─────────┐       ┌───────────────────┐
+
+**How It Works**:
 
 - 📊 Score bills for each donor (+1 to -1 scale)   │    MongoDB        │       │  Mongo Express    │
 
-- 🎯 Predict voting behavior based on donor influence   │  - Members        │◄──────┤  (Port 8081)      │
+```mermaid
 
-   │  - Bills          │       │  Admin UI         │
+graph TD- 🎯 Predict voting behavior based on donor influence   │  - Members        │◄──────┤  (Port 8081)      │
 
----   │  - Donations      │       └───────────────────┘
+    A[Donor: Exxon Mobil] --> B[Research Context]
 
-   └───────────────────┘
+    B --> C[Industry: Oil & Gas]   │  - Bills          │       │  Admin UI         │
 
-## 🏗️ Architecture```
+    B --> D[Public Statements]
+
+    B --> E[Lobbying Records]---   │  - Donations      │       └───────────────────┘
+
+    B --> F[Past Political Activity]
+
+       └───────────────────┘
+
+    C --> G[AI Model]
+
+    D --> G## 🏗️ Architecture```
+
+    E --> G
+
+    F --> G
+
+    
+
+    G --> H[Policy Profile]### System Overview### Data Pipeline Flow
+
+    H --> I[PROS: Policies They Support]
+
+    H --> J[CONS: Policies They Oppose]
+
+    
+
+    I --> K[+ Fossil fuel subsidies<br/>+ Deregulation<br/>+ Tax breaks for energy companies]``````
+
+    J --> L[- Carbon taxes<br/>- Renewable energy mandates<br/>- Environmental regulations]
+
+    ┌─────────────────────────────────────────────────────────────┐Weekly Schedule (Sunday 2 AM UTC)
+
+    style A fill:#f96,stroke:#333,stroke-width:2px
+
+    style G fill:#69f,stroke:#333,stroke-width:2px│               Dagster Webserver (Port 3000)                  │         │
+
+    style H fill:#9f6,stroke:#333,stroke-width:2px
+
+```│                     Orchestration & Monitoring               │         ▼
 
 
 
-### System Overview### Data Pipeline Flow
+**Tasks**:└────────────┬───────────────────────────┬────────────────────┘   data_sync_asset
 
+- For each donor (company, individual, PAC):
 
+  - Research their industry/sector             │                           │   • Check Last-Modified headers
 
-``````
+  - Identify public policy positions
 
-┌─────────────────────────────────────────────────────────────┐Weekly Schedule (Sunday 2 AM UTC)
+  - Find lobbying records (if available)   ┌─────────▼─────────┐       ┌────────▼──────────┐   • Download if remote newer
 
-│               Dagster Webserver (Port 3000)                  │         │
+  - Analyze past political activity
 
-│                     Orchestration & Monitoring               │         ▼
+- Use AI/NLP to generate:   │  Dagster Daemon   │       │  PostgreSQL       │   • Legislators file (1MB)
 
-└────────────┬───────────────────────────┬────────────────────┘   data_sync_asset
+  - **PROS list**: Policies they would support (scored +1)
 
-             │                           │   • Check Last-Modified headers
+  - **CONS list**: Policies they would oppose (scored -1)   │  - Schedules      │       │  - Run History    │   • FEC bulk data (~4MB)
 
-   ┌─────────▼─────────┐       ┌────────▼──────────┐   • Download if remote newer
-
-   │  Dagster Daemon   │       │  PostgreSQL       │   • Legislators file (1MB)
-
-   │  - Schedules      │       │  - Run History    │   • FEC bulk data (~4MB)
+- Store profiles in MongoDB
 
    │  - Sensors        │       │  - Event Logs     │         │
 
-   │  - Run Queues     │       │  - Metadata       │         │ Dependencies
+**Output**:
+
+- `donor_profiles` collection with AI-generated policy preferences   │  - Run Queues     │       │  - Metadata       │         │ Dependencies
+
+- Each profile includes confidence scores and source citations
 
    └─────────┬─────────┘       └───────────────────┘         ▼
 
-             │   member_fec_mapping_asset
+**Example Profile**:
 
-   ┌─────────▼─────────┐       ┌───────────────────┐   • Load cached data
+```json             │   member_fec_mapping_asset
 
-   │    MongoDB        │       │  Mongo Express    │   • Build member→FEC mapping
+{
 
-   │  - Members        │◄──────┤  (Port 8081)      │   • Extract committee IDs
+  "donor_id": "exxon_mobil",   ┌─────────▼─────────┐       ┌───────────────────┐   • Load cached data
 
-   │  - Financial Data │       │  Admin UI         │   • Validate FEC IDs
+  "name": "Exxon Mobil Corporation",
 
-   │  - Mappings       │       └───────────────────┘         │
+  "industry": "Oil & Gas",   │    MongoDB        │       │  Mongo Express    │   • Build member→FEC mapping
 
-   └───────────────────┘         ▼
+  "profile": {
 
-```     MongoDB
+    "pros": [   │  - Members        │◄──────┤  (Port 8081)      │   • Extract committee IDs
 
-   Collection: member_fec_mapping
+      {"policy": "Fossil fuel subsidies", "score": 1.0},
 
-### Data Pipeline Flow```
+      {"policy": "Energy deregulation", "score": 0.9},   │  - Financial Data │       │  Admin UI         │   • Validate FEC IDs
+
+      {"policy": "Tax breaks for oil companies", "score": 1.0}
+
+    ],   │  - Mappings       │       └───────────────────┘         │
+
+    "cons": [
+
+      {"policy": "Carbon pricing", "score": -1.0},   └───────────────────┘         ▼
+
+      {"policy": "Renewable energy mandates", "score": -0.8},
+
+      {"policy": "EPA regulations", "score": -0.9}```     MongoDB
+
+    ]
+
+  },   Collection: member_fec_mapping
+
+  "confidence": 0.85,
+
+  "sources": ["lobbying records", "public statements", "industry analysis"]### Data Pipeline Flow```
+
+}
+
+```
 
 
 
-```## Quick Start
+---```## Quick Start
 
-Weekly Schedule (Sunday 2 AM UTC)
 
-         │### Prerequisites
 
-         ▼- Docker and Docker Compose
+### Phase 3: Bill Analysis & Scoring (THE MAGIC)Weekly Schedule (Sunday 2 AM UTC)
 
-   ┌──────────────────────────────────┐- `.env` file with API keys (see `.env.example`)
 
-   │      data_sync_asset             │
 
-   │  • Check remote Last-Modified    │### Start Services
+**Goal**: Use AI to score bills against donor preferences         │### Prerequisites
 
-   │  • Download if updated           │
 
-   │  • Legislators (1MB)             │**Production Mode** (default - isolated, secure):
 
-   │  • FEC bulk data (~10MB)         │```bash
+**How It Works**:         ▼- Docker and Docker Compose
 
-   └──────────┬───────────────────────┘./start.sh
 
-              │# or manually: docker compose up -d
 
-              │ Dependencies```
+```mermaid   ┌──────────────────────────────────┐- `.env` file with API keys (see `.env.example`)
 
-              ▼
+graph TD
 
-   ┌──────────────────────────────────┐**Development Mode** (hot-reload, code changes apply instantly):
+    A[Bill: Clean Energy Act] --> B[AI Bill Analyzer]   │      data_sync_asset             │
 
-   │   member_fec_mapping_asset       │```bash
+    B --> C[Extract Key Provisions]
 
-   │  • Build member→FEC mapping      │./start.sh -dev
+       │  • Check remote Last-Modified    │### Start Services
 
-   │  • Validate candidate IDs        │# or manually: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+    C --> D[Provision 1: Carbon Tax]
+
+    C --> E[Provision 2: Renewable Mandates]   │  • Download if updated           │
+
+    C --> F[Provision 3: Fossil Fuel Phase-Out]
+
+       │  • Legislators (1MB)             │**Production Mode** (default - isolated, secure):
+
+    G[Donor Profile: Exxon Mobil] --> H[Policy Preferences]
+
+    H --> I[CONS: Carbon taxes -1.0]   │  • FEC bulk data (~10MB)         │```bash
+
+    H --> J[CONS: Renewable mandates -0.8]
+
+    H --> K[CONS: Fossil fuel regulations -0.9]   └──────────┬───────────────────────┘./start.sh
+
+    
+
+    D --> L[Compare]              │# or manually: docker compose up -d
+
+    I --> L
+
+    E --> L              │ Dependencies```
+
+    J --> L
+
+    F --> L              ▼
+
+    K --> L
+
+       ┌──────────────────────────────────┐**Development Mode** (hot-reload, code changes apply instantly):
+
+    L --> M[Bill Score for Exxon: -0.9]
+
+    M --> N[HIGH NEGATIVE ALIGNMENT]   │   member_fec_mapping_asset       │```bash
+
+    
+
+    style A fill:#9f6,stroke:#333,stroke-width:2px   │  • Build member→FEC mapping      │./start.sh -dev
+
+    style B fill:#69f,stroke:#333,stroke-width:2px
+
+    style M fill:#f96,stroke:#333,stroke-width:2px   │  • Validate candidate IDs        │# or manually: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+```
 
    │  • Extract committee IDs         │```
 
-   └──────────┬───────────────────────┘
+**Tasks**:
 
-              │**Wipe & Restart** (clear all data):
+- Fetch bills from Congress.gov API   └──────────┬───────────────────────┘
 
-              │ Dependencies```bash
+- Use AI/NLP to:
 
-              ▼./start.sh -v           # Production mode, wipe volumes
+  - Extract key provisions from bill text              │**Wipe & Restart** (clear all data):
 
-   ┌──────────────────────────────────┐./start.sh -dev -v      # Dev mode, wipe volumes
+  - Identify policy areas (healthcare, energy, taxes, etc.)
 
-   │  member_financial_summary_asset  │```
+  - Compare provisions to donor PROS/CONS lists              │ Dependencies```bash
+
+  - Generate alignment score (-1 to +1) for each donor
+
+- Store scores in MongoDB              ▼./start.sh -v           # Production mode, wipe volumes
+
+
+
+**Scoring Logic**:   ┌──────────────────────────────────┐./start.sh -dev -v      # Dev mode, wipe volumes
+
+- **+1.0**: Bill strongly aligns with donor's interests (all PROS, no CONS)
+
+- **0.0**: Bill is neutral to donor's interests   │  member_financial_summary_asset  │```
+
+- **-1.0**: Bill strongly opposes donor's interests (all CONS, no PROS)
 
    │  • Parse webl files (4 cycles)   │
 
-   │  • Deduplicate by (ID,date,cycle)│### Access Applications
+**Output**:
+
+- `bills` collection: Bill text, provisions, metadata   │  • Deduplicate by (ID,date,cycle)│### Access Applications
+
+- `bill_scores` collection: Score for every donor × bill combination
 
    │  • Aggregate per-cycle totals    │- **Dagster UI**: http://localhost:3000 (job management and monitoring)
 
-   │  • Compute career totals         │- **Mongo Express**: http://localhost:8081 (database UI, credentials: `ltuser`/`ltpass`)
+**Example**:
 
-   └──────────┬───────────────────────┘
+```json   │  • Compute career totals         │- **Mongo Express**: http://localhost:8081 (database UI, credentials: `ltuser`/`ltpass`)
 
-              │### Development vs Production Mode
+{
 
-              ▼
+  "bill_id": "hr1234_118",   └──────────┬───────────────────────┘
 
-          MongoDB**Use Production Mode** (`./start.sh`) when:
+  "title": "Clean Energy Act",
 
-   member_financial_summary collection- Running in production/staging environments
+  "donor_scores": [              │### Development vs Production Mode
 
-   {- You want isolated, secure containers
+    {"donor_id": "exxon_mobil", "score": -0.9, "reasoning": "Contains carbon tax, renewable mandates"},
 
-     by_cycle: {2020: {...}, 2024: {...}},- Code changes are infrequent
+    {"donor_id": "tesla", "score": 0.8, "reasoning": "Supports EV infrastructure, renewable energy"},              ▼
 
-     career_totals: {...},- **Trade-off**: Must rebuild after each code change (~30-60s)
+    {"donor_id": "sierra_club", "score": 1.0, "reasoning": "Aligns with environmental goals"}
 
-     latest_cycle: "2026",
+  ]          MongoDB**Use Production Mode** (`./start.sh`) when:
 
-     cycles_with_data: 3**Use Development Mode** (`./start.sh -dev`) when:
+}
 
-   }- Actively developing and testing jobs
-
-```- Making frequent code changes
-
-- Debugging issues locally
-
----- **Benefits**: Code changes apply instantly (no rebuild), database ports exposed for local tools
-
-- **Trade-off**: Less isolated (your local code folder is mounted in container)
-
-## 🚀 Quick Start
-
-## Working with Data Assets
-
-### Prerequisites
-
-- Docker & Docker Compose### Available Assets
-
-- `.env` file with API keys (copy from `.env.example`)
-
-**Current Pipeline (Bulk Data Approach):**
-
-### Start Services- **`data_sync`**: Downloads legislators file + FEC bulk data (~4MB). Smart caching with Last-Modified headers - only downloads if remote files are newer than local cache.
-
-- **`member_fec_mapping`**: Builds complete member profiles (~538 docs in MongoDB). For each member, creates:
-
-```bash  - Validated FEC candidate IDs (their campaign committees)
-
-# Production mode (isolated, secure)  - Committee IDs (PACs and other committees they control)
-
-./start.sh  - Bio info (name, party, state, district, term dates)
-
-  - External IDs (bioguide, govtrack, opensecrets, etc.)
-
-# Development mode (hot-reload, code changes apply instantly)  - Optional: Photo URL, social media, office contact (via ProPublica API)
-
-./start.sh -dev  
-
-  **Output**: MongoDB collection `member_fec_mapping` - the foundation for connecting members to financial data.
-
-# Wipe & restart (clear all data)
-
-./start.sh -v           # Production**Legacy Assets (API-based, deprecated):**
-
-./start.sh -dev -v      # Development- **`congress_members`**: Fetches members from ProPublica Congress API
-
-```- **`member_donor_data`**: Fetches donor data from OpenFEC API (depends on congress_members)
+```   member_financial_summary collection- Running in production/staging environments
 
 
 
-### Access Applications### Materializing Assets (Refreshing Data)
+---   {- You want isolated, secure containers
 
-- **Dagster UI**: http://localhost:3000 (orchestration & monitoring)
 
-- **Mongo Express**: http://localhost:8081 (database admin, `ltuser`/`ltpass`)**Via Dagster UI** (Recommended):
 
-1. Open http://localhost:3000
+### Phase 4: Voting Records & Correlation     by_cycle: {2020: {...}, 2024: {...}},- Code changes are infrequent
 
----2. Navigate to **"Assets"** tab
 
-3. Click on an asset to view details
 
-## 📁 Project Structure4. Click **"Materialize"** to refresh the data
+**Goal**: Track how politicians vote and correlate with donor influence     career_totals: {...},- **Trade-off**: Must rebuild after each code change (~30-60s)
+
+
+
+**Tasks**:     latest_cycle: "2026",
+
+- Fetch voting records from Congress.gov API
+
+- For each vote:     cycles_with_data: 3**Use Development Mode** (`./start.sh -dev`) when:
+
+  - Get the bill score for each donor
+
+  - Get the donation amount from that donor to the politician   }- Actively developing and testing jobs
+
+  - Calculate weighted influence score
+
+- Aggregate across all votes to create politician influence scores```- Making frequent code changes
+
+
+
+**Influence Calculation**:- Debugging issues locally
+
+```
+
+For each politician:---- **Benefits**: Code changes apply instantly (no rebuild), database ports exposed for local tools
+
+  For each vote:
+
+    For each donor to that politician:- **Trade-off**: Less isolated (your local code folder is mounted in container)
+
+      weighted_influence += (donation_amount × bill_score × vote_direction)
+
+```## 🚀 Quick Start
+
+
+
+**Output**:## Working with Data Assets
+
+- `votes` collection: How each member voted on each bill
+
+- `influence_scores` collection: Correlation between donations and votes### Prerequisites
+
+
+
+**Example Analysis**:- Docker & Docker Compose### Available Assets
+
+```json
+
+{- `.env` file with API keys (copy from `.env.example`)
+
+  "politician_id": "senator_x",
+
+  "name": "Senator X",**Current Pipeline (Bulk Data Approach):**
+
+  "total_donations": 5000000,
+
+  "top_donor_influence": [### Start Services- **`data_sync`**: Downloads legislators file + FEC bulk data (~4MB). Smart caching with Last-Modified headers - only downloads if remote files are newer than local cache.
+
+    {
+
+      "donor": "Exxon Mobil",- **`member_fec_mapping`**: Builds complete member profiles (~538 docs in MongoDB). For each member, creates:
+
+      "donated": 500000,
+
+      "bills_scored": 12,```bash  - Validated FEC candidate IDs (their campaign committees)
+
+      "alignment_rate": 0.92,
+
+      "influence_score": 0.87# Production mode (isolated, secure)  - Committee IDs (PACs and other committees they control)
+
+    }
+
+  ]./start.sh  - Bio info (name, party, state, district, term dates)
+
+}
+
+```  - External IDs (bioguide, govtrack, opensecrets, etc.)
+
+
+
+---# Development mode (hot-reload, code changes apply instantly)  - Optional: Photo URL, social media, office contact (via ProPublica API)
+
+
+
+### Phase 5: Lobbying Integration./start.sh -dev  
+
+
+
+**Goal**: Add lobbying data to the influence map  **Output**: MongoDB collection `member_fec_mapping` - the foundation for connecting members to financial data.
+
+
+
+**Tasks**:# Wipe & restart (clear all data)
+
+- Fetch lobbying disclosures from Senate LDA API
+
+- Link lobbyists to donors (same companies)./start.sh -v           # Production**Legacy Assets (API-based, deprecated):**
+
+- Track which bills are being lobbied
+
+- Correlate lobbying activity with votes./start.sh -dev -v      # Development- **`congress_members`**: Fetches members from ProPublica Congress API
+
+
+
+**Output**:```- **`member_donor_data`**: Fetches donor data from OpenFEC API (depends on congress_members)
+
+- `lobbying` collection: Which companies lobby which members on which bills
+
+- Enhanced influence scores that include lobbying pressure
+
+
+
+---### Access Applications### Materializing Assets (Refreshing Data)
+
+
+
+### Phase 6: Visualization & API- **Dagster UI**: http://localhost:3000 (orchestration & monitoring)
+
+
+
+**Goal**: Make the data accessible and understandable- **Mongo Express**: http://localhost:8081 (database admin, `ltuser`/`ltpass`)**Via Dagster UI** (Recommended):
+
+
+
+**Tasks**:1. Open http://localhost:3000
+
+- Build REST API for querying influence data
+
+- Create visualization dashboards:---2. Navigate to **"Assets"** tab
+
+  - "Which industries fund this politician?"
+
+  - "How does this politician vote relative to their donors?"3. Click on an asset to view details
+
+  - "Which bills had the strongest donor influence?"
+
+  - "Network graph: donors → politicians → votes"## 📁 Project Structure4. Click **"Materialize"** to refresh the data
+
+- Generate automated reports
 
 5. View metadata, lineage graph, and run history
 
+---
+
 ```
+
+## Quick Start
 
 legal-tender/**Via Command Line:**
 
+### Prerequisites
+
 ├── data/                     # Local data repository (mounted in Docker)```bash
 
-│   ├── legislators/          # Congress members with FEC IDs# Materialize a specific asset
+- Docker & Docker Compose
 
-│   ├── fec/                  # FEC bulk data by cycledocker compose exec dagster-webserver dagster asset materialize --select congress_members -m src
+- `.env` file with API keys (copy from `.env.example`)│   ├── legislators/          # Congress members with FEC IDs# Materialize a specific asset
 
-│   │   ├── 2020/
 
-│   │   ├── 2022/# Materialize all assets
+
+### Running the System│   ├── fec/                  # FEC bulk data by cycledocker compose exec dagster-webserver dagster asset materialize --select congress_members -m src
+
+
+
+**Production Mode** (isolated, secure):│   │   ├── 2020/
+
+```bash
+
+./start.sh│   │   ├── 2022/# Materialize all assets
+
+```
 
 │   │   ├── 2024/docker compose exec dagster-webserver dagster asset materialize --select "*" -m src
 
-│   │   └── 2026/
+**Development Mode** (hot-reload, code changes apply instantly):
 
-│   └── congress_api/         # API response cache# List all assets
+```bash│   │   └── 2026/
 
-│docker compose exec dagster-webserver dagster asset list -m src
+./start.sh -dev
 
-├── src/```
+```│   └── congress_api/         # API response cache# List all assets
+
+
+
+**Wipe & Restart** (clear all data):│docker compose exec dagster-webserver dagster asset list -m src
+
+```bash
+
+./start.sh -v├── src/```
+
+```
 
 │   ├── __init__.py           # Dagster definitions (assets, jobs, schedules)
 
+### Access Points
+
 │   │### Available Jobs
 
-│   ├── assets/               # Data pipeline assets
+- **Dagster UI**: http://localhost:3000 (pipeline orchestration)
 
-│   │   ├── data_sync.py      # Downloads legislators + FEC bulk data**Current Jobs (Bulk Data Approach - Recommended):**
+- **Mongo Express**: http://localhost:8081 (database admin)│   ├── assets/               # Data pipeline assets
 
-│   │   ├── member_mapping.py # Builds member→FEC ID mapping- **`data_sync_job`**: Downloads legislators file + FEC bulk data (~4MB). Smart caching checks remote Last-Modified headers.
+  - Username: `ltuser`
 
-│   │   └── financial_summary.py  # Aggregates financial summaries- **`member_fec_mapping_job`**: Builds complete member→FEC mapping (~538 profiles) with validated FEC IDs and committee IDs. Takes ~30 seconds (or ~5 min with ProPublica enhancement).
+  - Password: `ltpass`│   │   ├── data_sync.py      # Downloads legislators + FEC bulk data**Current Jobs (Bulk Data Approach - Recommended):**
 
-│   │- **`bulk_data_pipeline_job`**: Complete pipeline - runs data_sync + member_fec_mapping in sequence. **Use this for full refresh.**
 
-│   ├── jobs/                 # Job definitions
 
-│   │   └── asset_jobs.py     # Materialization jobs**Legacy Jobs (API-based, deprecated):**
+---│   │   ├── member_mapping.py # Builds member→FEC ID mapping- **`data_sync_job`**: Downloads legislators file + FEC bulk data (~4MB). Smart caching checks remote Last-Modified headers.
 
-│   │- **`congress_pipeline`**: Fetches members from ProPublica API
 
-│   ├── schedules/            # Automated schedules- **`donor_pipeline`**: Fetches donor data from OpenFEC API
 
-│   │   └── __init__.py       # Weekly pipeline schedule- **`full_pipeline`**: Legacy pipeline combining congress + donor jobs
+## Current Pipeline│   │   └── financial_summary.py  # Aggregates financial summaries- **`member_fec_mapping_job`**: Builds complete member→FEC mapping (~538 profiles) with validated FEC IDs and committee IDs. Takes ~30 seconds (or ~5 min with ProPublica enhancement).
+
+
+
+### Available Assets│   │- **`bulk_data_pipeline_job`**: Complete pipeline - runs data_sync + member_fec_mapping in sequence. **Use this for full refresh.**
+
+
+
+1. **`data_sync`**: Downloads legislators + FEC bulk data (~10MB, ~10 sec)│   ├── jobs/                 # Job definitions
+
+2. **`member_fec_mapping`**: Builds member→FEC mapping (538 profiles, ~3 sec)
+
+3. **`member_financial_summary`**: Aggregates financial data (4 cycles, ~5 sec)│   │   └── asset_jobs.py     # Materialization jobs**Legacy Jobs (API-based, deprecated):**
+
+
+
+### Running the Pipeline│   │- **`congress_pipeline`**: Fetches members from ProPublica API
+
+
+
+**Via Dagster UI** (recommended):│   ├── schedules/            # Automated schedules- **`donor_pipeline`**: Fetches donor data from OpenFEC API
+
+1. Open http://localhost:3000
+
+2. Go to **Jobs** → **`bulk_data_pipeline_job`**│   │   └── __init__.py       # Weekly pipeline schedule- **`full_pipeline`**: Legacy pipeline combining congress + donor jobs
+
+3. Click **Launch Run**
 
 │   │
 
-│   ├── data/                 # Data repository management**Via Command Line:**
+**Via CLI**:
 
-│   │   └── repository.py     # Smart caching, downloads```bash
+```bash│   ├── data/                 # Data repository management**Via Command Line:**
 
-│   │# Run the complete bulk data pipeline (recommended)
+docker compose exec dagster-webserver dagster job execute -m src -j bulk_data_pipeline_job
 
-│   ├── resources/            # Shared resourcesdocker compose exec dagster-webserver dagster job execute -m src -j bulk_data_pipeline_job
+```│   │   └── repository.py     # Smart caching, downloads```bash
 
-│   │   └── mongo.py          # MongoDB resource
+
+
+### Scheduling│   │# Run the complete bulk data pipeline (recommended)
+
+
+
+Enable the weekly schedule in Dagster UI:│   ├── resources/            # Shared resourcesdocker compose exec dagster-webserver dagster job execute -m src -j bulk_data_pipeline_job
+
+1. **Overview** → **Schedules**
+
+2. Find `weekly_bulk_data_pipeline`│   │   └── mongo.py          # MongoDB resource
+
+3. Toggle **Start Schedule**
 
 │   │# Or run individual jobs:
 
+Runs every Sunday at 2 AM UTC automatically.
+
 │   ├── api/                  # API clientsdocker compose exec dagster-webserver dagster job execute -m src -j data_sync_job
+
+---
 
 │   │   ├── congress_legislators.py  # GitHub legislators APIdocker compose exec dagster-webserver dagster job execute -m src -j member_fec_mapping_job
 
+## Data Schema
+
 │   │   ├── fec_bulk_data.py         # FEC bulk downloads
+
+### Current Collections
 
 │   │   ├── congress_api.py          # ProPublica Congress API# List all jobs
 
-│   │   ├── election_api.py          # OpenFEC APIdocker compose exec dagster-webserver dagster job list -m src
+**`member_fec_mapping`** (538 documents)
 
-│   │   └── lobbying_api.py          # Senate LDA API```
+```javascript│   │   ├── election_api.py          # OpenFEC APIdocker compose exec dagster-webserver dagster job list -m src
 
-│   │
+{
 
-│   └── utils/                # Utilities### Schedules
+  _id: "bioguide_id",│   │   └── lobbying_api.py          # Senate LDA API```
 
-│
+  name: "Ruben Gallego",
 
-├── docker-compose.yml        # Production services**Weekly Sunday Schedules** (must be manually enabled in Dagster UI):
+  state: "AZ",│   │
 
-├── docker-compose.dev.yml    # Development overrides- **`weekly_data_sync`**: Downloads fresh data every Sunday at 2 AM UTC (~4MB download, ~30 seconds)
+  chamber: "senate",
 
-├── Dockerfile                # Multi-stage build- **`weekly_bulk_data_pipeline`**: Complete pipeline every Sunday at 3 AM UTC (download + mapping, ~5-6 minutes with ProPublica)
+  party: "Democrat",│   └── utils/                # Utilities### Schedules
 
-├── requirements.txt          # Python dependencies
+  fec_candidate_ids: ["H4AZ07043", "S4AZ00139"],
 
-└── README.md                 # This file**To enable a schedule:**
+  committee_ids: ["C00123456"],│
 
-```1. Open Dagster UI → **Overview** → **Schedules**
+  term_start: "2025-01-03",
 
-2. Find the schedule (e.g., `weekly_bulk_data_pipeline`)
+  term_end: "2031-01-03"├── docker-compose.yml        # Production services**Weekly Sunday Schedules** (must be manually enabled in Dagster UI):
 
----3. Toggle **Start Schedule**
+}
 
-4. Verify it shows as **RUNNING**
+```├── docker-compose.dev.yml    # Development overrides- **`weekly_data_sync`**: Downloads fresh data every Sunday at 2 AM UTC (~4MB download, ~30 seconds)
 
-## 💾 Data Sources & File Formats
 
-Once enabled, the pipeline will automatically refresh your data every Sunday morning.
 
-### Current Data Sources
+**`member_financial_summary`** (538 documents)├── Dockerfile                # Multi-stage build- **`weekly_bulk_data_pipeline`**: Complete pipeline every Sunday at 3 AM UTC (download + mapping, ~5-6 minutes with ProPublica)
 
-## Project Structure
+```javascript
 
-**1. Congress Legislators** (GitHub - unitedstates/congress-legislators)
+{├── requirements.txt          # Python dependencies
 
-- **File**: `legislators-current.yaml` (~1MB)```
+  _id: "bioguide_id",
 
-- **Contains**: All 538 current members with FEC candidate IDs, bio, termslegal-tender/
+  name: "Ruben Gallego",└── README.md                 # This file**To enable a schedule:**
 
-- **Update frequency**: Weekly (GitHub updates as changes occur)├── data/                     # Local data repository (mounted in Docker)
+  by_cycle: {
 
-- **Our sync**: Weekly Sunday 2 AM UTC│   ├── legislators/          # GitHub legislators data
+    "2020": {total_raised: 5123456.78, total_spent: 4987654.32, ...},```1. Open Dagster UI → **Overview** → **Schedules**
 
-│   │   ├── current.yaml      # Current members with FEC IDs
+    "2022": {...},
+
+    "2024": {...},2. Find the schedule (e.g., `weekly_bulk_data_pipeline`)
+
+    "2026": {...}
+
+  },---3. Toggle **Start Schedule**
+
+  career_totals: {
+
+    total_raised: 31121631.69,4. Verify it shows as **RUNNING**
+
+    total_spent: 29774555.72,
+
+    cycles_included: ["2020", "2022", "2024", "2026"]## 💾 Data Sources & File Formats
+
+  },
+
+  latest_cycle: "2026"Once enabled, the pipeline will automatically refresh your data every Sunday morning.
+
+}
+
+```### Current Data Sources
+
+
+
+### Future Collections## Project Structure
+
+
+
+**`donors`** (master list)**1. Congress Legislators** (GitHub - unitedstates/congress-legislators)
+
+```javascript
+
+{- **File**: `legislators-current.yaml` (~1MB)```
+
+  _id: "donor_id",
+
+  name: "Exxon Mobil Corporation",- **Contains**: All 538 current members with FEC candidate IDs, bio, termslegal-tender/
+
+  type: "corporation",
+
+  industry: "Oil & Gas",- **Update frequency**: Weekly (GitHub updates as changes occur)├── data/                     # Local data repository (mounted in Docker)
+
+  total_contributed: 15000000,
+
+  politicians_funded: ["senator_x", "rep_y"],- **Our sync**: Weekly Sunday 2 AM UTC│   ├── legislators/          # GitHub legislators data
+
+  cycles_active: ["2020", "2022", "2024"]
+
+}│   │   ├── current.yaml      # Current members with FEC IDs
+
+```
 
 **2. FEC Bulk Data** (Federal Election Commission)│   │   └── metadata.json
 
-- **Files**: `webl` (candidate financial summaries) (~2-3MB per cycle)│   ├── fec/                  # FEC bulk data
+**`donor_profiles`** (AI-generated)
 
-- **Cycles tracked**: 2020, 2022, 2024, 2026 (8 years)│   │   ├── 2024/             # 2024 election cycle
+```javascript- **Files**: `webl` (candidate financial summaries) (~2-3MB per cycle)│   ├── fec/                  # FEC bulk data
 
-- **Contains**: Aggregated totals per candidate (raised, spent, cash, debts)│   │   │   ├── candidates.zip
+{
 
-- **Update frequency**: Monthly (~15th of each month)│   │   │   ├── committees.zip
+  _id: "donor_id",- **Cycles tracked**: 2020, 2022, 2024, 2026 (8 years)│   │   ├── 2024/             # 2024 election cycle
 
-- **Our sync**: Weekly Sunday 2 AM UTC (checks Last-Modified headers)│   │   │   ├── linkages.zip
+  pros: [
 
-│   │   │   ├── summaries/
+    {policy: "Fossil fuel subsidies", score: 1.0},- **Contains**: Aggregated totals per candidate (raised, spent, cash, debts)│   │   │   ├── candidates.zip
 
-### Future Data Sources (Planned)│   │   │   └── transactions/
+    {policy: "Energy deregulation", score: 0.9}
 
-│   │   └── 2026/             # 2026 election cycle
+  ],- **Update frequency**: Monthly (~15th of each month)│   │   │   ├── committees.zip
+
+  cons: [
+
+    {policy: "Carbon pricing", score: -1.0},- **Our sync**: Weekly Sunday 2 AM UTC (checks Last-Modified headers)│   │   │   ├── linkages.zip
+
+    {policy: "Renewable mandates", score: -0.8}
+
+  ],│   │   │   ├── summaries/
+
+  confidence: 0.85,
+
+  generated_at: "2025-10-14",### Future Data Sources (Planned)│   │   │   └── transactions/
+
+  model: "gpt-4"
+
+}│   │   └── 2026/             # 2026 election cycle
+
+```
 
 **3. Individual Contributions** (`indiv` files)│   └── congress_api/         # ProPublica API cache
 
-- **Size**: ~1.5GB per cycle├── src/
+**`bills`** (Congress.gov)
 
-- **Contains**: Donor names, employers, occupations, amounts, dates│   ├── __init__.py           # Dagster definitions (assets, jobs, schedules)
+```javascript- **Size**: ~1.5GB per cycle├── src/
 
-- **Use case**: "Which industries fund this person?"│   ├── assets/               # Data assets
+{
 
-- **Implementation**: Phase 1 (next priority)│   │   ├── data_sync.py      # Downloads & syncs external data
+  _id: "bill_id",- **Contains**: Donor names, employers, occupations, amounts, dates│   ├── __init__.py           # Dagster definitions (assets, jobs, schedules)
 
-│   │   ├── member_mapping.py # Builds member→FEC mapping
+  title: "Clean Energy Act",
 
-**4. Committee Transfers** (`pas2` files)│   │   ├── congress.py       # congress_members asset
+  congress: 118,- **Use case**: "Which industries fund this person?"│   ├── assets/               # Data assets
 
-- **Size**: ~700MB per cycle│   │   └── donors.py         # member_donor_data asset
+  type: "hr",
 
-- **Contains**: PAC→Candidate transfers, party transfers│   ├── jobs/                 # Asset jobs
+  number: 1234,- **Implementation**: Phase 1 (next priority)│   │   ├── data_sync.py      # Downloads & syncs external data
 
-- **Use case**: "Corporate PAC influence"│   │   └── asset_jobs.py     # All job definitions
+  provisions: ["carbon tax", "renewable mandates"],
 
-- **Implementation**: Phase 2│   ├── schedules/            # Automated schedules
+  introduced_date: "2024-01-15"│   │   ├── member_mapping.py # Builds member→FEC mapping
 
-│   │   └── __init__.py       # Weekly Sunday schedules
+}
 
-**5. Independent Expenditures** (`oppexp` files)│   ├── data/                 # Data repository management
+```**4. Committee Transfers** (`pas2` files)│   │   ├── congress.py       # congress_members asset
+
+
+
+**`bill_scores`** (AI analysis)- **Size**: ~700MB per cycle│   │   └── donors.py         # member_donor_data asset
+
+```javascript
+
+{- **Contains**: PAC→Candidate transfers, party transfers│   ├── jobs/                 # Asset jobs
+
+  bill_id: "hr1234_118",
+
+  donor_scores: [- **Use case**: "Corporate PAC influence"│   │   └── asset_jobs.py     # All job definitions
+
+    {donor_id: "exxon_mobil", score: -0.9},
+
+    {donor_id: "tesla", score: 0.8},- **Implementation**: Phase 2│   ├── schedules/            # Automated schedules
+
+    {donor_id: "sierra_club", score: 1.0}
+
+  ],│   │   └── __init__.py       # Weekly Sunday schedules
+
+  analyzed_at: "2025-10-14"
+
+}**5. Independent Expenditures** (`oppexp` files)│   ├── data/                 # Data repository management
+
+```
 
 - **Size**: ~300MB per cycle│   │   └── repository.py     # DataRepository class
 
-- **Contains**: Super PAC spending FOR/AGAINST candidates│   ├── resources/            # Shared resources
+**`votes`** (Congress.gov)
 
-- **Use case**: "Dark money influence"│   │   └── mongo.py          # MongoDB resource
+```javascript- **Contains**: Super PAC spending FOR/AGAINST candidates│   ├── resources/            # Shared resources
 
-- **Implementation**: Phase 3│   ├── api/                  # API clients
+{
 
-│   │   ├── congress_legislators.py  # GitHub legislators API
+  bill_id: "hr1234_118",- **Use case**: "Dark money influence"│   │   └── mongo.py          # MongoDB resource
 
-**6. Lobbying Disclosures** (Senate LDA API)│   │   ├── fec_bulk_data.py         # FEC bulk data API
+  vote_date: "2024-03-20",
 
-- **Contains**: Lobbyist filings, clients, bills lobbied, issues│   │   ├── congress_api.py          # ProPublica Congress API
+  members: [- **Implementation**: Phase 3│   ├── api/                  # API clients
 
-- **Use case**: "Corporate lobbying activity"│   │   ├── election_api.py          # OpenFEC API
+    {bioguide_id: "senator_x", position: "Yea"},
 
-- **Implementation**: Phase 4│   │   └── lobbying_api.py          # Senate LDA API
+    {bioguide_id: "senator_y", position: "Nay"}│   │   ├── congress_legislators.py  # GitHub legislators API
 
-│   └── utils/                # Utility functions
+  ],
 
-**7. Voting Records** (Congress.gov API)├── inspect_data.py           # Repository inspection tool
+  result: "Passed"**6. Lobbying Disclosures** (Senate LDA API)│   │   ├── fec_bulk_data.py         # FEC bulk data API
 
-- **Contains**: Bill votes, member positions, outcomes├── dagster.yaml              # Dagster instance configuration
+}
 
-- **Use case**: "Correlation analysis (money → votes)"├── workspace.yaml            # Code location configuration
+```- **Contains**: Lobbyist filings, clients, bills lobbied, issues│   │   ├── congress_api.py          # ProPublica Congress API
 
-- **Implementation**: Phase 5├── docker-compose.yml        # Service definitions
 
-├── Dockerfile                # Multi-stage container build
 
-### FEC Data: How It Works└── requirements.txt          # Python dependencies
+**`influence_scores`** (calculated)- **Use case**: "Corporate lobbying activity"│   │   ├── election_api.py          # OpenFEC API
+
+```javascript
+
+{- **Implementation**: Phase 4│   │   └── lobbying_api.py          # Senate LDA API
+
+  politician_id: "senator_x",
+
+  total_donations: 5000000,│   └── utils/                # Utility functions
+
+  donor_alignment: [
+
+    {**7. Voting Records** (Congress.gov API)├── inspect_data.py           # Repository inspection tool
+
+      donor_id: "exxon_mobil",
+
+      donated: 500000,- **Contains**: Bill votes, member positions, outcomes├── dagster.yaml              # Dagster instance configuration
+
+      bills_scored: 12,
+
+      votes_aligned: 11,- **Use case**: "Correlation analysis (money → votes)"├── workspace.yaml            # Code location configuration
+
+      alignment_rate: 0.92,
+
+      influence_score: 0.87- **Implementation**: Phase 5├── docker-compose.yml        # Service definitions
+
+    }
+
+  ],├── Dockerfile                # Multi-stage container build
+
+  overall_influence: 0.78
+
+}### FEC Data: How It Works└── requirements.txt          # Python dependencies
 
 ```
+
+```
+
+---
 
 **Election Cycles** (2-year periods named by election year)
 
+## Development
+
 ```## Data Repository
+
+### Project Structure
 
 2020 Cycle: Jan 2019 - Dec 2020
 
-2022 Cycle: Jan 2021 - Dec 2022All downloaded data is organized in the `data/` directory with a clean structure:
+```
 
-2024 Cycle: Jan 2023 - Dec 2024
+legal-tender/2022 Cycle: Jan 2021 - Dec 2022All downloaded data is organized in the `data/` directory with a clean structure:
 
-2026 Cycle: Jan 2025 - Dec 2026### Directory Layout
+├── src/
 
-```- **`data/legislators/`**: Congress members data from GitHub (1MB)
+│   ├── __init__.py              # Dagster definitions2024 Cycle: Jan 2023 - Dec 2024
 
-- **`data/fec/2024/`**: 2024 election cycle FEC bulk data
+│   ├── assets/                  # Data pipeline assets
 
-**Why Track 4 Cycles?**- **`data/fec/2026/`**: 2026 election cycle FEC bulk data
+│   │   ├── data_sync.py2026 Cycle: Jan 2025 - Dec 2026### Directory Layout
 
-- **Senate has 3 classes** with staggered 6-year terms:- **`data/congress_api/`**: Cached ProPublica API responses
+│   │   ├── member_mapping.py
 
-  - Class 1: Elected 2024 (next: 2030)
+│   │   └── financial_summary.py```- **`data/legislators/`**: Congress members data from GitHub (1MB)
 
-  - Class 2: Elected 2026 (next: 2032)### File Naming
+│   ├── jobs/                    # Job definitions
 
-  - Class 3: Elected 2022 (next: 2028) ← Would be missing with only 2024/2026!Friendly names instead of cryptic FEC codes:
+│   ├── schedules/               # Automated schedules- **`data/fec/2024/`**: 2024 election cycle FEC bulk data
 
-- **House**: All 435 seats up every 2 years- `candidates.zip` (was `cn24.zip`)
+│   ├── api/                     # External API clients
 
-- **Result**: 4 cycles = complete coverage of all 538 members- `committees.zip` (was `cm24.zip`)
+│   ├── data/                    # Data repository management**Why Track 4 Cycles?**- **`data/fec/2026/`**: 2026 election cycle FEC bulk data
+
+│   └── resources/               # Shared resources (MongoDB, etc)
+
+├── data/                        # Local data cache- **Senate has 3 classes** with staggered 6-year terms:- **`data/congress_api/`**: Cached ProPublica API responses
+
+├── docker-compose.yml
+
+├── Dockerfile  - Class 1: Elected 2024 (next: 2030)
+
+└── README.md
+
+```  - Class 2: Elected 2026 (next: 2032)### File Naming
+
+
+
+### Adding New Assets  - Class 3: Elected 2022 (next: 2028) ← Would be missing with only 2024/2026!Friendly names instead of cryptic FEC codes:
+
+
+
+1. Create asset file in `src/assets/`- **House**: All 435 seats up every 2 years- `candidates.zip` (was `cn24.zip`)
+
+2. Export in `src/assets/__init__.py`
+
+3. Register in `src/__init__.py` Definitions- **Result**: 4 cycles = complete coverage of all 538 members- `committees.zip` (was `cm24.zip`)
+
+4. Restart: `docker compose restart dagster-webserver dagster-daemon`
 
 - `linkages.zip` (was `ccl24.zip`)
 
+### Environment Variables
+
 **Filing Schedule**- `independent_expenditures.zip` (was `oppexp24.zip`)
 
-- **Quarterly reports**: Q1 (Apr 15), Q2 (Jul 15), Q3 (Oct 15), Year-End (Jan 31)
+Required in `.env`:
 
-- **Monthly reports**: High-volume committees (>$50K/month)### Inspection Tools
+```bash- **Quarterly reports**: Q1 (Apr 15), Q2 (Jul 15), Q3 (Oct 15), Year-End (Jan 31)
 
-- **Election reports**: Pre-General (12 days before), Post-General (30 days after)
+CONGRESS_API_KEY=your_key
 
-- **FEC publishes bulk files**: Monthly (~15th)**`inspect_data.py`** - View repository contents and stats:
+ELECTION_API_KEY=your_key- **Monthly reports**: High-volume committees (>$50K/month)### Inspection Tools
 
-```bash
+LOBBYING_API_KEY=your_key
 
-**Update Strategy**python3 inspect_data.py              # Overview of downloaded files
-
-- **Smart caching**: Check `Last-Modified` headers before downloadingpython3 inspect_data.py --metadata   # Detailed metadata
-
-- **Weekly sync**: Runs every Sunday 2 AM UTCpython3 inspect_data.py --json       # JSON output
-
-- **Efficient**: Only downloads if remote files are newer than local cache```
-
-
-
----**`test_data_repository.py`** - Test downloads and structure:
-
-```bash
-
-## 🔧 Working with the Pipelinepython3 test_data_repository.py      # Test structure + optional downloads
+MONGO_URI=mongodb://ltuser:ltpass@mongo:27017/admin- **Election reports**: Pre-General (12 days before), Post-General (30 days after)
 
 ```
 
-### Available Assets
+- **FEC publishes bulk files**: Monthly (~15th)**`inspect_data.py`** - View repository contents and stats:
 
-## Data Sync Strategy
+---
 
-**Current Pipeline:**
+```bash
 
-1. **`data_sync`**: Downloads legislators + FEC bulk data (~10MB, ~10 seconds)### Smart Downloads
+## Roadmap
 
-2. **`member_fec_mapping`**: Builds member→FEC mapping (538 profiles, ~3 seconds)The `data_sync` asset checks remote `Last-Modified` headers before downloading:
+**Update Strategy**python3 inspect_data.py              # Overview of downloaded files
 
-3. **`member_financial_summary`**: Aggregates financial data (4 cycles, ~5 seconds)1. If local file doesn't exist → download
+### Immediate Next Steps
 
-2. Check remote `Last-Modified` timestamp
+- **Smart caching**: Check `Last-Modified` headers before downloadingpython3 inspect_data.py --metadata   # Detailed metadata
 
-### Available Jobs3. Compare to local file modification time
+- [ ] **Phase 1**: Download and parse FEC `indiv` files
 
-4. Only download if remote is newer
+- [ ] Build master donor list- **Weekly sync**: Runs every Sunday 2 AM UTCpython3 inspect_data.py --json       # JSON output
+
+- [ ] Link donors to politicians
+
+- **Efficient**: Only downloads if remote files are newer than local cache```
+
+### Core Innovation
+
+
+
+- [ ] **Phase 2**: AI donor profiling system
+
+- [ ] Generate PROS/CONS for each donor---**`test_data_repository.py`** - Test downloads and structure:
+
+- [ ] **Phase 3**: AI bill analysis system
+
+- [ ] Score bills against donor preferences```bash
+
+
+
+### Analysis & Correlation## 🔧 Working with the Pipelinepython3 test_data_repository.py      # Test structure + optional downloads
+
+
+
+- [ ] **Phase 4**: Voting records integration```
+
+- [ ] Calculate influence scores
+
+- [ ] **Phase 5**: Lobbying data integration### Available Assets
+
+
+
+### Presentation## Data Sync Strategy
+
+
+
+- [ ] **Phase 6**: Build REST API**Current Pipeline:**
+
+- [ ] Create visualization dashboards
+
+- [ ] Generate automated reports1. **`data_sync`**: Downloads legislators + FEC bulk data (~10MB, ~10 seconds)### Smart Downloads
+
+
+
+---2. **`member_fec_mapping`**: Builds member→FEC mapping (538 profiles, ~3 seconds)The `data_sync` asset checks remote `Last-Modified` headers before downloading:
+
+
+
+## Contributing3. **`member_financial_summary`**: Aggregates financial data (4 cycles, ~5 seconds)1. If local file doesn't exist → download
+
+
+
+This is an active research project. Areas for contribution:2. Check remote `Last-Modified` timestamp
+
+
+
+- **Data Engineering**: Parsers, ETL pipelines, data quality### Available Jobs3. Compare to local file modification time
+
+- **AI/ML**: Donor profiling models, bill analysis NLP
+
+- **Analysis**: Statistical correlation, influence scoring algorithms4. Only download if remote is newer
+
+- **Visualization**: Dashboards, network graphs, reports
 
 **Current Jobs:**5. Fallback to 7-day age check if remote check fails
 
+---
+
 - **`data_sync_job`**: Download fresh data
+
+## License
 
 - **`member_fec_mapping_job`**: Build member mappings### Configuration
 
+[Add your license]
+
 - **`member_financial_summary_job`**: Aggregate financial summaries```python
+
+---
 
 - **`bulk_data_pipeline_job`**: Full pipeline (all 3 assets in sequence) ⭐ **Use this**DataSyncConfig(
 
+## Acknowledgments
+
     force_refresh=False,           # Force re-download
 
-### Running Jobs    cycles=["2024", "2026"],       # FEC cycles to sync
+**Data Sources**:
 
-    sync_legislators=True,         # Legislators file
+- [Federal Election Commission](https://www.fec.gov/) - Campaign finance data### Running Jobs    cycles=["2024", "2026"],       # FEC cycles to sync
+
+- [unitedstates/congress-legislators](https://github.com/unitedstates/congress-legislators) - Legislator data
+
+- [Congress.gov API](https://api.congress.gov/) - Bills and votes    sync_legislators=True,         # Legislators file
+
+- [Senate LDA](https://lda.senate.gov/) - Lobbying disclosures
 
 **Via Dagster UI** (Recommended):    sync_fec_core=True,            # Core files (~4MB)
 
-1. Open http://localhost:3000    sync_fec_summaries=False,      # Summaries (~7MB)
+**Built With**:
 
-2. Navigate to **"Jobs"** tab    sync_fec_transactions=False,   # Transactions (~4GB)
+- [Dagster](https://dagster.io/) - Data orchestration1. Open http://localhost:3000    sync_fec_summaries=False,      # Summaries (~7MB)
 
-3. Select **`bulk_data_pipeline_job`**    check_remote_modified=True,    # Check Last-Modified headers
+- [MongoDB](https://www.mongodb.com/) - Document storage
 
-4. Click **"Launch Run"**)
+- [Docker](https://www.docker.com/) - Containerization2. Navigate to **"Jobs"** tab    sync_fec_transactions=False,   # Transactions (~4GB)
+
+
+
+---3. Select **`bulk_data_pipeline_job`**    check_remote_modified=True,    # Check Last-Modified headers
+
+
+
+**Status**: Phase 0 Complete | Phase 1 Starting Soon | Last Updated: October 20254. Click **"Launch Run"**)
+
 
 5. Monitor progress in real-time```
 
