@@ -75,46 +75,14 @@ bulk_data_pipeline_job = define_asset_job(
 )
 
 # ============================================================================
-# DEPRECATED JOBS (API-BASED APPROACH - KEPT FOR COMPATIBILITY)
+# DEPRECATED JOBS REMOVED
 # ============================================================================
-# These jobs use the old API-based approach (ProPublica + OpenFEC APIs).
-# They are kept for backward compatibility but should be migrated to the
-# bulk data approach for better performance and lower API usage.
+# The old API-based jobs (congress_pipeline, donor_pipeline, full_pipeline)
+# have been removed in favor of the bulk data approach which is:
+# - Faster (no rate limits)
+# - More complete (bulk files have more data)
+# - More reliable (no API dependencies)
+# 
+# Old assets (congress_members_asset, member_donor_data_asset) are still in
+# src/assets/ but are no longer registered in Dagster definitions.
 # ============================================================================
-
-congress_pipeline_job = define_asset_job(
-    name="congress_pipeline",
-    description="[DEPRECATED] Fetch current Congress members from Congress.gov API and sync to MongoDB",
-    selection=AssetSelection.keys("congress_members"),
-    tags={
-        "team": "data-engineering",
-        "source": "congress-api",
-        "priority": "low",
-        "status": "deprecated",
-    },
-)
-
-donor_pipeline_job = define_asset_job(
-    name="donor_pipeline",
-    description="[DEPRECATED] Fetch donor contributions for all Congress members from OpenFEC API",
-    selection=AssetSelection.keys("member_donor_data"),
-    tags={
-        "team": "data-engineering",
-        "source": "openfec-api",
-        "priority": "low",
-        "depends_on": "congress_members",
-        "status": "deprecated",
-    },
-)
-
-full_pipeline_job = define_asset_job(
-    name="full_pipeline",
-    description="[DEPRECATED] Refresh all congressional data: members + donor contributions (in dependency order)",
-    selection=AssetSelection.keys("congress_members", "member_donor_data"),
-    tags={
-        "team": "data-engineering",
-        "pipeline": "api-based",
-        "priority": "low",
-        "status": "deprecated",
-    },
-)

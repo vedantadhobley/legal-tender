@@ -26,7 +26,7 @@ from src.resources.mongo import MongoDBResource
 class FinancialSummaryConfig(Config):
     """Configuration for financial summary asset."""
     
-    cycles: List[str] = ["2024", "2026"]  # FEC cycles to load
+    cycles: List[str] = ["2020", "2022", "2024", "2026"]  # 8 years of data
     force_refresh: bool = False  # Force re-download
 
 
@@ -178,38 +178,107 @@ def member_financial_summary_asset(
             members_without_data += 1
             continue
         
-        # Aggregate totals across all cycles and committees
-        total_receipts = 0
-        total_disbursements = 0
-        cash_on_hand = 0
-        total_indiv_contrib = 0
-        total_debts = 0
-        
+        # Deduplicate by (CAND_ID, CVG_END_DT, cycle) - same candidate/date/cycle = duplicate
+        seen = set()
+        unique_summaries = []
         for summary in member_summaries:
-            try:
-                total_receipts += float(summary.get('TTL_RECEIPTS', 0) or 0)
-                total_disbursements += float(summary.get('TTL_DISB', 0) or 0)
-                cash_on_hand += float(summary.get('COH_COP', 0) or 0)
-                total_indiv_contrib += float(summary.get('TTL_INDIV_CONTRIB', 0) or 0)
-                total_debts += float(summary.get('DEBTS_OWED_BY', 0) or 0)
-            except (ValueError, TypeError):
-                continue
+            key = (
+                summary.get('CAND_ID'),
+                summary.get('CVG_END_DT'),
+                summary.get('cycle')
+            )
+            if key not in seen:
+                seen.add(key)
+                unique_summaries.append(summary)
+        
+        # Sort by coverage end date to get most recent data
+        unique_summaries.sort(
+            key=lambda x: x.get('CVG_END_DT', ''),
+            reverse=True
+        )
+        
+        # Organize by cycle for clean per-cycle storage
+        # Group summaries by cycle
+        by_cycle = {}
+        for summary in unique_summaries:
+            cycle = summary.get('cycle')
+            if cycle not in by_cycle:
+                by_cycle[cycle] = []
+            by_cycle[cycle].append(summary)
+        
+        # For each cycle, compute totals (deduped within cycle)
+        cycle_data = {}
+        for cycle in sorted(by_cycle.keys(), reverse=True):
+            cycle_summaries = by_cycle[cycle]
+            
+            total_receipts = 0
+            total_disbursements = 0
+            total_indiv_contrib = 0
+            cash_on_hand = 0
+            total_debts = 0
+            
+            for summary in cycle_summaries:
+                try:
+                    total_receipts += float(summary.get('TTL_RECEIPTS', 0) or 0)
+                    total_disbursements += float(summary.get('TTL_DISB', 0) or 0)
+                    total_indiv_contrib += float(summary.get('TTL_INDIV_CONTRIB', 0) or 0)
+                    # For point-in-time values, use the most recent (already sorted)
+                    if cash_on_hand == 0:
+                        cash_on_hand = float(summary.get('COH_COP', 0) or 0)
+                    if total_debts == 0:
+                        total_debts = float(summary.get('DEBTS_OWED_BY', 0) or 0)
+                except (ValueError, TypeError):
+                    continue
+            
+            cycle_data[cycle] = {
+                'total_raised': round(total_receipts, 2),
+                'total_spent': round(total_disbursements, 2),
+                'cash_on_hand': round(cash_on_hand, 2),
+                'individual_contributions': round(total_indiv_contrib, 2),
+                'debts': round(total_debts, 2),
+                'num_entries': len(cycle_summaries)
+            }
+        
+        # Compute career totals across all cycles (round to avoid floating-point errors)
+        career_total_raised = round(sum(c['total_raised'] for c in cycle_data.values()), 2)
+        career_total_spent = round(sum(c['total_spent'] for c in cycle_data.values()), 2)
+        career_indiv_contrib = round(sum(c['individual_contributions'] for c in cycle_data.values()), 2)
+        
+        # Most recent cycle (for quick reference)
+        most_recent_cycle = sorted(cycle_data.keys(), reverse=True)[0] if cycle_data else None
         
         member_financials[bioguide_id] = {
             'bioguide_id': bioguide_id,
             'name': name,
             'candidate_ids': candidate_ids,
-            'total_raised': total_receipts,
-            'total_spent': total_disbursements,
-            'cash_on_hand': cash_on_hand,
-            'individual_contributions': total_indiv_contrib,
-            'debts': total_debts,
-            'cycles_covered': config.cycles,
-            'raw_summaries': member_summaries,  # Keep raw data for analysis
+            
+            # Per-cycle data (clean, deduplicated)
+            'by_cycle': cycle_data,
+            
+            # Career totals (sum across all cycles)
+            'career_totals': {
+                'total_raised': career_total_raised,
+                'total_spent': career_total_spent,
+                'individual_contributions': career_indiv_contrib,
+                'cycles_included': sorted(cycle_data.keys())
+            },
+            
+            # Quick stats for rankings
+            'latest_cycle': most_recent_cycle,
+            'cycles_with_data': len(cycle_data),
+            
+            # Metadata
             'updated_at': datetime.now(),
         }
         
         members_with_data += 1
+        
+        # Log deduplication for interesting cases
+        if len(member_summaries) != len(unique_summaries):
+            context.log.info(
+                f"  📊 {name}: {len(member_summaries)} entries → "
+                f"{len(unique_summaries)} unique (removed {len(member_summaries) - len(unique_summaries)} duplicates)"
+            )
     
     context.log.info(f"✅ Members with financial data: {members_with_data}")
     context.log.info(f"⚠️  Members without data: {members_without_data}")
@@ -237,22 +306,24 @@ def member_financial_summary_asset(
             context.log.info(f"✅ Stored {len(docs)} member financial summaries")
     
     # ==========================================================================
-    # PHASE 4: Show top fundraisers
+    # PHASE 4: Show top fundraisers (by career total)
     # ==========================================================================
-    context.log.info("\n🏆 TOP 10 FUNDRAISERS:")
+    context.log.info("\n🏆 TOP 10 FUNDRAISERS (Career Total):")
     context.log.info("-" * 80)
     
     top_fundraisers = sorted(
         member_financials.items(),
-        key=lambda x: x[1]['total_raised'],
+        key=lambda x: x[1]['career_totals']['total_raised'],
         reverse=True
     )[:10]
     
     for i, (bioguide_id, data) in enumerate(top_fundraisers, 1):
+        career = data['career_totals']
+        cycles = career['cycles_included']
         context.log.info(
             f"{i:2d}. {data['name']:30s} "
-            f"${data['total_raised']:>12,.0f} raised  "
-            f"${data['cash_on_hand']:>12,.0f} cash"
+            f"${career['total_raised']:>12,.0f} raised  "
+            f"({len(cycles)} cycles: {min(cycles)}-{max(cycles)})"
         )
     
     context.log.info("\n" + "=" * 80)

@@ -12,8 +12,7 @@ Architecture:
 
 from dagster import Definitions
 from src.assets import (
-    congress_members_asset,
-    member_donor_data_asset,
+    # Bulk data assets (active)
     member_fec_mapping_asset,
     data_sync_asset,
     member_financial_summary_asset,
@@ -24,13 +23,8 @@ from src.jobs import (
     member_fec_mapping_job,
     member_financial_summary_job,
     bulk_data_pipeline_job,
-    # Deprecated jobs (API-based approach)
-    congress_pipeline_job,
-    donor_pipeline_job,
-    full_pipeline_job,
 )
 from src.schedules import (
-    weekly_data_sync_schedule,
     weekly_pipeline_schedule,
 )
 from src.resources import mongo_resource
@@ -41,28 +35,22 @@ from src.resources import mongo_resource
 
 defs = Definitions(
     assets=[
-        congress_members_asset,
-        member_donor_data_asset,
-        member_fec_mapping_asset,  # NEW: Refactored bulk data approach
-        data_sync_asset,  # NEW: Independent data download/sync
-        member_financial_summary_asset,  # NEW: Aggregated FEC financial data
+        # Active assets (bulk data approach)
+        data_sync_asset,  # Downloads legislators + FEC bulk files
+        member_fec_mapping_asset,  # Builds member→FEC mapping
+        member_financial_summary_asset,  # Aggregated financial summaries
     ],
     resources={
         "mongo": mongo_resource,
     },
     jobs=[
-        # Current jobs (bulk data approach)
+        # Bulk data jobs (active)
         data_sync_job,
         member_fec_mapping_job,
         member_financial_summary_job,
         bulk_data_pipeline_job,
-        # Deprecated jobs (API-based approach, kept for compatibility)
-        congress_pipeline_job,
-        donor_pipeline_job,
-        full_pipeline_job,
     ],
     schedules=[
-        weekly_data_sync_schedule,  # Downloads fresh data every Sunday 2 AM
-        weekly_pipeline_schedule,   # Full pipeline every Sunday 3 AM
+        weekly_pipeline_schedule,   # Full pipeline (download + mapping + aggregation) every Sunday 2 AM
     ],
 )
