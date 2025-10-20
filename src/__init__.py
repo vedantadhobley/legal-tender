@@ -16,12 +16,16 @@ from src.assets import (
     member_fec_mapping_asset,
     data_sync_asset,
     member_financial_summary_asset,
+    individual_contributions_asset,
+    independent_expenditures_asset,
 )
 from src.jobs import (
     # Current jobs (bulk data approach)
     data_sync_job,
     member_fec_mapping_job,
     member_financial_summary_job,
+    individual_contributions_job,
+    independent_expenditures_job,
     bulk_data_pipeline_job,
 )
 from src.schedules import (
@@ -39,6 +43,8 @@ defs = Definitions(
         data_sync_asset,  # Downloads legislators + FEC bulk files
         member_fec_mapping_asset,  # Builds member→FEC mapping
         member_financial_summary_asset,  # Aggregated financial summaries
+        individual_contributions_asset,  # Individual donations (with employer data)
+        independent_expenditures_asset,  # Super PAC spending (with negative values for opposition)
     ],
     resources={
         "mongo": mongo_resource,
@@ -48,6 +54,8 @@ defs = Definitions(
         data_sync_job,
         member_fec_mapping_job,
         member_financial_summary_job,
+        individual_contributions_job,
+        independent_expenditures_job,
         bulk_data_pipeline_job,
     ],
     schedules=[

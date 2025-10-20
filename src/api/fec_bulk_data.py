@@ -168,6 +168,194 @@ def parse_fec_linkages_file(zip_path: Path) -> List[Dict[str, str]]:
     return records
 
 
+def parse_indiv_file(zip_path: Path, limit: Optional[int] = None) -> List[Dict[str, str]]:
+    """Parse FEC individual contributions file (indiv.txt).
+    
+    Format: CMTE_ID|AMNDT_IND|RPT_TP|TRANSACTION_PGI|IMAGE_NUM|TRANSACTION_TP|
+            ENTITY_TP|NAME|CITY|STATE|ZIP_CODE|EMPLOYER|OCCUPATION|
+            TRANSACTION_DT|TRANSACTION_AMT|OTHER_ID|TRAN_ID|FILE_NUM|MEMO_CD|MEMO_TEXT|SUB_ID
+    
+    Key fields:
+    - NAME: Donor name
+    - EMPLOYER: Donor's employer (key for corporate influence!)
+    - OCCUPATION: Donor's job
+    - TRANSACTION_AMT: Amount donated
+    - CMTE_ID: Committee that received the donation
+    - TRANSACTION_DT: Date (MMDDYYYY format)
+    
+    Args:
+        zip_path: Path to indiv zip file
+        limit: Optional limit on number of records (for testing)
+        
+    Returns:
+        List of contribution records
+    """
+    records = []
+    with zipfile.ZipFile(zip_path) as zf:
+        txt_files = [name for name in zf.namelist() if name.endswith('.txt')]
+        if not txt_files:
+            print(f"⚠️  No .txt files found in {zip_path}")
+            return records
+        
+        print(f"📖 Parsing {txt_files[0]} from {zip_path.name}...")
+        if limit:
+            print(f"   Limited to first {limit:,} records")
+        
+        with zf.open(txt_files[0]) as f:
+            for i, line in enumerate(f):
+                if limit and i >= limit:
+                    print(f"   Reached limit of {limit:,} records")
+                    break
+                
+                # Log progress every 100k lines
+                if i % 100000 == 0 and i > 0:
+                    print(f"   Processed {i:,} lines, {len(records):,} valid records...")
+                
+                if not line.strip():
+                    continue
+                
+                try:
+                    line_str = line.decode('utf-8', errors='ignore')
+                    parts = line_str.split('|')
+                    
+                    if len(parts) >= 21:
+                        records.append({
+                            'CMTE_ID': parts[0],
+                            'AMNDT_IND': parts[1],
+                            'RPT_TP': parts[2],
+                            'TRANSACTION_PGI': parts[3],
+                            'IMAGE_NUM': parts[4],
+                            'TRANSACTION_TP': parts[5],
+                            'ENTITY_TP': parts[6],
+                            'NAME': parts[7],
+                            'CITY': parts[8],
+                            'STATE': parts[9],
+                            'ZIP_CODE': parts[10],
+                            'EMPLOYER': parts[11],
+                            'OCCUPATION': parts[12],
+                            'TRANSACTION_DT': parts[13],
+                            'TRANSACTION_AMT': parts[14],
+                            'OTHER_ID': parts[15],
+                            'TRAN_ID': parts[16],
+                            'FILE_NUM': parts[17],
+                            'MEMO_CD': parts[18],
+                            'MEMO_TEXT': parts[19],
+                            'SUB_ID': parts[20],
+                        })
+                except Exception:
+                    # Skip malformed lines
+                    continue
+    
+    return records
+
+
+def parse_oppexp_file(zip_path: Path, limit: Optional[int] = None) -> List[Dict[str, str]]:
+    """Parse FEC independent expenditures file (oppexp.txt).
+    
+    Format: CMTE_ID|AMNDT_IND|RPT_YR|RPT_TP|IMAGE_NUM|LINE_NUM|FORM_TP_CD|SCHED_TP_CD|
+            NAME|STREET_1|STREET_2|CITY|STATE|ZIP|TRANSACTION_DT|TRANSACTION_AMT|
+            TRANSACTION_PGI|PURPOSE|CATEGORY|CATEGORY_DESC|MEMO_CD|MEMO_TEXT|ENTITY_TP|
+            SUB_ID|FILE_NUM|TRAN_ID|BACK_REF_TRAN_ID|BACK_REF_SCHED_NAME|CAND_ID|
+            CAND_NAME|CAND_OFFICE|CAND_OFFICE_ST|CAND_OFFICE_DISTRICT|CONDUIT_NAME|
+            CONDUIT_STREET1|CONDUIT_STREET2|CONDUIT_CITY|CONDUIT_STATE|CONDUIT_ZIP|
+            PAYEE_EMPLOYER|PAYEE_OCCUPATION|DISSEMINATION_DT|COMM_DT|SUPPORT_OPPOSE_INDICATOR
+    
+    Key fields:
+    - CAND_ID: Candidate this spending is FOR or AGAINST
+    - CAND_NAME: Candidate name
+    - TRANSACTION_AMT: Amount spent
+    - SUPPORT_OPPOSE_INDICATOR: 'S' = Support, 'O' = Oppose (WE USE NEGATIVE VALUES FOR OPPOSE!)
+    - PURPOSE: What the money was spent on
+    - CMTE_ID: Super PAC that spent the money
+    - TRANSACTION_DT: Date (MMDDYYYY format)
+    
+    Args:
+        zip_path: Path to oppexp zip file
+        limit: Optional limit on number of records (for testing)
+        
+    Returns:
+        List of expenditure records
+    """
+    records = []
+    with zipfile.ZipFile(zip_path) as zf:
+        txt_files = [name for name in zf.namelist() if name.endswith('.txt')]
+        if not txt_files:
+            print(f"⚠️  No .txt files found in {zip_path}")
+            return records
+        
+        print(f"📖 Parsing {txt_files[0]} from {zip_path.name}...")
+        
+        with zf.open(txt_files[0]) as f:
+            for i, line in enumerate(f):
+                if limit and i >= limit:
+                    break
+                
+                # Log progress every 100k lines
+                if i % 100000 == 0 and i > 0:
+                    print(f"   Processed {i:,} lines, {len(records):,} valid records...")
+                
+                if not line.strip():
+                    continue
+                
+                try:
+                    line_str = line.decode('utf-8', errors='ignore')
+                    parts = line_str.split('|')
+                    
+                    if len(parts) >= 41:
+                        records.append({
+                            'CMTE_ID': parts[0],
+                            'AMNDT_IND': parts[1],
+                            'RPT_YR': parts[2],
+                            'RPT_TP': parts[3],
+                            'IMAGE_NUM': parts[4],
+                            'LINE_NUM': parts[5],
+                            'FORM_TP_CD': parts[6],
+                            'SCHED_TP_CD': parts[7],
+                            'NAME': parts[8],
+                            'STREET_1': parts[9],
+                            'STREET_2': parts[10],
+                            'CITY': parts[11],
+                            'STATE': parts[12],
+                            'ZIP': parts[13],
+                            'TRANSACTION_DT': parts[14],
+                            'TRANSACTION_AMT': parts[15],
+                            'TRANSACTION_PGI': parts[16],
+                            'PURPOSE': parts[17],
+                            'CATEGORY': parts[18],
+                            'CATEGORY_DESC': parts[19],
+                            'MEMO_CD': parts[20],
+                            'MEMO_TEXT': parts[21],
+                            'ENTITY_TP': parts[22],
+                            'SUB_ID': parts[23],
+                            'FILE_NUM': parts[24],
+                            'TRAN_ID': parts[25],
+                            'BACK_REF_TRAN_ID': parts[26],
+                            'BACK_REF_SCHED_NAME': parts[27],
+                            'CAND_ID': parts[28],
+                            'CAND_NAME': parts[29],
+                            'CAND_OFFICE': parts[30],
+                            'CAND_OFFICE_ST': parts[31],
+                            'CAND_OFFICE_DISTRICT': parts[32],
+                            'CONDUIT_NAME': parts[33],
+                            'CONDUIT_STREET1': parts[34],
+                            'CONDUIT_STREET2': parts[35],
+                            'CONDUIT_CITY': parts[36],
+                            'CONDUIT_STATE': parts[37],
+                            'CONDUIT_ZIP': parts[38],
+                            'PAYEE_EMPLOYER': parts[39],
+                            'PAYEE_OCCUPATION': parts[40],
+                            # Some files have these additional fields
+                            'DISSEMINATION_DT': parts[41] if len(parts) > 41 else '',
+                            'COMM_DT': parts[42] if len(parts) > 42 else '',
+                            'SUPPORT_OPPOSE_INDICATOR': parts[43] if len(parts) > 43 else '',
+                        })
+                except Exception:
+                    # Skip malformed lines
+                    continue
+    
+    return records
+
+
 def load_fec_candidates(
     cycle: str,
     force_refresh: bool = False,

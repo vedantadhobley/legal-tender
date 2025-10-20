@@ -61,10 +61,42 @@ member_financial_summary_job = define_asset_job(
     },
 )
 
+individual_contributions_job = define_asset_job(
+    name="individual_contributions_job",
+    description="Parse and store individual contributions (direct donations from people with employer data)",
+    selection=AssetSelection.keys("individual_contributions"),
+    tags={
+        "team": "data-engineering",
+        "source": "fec-indiv",
+        "priority": "high",
+        "status": "active",
+        "phase": "4",
+    },
+)
+
+independent_expenditures_job = define_asset_job(
+    name="independent_expenditures_job",
+    description="Parse and store independent expenditures (Super PAC spending FOR/AGAINST candidates with negative values for opposition)",
+    selection=AssetSelection.keys("independent_expenditures"),
+    tags={
+        "team": "data-engineering",
+        "source": "fec-oppexp",
+        "priority": "high",
+        "status": "active",
+        "phase": "4",
+    },
+)
+
 bulk_data_pipeline_job = define_asset_job(
     name="bulk_data_pipeline_job",
-    description="Complete pipeline: Download data (data_sync) + Build member FEC mapping + Load financial summaries",
-    selection=AssetSelection.keys("data_sync", "member_fec_mapping", "member_financial_summary"),
+    description="Complete pipeline: Download data + Build member FEC mapping + Load financial summaries + Individual contributions + Independent expenditures",
+    selection=AssetSelection.keys(
+        "data_sync",
+        "member_fec_mapping",
+        "member_financial_summary",
+        "individual_contributions",
+        "independent_expenditures"
+    ),
     tags={
         "team": "data-engineering",
         "pipeline": "bulk-data",
