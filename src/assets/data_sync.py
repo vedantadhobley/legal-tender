@@ -23,8 +23,8 @@ class DataSyncConfig(Config):
     force_refresh: bool = False
     """Force re-download even if files are fresh"""
     
-    cycles: List[str] = ["2024", "2026"]
-    """FEC cycles to sync"""
+    cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    """FEC cycles to sync (8 years of data)"""
     
     sync_legislators: bool = True
     """Download legislators file"""
@@ -35,8 +35,14 @@ class DataSyncConfig(Config):
     sync_fec_summaries: bool = False
     """Download FEC summary files (~7MB)"""
     
+    sync_individual_contributions: bool = True
+    """Download individual contributions (indiv) - 2-4GB per cycle"""
+    
+    sync_independent_expenditures: bool = True
+    """Download independent expenditures (oppexp) - Super PAC spending - 2-3GB per cycle"""
+    
     sync_fec_transactions: bool = False
-    """Download FEC transaction files (~4GB)"""
+    """Download OTHER FEC transaction files (deprecated - use specific flags above)"""
     
     check_remote_modified: bool = True
     """Check Last-Modified headers before downloading"""
@@ -303,51 +309,102 @@ def data_sync_asset(
                     stats['errors'].append(f"fec/{cycle}/summaries/{basename}: {str(e)}")
     
     # =========================================================================
-    # Phase 4: Sync FEC Transaction Files (Optional, Large!)
+    # Phase 4: Individual Contributions (indiv.zip - Direct Donations)
+    # =========================================================================
+    
+    if config.sync_individual_contributions:
+        context.log.info("\n� Phase 4: Syncing Individual Contributions")
+        context.log.info("-" * 80)
+        context.log.warning("⚠️  Individual contribution files are 2-4GB each!")
+        context.log.info("    These contain direct donations from people to candidate committees.")
+        
+        for cycle in config.cycles:
+            context.log.info(f"\n{cycle} Cycle:")
+            
+            try:
+                path_method = getattr(repo, FEC_FILE_MAPPING['indiv'])
+                local_path = path_method(cycle)
+                
+                year_suffix = cycle[-2:]
+                fec_filename = f"indiv{year_suffix}.zip"
+                remote_url = f"https://www.fec.gov/files/bulk-downloads/{cycle}/{fec_filename}"
+                
+                if should_download_file(
+                    local_path,
+                    remote_url,
+                    config.force_refresh,
+                    config.check_remote_modified
+                ):
+                    context.log.info(f"⬇️  Downloading {local_path.name} (this will take several minutes)...")
+                    path = download_fec_file('indiv', cycle, config.force_refresh, repo)
+                    
+                    file_size = path.stat().st_size
+                    stats['files_downloaded'].append(f"fec/{cycle}/transactions/{local_path.name}")
+                    stats['fec'][cycle]['files_downloaded'].append(local_path.name)
+                    stats['fec'][cycle]['bytes'] += file_size
+                    stats['total_bytes'] += file_size
+                    
+                    context.log.info(f"✓ Downloaded {local_path.name} ({file_size/1024/1024:.1f} MB)")
+                else:
+                    stats['files_skipped'].append(f"fec/{cycle}/transactions/{local_path.name}")
+                    stats['fec'][cycle]['files_skipped'].append(local_path.name)
+            
+            except Exception as e:
+                context.log.error(f"❌ Error downloading indiv for {cycle}: {e}")
+                stats['errors'].append(f"fec/{cycle}/transactions/indiv: {str(e)}")
+    
+    # =========================================================================
+    # Phase 5: Independent Expenditures (oppexp.zip - Super PAC Spending)
+    # =========================================================================
+    
+    if config.sync_independent_expenditures:
+        context.log.info("\n💥 Phase 5: Syncing Independent Expenditures (Super PAC Spending)")
+        context.log.info("-" * 80)
+        context.log.warning("⚠️  Independent expenditure files are 2-3GB each!")
+        context.log.info("    These contain Super PAC spending FOR and AGAINST candidates.")
+        
+        for cycle in config.cycles:
+            context.log.info(f"\n{cycle} Cycle:")
+            
+            try:
+                path_method = getattr(repo, FEC_FILE_MAPPING['oppexp'])
+                local_path = path_method(cycle)
+                
+                year_suffix = cycle[-2:]
+                fec_filename = f"oppexp{year_suffix}.zip"
+                remote_url = f"https://www.fec.gov/files/bulk-downloads/{cycle}/{fec_filename}"
+                
+                if should_download_file(
+                    local_path,
+                    remote_url,
+                    config.force_refresh,
+                    config.check_remote_modified
+                ):
+                    context.log.info(f"⬇️  Downloading {local_path.name} (this will take several minutes)...")
+                    path = download_fec_file('oppexp', cycle, config.force_refresh, repo)
+                    
+                    file_size = path.stat().st_size
+                    stats['files_downloaded'].append(f"fec/{cycle}/transactions/{local_path.name}")
+                    stats['fec'][cycle]['files_downloaded'].append(local_path.name)
+                    stats['fec'][cycle]['bytes'] += file_size
+                    stats['total_bytes'] += file_size
+                    
+                    context.log.info(f"✓ Downloaded {local_path.name} ({file_size/1024/1024:.1f} MB)")
+                else:
+                    stats['files_skipped'].append(f"fec/{cycle}/transactions/{local_path.name}")
+                    stats['fec'][cycle]['files_skipped'].append(local_path.name)
+            
+            except Exception as e:
+                context.log.error(f"❌ Error downloading oppexp for {cycle}: {e}")
+                stats['errors'].append(f"fec/{cycle}/transactions/oppexp: {str(e)}")
+    
+    # =========================================================================
+    # Phase 6: Other Transaction Files (deprecated - use specific flags)
     # =========================================================================
     
     if config.sync_fec_transactions:
-        context.log.info("\n💸 Phase 4: Syncing FEC Transaction Files (Large!)")
-        context.log.info("-" * 80)
-        context.log.warning("⚠️  Transaction files can be 2-3GB each!")
-        
-        transaction_files = ['oppexp', 'indiv', 'pas2']
-        
-        for cycle in config.cycles:
-            context.log.info(f"\n{cycle} Cycle Transactions:")
-            
-            for basename in transaction_files:
-                try:
-                    path_method = getattr(repo, FEC_FILE_MAPPING[basename])
-                    local_path = path_method(cycle)
-                    
-                    year_suffix = cycle[-2:]
-                    fec_filename = f"{basename}{year_suffix}.zip"
-                    remote_url = f"https://www.fec.gov/files/bulk-downloads/{cycle}/{fec_filename}"
-                    
-                    if should_download_file(
-                        local_path,
-                        remote_url,
-                        config.force_refresh,
-                        config.check_remote_modified
-                    ):
-                        context.log.info(f"⬇️  Downloading {local_path.name} (may take several minutes)...")
-                        path = download_fec_file(basename, cycle, config.force_refresh, repo)
-                        
-                        file_size = path.stat().st_size
-                        stats['files_downloaded'].append(f"fec/{cycle}/transactions/{local_path.name}")
-                        stats['fec'][cycle]['files_downloaded'].append(local_path.name)
-                        stats['fec'][cycle]['bytes'] += file_size
-                        stats['total_bytes'] += file_size
-                        
-                        context.log.info(f"✓ Downloaded {local_path.name} ({file_size/1024/1024:.1f} MB)")
-                    else:
-                        stats['files_skipped'].append(f"fec/{cycle}/transactions/{local_path.name}")
-                        stats['fec'][cycle]['files_skipped'].append(local_path.name)
-                
-                except Exception as e:
-                    context.log.error(f"❌ Error downloading {basename} transactions for {cycle}: {e}")
-                    stats['errors'].append(f"fec/{cycle}/transactions/{basename}: {str(e)}")
+        context.log.warning("\n⚠️  sync_fec_transactions is deprecated!")
+        context.log.warning("    Use sync_individual_contributions and sync_independent_expenditures instead")
     
     # =========================================================================
     # Summary

@@ -46,17 +46,19 @@ class MongoDBResource(ConfigurableResource):
         """
         return client[self.database]
     
-    def get_collection(self, client: MongoClient, collection_name: str) -> Any:
+    def get_collection(self, client: MongoClient, collection_name: str, database_name: str | None = None) -> Any:
         """Get a specific collection from the database.
         
         Args:
             client: MongoDB client instance
             collection_name: Name of the collection to retrieve
+            database_name: Optional database name override (default: use configured database)
             
         Returns:
             Collection: MongoDB collection
         """
-        db = self.get_database(client)
+        db_name = database_name if database_name else self.database
+        db = client[db_name]
         return db[collection_name]
 
 

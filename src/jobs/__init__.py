@@ -5,6 +5,8 @@ from src.jobs.asset_jobs import (
     data_sync_job,
     member_fec_mapping_job,
     member_financial_summary_job,
+    individual_contributions_job,
+    independent_expenditures_job,
     bulk_data_pipeline_job,
 )
 
@@ -12,5 +14,7 @@ __all__ = [
     "data_sync_job",
     "member_fec_mapping_job",
     "member_financial_summary_job",
+    "individual_contributions_job",
+    "independent_expenditures_job",
     "bulk_data_pipeline_job",
 ]

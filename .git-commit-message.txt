@@ -1,0 +1,39 @@
+refactor: Architecture clarification and 8-year data expansion
+
+MAJOR CHANGES:
+- Two-database MongoDB architecture (fec_bulk + legal_tender)
+- Streaming parsers with dynamic batch sizing (memory-safe for 2-4GB files)
+- Expanded from 2 years → 8 years of FEC data (2020-2026)
+- Added individual contributions & independent expenditures assets
+- Comprehensive documentation in README & MONGODB_STRUCTURE
+
+BUSINESS LOGIC CLARIFICATION:
+- Focus: Corporate/PAC influence tracking (NOT individual donors)
+- New: Leadership PAC upstream influence tracking (money laundering detection)
+- New: "Virtual PAC" concept (compare Individual $ vs Corporate PAC $)
+- New: Lobbying data integration plan (Senate LDA API)
+
+TECHNICAL IMPROVEMENTS:
+- Memory-safe streaming for large files (never load 4GB into RAM)
+- Dynamic batch sizing based on available memory (1K-100K records)
+- Two-database architecture (raw fec_bulk, processed legal_tender)
+- Added psutil for memory detection
+
+FILES CHANGED:
+- README.md: 300 → 900+ lines (comprehensive documentation)
+- MONGODB_STRUCTURE.md: Complete rewrite with schemas
+- src/assets/individual_contributions.py: NEW streaming parser
+- src/assets/independent_expenditures.py: NEW with negative values for opposition
+- src/utils/memory.py: NEW dynamic batch sizing
+- src/resources/mongo.py: Added database override parameter
+- requirements.txt: Added psutil
+
+NEXT STEPS (for tomorrow):
+1. Review schemas in MONGODB_STRUCTURE.md
+2. Build proper flows for donor aggregation
+3. Implement Leadership PAC upstream tracking (pas2 files)
+4. Add lobbying data integration (Senate LDA API)
+5. Everything until AI implementation (Phase 1-3)
+
+This refactor clarifies WHAT we're building (corporate influence tracking)
+and HOW we're building it (streaming, two-database, memory-safe).
