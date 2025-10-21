@@ -1,66 +1,84 @@
-"""MongoDB resource for Dagster."""
-import os
-from contextlib import contextmanager
-from typing import Any
+"""MongoDB Resource for Dagster."""
 
+from contextlib import contextmanager
+from typing import Optional
 from dagster import ConfigurableResource
 from pymongo import MongoClient
 from pymongo.database import Database
+from pymongo.collection import Collection
 
 
 class MongoDBResource(ConfigurableResource):
-    """MongoDB resource for connecting to and interacting with MongoDB.
+    """
+    Dagster resource for MongoDB connections.
     
-    This resource provides a configured MongoDB client and database connection
-    that can be shared across multiple assets and ops.
-    
-    Configuration:
-        uri: MongoDB connection string (default: from MONGO_URI env var)
-        database: Database name (default: from MONGO_DB env var or 'legal_tender')
+    Usage in asset:
+        @asset
+        def my_asset(mongo: MongoDBResource):
+            with mongo.get_client() as client:
+                db = client['my_database']
+                collection = db['my_collection']
+                # ... do work
     """
     
-    uri: str = os.getenv("MONGO_URI", "mongodb://ltuser:ltpass@mongo:27017/admin")
-    database: str = os.getenv("MONGO_DB", "legal_tender")
+    connection_string: str = "mongodb://ltuser:ltpass@mongo:27017/"
+    """MongoDB connection string (uses 'mongo' service name in Docker with authentication)"""
     
     @contextmanager
     def get_client(self):
-        """Get MongoDB client as a context manager.
+        """
+        Get a MongoDB client as a context manager.
         
         Yields:
-            MongoClient: Configured MongoDB client
+            MongoClient: Connected MongoDB client
+            
+        Example:
+            with mongo.get_client() as client:
+                db = client['legal_tender']
+                collection = db['members']
+                collection.insert_one({...})
         """
-        client = MongoClient(self.uri)
+        client = MongoClient(self.connection_string)
         try:
+            # Test connection
+            client.admin.command('ping')
             yield client
         finally:
             client.close()
     
-    def get_database(self, client: MongoClient) -> Database:
-        """Get configured database from client.
+    def get_database(self, client: MongoClient, database_name: str) -> Database:
+        """
+        Get a database from the client.
         
         Args:
-            client: MongoDB client instance
+            client: MongoDB client
+            database_name: Name of the database
             
         Returns:
-            Database: Configured MongoDB database
+            Database: MongoDB database
         """
-        return client[self.database]
+        return client[database_name]
     
-    def get_collection(self, client: MongoClient, collection_name: str, database_name: str | None = None) -> Any:
-        """Get a specific collection from the database.
+    def get_collection(
+        self, 
+        client: MongoClient, 
+        collection_name: str, 
+        database_name: str = "legal_tender"
+    ) -> Collection:
+        """
+        Get a collection from the database.
         
         Args:
-            client: MongoDB client instance
-            collection_name: Name of the collection to retrieve
-            database_name: Optional database name override (default: use configured database)
+            client: MongoDB client
+            collection_name: Name of the collection
+            database_name: Name of the database (default: legal_tender)
             
         Returns:
             Collection: MongoDB collection
         """
-        db_name = database_name if database_name else self.database
-        db = client[db_name]
+        db = self.get_database(client, database_name)
         return db[collection_name]
 
 
-# Singleton instance for easy import
-mongo_resource = MongoDBResource()
+# Default resource instance
+mongo_resource = MongoDBResource(connection_string="mongodb://ltuser:ltpass@mongo:27017/")

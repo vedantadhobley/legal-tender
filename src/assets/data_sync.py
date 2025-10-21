@@ -32,14 +32,17 @@ class DataSyncConfig(Config):
     sync_fec_core: bool = True
     """Download FEC core files (candidates, committees, linkages)"""
     
-    sync_fec_summaries: bool = False
-    """Download FEC summary files (~7MB)"""
+    sync_fec_summaries: bool = True
+    """Download FEC summary files (webl, webk - ~10MB total, gives us committee & PAC financial summaries)"""
     
-    sync_individual_contributions: bool = True
-    """Download individual contributions (indiv) - 2-4GB per cycle"""
+    sync_individual_contributions: bool = False
+    """DEPRECATED: Individual contributions no longer needed. We use webl.zip summary files for aggregate individual donor totals."""
     
     sync_independent_expenditures: bool = True
-    """Download independent expenditures (oppexp) - Super PAC spending - 2-3GB per cycle"""
+    """Download independent expenditures (CSV) - Super PAC spending FOR/AGAINST candidates - 20MB per cycle"""
+    
+    sync_committee_transfers: bool = True
+    """Download committee transfers (pas2) - ~300MB per cycle, CRITICAL for Leadership PAC tracking"""
     
     sync_fec_transactions: bool = False
     """Download OTHER FEC transaction files (deprecated - use specific flags above)"""
@@ -76,7 +79,8 @@ def should_download_file(
     local_path,
     remote_url: str,
     force_refresh: bool = False,
-    check_remote: bool = True
+    check_remote: bool = True,
+    context = None
 ) -> bool:
     """
     Determine if a file should be downloaded.
@@ -86,15 +90,24 @@ def should_download_file(
         remote_url: URL of remote file
         force_refresh: Force download regardless of state
         check_remote: Check remote Last-Modified header
+        context: Optional Dagster context for logging
         
     Returns:
         True if file should be downloaded
     """
+    def log(msg):
+        if context:
+            context.log.info(msg)
+        else:
+            print(msg)
+    
     if force_refresh:
+        log("🔄 Force refresh enabled")
         return True
     
     # If file doesn't exist locally, download
     if not local_path.exists():
+        log(f"📥 File doesn't exist locally: {local_path.name}")
         return True
     
     # If we're checking remote modification time
@@ -105,19 +118,19 @@ def should_download_file(
             
             # Download if remote is newer
             if remote_modified > local_modified:
-                print(f"ℹ️  Remote file is newer (remote: {remote_modified}, local: {local_modified})")
+                log(f"🆕 Remote file is newer (remote: {remote_modified.date()}, local: {local_modified.date()})")
                 return True
             else:
-                print(f"✓ Local file is up to date (last modified: {local_modified})")
+                log(f"✓ Using cached {local_path.name} (up to date)")
                 return False
     
     # Fall back to age-based check (7 days)
     file_age = datetime.now() - datetime.fromtimestamp(local_path.stat().st_mtime)
     if file_age.days >= 7:
-        print(f"ℹ️  Local file is {file_age.days} days old, refreshing...")
+        log(f"⏰ File is {file_age.days} days old, refreshing...")
         return True
     
-    print(f"✓ Local file is fresh ({file_age.days} days old)")
+    log(f"✓ Using cached {local_path.name} ({file_age.days} days old)")
     return False
 
 
@@ -171,7 +184,8 @@ def data_sync_asset(
                 local_path,
                 legislators_url,
                 config.force_refresh,
-                config.check_remote_modified
+                config.check_remote_modified,
+                context
             ):
                 context.log.info("⬇️  Downloading legislators file...")
                 legislators = download_legislators_file(repo)
@@ -241,7 +255,8 @@ def data_sync_asset(
                         local_path,
                         remote_url,
                         config.force_refresh,
-                        config.check_remote_modified
+                        config.check_remote_modified,
+                        context
                     ):
                         context.log.info(f"⬇️  Downloading {local_path.name}...")
                         path = download_fec_file(basename, cycle, config.force_refresh, repo)
@@ -256,7 +271,6 @@ def data_sync_asset(
                     else:
                         stats['files_skipped'].append(f"fec/{cycle}/{local_path.name}")
                         stats['fec'][cycle]['files_skipped'].append(local_path.name)
-                        context.log.info(f"✓ Skipped {local_path.name} (up to date)")
                 
                 except Exception as e:
                     context.log.error(f"❌ Error downloading {basename} for {cycle}: {e}")
@@ -288,7 +302,8 @@ def data_sync_asset(
                         local_path,
                         remote_url,
                         config.force_refresh,
-                        config.check_remote_modified
+                        config.check_remote_modified,
+                        context
                     ):
                         context.log.info(f"⬇️  Downloading {local_path.name}...")
                         path = download_fec_file(basename, cycle, config.force_refresh, repo)
@@ -333,7 +348,8 @@ def data_sync_asset(
                     local_path,
                     remote_url,
                     config.force_refresh,
-                    config.check_remote_modified
+                    config.check_remote_modified,
+                    context
                 ):
                     context.log.info(f"⬇️  Downloading {local_path.name} (this will take several minutes)...")
                     path = download_fec_file('indiv', cycle, config.force_refresh, repo)
@@ -354,14 +370,14 @@ def data_sync_asset(
                 stats['errors'].append(f"fec/{cycle}/transactions/indiv: {str(e)}")
     
     # =========================================================================
-    # Phase 5: Independent Expenditures (oppexp.zip - Super PAC Spending)
+    # Phase 5: Independent Expenditures (CSV - Super PAC Spending FOR/AGAINST Candidates)
     # =========================================================================
     
     if config.sync_independent_expenditures:
-        context.log.info("\n💥 Phase 5: Syncing Independent Expenditures (Super PAC Spending)")
+        context.log.info("\n💥 Phase 5: Syncing Independent Expenditures (Schedule E - Super PAC Spending)")
         context.log.info("-" * 80)
-        context.log.warning("⚠️  Independent expenditure files are 2-3GB each!")
-        context.log.info("    These contain Super PAC spending FOR and AGAINST candidates.")
+        context.log.info("📝 NOTE: Downloading CSV files (NOT oppexp.zip - that's operating expenses!)")
+        context.log.info("    These contain Super PAC spending FOR and AGAINST specific candidates.")
         
         for cycle in config.cycles:
             context.log.info(f"\n{cycle} Cycle:")
@@ -370,18 +386,76 @@ def data_sync_asset(
                 path_method = getattr(repo, FEC_FILE_MAPPING['oppexp'])
                 local_path = path_method(cycle)
                 
-                year_suffix = cycle[-2:]
-                fec_filename = f"oppexp{year_suffix}.zip"
+                # CSV file at cycle root, not in transactions directory
+                fec_filename = f"independent_expenditure_{cycle}.csv"
                 remote_url = f"https://www.fec.gov/files/bulk-downloads/{cycle}/{fec_filename}"
                 
                 if should_download_file(
                     local_path,
                     remote_url,
                     config.force_refresh,
-                    config.check_remote_modified
+                    config.check_remote_modified,
+                    context
                 ):
-                    context.log.info(f"⬇️  Downloading {local_path.name} (this will take several minutes)...")
-                    path = download_fec_file('oppexp', cycle, config.force_refresh, repo)
+                    context.log.info(f"⬇️  Downloading {local_path.name} (~20 MB, CSV format)...")
+                    
+                    # Download CSV directly (no ZIP extraction needed)
+                    import requests
+                    response = requests.get(remote_url, timeout=120)
+                    response.raise_for_status()
+                    
+                    # Ensure parent directory exists
+                    local_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # Save CSV file
+                    with open(local_path, 'wb') as f:
+                        f.write(response.content)
+                    
+                    file_size = local_path.stat().st_size
+                    stats['files_downloaded'].append(f"fec/{cycle}/{local_path.name}")
+                    stats['fec'][cycle]['files_downloaded'].append(local_path.name)
+                    stats['fec'][cycle]['bytes'] += file_size
+                    stats['total_bytes'] += file_size
+                    
+                    context.log.info(f"✓ Downloaded {local_path.name} ({file_size/1024/1024:.1f} MB)")
+                else:
+                    stats['files_skipped'].append(f"fec/{cycle}/{local_path.name}")
+                    stats['fec'][cycle]['files_skipped'].append(local_path.name)
+            
+            except Exception as e:
+                context.log.error(f"❌ Error downloading independent expenditures for {cycle}: {e}")
+                stats['errors'].append(f"fec/{cycle}/independent_expenditure: {str(e)}")
+    
+    # =========================================================================
+    # Phase 6: Committee Transfers (pas2.zip - Leadership PAC Tracking)
+    # =========================================================================
+    
+    if config.sync_committee_transfers:
+        context.log.info("\n🔄 Phase 6: Syncing Committee Transfers (Leadership PAC Tracking)")
+        context.log.info("-" * 80)
+        context.log.info("    These transfers are CRITICAL for detecting corporate money laundering")
+        context.log.info("    via Leadership PACs (Corporate PAC → Leadership PAC → Politician)")
+        
+        for cycle in config.cycles:
+            context.log.info(f"\n{cycle} Cycle:")
+            
+            try:
+                path_method = getattr(repo, FEC_FILE_MAPPING['pas2'])
+                local_path = path_method(cycle)
+                
+                year_suffix = cycle[-2:]
+                fec_filename = f"pas2{year_suffix}.zip"
+                remote_url = f"https://www.fec.gov/files/bulk-downloads/{cycle}/{fec_filename}"
+                
+                if should_download_file(
+                    local_path,
+                    remote_url,
+                    config.force_refresh,
+                    config.check_remote_modified,
+                    context
+                ):
+                    context.log.info(f"⬇️  Downloading {local_path.name}...")
+                    path = download_fec_file('pas2', cycle, config.force_refresh, repo)
                     
                     file_size = path.stat().st_size
                     stats['files_downloaded'].append(f"fec/{cycle}/transactions/{local_path.name}")
@@ -395,16 +469,16 @@ def data_sync_asset(
                     stats['fec'][cycle]['files_skipped'].append(local_path.name)
             
             except Exception as e:
-                context.log.error(f"❌ Error downloading oppexp for {cycle}: {e}")
-                stats['errors'].append(f"fec/{cycle}/transactions/oppexp: {str(e)}")
+                context.log.error(f"❌ Error downloading pas2 for {cycle}: {e}")
+                stats['errors'].append(f"fec/{cycle}/transactions/pas2: {str(e)}")
     
     # =========================================================================
-    # Phase 6: Other Transaction Files (deprecated - use specific flags)
+    # Phase 7: Other Transaction Files (deprecated - use specific flags)
     # =========================================================================
     
     if config.sync_fec_transactions:
         context.log.warning("\n⚠️  sync_fec_transactions is deprecated!")
-        context.log.warning("    Use sync_individual_contributions and sync_independent_expenditures instead")
+        context.log.warning("    Use sync_committee_transfers and sync_independent_expenditures instead")
     
     # =========================================================================
     # Summary

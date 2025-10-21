@@ -1,12 +1,18 @@
-"""Individual Contributions Asset
+"""Committee Transfers Asset
 
-Parse and store individual contributions (indiv.zip) - direct donations from people to candidate committees.
-This is the foundation for corporate influence analysis (aggregate by employer).
+Parse and store committee-to-committee transfers (pas2.zip) - Money flowing between PACs.
+This is CRITICAL for Leadership PAC tracking and detecting corporate money laundering.
+
+Key Use Cases:
+1. Corporate PAC → Leadership PAC → Politician (hidden influence)
+2. Corporate PAC → Candidate Committee (direct influence)
+3. Leadership PAC → Multiple Politicians (distribution analysis)
 """
 
 from typing import Dict, Any, List
 from datetime import datetime
 from pathlib import Path
+import zipfile
 
 from dagster import (
     asset,
@@ -18,13 +24,13 @@ from dagster import (
 )
 
 from src.data import get_repository
-from src.api.fec_bulk_data import parse_indiv_file, download_fec_file
+from src.api.fec_bulk_data import download_fec_file
 from src.resources.mongo import MongoDBResource
 from src.utils.memory import get_recommended_batch_size
 
 
-class IndividualContributionsConfig(Config):
-    """Configuration for individual contributions processing."""
+class CommitteeTransfersConfig(Config):
+    """Configuration for committee transfers asset."""
     
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
     """Election cycles to process (8 years of data).
@@ -35,50 +41,45 @@ class IndividualContributionsConfig(Config):
     - ["2020", "2022", "2024", "2026"] - All four cycles (default, full 8 years)
     """
     
-    max_contributors_per_member: int = 100
-    """Maximum number of top contributors to store per member"""
-    
-    batch_size: int | None = None
-    """Number of records to process in each batch.
-    
-    If None (default), will automatically calculate based on available memory.
-    
-    Manual batch sizes by available RAM:
-    - 1-2 GB free:  1,000-2,000 (very conservative, cloud instances)
-    - 4 GB free:    10,000 (moderate, small cloud instances)
-    - 8 GB free:    25,000 (comfortable, medium cloud instances)
-    - 16 GB free:   50,000 (fast, local development or large instances)
-    - 32 GB+ free:  100,000 (very fast, workstations/servers)
-    """
+    force_refresh: bool = False
+    batch_size: int | None = None  # Auto-detect if None
 
 
 @asset(
-    name="individual_contributions",
-    description="Individual contributions from people to candidate committees (direct donations with $3,300 limit per election)",
+    name="committee_transfers",
+    description="Committee-to-committee transfers (Corporate PAC → Leadership PAC → Politicians)",
     group_name="fec",
     compute_kind="bulk_data",
     ins={"data_sync": AssetIn("data_sync")},
     metadata={
-        "source": "FEC bulk data (indiv files)",
-        "file_size": "2-4 GB per cycle",
-        "contains": "Name, employer, occupation, amount, date, committee",
+        "source": "FEC bulk data (pas2 files)",
+        "file_size": "~300 MB per cycle",
+        "contains": "From committee, to committee, amount, date, transaction type",
+        "critical_for": "Leadership PAC money laundering detection",
     },
 )
-def individual_contributions_asset(
+def committee_transfers_asset(
     context: AssetExecutionContext,
-    config: IndividualContributionsConfig,
+    config: CommitteeTransfersConfig,
     mongo: MongoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
-    """Parse and store individual contributions.
+    """Parse and store committee transfers.
     
-    These are direct donations from individuals to candidate committees.
+    These are transfers between committees (PACs, Leadership PACs, candidate committees).
+    CRITICAL for tracking Leadership PAC money laundering.
+    
     Key fields:
-    - NAME: Donor name
-    - EMPLOYER: Donor's employer (for corporate influence analysis)
-    - OCCUPATION: Donor's job
-    - TRANSACTION_AMT: Amount donated ($3,300 limit per election)
-    - CMTE_ID: Committee that received donation
+    - OTHER_ID (field 15): Committee SENDING the transfer (FROM)
+    - CMTE_ID (field 0): Committee RECEIVING the transfer (TO)
+    - TRANSACTION_AMT (field 14): Amount transferred
+    - TRANSACTION_DT (field 13): Date (MMDDYYYY)
+    - NAME (field 7): Name of sending committee
+    
+    Example Flow:
+    1. Lockheed Martin PAC → Pelosi Leadership PAC ($50K)
+    2. Pelosi Leadership PAC → 10 Politicians ($10K each)
+    3. We calculate: Each politician got 10% Lockheed influence
     
     Args:
         config: Configuration
@@ -89,8 +90,9 @@ def individual_contributions_asset(
         Summary statistics
     """
     context.log.info("=" * 80)
-    context.log.info("👤 PROCESSING INDIVIDUAL CONTRIBUTIONS")
+    context.log.info("🔄 PROCESSING COMMITTEE TRANSFERS (Leadership PAC Tracking)")
     context.log.info("=" * 80)
+    context.log.info("💡 This data enables upstream influence calculation")
     
     # Determine batch size (auto-detect if not specified)
     if config.batch_size is None:
@@ -103,10 +105,8 @@ def individual_contributions_asset(
     repo = get_repository()
     
     stats = {
-        'total_contributions': 0,
+        'total_transfers': 0,
         'by_cycle': {},
-        'unique_donors': 0,
-        'unique_employers': 0,
         'total_amount': 0.0,
     }
     
@@ -116,39 +116,41 @@ def individual_contributions_asset(
     # Never load full file into memory!
     # ==========================================================================
     
-    context.log.info("\n📥 STREAMING INDIVIDUAL CONTRIBUTIONS (Batch Processing)")
+    context.log.info("\n📥 STREAMING COMMITTEE TRANSFERS (Batch Processing)")
     context.log.info(f"   Batch size: {batch_size:,} records per insert")
     context.log.info("-" * 80)
     
-    # Initialize MongoDB
+    # Initialize MongoDB - use fec database for raw data
     with mongo.get_client() as client:
-        collection = mongo.get_collection(client, "individual_contributions")
         
-        # Clear existing data
-        collection.delete_many({})
-        context.log.info("🗑️  Cleared existing contributions\n")
-        
-        # Process each cycle independently
-        # Note: We track unique counts via MongoDB queries post-processing to save memory
-        # during the streaming phase (sets can consume 100MB+ for millions of unique values)
+        total_transfers = 0
         total_amount = 0.0
-        total_contributions = 0
         
         for cycle in config.cycles:
             context.log.info(f"📊 {cycle} Cycle:")
             
             try:
-                zip_path = repo.fec_individual_contributions_path(cycle)
+                zip_path = repo.fec_committee_transfers_path(cycle)
                 
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
-                    context.log.warning("   Run data_sync with sync_individual_contributions=True first\n")
+                    context.log.warning("   Run data_sync first to download pas2 files\n")
                     continue
+                
+                # Get collection for this cycle - each cycle in its own database
+                collection = mongo.get_collection(
+                    client, 
+                    "committee_transfers",
+                    database_name=f"fec_{cycle}"
+                )
+                
+                # Clear existing data for this cycle
+                collection.delete_many({})
+                context.log.info(f"   🗑️  Cleared existing {cycle} transfers")
                 
                 # Stream process this cycle
                 context.log.info(f"   📖 Streaming {zip_path.name}...")
                 
-                import zipfile
                 batch = []
                 cycle_count = 0
                 cycle_amount = 0.0
@@ -174,7 +176,7 @@ def individual_contributions_asset(
                                     continue
                                 
                                 fields = decoded.split('|')
-                                if len(fields) < 21:
+                                if len(fields) < 22:  # pas2 has 22 fields
                                     continue
                                 
                                 # Parse amount
@@ -183,33 +185,26 @@ def individual_contributions_asset(
                                 except:
                                     amount = 0.0
                                 
-                                # Clean fields
-                                name = (fields[7] or '').strip().upper()
-                                employer = (fields[11] or 'NOT PROVIDED').strip().upper()
-                                occupation = (fields[12] or 'NOT PROVIDED').strip().upper()
-                                
-                                # Don't track unique donors/employers in memory during streaming
-                                # We'll calculate these via MongoDB aggregation after data is loaded
-                                # This saves 100MB+ of memory for sets with millions of unique values
-                                
                                 cycle_amount += amount
                                 total_amount += amount
                                 
                                 # Build record
                                 record = {
-                                    '_id': fields[20],  # SUB_ID
+                                    '_id': fields[21],  # SUB_ID (unique identifier)
+                                    'sub_id': fields[21],  # Keep original FEC field
                                     'cycle': cycle,
-                                    'donor_name': name,
-                                    'employer': employer,
-                                    'occupation': occupation,
+                                    'from_committee_id': fields[15],  # OTHER_ID (sender)
+                                    'from_committee_name': (fields[7] or '').strip().upper(),  # NAME
+                                    'to_committee_id': fields[0],  # CMTE_ID (receiver)
                                     'amount': round(amount, 2),
-                                    'date': fields[13],
-                                    'committee_id': fields[0],
-                                    'city': (fields[8] or '').strip().upper(),
+                                    'date': fields[13],  # TRANSACTION_DT
+                                    'transaction_type': fields[5],  # TRANSACTION_TP
+                                    'entity_type': fields[6],  # ENTITY_TP
+                                    'candidate_id': fields[16],  # CAND_ID (if applicable)
+                                    'city': (fields[8] or '').strip(),
                                     'state': fields[9],
                                     'zip_code': fields[10],
-                                    'transaction_type': fields[5],
-                                    'memo_text': fields[19],
+                                    'memo_text': fields[20],
                                     'updated_at': datetime.now(),
                                 }
                                 
@@ -220,18 +215,18 @@ def individual_contributions_asset(
                                     try:
                                         collection.insert_many(batch, ordered=False)
                                         cycle_count += len(batch)
-                                        total_contributions += len(batch)
+                                        total_transfers += len(batch)
                                         context.log.info(f"   💾 Batch inserted: {cycle_count:,} records so far...")
                                     except Exception as e:
                                         context.log.warning(f"   ⚠️  Batch insert error (skipping duplicates): {str(e)[:100]}")
-                                        # Try inserting one by one to skip duplicates
+                                        # Try inserting one by one
                                         for rec in batch:
                                             try:
                                                 collection.insert_one(rec)
                                                 cycle_count += 1
-                                                total_contributions += 1
+                                                total_transfers += 1
                                             except:
-                                                pass  # Skip duplicate
+                                                pass
                                     batch = []  # Clear memory!
                                 
                             except Exception as e:
@@ -239,26 +234,33 @@ def individual_contributions_asset(
                             
                             # Progress every 100K lines
                             if lines_read % 100000 == 0:
-                                context.log.info(f"   � Read {lines_read:,} lines, {cycle_count:,} valid records...")
+                                context.log.info(f"   📄 Read {lines_read:,} lines, {cycle_count:,} valid records...")
                     
                     # Insert final batch
                     if batch:
                         try:
                             collection.insert_many(batch, ordered=False)
                             cycle_count += len(batch)
-                            total_contributions += len(batch)
+                            total_transfers += len(batch)
                         except Exception as e:
                             context.log.warning(f"   ⚠️  Final batch insert error (skipping duplicates): {str(e)[:100]}")
                             for rec in batch:
                                 try:
                                     collection.insert_one(rec)
                                     cycle_count += 1
-                                    total_contributions += 1
+                                    total_transfers += 1
                                 except:
                                     pass
                         batch = []  # Clear memory!
                 
-                context.log.info(f"   ✅ {cycle}: {cycle_count:,} contributions, ${cycle_amount:,.2f}\n")
+                # Create indexes for this cycle
+                context.log.info(f"   📇 Creating indexes for {cycle}...")
+                collection.create_index([("from_committee_id", 1)])
+                collection.create_index([("to_committee_id", 1)])
+                collection.create_index([("amount", -1)])
+                collection.create_index([("date", -1)])
+                
+                context.log.info(f"   ✅ {cycle}: {cycle_count:,} transfers, ${cycle_amount:,.2f}\n")
                 
                 stats['by_cycle'][cycle] = {
                     'count': cycle_count,
@@ -268,48 +270,28 @@ def individual_contributions_asset(
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}\n")
                 continue
-        
-        # Create indexes once after all data loaded
-        context.log.info("📇 Creating indexes...")
-        collection.create_index([("employer", 1)])
-        collection.create_index([("committee_id", 1)])
-        collection.create_index([("cycle", 1)])
-        collection.create_index([("donor_name", 1)])
-        collection.create_index([("amount", -1)])
-        context.log.info("✅ Indexes created")
-        
-        # Calculate unique counts via MongoDB aggregation (memory-efficient)
-        context.log.info("\n📊 Calculating unique counts...")
-        unique_donors = collection.distinct("donor_name")
-        unique_employers = collection.distinct("employer")
-        context.log.info(f"   ✅ Unique donors: {len(unique_donors):,}")
-        context.log.info(f"   ✅ Unique employers: {len(unique_employers):,}")
     
     # ==========================================================================
     # Summary
     # ==========================================================================
     
     context.log.info("\n" + "=" * 80)
-    context.log.info("🎉 INDIVIDUAL CONTRIBUTIONS COMPLETE!")
+    context.log.info("🎉 COMMITTEE TRANSFERS COMPLETE!")
     context.log.info("=" * 80)
-    context.log.info(f"   Total: {total_contributions:,} contributions")
-    context.log.info(f"   Unique donors: {len(unique_donors):,}")
-    context.log.info(f"   Unique employers: {len(unique_employers):,}")
+    context.log.info(f"   Total: {total_transfers:,} transfers")
     context.log.info(f"   Total amount: ${total_amount:,.2f}")
+    context.log.info("\n💡 Next Step: Build donors aggregation asset to calculate upstream influence")
     
-    stats['total_contributions'] = total_contributions
-    stats['unique_donors'] = len(unique_donors)
-    stats['unique_employers'] = len(unique_employers)
+    stats['total_transfers'] = total_transfers
     stats['total_amount'] = round(total_amount, 2)
     
     return Output(
         value=stats,
         metadata={
-            "total_contributions": total_contributions,
-            "unique_donors": len(unique_donors),
-            "unique_employers": len(unique_employers),
+            "total_transfers": total_transfers,
             "total_amount_usd": MetadataValue.float(total_amount),
             "cycles_processed": MetadataValue.json(config.cycles),
-            "mongodb_collection": "individual_contributions",
+            "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
+            "mongodb_collection": "committee_transfers",
         }
     )
