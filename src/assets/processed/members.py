@@ -209,7 +209,7 @@ def member_fec_mapping_asset(
             },
             'data_sources': {
                 'legislators_file': datetime.now().isoformat(),
-                'fec_bulk': datetime.now().isoformat(),
+                'fec': datetime.now().isoformat(),
             },
         }
     

@@ -1,544 +1,594 @@
 # MongoDB Structure for Legal Tender
 
-## Overview
+## Architecture Overview
 
-Two-database architecture designed for corporate influence tracking:
-1. **`fec_bulk`** - Raw FEC bulk data files (one collection per file per cycle)
-2. **`legal_tender`** - Processed analytics (donors with upstream influence, lobbying, votes)
+**Per-Year Database Design** for raw FEC data + single analytics database:
+- **`fec_2020`**, **`fec_2022`**, **`fec_2024`**, **`fec_2026`** - Raw FEC bulk files (one database per election cycle)
+- **`legal_tender`** - Processed analytics (cross-cycle aggregations, lobbying, votes, influence scores)
 
-**Key Design Decision**: We track **corporate/PAC influence**, NOT individual donors. All aggregations focus on employers, PACs, and Leadership PAC money flows.
+**Why Per-Year Databases?**
+1. **Logical Separation**: Each cycle is a complete, self-contained dataset
+2. **Simpler Collection Names**: `independent_expenditures` instead of `independent_expenditures_2024`
+3. **Better Performance**: All 2024 data in one database, no year filters needed
+4. **Easier Joins**: Natural relationships within a cycle (candidates ↔ committees ↔ expenditures)
+5. **Clear Architecture**: Each file type = one collection per database
+
+**Key Design Decision**: We track **corporate/PAC influence**, NOT individual donors. Individual donor behavior is captured via aggregated totals in summary files (`webl.zip`), not granular 40M+ record datasets (`indiv.zip` - removed for performance).
 
 ---
 
-## Database: `fec_bulk` (Raw FEC Bulk Data)
+## Raw FEC Data: `fec_YYYY` Databases
 
-### Individual Contributions (per cycle)
+Each election cycle (2020, 2022, 2024, 2026) has its own database with **7 collections** (one per FEC file type).
+
+### Example: `fec_2024` Database
+
 ```
-fec_bulk.individual_contributions_2020
-fec_bulk.individual_contributions_2022
-fec_bulk.individual_contributions_2024
-fec_bulk.individual_contributions_2026
+fec_2024/
+├── candidates              (~10K records, cn24.zip)
+├── committees              (~20K records, cm24.zip)
+├── linkages                (~20K records, ccl24.zip)
+├── candidate_summaries     (~10K records, weball24.zip)
+├── committee_summaries     (~10K records, webl24.zip)
+├── pac_summaries           (~5K records, webk24.zip)
+├── committee_transfers     (~2-5M records, pas224.zip)
+└── independent_expenditures (~50-200K records, independent_expenditure_2024.csv)
 ```
-**Purpose**: Raw contribution data for corporate influence aggregation  
-**Schema:**
+
+---
+
+## Collection Schemas (Per-Year Raw Data)
+
+**Important Note on Field Formats:**
+- **webl.zip** (committee_summaries): 30 fields per record
+- **webk.zip** (pac_summaries): 27 fields per record (DIFFERENT FORMAT!)
+- **weball.zip** (candidate_summaries): 30 fields per record
+- Field indices are NOT interchangeable between formats!
+
+### 1. `candidates` Collection
+**Source**: `cnYY.zip` (Candidate Master File)  
+**Records**: ~5,000-10,000 per cycle  
+**Purpose**: Map candidate IDs to names, offices, states, districts
+
 ```js
 {
-  _id: "SUB_ID",              // FEC unique transaction ID
-  cycle: "2024",
-  donor_name: "JOHN DOE",
-  employer: "LOCKHEED MARTIN",  // ← Key field for aggregation
-  occupation: "ENGINEER",
-  amount: 3300.00,
-  date: "12312024",
-  committee_id: "C00123456",
-  city: "ARLINGTON",
-  state: "VA",
-  zip_code: "22201"
+  _id: "H4CA12034",           // Candidate ID (H=House, S=Senate, P=President)
+  name: "PELOSI, NANCY",
+  party: "DEM",
+  office: "H",                 // H=House, S=Senate, P=President
+  state: "CA",
+  district: "12",
+  incumbent_challenger: "I",   // I=Incumbent, C=Challenger, O=Open
+  status: "C",                 // C=Candidate, N=Not yet candidate
+  principal_campaign_committee: "C00295527",
+  updated_at: ISODate("2024-10-20T00:00:00Z")
 }
 ```
 
-### Independent Expenditures (per cycle)
-```
-fec_bulk.independent_expenditures_2020
-fec_bulk.independent_expenditures_2022
-fec_bulk.independent_expenditures_2024
-fec_bulk.independent_expenditures_2026
-```
-**Purpose**: Super PAC spending FOR/AGAINST candidates  
-**Innovation**: Opposition stored as **NEGATIVE** values
+**Indexes:**
+- `{ _id: 1 }` (primary key)
+- `{ name: 1 }`
+- `{ state: 1, district: 1 }`
 
-**Schema:**
+---
+
+### 2. `committees` Collection
+**Source**: `cmYY.zip` (Committee Master File)  
+**Records**: ~10,000-20,000 per cycle  
+**Purpose**: Identify committee types (especially Leadership PACs!)
+
 ```js
 {
-  _id: "SUB_ID",
-  cycle: "2024",
-  committee_id: "C00789012",
-  committee_name: "FUTURE FORWARD USA",
-  candidate_id: "P80001571",
-  candidate_name: "BIDEN, JOSEPH R JR",
-  amount: -5000000.00,        // NEGATIVE = opposition
-  raw_amount: 5000000.00,
-  support_oppose: "O",        // S=Support, O=Oppose
-  is_support: false,
-  is_oppose: true,
-  purpose: "TV ads against candidate",
-  date: "10152024"
+  _id: "C00295527",            // Committee ID
+  name: "NANCY PELOSI FOR CONGRESS",
+  designation: "P",            // P=Principal campaign committee, A=Authorized, U=Unauthorized
+  type: "H",                   // H=House, S=Senate, P=Presidential, O=Leadership PAC ⭐
+  party: "DEM",
+  filing_frequency: "Q",       // Q=Quarterly, M=Monthly
+  interest_group: "",          // For PACs
+  connected_org_name: "PELOSI, NANCY",  // ⭐ For Leadership PACs - who owns it
+  candidate_id: "H4CA12034",   // For campaign committees
+  treasurer_name: "SMITH, JOHN",
+  street_1: "123 Main St",
+  city: "San Francisco",
+  state: "CA",
+  zip: "94102",
+  updated_at: ISODate("2024-10-20T00:00:00Z")
 }
 ```
 
-### Committee Transfers (per cycle) - Leadership PAC Tracking
-```
-fec_bulk.committee_transfers_2020
-fec_bulk.committee_transfers_2022
-fec_bulk.committee_transfers_2024
-fec_bulk.committee_transfers_2026
-```
-**Purpose**: Track money flowing between committees (Leadership PAC money laundering)  
-**Source**: FEC `pas2YY.zip` files
+**Key Field for Leadership PAC Identification:**
+- `type: "O"` = Leadership PAC ⭐
+- Cross-reference `connected_org_name` to identify which politician controls it
 
-**Schema:**
+**Indexes:**
+- `{ _id: 1 }` (primary key)
+- `{ type: 1 }` (find all Leadership PACs)
+- `{ connected_org_name: 1 }` (find PACs owned by politician)
+- `{ name: 1 }`
+
+---
+
+### 3. `linkages` Collection
+**Source**: `cclYY.zip` (Candidate-Committee Linkage File)  
+**Records**: ~20,000 per cycle  
+**Purpose**: Link candidates to their authorized committees
+
 ```js
 {
-  _id: "from_committee|to_committee|date",
-  cycle: "2024",
+  _id: "H4CA12034|C00295527",  // Composite: candidate_id|committee_id
+  candidate_id: "H4CA12034",
+  committee_id: "C00295527",
+  committee_type: "P",         // P=Principal, A=Authorized, J=Joint fundraiser
+  committee_designation: "P",
+  linkage_id: "12345",
+  updated_at: ISODate("2024-10-20T00:00:00Z")
+}
+```
+
+**Indexes:**
+- `{ candidate_id: 1 }`
+- `{ committee_id: 1 }`
+
+---
+
+### 4. `candidate_summaries` Collection
+**Source**: `weballYY.zip` (Candidate Financial Summary)  
+**Records**: ~10,000 per cycle  
+**Purpose**: Per-candidate financial summaries across all authorized committees
+
+```js
+{
+  _id: "H4CA12034|2024Q2",     // candidate_id|coverage_period
+  candidate_id: "H4CA12034",
+  candidate_name: "PELOSI, NANCY",
+  incumbent_challenger: "I",   // I=Incumbent, C=Challenger, O=Open
+  party: "DEM",
+  
+  coverage_from_date: "20240401",
+  coverage_through_date: "20240630",
+  
+  // Income
+  total_receipts: 5000000.00,
+  individual_contributions: 3500000.00,
+  pac_contributions: 1000000.00,
+  candidate_contributions: 50000.00,
+  
+  // Spending
+  total_disbursements: 4000000.00,
+  operating_expenditures: 500000.00,
+  
+  // Balances
+  cash_on_hand_beginning: 2000000.00,
+  cash_on_hand_end: 3000000.00,
+  debts_owed_by: 0.00,
+  debts_owed_to: 0.00,
+  
+  updated_at: ISODate("2024-10-20T00:00:00Z")
+}
+```
+
+**Indexes:**
+- `{ candidate_id: 1 }`
+- `{ total_receipts: -1 }` (top fundraisers)
+
+---
+
+### 5. `committee_summaries` Collection
+**Source**: `weblYY.zip` (Committee Financial Summary - 30 fields)  
+**Records**: ~10,000 per cycle  
+**Purpose**: Committee financial totals INCLUDING aggregated individual donor amounts
+
+```js
+{
+  _id: "C00295527|20240630",   // committee_id|coverage_through_date
+  committee_id: "C00295527",
+  committee_name: "NANCY PELOSI FOR CONGRESS",
+  coverage_from_date: "20240401",      // Field [26]
+  coverage_through_date: "20240630",   // Field [27]
+  
+  // Income
+  total_receipts: 5000000.00,
+  individual_contributions: 3500000.00,  // ⭐ Aggregated individual donor total
+  pac_contributions: 1000000.00,
+  candidate_contributions: 50000.00,
+  transfers_from_authorized: 100000.00,
+  
+  // Spending
+  total_disbursements: 4000000.00,
+  operating_expenditures: 500000.00,
+  transfers_to_authorized: 50000.00,
+  
+  // Balances
+  cash_on_hand_beginning: 2000000.00,   // Field [8]
+  cash_on_hand_end: 3000000.00,         // Field [9]
+  debts_owed_by: 0.00,                  // Field [28]
+  debts_owed_to: 0.00,
+  
+  updated_at: ISODate("2024-10-20T00:00:00Z")
+}
+```
+
+**Why This Instead of `indiv.zip`:**
+- Individual donor totals aggregated here (no need for 40M+ individual records)
+- We track **corporate** influence, not individual donors
+- Saves 16GB of storage and processing time
+
+**Indexes:**
+- `{ committee_id: 1 }`
+- `{ individual_contributions: -1 }` (top individual-funded committees)
+
+---
+
+### 6. `pac_summaries` Collection
+**Source**: `webkYY.zip` (PAC Financial Summary - 27 fields, DIFFERENT FORMAT!)  
+**Records**: ~5,000 per cycle  
+**Purpose**: PAC-specific financial summaries
+
+**⚠️ CRITICAL: webk.zip has 27 fields, NOT 30 like webl.zip!**
+- Does NOT have `coverage_from_date` (only `coverage_through_date` at field [26])
+- Financial field indices are DIFFERENT from webl format
+- Must use correct field mappings or data will be corrupted
+
+```js
+{
+  _id: "C00123456|20240630",            // committee_id|coverage_through_date
+  committee_id: "C00123456",            // Field [0]
+  committee_name: "LOCKHEED MARTIN PAC",
+  committee_type: "Q",                  // Field [2] - Q=Qualified PAC
+  
+  coverage_through_date: "20240630",    // Field [26] - NO from_date!
+  
+  // Income
+  total_receipts: 1000000.00,           // Field [5]
+  
+  // Spending
+  total_disbursements: 800000.00,       // Field [7]
+  contributions_to_committees: 750000.00,  // ⭐ Field [22] - Money given to candidates/Leadership PACs
+  independent_expenditures: 100000.00,     // Field [23] - Super PAC-style spending
+  operating_expenditures: 50000.00,
+  
+  // Balances
+  cash_on_hand_beginning: 500000.00,    // Field [18]
+  cash_on_hand_end: 600000.00,          // Field [19]
+  debts_owed_by: 0.00,                  // Field [20]
+  
+  updated_at: ISODate("2024-10-20T00:00:00Z")
+}
+```
+
+**Field Mapping Notes:**
+- Fixed in October 2025: Was incorrectly using webl field indices (30 fields) on webk data (27 fields)
+- Before fix: coverage_through_date showed as "0", coverage_from_date showed cash amounts
+- After fix: All fields correctly mapped to actual webk structure
+
+**Indexes:**
+- `{ committee_id: 1 }`
+- `{ contributions_to_committees: -1 }` (biggest spenders)
+
+---
+
+### 7. `committee_transfers` Collection ⭐ CRITICAL FOR LEADERSHIP PAC TRACKING
+**Source**: `pas2YY.zip` (Committee-to-Committee Transfers)  
+**Records**: ~2-5 million per cycle  
+**Purpose**: Track money flowing from Corporate PACs → Leadership PACs → Politicians
+
+```js
+{
+  _id: "C00123456|C00789012|20240315",  // from|to|date
   from_committee_id: "C00123456",
   from_committee_name: "LOCKHEED MARTIN PAC",
   to_committee_id: "C00789012",
   to_committee_name: "PELOSI LEADERSHIP PAC",
   amount: 50000.00,
   date: "20240315",
-  transaction_type: "24K"
+  transaction_id: "SA11AI.12345",
+  transaction_type: "24K",
+  memo_text: "Political contribution",
+  updated_at: ISODate("2024-10-20T00:00:00Z")
 }
 ```
 
-### Candidates (per cycle)
-```
-fec_bulk.candidates_2020..2026
-```
-**Schema:**
+**Indexes:**
+- `{ from_committee_id: 1, amount: -1 }` (who's giving)
+- `{ to_committee_id: 1, amount: -1 }` (who's receiving)
+- `{ date: 1 }`
+- `{ amount: -1 }` (largest transfers)
+
+**Usage:**
+1. Find Leadership PACs (from `committees` collection where `type='O'`)
+2. Find transfers TO Leadership PACs (from corporate PACs)
+3. Calculate "upstream influence" for politicians (money laundered through their Leadership PACs)
+
+
+
+### 6. `pac_summaries` Collection
+**Source**: `webkYY.zip` (PAC Financial Summary)  
+**Records**: ~5,000 per cycle  
+**Purpose**: PAC-specific financial summaries
+
 ```js
 {
-  _id: "CAND_ID",
-  cycle: "2024",
-  name: "SMITH, JOHN A",
-  party: "DEM",
-  office: "H",         // H=House, S=Senate, P=President
-  state: "CA",
-  district: "12"
+  _id: "C00123456|2024Q2",
+  committee_id: "C00123456",
+  committee_name: "LOCKHEED MARTIN PAC",
+  coverage_from_date: "20240401",
+  coverage_through_date: "20240630",
+  
+  total_receipts: 1000000.00,
+  contributions_to_committees: 750000.00,  // ⭐ Money given to candidates/Leadership PACs
+  independent_expenditures: 100000.00,
+  operating_expenditures: 50000.00,
+  
+  cash_on_hand_end: 500000.00,
+  
+  updated_at: ISODate("2024-10-20T00:00:00Z")
 }
 ```
 
-### Committees (per cycle)
-```
-fec_bulk.committees_2020..2026
-```
-**Purpose**: Identify Leadership PACs and corporate PACs  
-**Schema:**
+**Indexes:**
+- `{ committee_id: 1 }`
+- `{ contributions_to_committees: -1 }` (biggest spenders)
+
+---
+
+### 8. `independent_expenditures` Collection ⭐ SUPER PAC SPENDING
+**Source**: `independent_expenditure_YYYY.csv` (Schedule E Filings)  
+**Records**: ~50,000-200,000 per cycle  
+**Purpose**: Track Super PAC spending FOR and AGAINST specific candidates  
+**Innovation**: OPPOSITION spending stored as **NEGATIVE** values
+
 ```js
 {
-  _id: "CMTE_ID",
-  cycle: "2024",
-  name: "PELOSI LEADERSHIP PAC",
-  type: "O",           // O=Leadership PAC, Q=Super PAC, etc.
-  party: "DEM",
-  connected_org: "PELOSI, NANCY"  // For Leadership PACs
+  _id: "SUB_ID_12345",         // Transaction ID
+  committee_id: "C00789012",
+  committee_name: "FUTURE FORWARD USA",
+  candidate_id: "P80001571",
+  candidate_name: "BIDEN, JOSEPH R JR",
+  
+  amount: -5000000.00,         // ⭐ NEGATIVE = opposition, POSITIVE = support
+  raw_amount: 5000000.00,      // Original amount (always positive)
+  
+  support_oppose: "O",         // S=Support, O=Oppose
+  is_support: false,
+  is_oppose: true,
+  
+  purpose: "TV advertising opposing candidate",
+  payee: "Media Buying Inc",
+  expenditure_date: "20241015",
+  file_num: "1234567",
+  
+  updated_at: ISODate("2024-10-20T00:00:00Z")
 }
+```
+
+**Indexes:**
+- `{ candidate_id: 1, amount: -1 }` (net spending per candidate)
+- `{ committee_id: 1 }`
+- `{ is_support: 1 }`
+- `{ is_oppose: 1 }`
+- `{ amount: -1 }` (biggest expenditures)
+
+**Usage:**
+```js
+// Net Super PAC influence for a candidate
+db.independent_expenditures.aggregate([
+  { $match: { candidate_id: "P80001571" } },
+  { $group: { 
+      _id: "$candidate_id",
+      net_support: { $sum: "$amount" },  // Negative oppose cancels positive support
+      support_total: { $sum: { $cond: ["$is_support", "$raw_amount", 0] } },
+      oppose_total: { $sum: { $cond: ["$is_oppose", "$raw_amount", 0] } }
+  }}
+])
 ```
 
 ---
 
-## Database: `legal_tender` (Processed Application Data)
+## Processed Data: `legal_tender` Database
 
-### Legislators (from GitHub, NOT FEC)
-```
-legal_tender.legislators_current
-```
-**Source**: `@unitedstates/congress-legislators` GitHub repo  
-**Purpose**: Map bioguide IDs to FEC IDs
+Single database for cross-cycle analytics and processed data.
 
-**Schema:**
+### Collection: `donors` (Future - Aggregated Influence)
 ```js
 {
-  _id: "bioguide_id",
-  name: {
-    first: "Nancy",
-    last: "Pelosi",
-    official_full: "Nancy Pelosi"
+  _id: "C00123456",            // Committee ID (corporate PAC)
+  name: "LOCKHEED MARTIN PAC",
+  type: "PAC",
+  
+  // Direct contributions (from committee_transfers, linkages, etc.)
+  direct_contributions: {
+    "H4CA12034": 50000.00,     // Direct to Pelosi campaign
+    "S6NY00111": 25000.00,     // Direct to Schumer campaign
+    // ... 
   },
-  ids: {
-    bioguide: "P000197",
-    fec: ["H8CA05035"],
-    govtrack: 400314
+  
+  // Upstream influence (via Leadership PACs)
+  upstream_contributions: {
+    "H4CA12034": 100000.00,    // Via Pelosi Leadership PAC
+    "S6NY00111": 75000.00,     // Via Schumer Leadership PAC
+    // ...
   },
-  terms: [
-    {
-      type: "rep",
-      start: "2021-01-03",
-      state: "CA",
-      district: 11,
-      party: "Democrat"
-    }
-  ]
+  
+  // Combined weighted influence
+  total_influence: {
+    "H4CA12034": 150000.00,    // 50K direct + 100K upstream
+    "S6NY00111": 100000.00,    // 25K direct + 75K upstream
+    // ...
+  },
+  
+  cycles: ["2020", "2022", "2024", "2026"],
+  updated_at: ISODate("2024-10-20T00:00:00Z")
 }
 ```
 
-### Donors (aggregated corporate/PAC influence)
-```
-legal_tender.donors
-```
-**Purpose**: Aggregated donor influence with Leadership PAC upstream tracking  
-**Key Innovation**: Tracks both direct donations AND weighted upstream influence via Leadership PACs
-
-**Schema:**
+### Collection: `members` (Current - Politicians)
 ```js
 {
-  _id: "normalized_donor_name",
-  display_name: "LOCKHEED MARTIN PAC",
-  donor_type: "corporate_pac",  // corporate_pac, super_pac, leadership_pac
+  _id: "pelosi-nancy-ca12",
+  bioguide_id: "P000197",
+  fec_candidate_ids: ["H4CA12034", "H6CA12034", ...],  // Per cycle
+  fec_leadership_pac_ids: ["C00789012"],                // ⭐ Leadership PAC
   
-  // Direct contributions (from individual_contributions)
-  total_direct: 5000000.00,
-  direct_by_cycle: {
-    "2020": 1200000,
-    "2022": 1300000,
-    "2024": 1500000,
-    "2026": 1000000
-  },
-  
-  // Upstream influence (via Leadership PACs from committee_transfers)
-  total_upstream: 2000000.00,
-  upstream_influence: {
-    leadership_pacs: [
-      {
-        pac_id: "C00789012",
-        pac_name: "Pelosi Leadership PAC",
-        gave_to_pac: 50000.00,           // Lockheed → Pelosi PAC
-        pac_gave_total: 500000.00,        // Pelosi PAC → all politicians
-        weight: 0.10,                     // 50K / 500K = 10%
-        weighted_influence: 50000.00,     // 10% of what Pelosi PAC distributed
-        recipients: [
-          { 
-            candidate_id: "H1CA12345", 
-            direct_from_pac: 10000,      // Pelosi PAC → politician
-            weighted_from_lockheed: 1000 // 10% × 10K = $1K Lockheed influence
-          }
-        ]
-      }
-    ]
-  },
-  
-  // Total influence
-  total_influence: 7000000.00,   // direct + upstream
-  
-  // Top recipients (sorted by total influence)
-  top_recipients: [
-    {
-      candidate_id: "H1TX23456",
-      name: "Smith, John",
-      direct: 15000,
-      upstream: 2500,
-      total: 17500
-    }
-  ],
-  
-  industry: "Defense",  // To be added later (AI/manual tagging)
-  updated_at: ISODate("2025-10-20")
-}
-```
-
-### Member Financial Summaries (aggregated campaign finance)
-```
-legal_tender.member_financial_summary
-```
-**Purpose**: Total receipts, disbursements, cash on hand per member  
-**Source**: FEC `webl.zip` files (committee financial summaries)  
-**Key Innovation**: Provides **total individual contributions** without processing 40M+ granular records  
-**Use Case**: Compare Corporate PAC money vs Individual Donor money (treat individuals as "virtual PAC")
-
-**Schema:**
-```js
-{
-  _id: "bioguide_id",
-  name: "Bernie Sanders",
-  candidate_ids: ["S6VT00033"],
-  
-  // Per-cycle breakdown
-  by_cycle: {
-    "2024": {
-      total_raised: 5000000.00,
-      total_spent: 4500000.00,
-      cash_on_hand: 500000.00,
-      individual_contributions: 4800000.00,  // ← KEY: Total from individuals (aggregated)
-      debts: 0.00,
-      num_entries: 2  // Multiple committees/filings deduplicated
-    },
-    "2022": { ... },
-    "2020": { ... }
-  },
-  
-  // Career totals (sum across all cycles)
-  career_totals: {
-    total_raised: 48000000.00,
-    total_spent: 45000000.00,
-    individual_contributions: 46000000.00,  // ← 96% from individuals!
-    cycles_included: ["2020", "2022", "2024", "2026"]
-  },
-  
-  // Quick stats
-  latest_cycle: "2024",
-  cycles_with_data: 4,
-  updated_at: ISODate("2025-10-20")
-}
-```
-
-**Comparative Analysis:**
-```js
-// Example: Compare funding sources for a politician
-{
-  bioguide_id: "P000197",  // Nancy Pelosi
-  career_totals: {
-    total_raised: 150000000,
-    individual_contributions: 90000000  // 60% from individuals
-  },
-  // From donors collection (separate query):
-  corporate_pac_total: 45000000,        // 30% from corporate PACs
-  super_pac_total: 15000000             // 10% from Super PACs
-}
-
-// Compare to Bernie Sanders:
-{
-  bioguide_id: "S000033",
-  career_totals: {
-    total_raised: 48000000,
-    individual_contributions: 46000000  // 96% from individuals!
-  },
-  corporate_pac_total: 500000,          // 1% from corporate PACs
-  super_pac_total: 1500000              // 3% from Super PACs
-}
-```
-
-**Why This Matters:**
-- **No performance cost**: 7MB summary files vs 2-4GB transaction files
-- **Instant comparison**: Corporate-funded vs grassroots-funded politicians
-- **Already implemented**: `src/assets/financial_summary.py` loads this data today
-- **Treat individuals as collective entity**: Compare "Corporate PAC influence" vs "Individual Donor influence"
-
----
-
-### Members (politicians with FEC linkage)
-```
-legal_tender.members
-```
-**Purpose**: Complete politician profiles with donor breakdown
-
-**Schema:**
-```js
-{
-  _id: "bioguide_id",
   name: "Nancy Pelosi",
   state: "CA",
-  district: 11,
-  party: "Democrat",
-  office: "House",
-  fec_ids: ["H8CA05035"],
-  committees: ["C00123456"],  // Authorized committees
+  district: "12",
+  party: "DEM",
   
-  // Top donors by total influence (direct + upstream)
-  top_donors: [
-    {
-      donor_id: "LOCKHEED MARTIN PAC",
-      direct: 15000,
-      upstream: 5000,
-      total: 20000
-    }
-  ],
+  // Populated from fec databases
+  total_direct_contributions: 5000000.00,
+  total_upstream_contributions: 2000000.00,  // Via Leadership PAC
   
-  updated_at: ISODate("2025-10-20")
+  updated_at: ISODate("2024-10-20T00:00:00Z")
 }
 ```
 
-### Lobbying Filings
-```
-legal_tender.lobbying_filings
-```
-**Source**: Senate LDA API (1.8M+ filings)  
-**Purpose**: Track corporate lobbying spending (NOT campaign donations)
+### Collection: `lobbying_filings` (Future)
+Senate LDA API data - lobbying disclosures linked to bills/issues.
 
-**Schema:**
+### Collection: `bills` (Future)
+Congress.gov API data - bill text, sponsors, votes.
+
+### Collection: `votes` (Future)
+Voting records linked to bills and donor influence.
+
+### Collection: `influence_analysis` (Future)
+Final correlation: Money → Votes.
+
+---
+
+## Data Flow Summary
+
+```
+1. Download FEC Bulk Files (data_sync asset)
+   ├── cn24.zip, cm24.zip, ccl24.zip (metadata)
+   ├── weball24.zip (candidate summaries)
+   ├── webl24.zip, webk24.zip (committee/PAC summaries)
+   ├── pas224.zip (transfers)
+   └── independent_expenditure_2024.csv (Super PAC)
+   
+2. Parse into fec_2024 Database (8 separate parser assets, 1 per file)
+   ├── candidates.py → candidates (10K)
+   ├── committees.py → committees (20K) → Find Leadership PACs (type='O')
+   ├── linkages.py → linkages (20K)
+   ├── candidate_summaries.py → candidate_summaries (10K)
+   ├── committee_summaries.py → committee_summaries (10K) → Individual donor aggregates
+   ├── pac_summaries.py → pac_summaries (5K) ⚠️ Fixed field mappings Oct 2025
+   ├── committee_transfers.py → committee_transfers (2-5M) → Track Corporate → Leadership PAC flows
+   └── independent_expenditures.py → independent_expenditures (50-200K) → Super PAC FOR/AGAINST
+
+3. Aggregate into legal_tender Database (member_fec_mapping asset)
+   ├── members (politicians with FEC IDs + Leadership PAC IDs)
+   └── donors (corporate PACs with direct + upstream influence) - FUTURE
+   
+4. Cross-Reference (Future)
+   ├── Lobbying data → Bills
+   ├── Votes → Bills
+   └── Donors → Votes (CORRELATION!)
+```
+
+---
+
+## Storage Estimates
+
+**Per Cycle (2024 example):**
+```
+fec_2024:
+├── candidates:              ~1 MB
+├── committees:              ~2 MB
+├── linkages:                ~2 MB
+├── candidate_summaries:     ~10 MB
+├── committee_summaries:     ~10 MB
+├── pac_summaries:           ~5 MB
+├── committee_transfers:     ~300 MB  ⭐ Largest
+└── independent_expenditures: ~20 MB
+Total per cycle:             ~350 MB
+```
+
+**All 4 Cycles (2020-2026):**
+```
+fec_2020: ~350 MB
+fec_2022: ~350 MB
+fec_2024: ~350 MB
+fec_2026: ~350 MB
+Total raw FEC: ~1.4 GB
+```
+
+**Compared to Old Approach (with indiv.zip):**
+- Old: 25 GB (4GB indiv × 4 cycles + other files)
+- New: 1.4 GB (removed indiv.zip, corrected independent expenditures)
+- **Savings: 95% reduction!**
+
+---
+
+## Query Examples
+
+### Find all Leadership PACs in 2024
 ```js
-{
-  _id: "filing_uuid",
-  client_name: "AMAZON.COM",
-  registrant_name: "Akin Gump Strauss Hauer & Feld",
-  income: 500000.00,
-  year: 2024,
-  quarter: "Q2",
-  filing_type: "LD-2",
-  
-  lobbying_activities: [
-    {
-      general_issue_code: "TAX",
-      description: "H.R. 1234 - Tax Reform Act",
-      lobbyists: ["John Doe", "Jane Smith"],
-      government_entities: ["HOUSE OF REPRESENTATIVES", "SENATE"]
-    }
-  ],
-  
-  dt_posted: ISODate("2024-07-30"),
-  updated_at: ISODate("2025-10-20")
-}
+use fec_2024
+db.committees.find({ type: "O" })
 ```
 
-**Note**: Lobbying data has NO politician names - lobbying is by issue/bill, not person. We'll correlate via bill sponsors and committee assignments.
-
----
-
-## Future Collections (Phase 4-6)
-
-### Bills (Congress.gov API)
+### Find money flowing TO Pelosi's Leadership PAC
+```js
+use fec_2024
+db.committee_transfers.find({ 
+  to_committee_id: "C00789012"  // Pelosi Leadership PAC
+}).sort({ amount: -1 })
 ```
-legal_tender.bills
+
+### Calculate net Super PAC support for Biden
+```js
+use fec_2024
+db.independent_expenditures.aggregate([
+  { $match: { candidate_id: "P80001571" } },
+  { $group: { 
+      _id: "$candidate_id",
+      net_support: { $sum: "$amount" },
+      total_support: { $sum: { $cond: ["$is_support", "$raw_amount", 0] } },
+      total_oppose: { $sum: { $cond: ["$is_oppose", "$raw_amount", 0] } },
+      count: { $sum: 1 }
+  }}
+])
 ```
-**Purpose**: Bill metadata, sponsors, committee assignments
 
-### Votes (Congress.gov API)
-```
-legal_tender.votes
-```
-**Purpose**: How each member voted on each bill
-
-### Donor Profiles (AI-Generated)
-```
-legal_tender.donor_profiles
-```
-**Purpose**: LLM-generated PROS/CONS for each corporate PAC
-
-### Influence Analysis (Final Output)
-```
-legal_tender.influence_analysis
-```
-**Purpose**: Correlate money → votes, calculate influence scores
-
----
-
-## Asset Dependency Graph
-
-```
-# FEC BULK DATA INGESTION (per-file assets → fec_bulk database)
-data_sync_indiv_2020 → individual_contributions_2020
-data_sync_indiv_2022 → individual_contributions_2022
-data_sync_indiv_2024 → individual_contributions_2024
-data_sync_indiv_2026 → individual_contributions_2026
-
-data_sync_oppexp_2020 → independent_expenditures_2020
-data_sync_oppexp_2022 → independent_expenditures_2022
-data_sync_oppexp_2024 → independent_expenditures_2024
-data_sync_oppexp_2026 → independent_expenditures_2026
-
-data_sync_pas2_2020 → committee_transfers_2020
-data_sync_pas2_2022 → committee_transfers_2022
-data_sync_pas2_2024 → committee_transfers_2024
-data_sync_pas2_2026 → committee_transfers_2026
-
-data_sync_cn_2020 → candidates_2020
-data_sync_cm_2020 → committees_2020
-data_sync_ccl_2020 → linkages_2020
-... (same for 2022, 2024, 2026)
-
-# FEC SUMMARY DATA (webl files → legal_tender database)
-member_financial_summary → member_financial_summary
-  ← webl_2020, webl_2022, webl_2024, webl_2026 (committee financial summaries)
-  ← legislators_current (for bioguide mapping)
-
-# CONGRESS DATA (GitHub → legal_tender database)
-data_sync_legislators → legislators_current
-
-# LOBBYING DATA (Senate LDA API → legal_tender database)
-lobbying_sync → lobbying_filings
-
-# AGGREGATION & PROCESSING (legal_tender database)
-[individual_contributions_* + committee_transfers_* + committees_*] → donors
-[donors + legislators_current + candidates_*] → members
-[lobbying_filings + bills] → bill_lobbying_links (future)
-
-# AI ANALYSIS (future)
-[donors] → donor_profiles (AI-generated PROS/CONS)
-[bills + donor_profiles] → bill_scores (alignment scoring)
-[members + votes + bill_scores + donors] → influence_analysis (final output)
+### Cross-cycle analysis: All candidates who received from Lockheed Martin PAC
+```js
+// Requires aggregating across multiple databases
+const cycles = ["2020", "2022", "2024", "2026"];
+cycles.forEach(cycle => {
+  db.getSiblingDB(`fec_${cycle}`).committee_transfers.find({
+    from_committee_id: "C00123456"  // Lockheed Martin PAC
+  })
+})
 ```
 
 ---
 
-## Implementation Plan
+## Current Pipeline Status (October 2025)
 
-### Phase 1: FEC Bulk Data (Current) ✅ → 🚧
-1. ✅ Two-database MongoDB structure (`fec_bulk` + `legal_tender`)
-2. ✅ Per-file download assets with weekly refresh
-3. ✅ Streaming parsers for `indiv.zip` and `oppexp.zip`
-4. ✅ Dynamic batch sizing (50% RAM allocation)
-5. 🚧 Add `pas2.zip` parser (committee transfers)
-6. 🚧 Refactor to per-file assets (enable parallel processing)
+### Completed ✅
+1. ✅ Per-year database structure implemented (`fec_YYYY` per cycle)
+2. ✅ Clean collection names (no year suffixes)
+3. ✅ All 8 FEC parsers created (1:1 file-to-parser mapping)
+   - candidates.py, committees.py, linkages.py
+   - candidate_summaries.py, committee_summaries.py, pac_summaries.py
+   - committee_transfers.py, independent_expenditures.py
+4. ✅ Fixed field mappings across all parsers
+   - candidates: party, election_year, state, district
+   - committees: type field correction
+   - linkages: unique key (linkage_id)
+   - pac_summaries: webk format (27 fields) - major fix Oct 2025
+   - independent_expenditures: _id composite key
+5. ✅ Data sync with smart caching and proper logging
+6. ✅ Cleaned job/asset structure (1 job, 10 assets)
+7. ✅ Raw data only (no transformations in parsers)
 
-### Phase 2: Leadership PAC Tracking 🚧
-1. Parse `pas2.zip` files (committee-to-committee transfers)
-2. Identify Leadership PACs via `CMTE_TP = "O"` in `cm.zip`
-3. Calculate upstream influence weights
-4. Create `donors` aggregation asset:
-   - Read from `individual_contributions_*` (direct)
-   - Read from `committee_transfers_*` (upstream)
-   - Read from `committees_*` (identify Leadership PACs)
-   - Calculate weighted influence per donor per politician
-   - Write to `legal_tender.donors`
+### In Progress 🚧
+1. 🚧 Docker rebuild and testing with corrected pac_summaries.py
+2. 🚧 Build `donors` aggregation (direct + upstream influence)
 
-### Phase 3: Lobbying Data 📋
-1. Create `lobbying_sync` asset
-2. Use Senate LDA API pagination to download all 1.8M+ filings
-3. Store in `legal_tender.lobbying_filings`
-4. Incremental updates quarterly (required filing schedule)
-5. Link to bills via issue descriptions (future)
-
-### Phase 4: Congressional Data 📋
-1. Congress.gov API integration
-2. Download bill metadata, sponsors, committee assignments
-3. Download voting records
-4. Store in `legal_tender.bills` and `legal_tender.votes`
-
-### Phase 5: AI Analysis 📋
-1. Generate donor profiles (LLM PROS/CONS for each PAC)
-2. Score bills against donor profiles (alignment analysis)
-3. Predict votes based on donor influence
-
-### Phase 6: Final Output 📋
-1. Correlate money → votes in `influence_analysis` collection
-2. Calculate influence scores per politician per donor
-3. Identify vote misalignments (voted against donor interests)
-4. Generate public dashboard
-
----
-
-## MongoDB Connection Examples
-
-```python
-from src.resources.mongo import MongoDBResource
-
-# In assets
-def my_asset(mongo: MongoDBResource):
-    client = mongo.get_client()
-    
-    # Raw FEC data
-    indiv_2024 = mongo.get_collection(client, "individual_contributions_2024", db="fec_bulk")
-    
-    # Processed data
-    donors = mongo.get_collection(client, "donors", db="legal_tender")
-    
-    # Do work...
-```
-
-**Collection Naming Convention:**
-- FEC raw: `{file_type}_{cycle}` (e.g. `individual_contributions_2024`)
-- Processed: `{entity_plural}` (e.g. `donors`, `members`, `bills`)
-
----
-
-## Key Design Decisions
-
-### 1. Corporate Focus, Not Individual Donors
-- We aggregate by `employer` field, not individual names
-- Track PAC-to-PAC transfers (Leadership PAC money laundering)
-- Focus on corporate influence, not individual behavior
-
-### 2. Leadership PAC Upstream Tracking
-- Calculate weighted influence via committee transfers
-- Track money flowing: Corporate PAC → Leadership PAC → Politician
-- Expose hidden corporate influence
-
-### 3. Lobbying as Separate Layer
-- Lobbying spending ≠ campaign donations
-- No direct politician linkage in lobbying data
-- Correlate via bill sponsors and committee assignments
-
-### 4. Two-Database Architecture
-- Raw FEC data preserved permanently
-- Can rebuild analytics from raw data anytime
-- Clear separation of concerns
-- Fast queries on aggregated data
+### Future Work 📋
+1. 📋 Integrate lobbying data (Senate LDA API)
+2. 📋 Build correlation analysis (Money → Votes)
+3. 📋 Congress.gov API integration (bills, votes)

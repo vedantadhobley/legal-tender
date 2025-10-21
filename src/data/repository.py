@@ -165,8 +165,13 @@ class DataRepository:
         return self.fec_transactions_dir(cycle) / "individual_contributions.zip"
     
     def fec_independent_expenditures_path(self, cycle: str) -> Path:
-        """Path to FEC independent expenditures file (oppexp{YY}.zip)."""
-        return self.fec_transactions_dir(cycle) / "independent_expenditures.zip"
+        """Path to FEC independent expenditures file (independent_expenditure_{YYYY}.csv).
+        
+        NOTE: This is a CSV file, NOT a ZIP!
+        Schedule E filings (independent expenditures FOR/AGAINST candidates).
+        Do NOT confuse with oppexp.zip (operating expenditures - wrong file!).
+        """
+        return self.fec_cycle_dir(cycle) / f"independent_expenditure_{cycle}.csv"
     
     def fec_committee_transfers_path(self, cycle: str) -> Path:
         """Path to FEC committee transfers file (pas2{YY}.zip)."""
