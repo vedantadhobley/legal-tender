@@ -16,14 +16,14 @@ from src.assets import (
     data_sync_asset,
     
     # FEC parsers (raw data → fec_YYYY databases) - 8 files, 8 parsers
-    candidates_asset,
-    committees_asset,
-    linkages_asset,
-    candidate_summaries_asset,
-    committee_summaries_asset,
-    pac_summaries_asset,
-    committee_transfers_asset,
-    independent_expenditures_asset,
+    cn_asset,
+    cm_asset,
+    ccl_asset,
+    weball_asset,
+    webl_asset,
+    webk_asset,
+    itpas2_asset,
+    independent_expenditure_asset,
     
     # Processed data (aggregated → legal_tender database)
     member_fec_mapping_asset,
@@ -44,14 +44,14 @@ defs = Definitions(
         data_sync_asset,
         
         # FEC raw data parsers (→ fec_YYYY databases) - 8 files, 8 parsers
-        candidates_asset,
-        committees_asset,
-        linkages_asset,
-        candidate_summaries_asset,
-        committee_summaries_asset,
-        pac_summaries_asset,
-        committee_transfers_asset,
-        independent_expenditures_asset,
+        cn_asset,
+        cm_asset,
+        ccl_asset,
+        weball_asset,
+        webl_asset,
+        webk_asset,
+        itpas2_asset,
+        independent_expenditure_asset,
         
         # Processed/aggregated data (→ legal_tender database)
         member_fec_mapping_asset,

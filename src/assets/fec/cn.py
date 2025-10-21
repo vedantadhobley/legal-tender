@@ -16,19 +16,19 @@ class CandidatesConfig(Config):
 
 
 @asset(
-    name="candidates",
-    description="FEC candidate master file - maps candidate IDs to names, offices, states",
+    name="cn",
+    description="FEC candidate master file (cn.zip) - raw FEC data with original field names",
     group_name="fec",
     compute_kind="bulk_data",
     ins={"data_sync": AssetIn("data_sync")},
 )
-def candidates_asset(
+def cn_asset(
     context: AssetExecutionContext,
     config: CandidatesConfig,
     mongo: MongoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
-    """Parse cn.zip files and store in fec_{cycle}.candidates collections."""
+    """Parse cn.zip files and store in fec_{cycle}.cn collections using raw FEC field names."""
     
     repo = get_repository()
     stats = {'total_candidates': 0, 'by_cycle': {}}
@@ -38,7 +38,7 @@ def candidates_asset(
             context.log.info(f"📊 {cycle} Cycle:")
             
             try:
-                collection = mongo.get_collection(client, "candidates", database_name=f"fec_{cycle}")
+                collection = mongo.get_collection(client, "cn", database_name=f"fec_{cycle}")
                 collection.delete_many({})
                 
                 zip_path = repo.fec_candidates_path(cycle)
@@ -59,22 +59,26 @@ def candidates_asset(
                                 continue
                             
                             fields = decoded.split('|')
-                            if len(fields) < 15:
+                            if len(fields) < 15:  # cn.txt has 15 fields per FEC.md
                                 continue
                             
-                            cand_id = fields[0]
+                            # Use EXACT field names from fec.md (15 fields - basic candidate registration)
                             batch.append({
-                                '_id': cand_id,
-                                'candidate_id': cand_id,  # Keep original FEC field
-                                'name': fields[1],
-                                'party': fields[2],  # REP, DEM, IND, etc.
-                                'election_year': fields[3],
-                                'state': fields[4],  # AL, TX, etc.
-                                'office': fields[5],  # H, S, P
-                                'district': fields[6],  # 01, 02, 00 for statewide
-                                'incumbent_challenger_status': fields[7],  # I, C, O
-                                'candidate_status': fields[8],  # C, N, F
-                                'principal_campaign_committee': fields[9],
+                                'CAND_ID': fields[0],
+                                'CAND_NAME': fields[1],
+                                'CAND_PTY_AFFILIATION': fields[2],
+                                'CAND_ELECTION_YR': int(fields[3]) if fields[3] else None,
+                                'CAND_OFFICE_ST': fields[4],
+                                'CAND_OFFICE': fields[5],
+                                'CAND_OFFICE_DISTRICT': fields[6],
+                                'CAND_ICI': fields[7],
+                                'CAND_STATUS': fields[8],
+                                'CAND_PCC': fields[9],
+                                'CAND_ST1': fields[10],
+                                'CAND_ST2': fields[11],
+                                'CAND_CITY': fields[12],
+                                'CAND_ST': fields[13],
+                                'CAND_ZIP': fields[14],
                                 'updated_at': datetime.now(),
                             })
                 
@@ -84,8 +88,13 @@ def candidates_asset(
                     stats['by_cycle'][cycle] = len(batch)
                     stats['total_candidates'] += len(batch)
                 
-                collection.create_index([("name", 1)])
-                collection.create_index([("state", 1), ("district", 1)])
+                # Create indexes on key fields
+                collection.create_index([("CAND_ID", 1)])
+                collection.create_index([("CAND_NAME", 1)])
+                collection.create_index([("CAND_OFFICE_ST", 1), ("CAND_OFFICE_DISTRICT", 1)])
+                collection.create_index([("CAND_PTY_AFFILIATION", 1)])
+                collection.create_index([("CAND_OFFICE", 1)])
+                collection.create_index([("CAND_ELECTION_YR", 1)])
                 
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}")
@@ -96,6 +105,6 @@ def candidates_asset(
             "total_candidates": stats['total_candidates'],
             "cycles_processed": MetadataValue.json(config.cycles),
             "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
-            "mongodb_collection": "candidates",
+            "mongodb_collection": "cn",
         }
     )

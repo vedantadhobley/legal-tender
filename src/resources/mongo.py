@@ -1,7 +1,6 @@
 """MongoDB Resource for Dagster."""
 
 from contextlib import contextmanager
-from typing import Optional
 from dagster import ConfigurableResource
 from pymongo import MongoClient
 from pymongo.database import Database

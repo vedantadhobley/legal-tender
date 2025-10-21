@@ -1,4 +1,4 @@
-"""Committees Asset - Parse FEC committee master files (cm.zip)"""
+"""Committees Asset - Parse FEC committee master files (cm.zip) using raw FEC field names"""
 
 from typing import Dict, Any, List
 from datetime import datetime
@@ -15,19 +15,19 @@ class CommitteesConfig(Config):
 
 
 @asset(
-    name="committees",
-    description="FEC committee master file - identifies Leadership PACs (type='O') and all committees",
+    name="cm",
+    description="FEC committee master file (cm.zip) - raw FEC data with original field names",
     group_name="fec",
     compute_kind="bulk_data",
     ins={"data_sync": AssetIn("data_sync")},
 )
-def committees_asset(
+def cm_asset(
     context: AssetExecutionContext,
     config: CommitteesConfig,
     mongo: MongoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
-    """Parse cm.zip files and store in fec_{cycle}.committees collections."""
+    """Parse cm.zip files and store in fec_{cycle}.cm collections using raw FEC field names."""
     
     repo = get_repository()
     stats = {'total_committees': 0, 'leadership_pacs': 0, 'by_cycle': {}}
@@ -37,7 +37,7 @@ def committees_asset(
             context.log.info(f"📊 {cycle} Cycle:")
             
             try:
-                collection = mongo.get_collection(client, "committees", database_name=f"fec_{cycle}")
+                collection = mongo.get_collection(client, "cm", database_name=f"fec_{cycle}")
                 collection.delete_many({})
                 
                 zip_path = repo.fec_committees_path(cycle)
@@ -62,29 +62,29 @@ def committees_asset(
                             if len(fields) < 15:
                                 continue
                             
-                            cmte_id = fields[0]
-                            cmte_type = fields[9]  # FIXED: was fields[5] (city!)
+                            cmte_tp = fields[9]  # Committee type
                             
-                            if cmte_type == 'O':
+                            if cmte_tp == 'O':
                                 leadership_count += 1
                             
+                            # Use EXACT field names from fec.md
                             batch.append({
-                                '_id': cmte_id,
-                                'committee_id': cmte_id,  # Keep original FEC field
-                                'name': fields[1],
-                                'treasurer_name': fields[2],
-                                'street_1': fields[3],
-                                'street_2': fields[4],
-                                'city': fields[5],
-                                'state': fields[6],
-                                'zip': fields[7],
-                                'designation': fields[8],  # P, A, B, D, J, U
-                                'type': cmte_type,  # O=Leadership PAC, Q=PAC, etc.
-                                'party': fields[10],
-                                'filing_frequency': fields[11],
-                                'interest_group': fields[12],
-                                'connected_org_name': fields[13],
-                                'candidate_id': fields[14],
+
+                                'CMTE_ID': fields[0],
+                                'CMTE_NM': fields[1],
+                                'TRES_NM': fields[2],
+                                'CMTE_ST1': fields[3],
+                                'CMTE_ST2': fields[4],
+                                'CMTE_CITY': fields[5],
+                                'CMTE_ST': fields[6],
+                                'CMTE_ZIP': fields[7],
+                                'CMTE_DSGN': fields[8],
+                                'CMTE_TP': cmte_tp,
+                                'CMTE_PTY_AFFILIATION': fields[10],
+                                'CMTE_FILING_FREQ': fields[11],
+                                'ORG_TP': fields[12],
+                                'CONNECTED_ORG_NM': fields[13],
+                                'CAND_ID': fields[14],
                                 'updated_at': datetime.now(),
                             })
                 
@@ -95,9 +95,10 @@ def committees_asset(
                     stats['total_committees'] += len(batch)
                     stats['leadership_pacs'] += leadership_count
                 
-                collection.create_index([("type", 1)])
-                collection.create_index([("connected_org_name", 1)])
-                collection.create_index([("name", 1)])
+                # Create indexes on key fields
+                collection.create_index([("CMTE_TP", 1)])
+                collection.create_index([("CONNECTED_ORG_NM", 1)])
+                collection.create_index([("CMTE_NM", 1)])
                 
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}")
@@ -109,6 +110,6 @@ def committees_asset(
             "leadership_pacs": stats['leadership_pacs'],
             "cycles_processed": MetadataValue.json(config.cycles),
             "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
-            "mongodb_collection": "committees",
+            "mongodb_collection": "cm",
         }
     )

@@ -5,7 +5,7 @@ Run this to test downloads before running full Dagster pipeline.
 """
 
 from src.data import get_repository
-from src.api.fec_bulk_data import download_fec_file
+from src.data.repository import download_fec_file
 
 def main():
     print("=" * 80)

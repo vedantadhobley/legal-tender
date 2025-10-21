@@ -27,15 +27,15 @@ fec_pipeline_job = define_asset_job(
         # Phase 2: Build member→FEC mapping
         "member_fec_mapping",
         
-        # Phase 3: Parse all 8 FEC files into per-year databases
-        "candidates",
-        "committees",
-        "linkages",
-        "candidate_summaries",
-        "committee_summaries",
-        "pac_summaries",
-        "committee_transfers",
-        "independent_expenditures",
+        # Phase 3: Parse all 8 FEC files into per-year databases (using raw FEC names)
+        "cn",                       # cn.zip - candidate master
+        "cm",                       # cm.zip - committee master
+        "ccl",                      # ccl.zip - candidate-committee linkages
+        "weball",                   # weball.zip - candidate summary (all)
+        "webl",                     # webl.zip - committee summary
+        "webk",                     # webk.zip - PAC summary
+        "itpas2",                   # pas2.zip - itemized transactions (ALL types)
+        "independent_expenditure",  # independent_expenditure.csv
     ),
     tags={
         "team": "data-engineering",
