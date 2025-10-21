@@ -25,10 +25,6 @@ from src.api.congress_legislators import (
     extract_fec_ids,
     get_current_term,
 )
-from src.api.fec_bulk_data import (
-    load_fec_candidates,
-    load_committee_linkages,
-)
 from src.api.congress_api import get_member  # For photo URLs and enhanced data
 from src.resources.mongo import MongoDBResource
 
@@ -115,24 +111,56 @@ def member_fec_mapping_asset(
     context.log.info("")
     
     # ==========================================================================
-    # PHASE 2: Load FEC Bulk Data (already downloaded by data_sync)
+    # PHASE 2: Load FEC Bulk Data from MongoDB (populated by cn/ccl assets)
     # ==========================================================================
-    context.log.info("📥 PHASE 2: Loading FEC Bulk Data")
+    context.log.info("📥 PHASE 2: Loading FEC Bulk Data from MongoDB")
     context.log.info("-" * 80)
     
-    # Load candidate and linkage data for all cycles
+    # Load candidate and linkage data for all cycles from MongoDB
     all_candidates = {}
     all_linkages = {}
     
-    for cycle in config.cycles:
-        context.log.info(f"Loading {cycle} cycle...")
-        candidates = load_fec_candidates(cycle, force_refresh=False, repository=repo)
-        linkages = load_committee_linkages(cycle, force_refresh=False, repository=repo)
-        
-        all_candidates[cycle] = candidates
-        all_linkages[cycle] = linkages
-        
-        context.log.info(f"  ✅ {len(candidates)} candidates, {len(linkages)} with committees")
+    with mongo.get_client() as client:
+        for cycle in config.cycles:
+            context.log.info(f"Loading {cycle} cycle from MongoDB...")
+            
+            # Query cn collection (candidate master)
+            cn_collection = mongo.get_collection(client, "cn", database_name=f"fec_{cycle}")
+            candidates = {}
+            for doc in cn_collection.find({}, {
+                'CAND_ID': 1,
+                'CAND_NAME': 1,
+                'CAND_PTY_AFFILIATION': 1,
+                'CAND_OFFICE_ST': 1,
+                'CAND_OFFICE': 1,
+                'CAND_OFFICE_DISTRICT': 1,
+            }):
+                cand_id = doc.get('CAND_ID')
+                if cand_id:
+                    candidates[cand_id] = {
+                        'id': cand_id,
+                        'name': doc.get('CAND_NAME', ''),
+                        'party': doc.get('CAND_PTY_AFFILIATION', ''),
+                        'state': doc.get('CAND_OFFICE_ST', ''),
+                        'office': doc.get('CAND_OFFICE', ''),
+                        'district': doc.get('CAND_OFFICE_DISTRICT', ''),
+                    }
+            
+            # Query ccl collection (candidate-committee linkages)
+            ccl_collection = mongo.get_collection(client, "ccl", database_name=f"fec_{cycle}")
+            linkages = {}
+            for doc in ccl_collection.find({}, {'CAND_ID': 1, 'CMTE_ID': 1}):
+                cand_id = doc.get('CAND_ID')
+                committee_id = doc.get('CMTE_ID')
+                if cand_id and committee_id:
+                    if cand_id not in linkages:
+                        linkages[cand_id] = []
+                    linkages[cand_id].append(committee_id)
+            
+            all_candidates[cycle] = candidates
+            all_linkages[cycle] = linkages
+            
+            context.log.info(f"  ✅ {len(candidates)} candidates, {len(linkages)} with committees")
     
     context.log.info("")
     

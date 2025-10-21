@@ -1,21 +1,32 @@
-"""FEC Bulk Data Assets - Raw FEC file parsers (one file = one parser)"""
+"""FEC Bulk Data Assets - Raw FEC file parsers using original FEC field names
 
-from .candidates import candidates_asset
-from .committees import committees_asset
-from .linkages import linkages_asset
-from .candidate_summaries import candidate_summaries_asset
-from .committee_summaries import committee_summaries_asset
-from .pac_summaries import pac_summaries_asset
-from .committee_transfers import committee_transfers_asset
-from .independent_expenditures import independent_expenditures_asset
+Collection names match FEC file prefixes:
+- cn.zip → cn collection (candidate master)
+- cm.zip → cm collection (committee master)
+- ccl.zip → ccl collection (candidate-committee linkages)
+- weball.zip → weball collection (candidate summary - all)
+- webl.zip → webl collection (committee summary)
+- webk.zip → webk collection (PAC summary)
+- pas2.zip → itpas2 collection (itemized transactions - ALL types)
+- independent_expenditure.csv → independent_expenditures collection
+"""
+
+from .cn import cn_asset
+from .cm import cm_asset
+from .ccl import ccl_asset
+from .weball import weball_asset
+from .webl import webl_asset
+from .webk import webk_asset
+from .itpas2 import itpas2_asset
+from .independent_expenditure import independent_expenditure_asset
 
 __all__ = [
-    'candidates_asset',
-    'committees_asset',
-    'linkages_asset',
-    'candidate_summaries_asset',
-    'committee_summaries_asset',
-    'pac_summaries_asset',
-    'committee_transfers_asset',
-    'independent_expenditures_asset',
+    'cn_asset',
+    'cm_asset',
+    'ccl_asset',
+    'weball_asset',
+    'webl_asset',
+    'webk_asset',
+    'itpas2_asset',
+    'independent_expenditure_asset',
 ]

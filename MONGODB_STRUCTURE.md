@@ -23,17 +23,21 @@ Each election cycle (2020, 2022, 2024, 2026) has its own database with **7 colle
 
 ### Example: `fec_2024` Database
 
+**Collections use raw FEC field names (CAND_ID, CMTE_ID, etc.) matching FEC.md exactly**
+
 ```
 fec_2024/
-├── candidates              (~10K records, cn24.zip)
-├── committees              (~20K records, cm24.zip)
-├── linkages                (~20K records, ccl24.zip)
-├── candidate_summaries     (~10K records, weball24.zip)
-├── committee_summaries     (~10K records, webl24.zip)
-├── pac_summaries           (~5K records, webk24.zip)
-├── committee_transfers     (~2-5M records, pas224.zip)
-└── independent_expenditures (~50-200K records, independent_expenditure_2024.csv)
+├── cn                      (~10K records, cn.zip)
+├── cm                      (~20K records, cm.zip)
+├── ccl                     (~20K records, ccl.zip)
+├── weball                  (~10K records, weball.zip)
+├── webl                    (~10K records, webl.zip)
+├── webk                    (~5K records, webk.zip)
+├── itpas2                  (~2-5M records, pas2.zip)
+└── independent_expenditure (~50-200K records, independent_expenditure.csv)
 ```
+
+**Note**: Collection names match file prefixes (cn, cm, ccl, etc.) and use raw FEC field names as documented in FEC.md.
 
 ---
 
@@ -461,21 +465,26 @@ Final correlation: Money → Votes.
 
 ```
 1. Download FEC Bulk Files (data_sync asset)
-   ├── cn24.zip, cm24.zip, ccl24.zip (metadata)
-   ├── weball24.zip (candidate summaries)
-   ├── webl24.zip, webk24.zip (committee/PAC summaries)
-   ├── pas224.zip (transfers)
-   └── independent_expenditure_2024.csv (Super PAC)
+   ├── cn.zip, cm.zip, ccl.zip (metadata - NO year suffixes)
+   ├── weball.zip (candidate summaries)
+   ├── webl.zip, webk.zip (committee/PAC summaries)
+   ├── pas2.zip (transfers)
+   └── independent_expenditure.csv (Super PAC - NO year suffix)
    
-2. Parse into fec_2024 Database (8 separate parser assets, 1 per file)
-   ├── candidates.py → candidates (10K)
-   ├── committees.py → committees (20K) → Find Leadership PACs (type='O')
-   ├── linkages.py → linkages (20K)
-   ├── candidate_summaries.py → candidate_summaries (10K)
-   ├── committee_summaries.py → committee_summaries (10K) → Individual donor aggregates
-   ├── pac_summaries.py → pac_summaries (5K) ⚠️ Fixed field mappings Oct 2025
-   ├── committee_transfers.py → committee_transfers (2-5M) → Track Corporate → Leadership PAC flows
-   └── independent_expenditures.py → independent_expenditures (50-200K) → Super PAC FOR/AGAINST
+   File structure: data/fec/20xx/cn.zip (flat, no subdirectories)
+   
+2. Parse into fec_20xx Database (8 separate parser assets, 1 per file)
+   ├── cn.py → cn (10K) - Raw FEC field names (CAND_ID, CAND_NAME, etc.)
+   ├── cm.py → cm (20K) - Raw FEC field names (CMTE_ID, CMTE_NM, etc.)
+   ├── ccl.py → ccl (20K) - Raw FEC field names (LINKAGE_ID, etc.)
+   ├── weball.py → weball (10K) - Raw FEC field names
+   ├── webl.py → webl (10K) - Raw FEC field names
+   ├── webk.py → webk (5K) - Raw FEC field names (27 fields, NOT 30)
+   ├── itpas2.py → itpas2 (2-5M) - Raw FEC field names
+   └── independent_expenditure.py → independent_expenditure (50-200K) - Raw FEC field names
+   
+   Collections use raw FEC names (cn, cm, ccl, weball, webl, webk, itpas2, independent_expenditure)
+   MongoDB auto-generates _id (no manual _id assignment)
 
 3. Aggregate into legal_tender Database (member_fec_mapping asset)
    ├── members (politicians with FEC IDs + Leadership PAC IDs)

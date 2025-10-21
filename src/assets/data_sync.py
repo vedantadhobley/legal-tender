@@ -13,8 +13,8 @@ from typing import Dict, Any, List, Optional
 import requests
 
 from ..data import get_repository
+from ..data.repository import download_fec_file, FEC_FILE_MAPPING
 from ..api.congress_legislators import download_legislators_file, get_current_legislators, extract_fec_ids
-from ..api.fec_bulk_data import download_fec_file, FEC_FILE_MAPPING
 
 
 class DataSyncConfig(Config):

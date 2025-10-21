@@ -1,4 +1,4 @@
-"""Committee Summaries Asset - Parse FEC committee financial summaries (webl.zip)"""
+"""Linkages Asset - Parse FEC candidate-committee linkages (ccl.zip) using raw FEC field names"""
 
 from typing import Dict, Any, List
 from datetime import datetime
@@ -10,40 +10,37 @@ from src.data import get_repository
 from src.resources.mongo import MongoDBResource
 
 
-class CommitteeSummariesConfig(Config):
+class LinkagesConfig(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
 
 
 @asset(
-    name="committee_summaries",
-    description="FEC committee financial summaries (webl.zip) - quarterly/annual reports for all committees",
+    name="ccl",
+    description="FEC candidate-committee linkages (ccl.zip) - raw FEC data with original field names",
     group_name="fec",
     compute_kind="bulk_data",
     ins={"data_sync": AssetIn("data_sync")},
 )
-def committee_summaries_asset(
+def ccl_asset(
     context: AssetExecutionContext,
-    config: CommitteeSummariesConfig,
+    config: LinkagesConfig,
     mongo: MongoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
-    """Parse webl.zip and store RAW data in fec_{cycle}.committee_summaries.
-    
-    NO AGGREGATION - just raw FEC data.
-    """
+    """Parse ccl.zip files and store in fec_{cycle}.ccl collections using raw FEC field names."""
     
     repo = get_repository()
-    stats = {'total_summaries': 0, 'by_cycle': {}}
+    stats = {'total_linkages': 0, 'by_cycle': {}}
     
     with mongo.get_client() as client:
         for cycle in config.cycles:
             context.log.info(f"📊 {cycle} Cycle:")
             
             try:
-                collection = mongo.get_collection(client, "committee_summaries", database_name=f"fec_{cycle}")
+                collection = mongo.get_collection(client, "ccl", database_name=f"fec_{cycle}")
                 collection.delete_many({})
                 
-                zip_path = repo.fec_committee_summary_path(cycle)
+                zip_path = repo.fec_linkages_path(cycle)
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue
@@ -61,35 +58,31 @@ def committee_summaries_asset(
                                 continue
                             
                             fields = decoded.split('|')
-                            if len(fields) < 30:
+                            if len(fields) < 7:
                                 continue
                             
-                            cmte_id = fields[0]
-                            # Multiple reports per cycle - use committee_id + coverage_through_date
+                            # Use EXACT field names from fec.md
                             batch.append({
-                                '_id': f"{cmte_id}|{fields[27]}",
-                                'committee_id': cmte_id,
-                                'committee_name': fields[1],
-                                'coverage_from_date': fields[26],
-                                'coverage_through_date': fields[27],
-                                'total_receipts': float(fields[5]) if fields[5] else 0.0,
-                                'individual_contributions': float(fields[17]) if fields[17] else 0.0,
-                                'pac_contributions': float(fields[11]) if fields[11] else 0.0,
-                                'total_disbursements': float(fields[7]) if fields[7] else 0.0,
-                                'cash_on_hand_beginning': float(fields[8]) if fields[8] else 0.0,
-                                'cash_on_hand_end': float(fields[9]) if fields[9] else 0.0,
-                                'debts_owed_by': float(fields[28]) if fields[28] else 0.0,
+
+                                'CAND_ID': fields[0],
+                                'CAND_ELECTION_YR': fields[1],
+                                'FEC_ELECTION_YR': fields[2],
+                                'CMTE_ID': fields[3],
+                                'CMTE_TP': fields[4],
+                                'CMTE_DSGN': fields[5],
+                                'LINKAGE_ID': fields[6],
                                 'updated_at': datetime.now(),
                             })
                 
                 if batch:
                     collection.insert_many(batch, ordered=False)
-                    context.log.info(f"   ✅ {cycle}: {len(batch):,} committee summaries")
+                    context.log.info(f"   ✅ {cycle}: {len(batch):,} linkages")
                     stats['by_cycle'][cycle] = len(batch)
-                    stats['total_summaries'] += len(batch)
+                    stats['total_linkages'] += len(batch)
                 
-                collection.create_index([("committee_id", 1)])
-                collection.create_index([("coverage_through_date", -1)])
+                # Create indexes on key fields
+                collection.create_index([("CAND_ID", 1)])
+                collection.create_index([("CMTE_ID", 1)])
                 
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}")
@@ -97,9 +90,9 @@ def committee_summaries_asset(
     return Output(
         value=stats,
         metadata={
-            "total_summaries": stats['total_summaries'],
+            "total_linkages": stats['total_linkages'],
             "cycles_processed": MetadataValue.json(config.cycles),
             "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
-            "mongodb_collection": "committee_summaries",
+            "mongodb_collection": "ccl",
         }
     )
