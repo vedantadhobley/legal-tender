@@ -45,7 +45,7 @@ def itpas2_asset(
                 collection = mongo.get_collection(client, "itpas2", database_name=f"fec_{cycle}")
                 collection.delete_many({})
                 
-                zip_path = repo.fec_committee_transfers_path(cycle)
+                zip_path = repo.fec_pas2_path(cycle)
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue

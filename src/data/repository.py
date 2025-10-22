@@ -136,35 +136,35 @@ class DataRepository:
     # FEC File Paths (using raw FEC filenames)
     # ==========================================================================
     
-    def fec_candidates_path(self, cycle: str) -> Path:
+    def fec_cn_path(self, cycle: str) -> Path:
         """Path to FEC candidates file (cn.zip) - flat structure per fec.md."""
         return self.fec_cycle_dir(cycle) / "cn.zip"
     
-    def fec_committees_path(self, cycle: str) -> Path:
+    def fec_cm_path(self, cycle: str) -> Path:
         """Path to FEC committees file (cm.zip) - flat structure per fec.md."""
         return self.fec_cycle_dir(cycle) / "cm.zip"
     
-    def fec_linkages_path(self, cycle: str) -> Path:
+    def fec_ccl_path(self, cycle: str) -> Path:
         """Path to FEC linkages file (ccl.zip) - flat structure per fec.md."""
         return self.fec_cycle_dir(cycle) / "ccl.zip"
     
-    def fec_candidate_summary_path(self, cycle: str) -> Path:
+    def fec_weball_path(self, cycle: str) -> Path:
         """Path to FEC candidate summary file (weball.zip) - flat structure per fec.md."""
         return self.fec_cycle_dir(cycle) / "weball.zip"
     
-    def fec_committee_summary_path(self, cycle: str) -> Path:
+    def fec_webl_path(self, cycle: str) -> Path:
         """Path to FEC committee summary file (webl.zip) - flat structure per fec.md."""
         return self.fec_cycle_dir(cycle) / "webl.zip"
     
-    def fec_pac_summary_path(self, cycle: str) -> Path:
+    def fec_webk_path(self, cycle: str) -> Path:
         """Path to FEC PAC summary file (webk.zip) - flat structure per fec.md."""
         return self.fec_cycle_dir(cycle) / "webk.zip"
     
-    def fec_individual_contributions_path(self, cycle: str) -> Path:
+    def fec_indiv_path(self, cycle: str) -> Path:
         """Path to FEC individual contributions file (indiv.zip) - flat structure per fec.md."""
         return self.fec_cycle_dir(cycle) / "indiv.zip"
     
-    def fec_independent_expenditures_path(self, cycle: str) -> Path:
+    def fec_independent_expenditure_path(self, cycle: str) -> Path:
         """Path to FEC independent expenditures file (independent_expenditure.csv).
         
         NOTE: This is a CSV file, NOT a ZIP!
@@ -174,7 +174,17 @@ class DataRepository:
         """
         return self.fec_cycle_dir(cycle) / "independent_expenditure.csv"
     
-    def fec_committee_transfers_path(self, cycle: str) -> Path:
+    def fec_oppexp_path(self, cycle: str) -> Path:
+        """Path to FEC operating expenditures file (oppexp.zip).
+        
+        Operating expenditures show WHERE committees spend money (ads, printing,
+        consulting, events, etc.). This is different from independent_expenditure.csv
+        which shows Super PAC spending FOR/AGAINST candidates.
+        Flat structure per fec.md.
+        """
+        return self.fec_cycle_dir(cycle) / "oppexp.zip"
+    
+    def fec_pas2_path(self, cycle: str) -> Path:
         """Path to FEC itemized transactions file (pas2.zip).
         
         NOTE: This file contains ALL itemized transactions (Schedule A receipts 
@@ -307,9 +317,9 @@ class DataRepository:
             if cycle_dir.is_dir() and cycle_dir.name.isdigit():
                 cycle = cycle_dir.name
                 stats['fec_cycles'][cycle] = {
-                    'candidates': self.fec_candidates_path(cycle).exists(),
-                    'committees': self.fec_committees_path(cycle).exists(),
-                    'linkages': self.fec_linkages_path(cycle).exists(),
+                    'candidates': self.fec_cn_path(cycle).exists(),
+                    'committees': self.fec_cm_path(cycle).exists(),
+                    'linkages': self.fec_ccl_path(cycle).exists(),
                 }
         
         # Congress API member count
@@ -342,15 +352,16 @@ FEC_BULK_URL = "https://www.fec.gov/files/bulk-downloads"
 
 # Mapping of FEC basenames to repository path methods
 FEC_FILE_MAPPING = {
-    'cn': 'fec_candidates_path',
-    'cm': 'fec_committees_path',
-    'ccl': 'fec_linkages_path',
-    'weball': 'fec_candidate_summary_path',
-    'webl': 'fec_committee_summary_path',
-    'webk': 'fec_pac_summary_path',
-    'indiv': 'fec_individual_contributions_path',
-    'oppexp': 'fec_independent_expenditures_path',
-    'pas2': 'fec_committee_transfers_path',
+    'cn': 'fec_cn_path',
+    'cm': 'fec_cm_path',
+    'ccl': 'fec_ccl_path',
+    'weball': 'fec_weball_path',
+    'webl': 'fec_webl_path',
+    'webk': 'fec_webk_path',
+    'indiv': 'fec_indiv_path',
+    'independent_expenditure': 'fec_independent_expenditure_path',
+    'oppexp': 'fec_oppexp_path',
+    'pas2': 'fec_pas2_path',
 }
 
 
@@ -464,10 +475,10 @@ if __name__ == '__main__':
     
     print("\n📊 File Paths (2024 cycle):")
     print(f"Legislators Current: {repo.legislators_current_path}")
-    print(f"FEC Candidates:      {repo.fec_candidates_path('2024')}")
-    print(f"FEC Committees:      {repo.fec_committees_path('2024')}")
-    print(f"FEC Linkages:        {repo.fec_linkages_path('2024')}")
-    print(f"FEC Expenditures:    {repo.fec_independent_expenditures_path('2024')}")
+    print(f"FEC cn:              {repo.fec_cn_path('2024')}")
+    print(f"FEC cm:              {repo.fec_cm_path('2024')}")
+    print(f"FEC ccl:             {repo.fec_ccl_path('2024')}")
+    print(f"FEC independent_exp: {repo.fec_independent_expenditure_path('2024')}")
     
     print("\n📈 Repository Stats:")
     stats = repo.get_repository_stats()

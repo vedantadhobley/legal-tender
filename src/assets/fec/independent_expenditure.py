@@ -49,7 +49,7 @@ def independent_expenditure_asset(
                 collection = mongo.get_collection(client, "independent_expenditure", database_name=f"fec_{cycle}")
                 collection.delete_many({})
                 
-                csv_path = repo.fec_independent_expenditures_path(cycle)
+                csv_path = repo.fec_independent_expenditure_path(cycle)
                 if not csv_path.exists():
                     context.log.warning(f"⚠️  File not found: {csv_path}")
                     continue

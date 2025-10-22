@@ -41,7 +41,7 @@ def cn_asset(
                 collection = mongo.get_collection(client, "cn", database_name=f"fec_{cycle}")
                 collection.delete_many({})
                 
-                zip_path = repo.fec_candidates_path(cycle)
+                zip_path = repo.fec_cn_path(cycle)
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue

@@ -40,7 +40,7 @@ def webk_asset(
                 collection = mongo.get_collection(client, "webk", database_name=f"fec_{cycle}")
                 collection.delete_many({})
                 
-                zip_path = repo.fec_pac_summary_path(cycle)
+                zip_path = repo.fec_webk_path(cycle)
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue
