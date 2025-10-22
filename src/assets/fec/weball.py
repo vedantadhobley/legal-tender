@@ -40,7 +40,7 @@ def weball_asset(
                 collection = mongo.get_collection(client, "weball", database_name=f"fec_{cycle}")
                 collection.delete_many({})
                 
-                zip_path = repo.fec_candidate_summary_path(cycle)
+                zip_path = repo.fec_weball_path(cycle)
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue

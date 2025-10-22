@@ -40,7 +40,7 @@ def webl_asset(
                 collection = mongo.get_collection(client, "webl", database_name=f"fec_{cycle}")
                 collection.delete_many({})
                 
-                zip_path = repo.fec_committee_summary_path(cycle)
+                zip_path = repo.fec_webl_path(cycle)
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue

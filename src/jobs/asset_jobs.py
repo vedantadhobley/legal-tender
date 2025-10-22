@@ -19,15 +19,12 @@ from dagster import define_asset_job, AssetSelection
 
 fec_pipeline_job = define_asset_job(
     name="fec_pipeline_job",
-    description="Complete FEC data pipeline: Download → Member mapping → Parse all 8 FEC files",
+    description="Complete FEC data pipeline: Download → Parse → Member mapping → LT computations → Aggregations",
     selection=AssetSelection.keys(
         # Phase 1: Download all source data
         "data_sync",
         
-        # Phase 2: Build member→FEC mapping
-        "member_fec_mapping",
-        
-        # Phase 3: Parse all 8 FEC files into per-year databases (using raw FEC names)
+        # Phase 2: Parse all 9 FEC files into per-year databases (using raw FEC names)
         "cn",                       # cn.zip - candidate master
         "cm",                       # cm.zip - committee master
         "ccl",                      # ccl.zip - candidate-committee linkages
@@ -35,7 +32,24 @@ fec_pipeline_job = define_asset_job(
         "webl",                     # webl.zip - committee summary
         "webk",                     # webk.zip - PAC summary
         "itpas2",                   # pas2.zip - itemized transactions (ALL types)
+        "oppexp",                   # oppexp.zip - operating expenditures
         "independent_expenditure",  # independent_expenditure.csv
+        
+        # Phase 3: Build member→FEC mapping
+        "member_fec_mapping",
+        
+        # Phase 4: LT cycle computations (enriched views per cycle)
+        "lt_independent_expenditure",
+        "lt_itpas2",
+        "lt_oppexp",
+        
+        # Phase 5: LT cycle aggregations (per-cycle financial summaries)
+        "lt_candidate_financials",
+        "lt_donor_financials",
+        
+        # Phase 6: Cross-cycle aggregations (legal_tender database)
+        "candidate_financials",
+        "donor_financials",
     ),
     tags={
         "team": "data-engineering",
