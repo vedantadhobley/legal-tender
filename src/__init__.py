@@ -22,7 +22,7 @@ from src.assets import (
     # Data sync
     data_sync_asset,
     
-    # FEC parsers (raw data → fec_YYYY databases) - 9 files, 9 parsers
+    # FEC parsers (raw data → fec_YYYY databases) - 8 files, 8 parsers
     cn_asset,
     cm_asset,
     ccl_asset,
@@ -31,19 +31,22 @@ from src.assets import (
     webk_asset,
     itpas2_asset,
     oppexp_asset,
-    independent_expenditure_asset,
     
     # LT cycle computations (→ lt_{cycle} databases)
-    lt_independent_expenditure_asset,
     lt_itpas2_asset,
     lt_oppexp_asset,
     lt_candidate_financials_asset,
     lt_donor_financials_asset,
+    lt_webl_asset,
+    lt_weball_asset,
+    lt_webk_asset,
     
     # Legal tender cross-cycle data (→ legal_tender database)
     member_fec_mapping_asset,
     candidate_financials,
     donor_financials,
+    candidate_summaries,
+    committee_summaries,
 )
 from src.jobs import fec_pipeline_job
 from src.schedules import (
@@ -60,7 +63,7 @@ defs = Definitions(
         # Data sync (downloads all files)
         data_sync_asset,
         
-        # FEC raw data parsers (→ fec_YYYY databases) - 9 files, 9 parsers
+        # FEC raw data parsers (→ fec_YYYY databases) - 8 files, 8 parsers
         cn_asset,
         cm_asset,
         ccl_asset,
@@ -69,19 +72,22 @@ defs = Definitions(
         webk_asset,
         itpas2_asset,
         oppexp_asset,
-        independent_expenditure_asset,
         
         # LT cycle computations (→ lt_{cycle} databases)
-        lt_independent_expenditure_asset,
         lt_itpas2_asset,
         lt_oppexp_asset,
         lt_candidate_financials_asset,
         lt_donor_financials_asset,
+        lt_webl_asset,
+        lt_weball_asset,
+        lt_webk_asset,
         
         # Legal tender cross-cycle data (→ legal_tender database)
         member_fec_mapping_asset,
         candidate_financials,
         donor_financials,
+        candidate_summaries,
+        committee_summaries,
     ],
     resources={
         "mongo": mongo_resource,

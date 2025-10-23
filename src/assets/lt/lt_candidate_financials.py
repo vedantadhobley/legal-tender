@@ -21,7 +21,6 @@ class LtCandidateFinancialsConfig(Config):
     name="lt_candidate_financials",
     group_name="lt",
     ins={
-        "lt_independent_expenditure": AssetIn(key="lt_independent_expenditure"),
         "lt_itpas2": AssetIn(key="lt_itpas2"),
         "lt_oppexp": AssetIn(key="lt_oppexp"),
     },
@@ -32,7 +31,6 @@ def lt_candidate_financials_asset(
     context: AssetExecutionContext,
     config: LtCandidateFinancialsConfig,
     mongo: MongoDBResource,
-    lt_independent_expenditure: Dict[str, Any],
     lt_itpas2: Dict[str, Any],
     lt_oppexp: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -120,7 +118,6 @@ def lt_candidate_financials_asset(
         for cycle in config.cycles:
             context.log.info(f"Processing cycle {cycle}")
             
-            indie_collection = mongo.get_collection(client, "independent_expenditure", database_name=f"lt_{cycle}")
             itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"lt_{cycle}")
             financials_collection = mongo.get_collection(client, "candidate_financials", database_name=f"lt_{cycle}")
             
@@ -128,24 +125,10 @@ def lt_candidate_financials_asset(
             financials_collection.delete_many({})
             context.log.info(f"Cleared existing candidate_financials for cycle {cycle}")
             
-            # Get all unique tracked candidates
+            # Get all unique tracked candidates from itpas2
             tracked_candidates = {}
             
-            # Gather from independent_expenditure
-            for doc in indie_collection.find({"is_tracked_member": True}):
-                cand_id = doc.get('candidate_id')
-                if cand_id and cand_id not in tracked_candidates:
-                    tracked_candidates[cand_id] = {
-                        'candidate_id': cand_id,
-                        'bioguide_id': doc.get('bioguide_id'),
-                        'candidate_name': doc.get('candidate_name'),
-                        'party': doc.get('candidate_party'),
-                        'office': doc.get('candidate_office'),
-                        'state': doc.get('candidate_state'),
-                        'district': doc.get('candidate_district'),
-                    }
-            
-            # Gather from itpas2
+            # Gather from itpas2 (covers both indie expenditures and PAC contributions)
             for doc in itpas2_collection.find({"is_tracked_member": True}):
                 cand_id = doc.get('candidate_id')
                 if cand_id and cand_id not in tracked_candidates:
@@ -167,13 +150,27 @@ def lt_candidate_financials_asset(
                 context.log.info(f"Processing candidate {cand_id} - {cand_info['candidate_name']}")
                 
                 # === INDEPENDENT EXPENDITURES ===
+                # Using itpas2 data instead of independent_expenditure collection
+                # because independent_expenditure.csv contains billions in fake/troll filings
+                # Transaction types (per official FEC documentation):
+                # 24E = Independent expenditure advocating election (58,432 txns, $1.9B) → support
+                # 24A = Independent expenditure opposing election (19,229 txns, $2.5B) → oppose
+                # 24F = Communication cost for candidate (708 txns, $7M) → support (minor)
+                # 24N = Communication cost against candidate (91 txns, $57K) → oppose (negligible)
                 indie_support_committees = {}
                 indie_oppose_committees = {}
                 
-                for doc in indie_collection.find({"candidate_id": cand_id}):
-                    cmte_id = doc.get('committee_id')
+                for doc in itpas2_collection.find({
+                    "candidate_id": cand_id,
+                    "transaction_type": {"$in": ["24A", "24E", "24F", "24N"]}
+                }):
+                    cmte_id = doc.get('filer_committee_id')
                     amount = doc.get('amount', 0)
-                    is_support = doc.get('is_support', False)
+                    transaction_type = doc.get('transaction_type', '')
+                    
+                    # Map transaction types to support/oppose
+                    # 24E/24F = support, 24A/24N = oppose
+                    is_support = transaction_type in ['24E', '24F']
                     
                     # Choose support or oppose bucket
                     committees_dict = indie_support_committees if is_support else indie_oppose_committees
@@ -181,7 +178,7 @@ def lt_candidate_financials_asset(
                     if cmte_id not in committees_dict:
                         committees_dict[cmte_id] = {
                             'committee_id': cmte_id,
-                            'committee_name': doc.get('committee_name', ''),
+                            'committee_name': doc.get('filer_committee_name', ''),
                             'total_amount': 0,
                             'transaction_count': 0,
                             'transactions': []
@@ -191,10 +188,11 @@ def lt_candidate_financials_asset(
                     committees_dict[cmte_id]['transaction_count'] += 1
                     committees_dict[cmte_id]['transactions'].append({
                         'amount': amount,
-                        'date': doc.get('expenditure_date', ''),
-                        'description': doc.get('expenditure_description', ''),
-                        'payee': doc.get('payee_name', ''),
+                        'date': doc.get('transaction_date', ''),
+                        'description': doc.get('memo_text', ''),
+                        'payee': '',  # itpas2 doesn't have payee info for indie expenditures
                         'transaction_id': doc.get('transaction_id', ''),
+                        'transaction_type': transaction_type,  # Include type for reference
                     })
                 
                 # Sort and limit transactions to top 10 per committee

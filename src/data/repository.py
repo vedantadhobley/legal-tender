@@ -164,16 +164,6 @@ class DataRepository:
         """Path to FEC individual contributions file (indiv.zip) - flat structure per fec.md."""
         return self.fec_cycle_dir(cycle) / "indiv.zip"
     
-    def fec_independent_expenditure_path(self, cycle: str) -> Path:
-        """Path to FEC independent expenditures file (independent_expenditure.csv).
-        
-        NOTE: This is a CSV file, NOT a ZIP!
-        Schedule E filings (independent expenditures FOR/AGAINST candidates).
-        Do NOT confuse with oppexp.zip (operating expenditures - wrong file!).
-        Flat structure per fec.md.
-        """
-        return self.fec_cycle_dir(cycle) / "independent_expenditure.csv"
-    
     def fec_oppexp_path(self, cycle: str) -> Path:
         """Path to FEC operating expenditures file (oppexp.zip).
         
@@ -359,7 +349,6 @@ FEC_FILE_MAPPING = {
     'webl': 'fec_webl_path',
     'webk': 'fec_webk_path',
     'indiv': 'fec_indiv_path',
-    'independent_expenditure': 'fec_independent_expenditure_path',
     'oppexp': 'fec_oppexp_path',
     'pas2': 'fec_pas2_path',
 }
@@ -478,7 +467,7 @@ if __name__ == '__main__':
     print(f"FEC cn:              {repo.fec_cn_path('2024')}")
     print(f"FEC cm:              {repo.fec_cm_path('2024')}")
     print(f"FEC ccl:             {repo.fec_ccl_path('2024')}")
-    print(f"FEC independent_exp: {repo.fec_independent_expenditure_path('2024')}")
+    print(f"FEC pas2:            {repo.fec_pas2_path('2024')}")
     
     print("\n📈 Repository Stats:")
     stats = repo.get_repository_stats()

@@ -9,24 +9,30 @@ Philosophy:
 - Same pattern as FEC assets: no year suffix, use cycles config
 
 Available Assets:
-- lt_independent_expenditure: Super PAC spending FOR/AGAINST tracked members
-- lt_itpas2: Itemized contributions (PAC→Candidate) for tracked members
+- lt_itpas2: Itemized transactions (ALL types including 24A/24E independent expenditures) for tracked members
 - lt_oppexp: Operating expenditures for tracked member committees
 - lt_candidate_financials: Per-cycle aggregation of ALL money TO each candidate
 - lt_donor_financials: Per-cycle aggregation of ALL money FROM each committee
+- lt_webl: FEC candidate summaries (cycle-specific) filtered to tracked members
+- lt_weball: FEC all-candidate summaries (includes future cycles) filtered to tracked members
+- lt_webk: FEC committee/PAC summaries filtered to committees linked to tracked members
 """
 
-from src.assets.lt.lt_independent_expenditure import lt_independent_expenditure_asset
 from src.assets.lt.lt_itpas2 import lt_itpas2_asset
 from src.assets.lt.lt_oppexp import lt_oppexp_asset
 from src.assets.lt.lt_candidate_financials import lt_candidate_financials_asset
 from src.assets.lt.lt_donor_financials import lt_donor_financials_asset
+from src.assets.lt.lt_webl import lt_webl_asset
+from src.assets.lt.lt_weball import lt_weball_asset
+from src.assets.lt.lt_webk import lt_webk_asset
 
 __all__ = [
-    "lt_independent_expenditure_asset",
     "lt_itpas2_asset",
     "lt_oppexp_asset",
     "lt_candidate_financials_asset",
     "lt_donor_financials_asset",
+    "lt_webl_asset",
+    "lt_weball_asset",
+    "lt_webk_asset",
 ]
 

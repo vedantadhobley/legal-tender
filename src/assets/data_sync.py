@@ -38,11 +38,8 @@ class DataSyncConfig(Config):
     sync_individual_contributions: bool = False
     """DEPRECATED: Individual contributions no longer needed. We use webl.zip summary files for aggregate individual donor totals."""
     
-    sync_independent_expenditures: bool = True
-    """Download independent expenditures (CSV) - Super PAC spending FOR/AGAINST candidates - 20MB per cycle"""
-    
     sync_committee_transfers: bool = True
-    """Download committee transfers (pas2) - ~300MB per cycle, CRITICAL for Leadership PAC tracking"""
+    """Download committee transfers (pas2) - ~300MB per cycle, CRITICAL for Leadership PAC tracking AND independent expenditures (24A/24E)"""
     
     sync_fec_transactions: bool = False
     """Download OTHER FEC transaction files (deprecated - use specific flags above)"""
@@ -370,64 +367,8 @@ def data_sync_asset(
                 stats['errors'].append(f"fec/{cycle}/transactions/indiv: {str(e)}")
     
     # =========================================================================
-    # Phase 5: Independent Expenditures (CSV - Super PAC Spending FOR/AGAINST Candidates)
     # =========================================================================
-    
-    if config.sync_independent_expenditures:
-        context.log.info("\n💥 Phase 5: Syncing Independent Expenditures (Schedule E - Super PAC Spending)")
-        context.log.info("-" * 80)
-        context.log.info("📝 NOTE: Downloading CSV files (NOT oppexp.zip - that's operating expenses!)")
-        context.log.info("    These contain Super PAC spending FOR and AGAINST specific candidates.")
-        
-        for cycle in config.cycles:
-            context.log.info(f"\n{cycle} Cycle:")
-            
-            try:
-                path_method = getattr(repo, FEC_FILE_MAPPING['independent_expenditure'])
-                local_path = path_method(cycle)
-                
-                # CSV file at cycle root, not in transactions directory
-                fec_filename = f"independent_expenditure_{cycle}.csv"
-                remote_url = f"https://www.fec.gov/files/bulk-downloads/{cycle}/{fec_filename}"
-                
-                if should_download_file(
-                    local_path,
-                    remote_url,
-                    config.force_refresh,
-                    config.check_remote_modified,
-                    context
-                ):
-                    context.log.info(f"⬇️  Downloading {local_path.name} (~20 MB, CSV format)...")
-                    
-                    # Download CSV directly (no ZIP extraction needed)
-                    import requests
-                    response = requests.get(remote_url, timeout=120)
-                    response.raise_for_status()
-                    
-                    # Ensure parent directory exists
-                    local_path.parent.mkdir(parents=True, exist_ok=True)
-                    
-                    # Save CSV file
-                    with open(local_path, 'wb') as f:
-                        f.write(response.content)
-                    
-                    file_size = local_path.stat().st_size
-                    stats['files_downloaded'].append(f"fec/{cycle}/{local_path.name}")
-                    stats['fec'][cycle]['files_downloaded'].append(local_path.name)
-                    stats['fec'][cycle]['bytes'] += file_size
-                    stats['total_bytes'] += file_size
-                    
-                    context.log.info(f"✓ Downloaded {local_path.name} ({file_size/1024/1024:.1f} MB)")
-                else:
-                    stats['files_skipped'].append(f"fec/{cycle}/{local_path.name}")
-                    stats['fec'][cycle]['files_skipped'].append(local_path.name)
-            
-            except Exception as e:
-                context.log.error(f"❌ Error downloading independent expenditures for {cycle}: {e}")
-                stats['errors'].append(f"fec/{cycle}/independent_expenditure: {str(e)}")
-    
-    # =========================================================================
-    # Phase 5.5: Operating Expenditures (oppexp.zip - Committee Spending on Vendors/Services)
+    # Phase 5: Operating Expenditures (oppexp.zip - Committee Spending on Vendors/Services)
     # =========================================================================
     
     if config.sync_fec_core:  # oppexp is part of core FEC data
