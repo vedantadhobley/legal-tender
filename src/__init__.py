@@ -5,16 +5,18 @@ that track political donations, congressional voting, and lobbying activity.
 
 Architecture:
 - Assets: 
+  * sync/ → Data synchronization (downloads all FEC files)
   * fec/ → Raw FEC bulk data parsers (→ fec_YYYY databases)
-  * lt/ → Per-cycle computation assets (→ lt_YYYY databases) [TODO]
-  * legal_tender/ → Cross-cycle aggregated assets (→ legal_tender database)
+  * mapping/ → ID mapping assets (→ aggregation database)
+  * enrichment/ → Per-cycle enriched assets (→ enriched_YYYY databases)
+  * aggregation/ → Cross-cycle aggregated assets (→ aggregation database)
 - Jobs: One main pipeline job (fec_pipeline_job)
 - Resources: MongoDB for data storage
 - Schedules: Weekly automated refresh
 
 Data Flow:
-  FEC.gov bulk files → fec_2024 (raw) → lt_2024 (computed) → legal_tender (aggregated)
-                    → fec_2026 (raw) → lt_2026 (computed) ↗
+  FEC.gov bulk files → fec_2024 (raw) → enriched_2024 (filtered) → aggregation (rolled up)
+                    → fec_2026 (raw) → enriched_2026 (filtered) ↗
 """
 
 from dagster import Definitions
@@ -32,21 +34,23 @@ from src.assets import (
     itpas2_asset,
     oppexp_asset,
     
-    # LT cycle computations (→ lt_{cycle} databases)
-    lt_itpas2_asset,
-    lt_oppexp_asset,
-    lt_candidate_financials_asset,
-    lt_donor_financials_asset,
-    lt_webl_asset,
-    lt_weball_asset,
-    lt_webk_asset,
-    
-    # Legal tender cross-cycle data (→ legal_tender database)
+    # Mapping assets (ID mapping → aggregation database)
     member_fec_mapping_asset,
-    candidate_financials,
-    donor_financials,
-    candidate_summaries,
-    committee_summaries,
+    
+    # Enrichment assets (per-cycle enriched data → enriched_{cycle} databases)
+    enriched_itpas2_asset,
+    enriched_oppexp_asset,
+    enriched_candidate_financials_asset,
+    enriched_donor_financials_asset,
+    enriched_webl_asset,
+    enriched_weball_asset,
+    enriched_webk_asset,
+    
+    # Aggregation assets (cross-cycle rollups → aggregation database)
+    candidate_financials_asset,
+    donor_financials_asset,
+    candidate_summaries_asset,
+    committee_summaries_asset,
 )
 from src.jobs import fec_pipeline_job
 from src.schedules import (
@@ -73,21 +77,23 @@ defs = Definitions(
         itpas2_asset,
         oppexp_asset,
         
-        # LT cycle computations (→ lt_{cycle} databases)
-        lt_itpas2_asset,
-        lt_oppexp_asset,
-        lt_candidate_financials_asset,
-        lt_donor_financials_asset,
-        lt_webl_asset,
-        lt_weball_asset,
-        lt_webk_asset,
-        
-        # Legal tender cross-cycle data (→ legal_tender database)
+        # Mapping assets (ID mapping → aggregation database)
         member_fec_mapping_asset,
-        candidate_financials,
-        donor_financials,
-        candidate_summaries,
-        committee_summaries,
+        
+        # Enrichment assets (per-cycle enriched data → enriched_{cycle} databases)
+        enriched_itpas2_asset,
+        enriched_oppexp_asset,
+        enriched_candidate_financials_asset,
+        enriched_donor_financials_asset,
+        enriched_webl_asset,
+        enriched_weball_asset,
+        enriched_webk_asset,
+        
+        # Aggregation assets (cross-cycle rollups → aggregation database)
+        candidate_financials_asset,
+        donor_financials_asset,
+        candidate_summaries_asset,
+        committee_summaries_asset,
     ],
     resources={
         "mongo": mongo_resource,

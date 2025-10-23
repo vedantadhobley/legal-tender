@@ -5,7 +5,7 @@ Filters webk.zip data to committees linked to tracked members and enriches with 
 This contains OFFICIAL FEC summary data for PACs and party committees.
 
 Input: fec_{cycle}.webk (raw FEC PAC/committee summaries)
-Output: lt_{cycle}.webk (filtered to relevant committees)
+Output: enriched_{cycle}.webk (filtered to relevant committees)
 
 Key Features:
 - Filters to committees linked to tracked members (via ccl linkages)
@@ -36,24 +36,24 @@ from dagster import (
 from src.resources.mongo import MongoDBResource
 
 
-class LtWebkConfig(Config):
+class EnrichedWebkConfig(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
 
 
 @asset(
-    name="lt_webk",
+    name="enriched_webk",
     description="FEC PAC/committee financial summaries filtered to committees linked to tracked members",
-    group_name="lt",
-    compute_kind="computation",
+    group_name="enrichment",
+    compute_kind="enrichment",
     ins={
         "webk": AssetIn("webk"),
         "ccl": AssetIn("ccl"),
         "member_fec_mapping": AssetIn("member_fec_mapping"),
     },
 )
-def lt_webk_asset(
+def enriched_webk_asset(
     context: AssetExecutionContext,
-    config: LtWebkConfig,
+    config: EnrichedWebkConfig,
     mongo: MongoDBResource,
     webk: Dict[str, Any],
     ccl: Dict[str, Any],
@@ -75,7 +75,7 @@ def lt_webk_asset(
     
     with mongo.get_client() as client:
         # Get member FEC mapping to get tracked candidate IDs
-        mapping_collection = mongo.get_collection(client, "member_fec_mapping", database_name="legal_tender")
+        mapping_collection = mongo.get_collection(client, "member_fec_mapping", database_name="aggregation")
         
         tracked_candidate_ids: Set[str] = set()
         cand_to_bioguide = {}
@@ -94,10 +94,10 @@ def lt_webk_asset(
             
             ccl_collection = mongo.get_collection(client, "ccl", database_name=f"fec_{cycle}")
             webk_collection = mongo.get_collection(client, "webk", database_name=f"fec_{cycle}")
-            lt_webk_collection = mongo.get_collection(client, "webk", database_name=f"lt_{cycle}")
+            enriched_webk_collection = mongo.get_collection(client, "webk", database_name=f"enriched_{cycle}")
             
             # Clear existing data
-            lt_webk_collection.delete_many({})
+            enriched_webk_collection.delete_many({})
             
             # Get committees linked to tracked candidates
             linked_committee_ids: Set[str] = set()
@@ -124,7 +124,7 @@ def lt_webk_asset(
             
             # Insert batch
             if batch:
-                lt_webk_collection.insert_many(batch, ordered=False)
+                enriched_webk_collection.insert_many(batch, ordered=False)
                 context.log.info(f"  ✅ {cycle}: {len(batch)} committees")
                 stats['by_cycle'][cycle] = len(batch)
                 stats['total_committees'] += len(batch)
@@ -133,10 +133,10 @@ def lt_webk_asset(
                 stats['by_cycle'][cycle] = 0
             
             # Create indexes
-            lt_webk_collection.create_index([("CMTE_ID", 1)])
-            lt_webk_collection.create_index([("CMTE_NM", 1)])
-            lt_webk_collection.create_index([("TTL_RECEIPTS", -1)])
-            lt_webk_collection.create_index([("IND_EXP", -1)])  # Independent expenditures
+            enriched_webk_collection.create_index([("CMTE_ID", 1)])
+            enriched_webk_collection.create_index([("CMTE_NM", 1)])
+            enriched_webk_collection.create_index([("TTL_RECEIPTS", -1)])
+            enriched_webk_collection.create_index([("IND_EXP", -1)])  # Independent expenditures
     
     return Output(
         value=stats,

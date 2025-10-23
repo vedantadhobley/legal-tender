@@ -16,18 +16,18 @@ class CommitteeSummariesConfig(Config):
 
 @asset(
     name="committee_summaries",
-    group_name="legal_tender",
+    group_name="aggregation",
     ins={
-        "lt_webk": AssetIn(key="lt_webk"),
+        "enriched_webk": AssetIn(key="enriched_webk"),
     },
     compute_kind="aggregation",
     description="Cross-cycle aggregation of FEC committee summaries. Aggregates PAC/committee financial data by committee ID."
 )
-def committee_summaries(
+def committee_summaries_asset(
     context: AssetExecutionContext,
     config: CommitteeSummariesConfig,
     mongo: MongoDBResource,
-    lt_webk: Dict[str, Any],
+    enriched_webk: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """
     Aggregate FEC committee summaries across all cycles.
@@ -49,7 +49,7 @@ def committee_summaries(
     }
     
     with mongo.get_client() as client:
-        summaries_collection = mongo.get_collection(client, "committee_summaries", database_name="legal_tender")
+        summaries_collection = mongo.get_collection(client, "committee_summaries", database_name="aggregation")
         
         # Clear existing data
         summaries_collection.delete_many({})
@@ -62,12 +62,12 @@ def committee_summaries(
             context.log.info(f"Processing cycle {cycle}...")
             
             # Get collection for this cycle
-            webk_collection = mongo.get_collection(client, "webk", database_name=f"lt_{cycle}")
+            webk_collection = mongo.get_collection(client, "webk", database_name=f"enriched_{cycle}")
             
             # Check if collection exists
-            db = client[f"lt_{cycle}"]
+            db = client[f"enriched_{cycle}"]
             if "webk" not in db.list_collection_names():
-                context.log.warning(f"Collection lt_{cycle}.webk not found, skipping")
+                context.log.warning(f"Collection enriched_{cycle}.webk not found, skipping")
                 continue
             
             webk_records = list(webk_collection.find({}))

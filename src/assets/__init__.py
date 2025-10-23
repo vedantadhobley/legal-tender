@@ -1,13 +1,15 @@
 """Export all assets for use in Dagster definitions.
 
 Asset Organization (matches MongoDB structure):
+- sync/ → Data synchronization (downloads all FEC files)
 - fec/ → Raw FEC bulk data parsers (→ fec_YYYY databases)
-- lt/ → Per-cycle computation assets (→ lt_YYYY databases)
-- legal_tender/ → Cross-cycle aggregated assets (→ legal_tender database)
+- mapping/ → ID mapping assets (member bioguide → FEC IDs, etc.)
+- enrichment/ → Per-cycle enriched assets (→ enriched_YYYY databases)
+- aggregation/ → Cross-cycle aggregated assets (→ aggregation database)
 """
 
 # Data sync (downloads all FEC files)
-from .data_sync import data_sync_asset
+from .sync.data_sync import data_sync_asset
 
 # FEC Data Parsers (Raw → fec_YYYY databases) - Using original FEC file prefixes
 from .fec.cn import cn_asset
@@ -19,21 +21,23 @@ from .fec.webk import webk_asset
 from .fec.itpas2 import itpas2_asset
 from .fec.oppexp import oppexp_asset
 
-# LT Cycle Computations (fec_{cycle} + member_fec_mapping → lt_{cycle} databases)
-from .lt.lt_itpas2 import lt_itpas2_asset
-from .lt.lt_oppexp import lt_oppexp_asset
-from .lt.lt_candidate_financials import lt_candidate_financials_asset
-from .lt.lt_donor_financials import lt_donor_financials_asset
-from .lt.lt_webl import lt_webl_asset
-from .lt.lt_weball import lt_weball_asset
-from .lt.lt_webk import lt_webk_asset
+# Mapping Assets (fec_{cycle} → aggregation database)
+from .mapping.member_fec_mapping import member_fec_mapping_asset
 
-# Legal Tender Cross-Cycle Assets (lt_YYYY → legal_tender database)
-from .legal_tender.member_fec_mapping import member_fec_mapping_asset
-from .legal_tender.candidate_financials import candidate_financials
-from .legal_tender.donor_financials import donor_financials
-from .legal_tender.candidate_summaries import candidate_summaries
-from .legal_tender.committee_summaries import committee_summaries
+# Enrichment Assets (fec_{cycle} + mappings → enriched_{cycle} databases)
+from .enrichment.enriched_itpas2 import enriched_itpas2_asset
+from .enrichment.enriched_oppexp import enriched_oppexp_asset
+from .enrichment.enriched_candidate_financials import enriched_candidate_financials_asset
+from .enrichment.enriched_donor_financials import enriched_donor_financials_asset
+from .enrichment.enriched_webl import enriched_webl_asset
+from .enrichment.enriched_weball import enriched_weball_asset
+from .enrichment.enriched_webk import enriched_webk_asset
+
+# Aggregation Assets (enriched_{cycle} → aggregation database)
+from .aggregation.candidate_financials import candidate_financials_asset
+from .aggregation.donor_financials import donor_financials_asset
+from .aggregation.candidate_summaries import candidate_summaries_asset
+from .aggregation.committee_summaries import committee_summaries_asset
 
 __all__ = [
     # Data sync
@@ -49,19 +53,21 @@ __all__ = [
     "itpas2_asset",        # pas2.zip - itemized transactions (ALL types)
     "oppexp_asset",        # oppexp.zip - operating expenditures
     
-    # LT cycle computations (→ lt_{cycle} databases)
-    "lt_itpas2_asset",
-    "lt_oppexp_asset",
-    "lt_candidate_financials_asset",
-    "lt_donor_financials_asset",
-    "lt_webl_asset",
-    "lt_weball_asset",
-    "lt_webk_asset",
-    
-    # Legal tender cross-cycle data (aggregated → legal_tender database)
+    # Mapping assets (ID mapping → aggregation database)
     "member_fec_mapping_asset",
-    "candidate_financials",
-    "donor_financials",
-    "candidate_summaries",
-    "committee_summaries",
+    
+    # Enrichment assets (per-cycle enriched data → enriched_{cycle} databases)
+    "enriched_itpas2_asset",
+    "enriched_oppexp_asset",
+    "enriched_candidate_financials_asset",
+    "enriched_donor_financials_asset",
+    "enriched_webl_asset",
+    "enriched_weball_asset",
+    "enriched_webk_asset",
+    
+    # Aggregation assets (cross-cycle rollups → aggregation database)
+    "candidate_financials_asset",
+    "donor_financials_asset",
+    "candidate_summaries_asset",
+    "committee_summaries_asset",
 ]

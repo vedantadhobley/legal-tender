@@ -1,22 +1,23 @@
-"""LT Operating Expenditures Asset - Enriched committee spending.
+"""Enriched itpas2 Asset - Enriched itemized contributions and transfers.
 
-This asset processes operating expenditure data (WHERE committees spend money - 
-vendors, ads, services) and enriches it by linking committees to candidates.
+This asset processes pas2.zip (itemized transactions) and enriches it with 
+full donor and recipient details. This is THE critical file for tracking
+PAC → Candidate money flows.
 
-Input: fec_{cycle}.oppexp (raw operating expenditure data)
-Output: lt_{cycle}.oppexp (enriched with committee→candidate linkages)
+Input: fec_{cycle}.itpas2 (raw transaction data)
+Output: enriched_{cycle}.itpas2 (enriched with donor/recipient names, offices, parties)
 
 Key Features:
-- Links committee spending to their candidates via ccl
-- Enriches with committee details (name, type, party)
-- Enriches with candidate details (name, office, party)
-- Filters to tracked member committees only
-- Tracks spending categories and purposes
+- Tracks contributions from PACs to candidates
+- Enriches with committee names (via cm.zip)
+- Links to candidates (via ccl.zip)
+- Filters to tracked members only
+- Handles corrections (negative amounts)
 
 Use Cases:
-- "Where did Ted Cruz's campaign spend money?"
-- "Which vendors received the most from tracked member committees?"
-- "How much did committees spend on advertising?"
+- "Show me all AIPAC contributions to Ted Cruz"
+- "Which PACs gave the most to this candidate?"
+- "How much did corporate PACs contribute to tracked members?"
 """
 
 from typing import Dict, Any, List
@@ -33,56 +34,55 @@ from dagster import (
 from src.resources.mongo import MongoDBResource
 
 
-class LtOppexpConfig(Config):
+class EnrichedItpas2Config(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
     force_refresh: bool = False
 
 
 @asset(
-    name="lt_oppexp",
-    description="Enriched operating expenditures for tracked member committees across all cycles",
-    group_name="lt",
-    compute_kind="computation",
+    name="enriched_itpas2",
+    description="Enriched itemized contributions for tracked members across all cycles",
+    group_name="enrichment",
+    compute_kind="enrichment",
     ins={
-        "oppexp": AssetIn("oppexp"),
+        "itpas2": AssetIn("itpas2"),
         "cn": AssetIn("cn"),
         "cm": AssetIn("cm"),
         "ccl": AssetIn("ccl"),
         "member_fec_mapping": AssetIn("member_fec_mapping"),
     },
 )
-def lt_oppexp_asset(
+def enriched_itpas2_asset(
     context: AssetExecutionContext,
-    config: LtOppexpConfig,
+    config: EnrichedItpas2Config,
     mongo: MongoDBResource,
-    oppexp: Dict[str, Any],
+    itpas2: Dict[str, Any],
     cn: Dict[str, Any],
     cm: Dict[str, Any],
     ccl: Dict[str, Any],
     member_fec_mapping: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """
-    Process operating expenditures and enrich with committee→candidate context.
+    Process itemized contributions and enrich with full context.
     
     Data Flow:
     1. Load member_fec_mapping → get tracked member FEC IDs
     2. For each cycle:
        - Load ccl → map committee IDs to candidate IDs
        - Load cn → get candidate details
-       - Load cm → get committee details
-       - Load oppexp → get spending records
-       - Filter to tracked member committees
-       - Enrich with full context
-       - Store in lt_{cycle}.oppexp
+       - Load cm → get committee (donor) details
+       - Load itpas2 → get transaction records
+       - Join and enrich → create denormalized records
+       - Store in enriched_{cycle}.itpas2
     """
     context.log.info("=" * 80)
-    context.log.info("💰 PROCESSING OPERATING EXPENDITURES")
+    context.log.info("💰 PROCESSING ITEMIZED CONTRIBUTIONS (itpas2)")
     context.log.info("=" * 80)
     
     overall_stats = {
         'cycles_processed': [],
-        'total_expenditures': 0,
-        'tracked_expenditures': 0,
+        'total_transactions': 0,
+        'tracked_transactions': 0,
         'by_cycle': {},
     }
     
@@ -94,7 +94,7 @@ def lt_oppexp_asset(
         context.log.info("-" * 80)
         
         member_mapping_collection = mongo.get_collection(
-            client, "member_fec_mapping", database_name="legal_tender"
+            client, "member_fec_mapping", database_name="aggregation"
         )
         
         # Build set of tracked FEC candidate IDs
@@ -121,11 +121,11 @@ def lt_oppexp_asset(
             context.log.info("=" * 80)
             
             cycle_stats = {
-                'total_expenditures': 0,
-                'tracked_expenditures': 0,
+                'total_transactions': 0,
+                'tracked_member_transactions': 0,
+                'corrections': 0,
                 'total_amount': 0,
-                'unique_committees': set(),
-                'unique_candidates': set(),
+                'unique_donors': set(),
                 'unique_recipients': set(),
             }
             
@@ -181,139 +181,144 @@ def lt_oppexp_asset(
                 
                 context.log.info(f"   ✅ {len(committee_details)} committee records")
                 
-                # Process Operating Expenditures
-                context.log.info(f"🔨 Processing operating expenditures ({cycle})...")
+                # Process itpas2 Transactions
+                context.log.info(f"🔨 Processing itemized transactions ({cycle})...")
                 
-                oppexp_collection = mongo.get_collection(
-                    client, "oppexp", database_name=f"fec_{cycle}"
+                itpas2_collection = mongo.get_collection(
+                    client, "itpas2", database_name=f"fec_{cycle}"
                 )
                 
-                lt_oppexp_collection = mongo.get_collection(
-                    client, "oppexp", database_name=f"lt_{cycle}"
+                enriched_itpas2_collection = mongo.get_collection(
+                    client, "itpas2", database_name=f"enriched_{cycle}"
                 )
                 
                 # Clear existing data
-                lt_oppexp_collection.delete_many({})
+                enriched_itpas2_collection.delete_many({})
                 
                 batch = []
                 batch_size = 5000
                 processed = 0
                 
-                for oppexp_doc in oppexp_collection.find():
-                    cycle_stats['total_expenditures'] += 1
+                for tx_doc in itpas2_collection.find():
+                    cycle_stats['total_transactions'] += 1
                     
-                    # Get committee ID
-                    cmte_id = oppexp_doc.get('CMTE_ID')
+                    # Get recipient candidate ID
+                    recipient_cand_id = tx_doc.get('CAND_ID')
+                    recipient_cmte_id = tx_doc.get('OTHER_ID')
                     
-                    # Resolve to candidate via ccl
-                    cand_id = committee_to_candidate.get(cmte_id)
+                    # Try to resolve candidate via direct CAND_ID or via committee linkage
+                    resolved_cand_id = None
+                    if recipient_cand_id and recipient_cand_id in tracked_candidate_ids:
+                        resolved_cand_id = recipient_cand_id
+                    elif recipient_cmte_id and recipient_cmte_id in committee_to_candidate:
+                        potential_cand_id = committee_to_candidate[recipient_cmte_id]
+                        if potential_cand_id in tracked_candidate_ids:
+                            resolved_cand_id = potential_cand_id
                     
-                    # Filter: Only tracked member committees
-                    if not cand_id or cand_id not in tracked_candidate_ids:
+                    # Filter: Only tracked members
+                    if not resolved_cand_id:
                         continue
                     
-                    # Parse amount - USE CORRECT FIELD NAME FROM FEC.md
-                    amount_str = oppexp_doc.get('TRANSACTION_AMT', '0')
+                    # Get filer committee ID (CMTE_ID from FEC)
+                    filer_cmte_id = tx_doc.get('CMTE_ID')
+                    
+                    # Parse amount
+                    amount_str = tx_doc.get('TRANSACTION_AMT', '0')
                     try:
-                        amount = float(str(amount_str).replace(',', '')) if amount_str else 0
-                    except (ValueError, AttributeError, TypeError):
+                        amount = float(str(amount_str).replace(',', ''))
+                    except (ValueError, AttributeError):
                         amount = 0
                     
-                    # Get details
-                    cmte_info = committee_details.get(cmte_id, {})
-                    cand_info = candidate_details.get(cand_id, {})
-                    bioguide_id = fec_to_bioguide.get(cand_id)
+                    is_correction = amount < 0
                     
-                    # Build enriched record - USE CORRECT FIELD NAMES FROM FEC.md
+                    # Get details
+                    filer_info = committee_details.get(filer_cmte_id, {})
+                    candidate_info = candidate_details.get(resolved_cand_id, {})
+                    bioguide_id = fec_to_bioguide.get(resolved_cand_id)
+                    
+                    # Build enriched record
                     enriched_record = {
-                        # Committee (spender) fields
-                        'committee_id': cmte_id,
-                        'committee_name': cmte_info.get('committee_name', ''),
-                        'committee_type': cmte_info.get('committee_type', ''),
-                        'committee_designation': cmte_info.get('committee_designation', ''),
-                        'committee_party': cmte_info.get('party', ''),
-                        'connected_org': cmte_info.get('connected_org', ''),
+                        # Filer committee fields (CMTE_ID from FEC - the committee filing the report)
+                        'filer_committee_id': filer_cmte_id,
+                        'filer_committee_name': filer_info.get('committee_name', ''),
+                        'filer_committee_type': filer_info.get('committee_type', ''),
+                        'filer_connected_org': filer_info.get('connected_org', ''),
+                        'filer_party': filer_info.get('party', ''),
                         
-                        # Candidate (linked via ccl) fields
-                        'candidate_id': cand_id,
-                        'candidate_name': cand_info.get('candidate_name', ''),
-                        'candidate_party': cand_info.get('party', ''),
-                        'candidate_office': cand_info.get('office', ''),
-                        'candidate_state': cand_info.get('state', ''),
-                        'candidate_district': cand_info.get('district', ''),
-                        'bioguide_id': bioguide_id,
+                        # Candidate fields (CAND_ID from FEC - the candidate associated with transaction)
+                        'candidate_id': resolved_cand_id,
+                        'candidate_name': candidate_info.get('candidate_name', ''),
+                        'candidate_party': candidate_info.get('party', ''),
+                        'candidate_office': candidate_info.get('office', ''),
+                        'candidate_state': candidate_info.get('state', ''),
+                        'candidate_district': candidate_info.get('district', ''),
+                        'candidate_bioguide_id': bioguide_id,
                         'is_tracked_member': True,
                         
-                        # Expenditure details - USE CORRECT FIELD NAMES FROM FEC.md
+                        # Transaction details
                         'amount': amount,
-                        'recipient_name': oppexp_doc.get('NAME', ''),
-                        'recipient_city': oppexp_doc.get('CITY', ''),
-                        'recipient_state': oppexp_doc.get('STATE', ''),
-                        'recipient_zip': oppexp_doc.get('ZIP_CODE', ''),
-                        'expenditure_date': oppexp_doc.get('TRANSACTION_DT', ''),
-                        'category': oppexp_doc.get('CATEGORY', ''),
-                        'purpose': oppexp_doc.get('PURPOSE', ''),
+                        'transaction_date': tx_doc.get('TRANSACTION_DT', ''),
+                        'transaction_type': tx_doc.get('TRANSACTION_TP', ''),
+                        'entity_type': tx_doc.get('ENTITY_TP', ''),
+                        'transaction_pgi': tx_doc.get('TRANSACTION_PGI', ''),
+                        'is_correction': is_correction,
                         
-                        # Original fields for reference - USE CORRECT FIELD NAMES FROM FEC.md
-                        'transaction_id': oppexp_doc.get('TRAN_ID', ''),
-                        'image_number': oppexp_doc.get('IMAGE_NUM', ''),
-                        'file_number': oppexp_doc.get('FILE_NUM', ''),
-                        'amendment_indicator': oppexp_doc.get('AMNDT_IND', ''),
-                        'report_type': oppexp_doc.get('RPT_TP', ''),
-                        'transaction_pgi': oppexp_doc.get('TRANSACTION_PGI', ''),
-                        'entity_type': oppexp_doc.get('ENTITY_TP', ''),
+                        # Original fields for reference
+                        'image_number': tx_doc.get('IMAGE_NUM', ''),
+                        'transaction_id': tx_doc.get('TRAN_ID', ''),
+                        'file_number': tx_doc.get('FILE_NUM', ''),
+                        'memo_code': tx_doc.get('MEMO_CD', ''),
+                        'memo_text': tx_doc.get('MEMO_TEXT', ''),
                         
                         # Metadata
                         'cycle': cycle,
-                        'source_file': 'oppexp',
+                        'source_file': 'itpas2',
                         'computed_at': datetime.now(),
                     }
                     
                     batch.append(enriched_record)
                     
                     # Update stats
-                    cycle_stats['tracked_expenditures'] += 1
+                    cycle_stats['tracked_member_transactions'] += 1
                     cycle_stats['total_amount'] += amount
-                    cycle_stats['unique_committees'].add(cmte_id)
-                    cycle_stats['unique_candidates'].add(cand_id)
-                    cycle_stats['unique_recipients'].add(oppexp_doc.get('NAME', ''))
+                    if is_correction:
+                        cycle_stats['corrections'] += 1
+                    cycle_stats['unique_donors'].add(filer_cmte_id)
+                    cycle_stats['unique_recipients'].add(resolved_cand_id)
                     
                     # Insert batch
                     if len(batch) >= batch_size:
-                        lt_oppexp_collection.insert_many(batch)
+                        enriched_itpas2_collection.insert_many(batch)
                         processed += len(batch)
                         context.log.info(f"   💾 Inserted {processed:,} records...")
                         batch = []
                 
                 # Insert remaining
                 if batch:
-                    lt_oppexp_collection.insert_many(batch)
+                    enriched_itpas2_collection.insert_many(batch)
                     processed += len(batch)
                 
                 # Create Indexes
-                lt_oppexp_collection.create_index([("bioguide_id", 1)])
-                lt_oppexp_collection.create_index([("candidate_id", 1)])
-                lt_oppexp_collection.create_index([("committee_id", 1)])
-                lt_oppexp_collection.create_index([("committee_name", 1)])
-                lt_oppexp_collection.create_index([("recipient_name", 1)])
-                lt_oppexp_collection.create_index([("category", 1)])
-                lt_oppexp_collection.create_index([("purpose", 1)])
-                lt_oppexp_collection.create_index([("amount", -1)])
-                lt_oppexp_collection.create_index([("expenditure_date", -1)])
+                enriched_itpas2_collection.create_index([("candidate_bioguide_id", 1)])
+                enriched_itpas2_collection.create_index([("candidate_id", 1)])
+                enriched_itpas2_collection.create_index([("filer_committee_id", 1)])
+                enriched_itpas2_collection.create_index([("filer_committee_name", 1)])
+                enriched_itpas2_collection.create_index([("filer_connected_org", 1)])
+                enriched_itpas2_collection.create_index([("amount", -1)])
+                enriched_itpas2_collection.create_index([("transaction_date", -1)])
                 
-                context.log.info(f"✅ {cycle}: {cycle_stats['tracked_expenditures']:,} tracked expenditures (${cycle_stats['total_amount']:,.2f})")
+                context.log.info(f"✅ {cycle}: {cycle_stats['tracked_member_transactions']:,} tracked transactions (${cycle_stats['total_amount']:,.2f})")
                 context.log.info("")
                 
                 # Update overall stats
                 overall_stats['cycles_processed'].append(cycle)
-                overall_stats['total_expenditures'] += cycle_stats['total_expenditures']
-                overall_stats['tracked_expenditures'] += cycle_stats['tracked_expenditures']
+                overall_stats['total_transactions'] += cycle_stats['total_transactions']
+                overall_stats['tracked_transactions'] += cycle_stats['tracked_member_transactions']
                 overall_stats['by_cycle'][cycle] = {
-                    'total': cycle_stats['total_expenditures'],
-                    'tracked': cycle_stats['tracked_expenditures'],
+                    'total': cycle_stats['total_transactions'],
+                    'tracked': cycle_stats['tracked_member_transactions'],
                     'amount': cycle_stats['total_amount'],
-                    'committees': len(cycle_stats['unique_committees']),
-                    'candidates': len(cycle_stats['unique_candidates']),
+                    'donors': len(cycle_stats['unique_donors']),
                     'recipients': len(cycle_stats['unique_recipients']),
                 }
                 
@@ -325,8 +330,8 @@ def lt_oppexp_asset(
     context.log.info("📊 PROCESSING SUMMARY")
     context.log.info("=" * 80)
     context.log.info(f"Cycles Processed: {', '.join(overall_stats['cycles_processed'])}")
-    context.log.info(f"Total Expenditures: {overall_stats['total_expenditures']:,}")
-    context.log.info(f"Tracked Expenditures: {overall_stats['tracked_expenditures']:,}")
+    context.log.info(f"Total Transactions: {overall_stats['total_transactions']:,}")
+    context.log.info(f"Tracked Transactions: {overall_stats['tracked_transactions']:,}")
     for cycle, stats in overall_stats['by_cycle'].items():
         context.log.info(f"  {cycle}: {stats['tracked']:,} tracked (${stats['amount']:,.2f})")
     context.log.info("=" * 80)
@@ -335,7 +340,7 @@ def lt_oppexp_asset(
         value=overall_stats,
         metadata={
             "cycles": overall_stats['cycles_processed'],
-            "total": overall_stats['total_expenditures'],
-            "tracked": overall_stats['tracked_expenditures'],
+            "total": overall_stats['total_transactions'],
+            "tracked": overall_stats['tracked_transactions'],
         }
     )

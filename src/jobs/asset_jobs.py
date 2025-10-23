@@ -19,7 +19,7 @@ from dagster import define_asset_job, AssetSelection
 
 fec_pipeline_job = define_asset_job(
     name="fec_pipeline_job",
-    description="Complete FEC data pipeline: Download → Parse → Member mapping → LT computations → Aggregations",
+    description="Complete FEC data pipeline: Download → Parse → Member mapping → Enrichment → Aggregation",
     selection=AssetSelection.keys(
         # Phase 1: Download all source data
         "data_sync",
@@ -37,18 +37,16 @@ fec_pipeline_job = define_asset_job(
         # Phase 3: Build member→FEC mapping
         "member_fec_mapping",
         
-        # Phase 4: LT cycle computations (enriched views per cycle)
-        "lt_itpas2",
-        "lt_oppexp",
-        "lt_webl",                  # Filter webl to tracked members
-        "lt_weball",                # Filter weball to tracked members
-        "lt_webk",                  # Filter webk to linked committees
+        # Phase 4: Enrichment (filtered per-cycle data)
+        "enriched_itpas2",
+        "enriched_oppexp",
+        "enriched_webl",                  # Filter webl to tracked members
+        "enriched_weball",                # Filter weball to tracked members
+        "enriched_webk",                  # Filter webk to linked committees
+        "enriched_candidate_financials",  # Per-cycle candidate financial summaries
+        "enriched_donor_financials",      # Per-cycle donor financial summaries
         
-        # Phase 5: LT cycle aggregations (per-cycle financial summaries)
-        "lt_candidate_financials",
-        "lt_donor_financials",
-        
-        # Phase 6: Cross-cycle aggregations (legal_tender database)
+        # Phase 5: Aggregation (cross-cycle rollups)
         "candidate_financials",
         "donor_financials",
         "candidate_summaries",      # FEC official candidate summaries (webl + weball)
