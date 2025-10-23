@@ -40,7 +40,7 @@ class MemberMappingConfig(Config):
 @asset(
     name="member_fec_mapping",
     description="Complete mapping of Congress members to FEC IDs, committees, and external identifiers",
-    group_name="legal_tender",
+    group_name="mapping",
     compute_kind="mapping",
     ins={"data_sync": AssetIn("data_sync")},
     metadata={
@@ -299,7 +299,7 @@ def member_fec_mapping_asset(
     context.log.info("-" * 80)
     
     with mongo.get_client() as client:
-        collection = mongo.get_collection(client, "member_fec_mapping")
+        collection = mongo.get_collection(client, "member_fec_mapping", database_name="aggregation")
         
         # Clear existing data
         collection.delete_many({})

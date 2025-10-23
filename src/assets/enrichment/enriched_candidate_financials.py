@@ -1,8 +1,8 @@
 """
-LT Candidate Financials Asset (Per-Cycle)
+Enriched Candidate Financials Asset (Per-Cycle)
 Aggregates ALL money flows TO each tracked candidate within a single cycle.
 Keeps sources separate with detailed breakdowns of support vs opposition.
-Stored in lt_{cycle}.candidate_financials
+Stored in enriched_{cycle}.candidate_financials
 """
 
 from dagster import asset, AssetIn, Config, AssetExecutionContext
@@ -12,31 +12,31 @@ from datetime import datetime
 from src.resources.mongo import MongoDBResource
 
 
-class LtCandidateFinancialsConfig(Config):
-    """Configuration for lt_candidate_financials asset"""
+class EnrichedCandidateFinancialsConfig(Config):
+    """Configuration for enriched_candidate_financials asset"""
     cycles: list[str] = ["2020", "2022", "2024", "2026"]
 
 
 @asset(
-    name="lt_candidate_financials",
-    group_name="lt",
+    name="enriched_candidate_financials",
+    group_name="enrichment",
     ins={
-        "lt_itpas2": AssetIn(key="lt_itpas2"),
-        "lt_oppexp": AssetIn(key="lt_oppexp"),
+        "enriched_itpas2": AssetIn(key="enriched_itpas2"),
+        "enriched_oppexp": AssetIn(key="enriched_oppexp"),
     },
     compute_kind="aggregation",
     description="Per-cycle aggregation of all money flows to each tracked candidate with source separation"
 )
-def lt_candidate_financials_asset(
+def enriched_candidate_financials_asset(
     context: AssetExecutionContext,
-    config: LtCandidateFinancialsConfig,
+    config: EnrichedCandidateFinancialsConfig,
     mongo: MongoDBResource,
-    lt_itpas2: Dict[str, Any],
-    lt_oppexp: Dict[str, Any],
+    enriched_itpas2: Dict[str, Any],
+    enriched_oppexp: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Aggregate ALL money flows TO each tracked candidate within a single cycle.
-    Stored in lt_{cycle}.candidate_financials
+    Stored in enriched_{cycle}.candidate_financials
     
     Structure per candidate (within each cycle):
     {
@@ -118,8 +118,8 @@ def lt_candidate_financials_asset(
         for cycle in config.cycles:
             context.log.info(f"Processing cycle {cycle}")
             
-            itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"lt_{cycle}")
-            financials_collection = mongo.get_collection(client, "candidate_financials", database_name=f"lt_{cycle}")
+            itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"enriched_{cycle}")
+            financials_collection = mongo.get_collection(client, "candidate_financials", database_name=f"enriched_{cycle}")
             
             # Clear existing data for this cycle
             financials_collection.delete_many({})
@@ -340,5 +340,5 @@ def lt_candidate_financials_asset(
             
             context.log.info(f"Cycle {cycle} complete: {len(tracked_candidates)} candidates processed")
     
-    context.log.info(f"LT candidate financials aggregation complete: {stats}")
+    context.log.info(f"Enriched candidate financials aggregation complete: {stats}")
     return stats

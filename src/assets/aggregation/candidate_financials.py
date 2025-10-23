@@ -1,7 +1,7 @@
 """
 Candidate Financials Asset (Cross-Cycle)
 Aggregates candidate financials across ALL cycles.
-Depends on lt_{cycle}.candidate_financials for each cycle.
+Depends on enriched_{cycle}.candidate_financials for each cycle.
 """
 
 from dagster import asset, AssetIn, Config, AssetExecutionContext
@@ -18,27 +18,27 @@ class CandidateFinancialsConfig(Config):
 
 @asset(
     name="candidate_financials",
-    group_name="legal_tender",
+    group_name="aggregation",
     ins={
-        "lt_candidate_financials": AssetIn(key="lt_candidate_financials"),
+        "enriched_candidate_financials": AssetIn(key="enriched_candidate_financials"),
     },
     compute_kind="aggregation",
     description="Cross-cycle aggregation of candidate financials with top committees across all cycles"
 )
-def candidate_financials(
+def candidate_financials_asset(
     context: AssetExecutionContext,
     config: CandidateFinancialsConfig,
     mongo: MongoDBResource,
-    lt_candidate_financials: Dict[str, Any],
+    enriched_candidate_financials: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Roll up ALL cycles of candidate financial data.
-    Source: lt_{cycle}.candidate_financials (per-cycle aggregations)
-    Target: legal_tender.candidate_financials (cross-cycle rollup)
+    Source: enriched_{cycle}.candidate_financials (per-cycle aggregations)
+    Target: aggregation.candidate_financials (cross-cycle rollup)
     """
     
     with mongo.get_client() as client:
-        financials_collection = mongo.get_collection(client, "candidate_financials", database_name="legal_tender")
+        financials_collection = mongo.get_collection(client, "candidate_financials", database_name="aggregation")
         
         # Clear existing cross-cycle data
         financials_collection.delete_many({})
@@ -49,7 +49,7 @@ def candidate_financials(
         
         for cycle in config.cycles:
             context.log.info(f"Reading cycle {cycle} candidate financials")
-            lt_financials = mongo.get_collection(client, "candidate_financials", database_name=f"lt_{cycle}")
+            lt_financials = mongo.get_collection(client, "candidate_financials", database_name=f"enriched_{cycle}")
             
             for doc in lt_financials.find():
                 cand_id = doc.get('candidate_id')

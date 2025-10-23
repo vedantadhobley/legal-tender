@@ -1,7 +1,7 @@
 """
 Donor Financials Asset (Cross-Cycle)
 Aggregates donor financials across ALL cycles.
-Depends on lt_{cycle}.donor_financials for each cycle.
+Depends on enriched_{cycle}.donor_financials for each cycle.
 """
 
 from dagster import asset, AssetIn, Config, AssetExecutionContext
@@ -18,27 +18,27 @@ class DonorFinancialsConfig(Config):
 
 @asset(
     name="donor_financials",
-    group_name="legal_tender",
+    group_name="aggregation",
     ins={
-        "lt_donor_financials": AssetIn(key="lt_donor_financials"),
+        "enriched_donor_financials": AssetIn(key="enriched_donor_financials"),
     },
     compute_kind="aggregation",
     description="Cross-cycle aggregation of donor financials with top candidates and spending across all cycles"
 )
-def donor_financials(
+def donor_financials_asset(
     context: AssetExecutionContext,
     config: DonorFinancialsConfig,
     mongo: MongoDBResource,
-    lt_donor_financials: Dict[str, Any],
+    enriched_donor_financials: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Roll up ALL cycles of donor financial data.
-    Source: lt_{cycle}.donor_financials (per-cycle aggregations)
-    Target: legal_tender.donor_financials (cross-cycle rollup)
+    Source: enriched_{cycle}.donor_financials (per-cycle aggregations)
+    Target: aggregation.donor_financials (cross-cycle rollup)
     """
     
     with mongo.get_client() as client:
-        financials_collection = mongo.get_collection(client, "donor_financials", database_name="legal_tender")
+        financials_collection = mongo.get_collection(client, "donor_financials", database_name="aggregation")
         
         # Clear existing cross-cycle data
         financials_collection.delete_many({})
@@ -49,7 +49,7 @@ def donor_financials(
         
         for cycle in config.cycles:
             context.log.info(f"Reading cycle {cycle} donor financials")
-            lt_financials = mongo.get_collection(client, "donor_financials", database_name=f"lt_{cycle}")
+            lt_financials = mongo.get_collection(client, "donor_financials", database_name=f"enriched_{cycle}")
             
             for doc in lt_financials.find():
                 cmte_id = doc.get('committee_id')

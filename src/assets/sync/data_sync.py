@@ -12,9 +12,9 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 import requests
 
-from ..data import get_repository
-from ..data.repository import download_fec_file, FEC_FILE_MAPPING
-from ..api.congress_legislators import download_legislators_file, get_current_legislators, extract_fec_ids
+from src.data import get_repository
+from src.data.repository import download_fec_file, FEC_FILE_MAPPING
+from src.api.congress_legislators import download_legislators_file, get_current_legislators, extract_fec_ids
 
 
 class DataSyncConfig(Config):
@@ -133,7 +133,7 @@ def should_download_file(
 
 @asset(
     name="data_sync",
-    group_name="data_sync",
+    group_name="sync",
     compute_kind="download",
     description="Syncs all external data sources (legislators, FEC bulk data) on a weekly schedule"
 )

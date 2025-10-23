@@ -1,8 +1,8 @@
 """
-LT Donor Financials Asset (Per-Cycle)
+Enriched Donor Financials Asset (Per-Cycle)
 Aggregates ALL money flows FROM each committee/organization within a single cycle.
 Keeps spending categories and recipients separate with detailed breakdowns.
-Stored in lt_{cycle}.donor_financials
+Stored in enriched_{cycle}.donor_financials
 """
 
 from dagster import asset, AssetIn, Config, AssetExecutionContext
@@ -12,31 +12,31 @@ from datetime import datetime
 from src.resources.mongo import MongoDBResource
 
 
-class LtDonorFinancialsConfig(Config):
-    """Configuration for lt_donor_financials asset"""
+class EnrichedDonorFinancialsConfig(Config):
+    """Configuration for enriched_donor_financials asset"""
     cycles: list[str] = ["2020", "2022", "2024", "2026"]
 
 
 @asset(
-    name="lt_donor_financials",
-    group_name="lt",
+    name="enriched_donor_financials",
+    group_name="enrichment",
     ins={
-        "lt_itpas2": AssetIn(key="lt_itpas2"),
-        "lt_oppexp": AssetIn(key="lt_oppexp"),
+        "enriched_itpas2": AssetIn(key="enriched_itpas2"),
+        "enriched_oppexp": AssetIn(key="enriched_oppexp"),
     },
     compute_kind="aggregation",
     description="Per-cycle aggregation of all money flows from each committee with recipient and category separation"
 )
-def lt_donor_financials_asset(
+def enriched_donor_financials_asset(
     context: AssetExecutionContext,
-    config: LtDonorFinancialsConfig,
+    config: EnrichedDonorFinancialsConfig,
     mongo: MongoDBResource,
-    lt_itpas2: Dict[str, Any],
-    lt_oppexp: Dict[str, Any],
+    enriched_itpas2: Dict[str, Any],
+    enriched_oppexp: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Aggregate ALL money flows FROM each committee within a single cycle.
-    Stored in lt_{cycle}.donor_financials
+    Stored in enriched_{cycle}.donor_financials
     
     Structure per committee (within each cycle):
     {
@@ -140,9 +140,9 @@ def lt_donor_financials_asset(
         for cycle in config.cycles:
             context.log.info(f"Processing cycle {cycle}")
             
-            itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"lt_{cycle}")
-            oppexp_collection = mongo.get_collection(client, "oppexp", database_name=f"lt_{cycle}")
-            financials_collection = mongo.get_collection(client, "donor_financials", database_name=f"lt_{cycle}")
+            itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"enriched_{cycle}")
+            oppexp_collection = mongo.get_collection(client, "oppexp", database_name=f"enriched_{cycle}")
+            financials_collection = mongo.get_collection(client, "donor_financials", database_name=f"enriched_{cycle}")
             
             # Clear existing data for this cycle
             financials_collection.delete_many({})
@@ -450,5 +450,5 @@ def lt_donor_financials_asset(
             
             context.log.info(f"Cycle {cycle} complete: {len(all_committees)} committees processed")
     
-    context.log.info(f"LT donor financials aggregation complete: {stats}")
+    context.log.info(f"Enriched donor financials aggregation complete: {stats}")
     return stats

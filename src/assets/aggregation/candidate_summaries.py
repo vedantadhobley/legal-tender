@@ -4,8 +4,8 @@ Candidate Summaries Asset - FEC Official Candidate Financial Summaries (Cross-Cy
 Aggregates FEC's official candidate financial summaries across all cycles.
 This provides a COMPLETE view of each tracked candidate's official FEC data.
 
-Input: lt_{cycle}.webl + lt_{cycle}.weball (per-cycle summaries)
-Output: legal_tender.candidate_summaries (cross-cycle aggregation)
+Input: enriched_{cycle}.webl + enriched_{cycle}.weball (per-cycle summaries)
+Output: aggregation.candidate_summaries (cross-cycle aggregation)
 
 Structure per candidate:
 {
@@ -66,20 +66,20 @@ class CandidateSummariesConfig(Config):
 
 @asset(
     name="candidate_summaries",
-    group_name="legal_tender",
+    group_name="aggregation",
     ins={
-        "lt_webl": AssetIn(key="lt_webl"),
-        "lt_weball": AssetIn(key="lt_weball"),
+        "enriched_webl": AssetIn(key="enriched_webl"),
+        "enriched_weball": AssetIn(key="enriched_weball"),
     },
     compute_kind="aggregation",
     description="FEC official candidate financial summaries aggregated across all cycles (from webl + weball)"
 )
-def candidate_summaries(
+def candidate_summaries_asset(
     context: AssetExecutionContext,
     config: CandidateSummariesConfig,
     mongo: MongoDBResource,
-    lt_webl: Dict[str, Any],
-    lt_weball: Dict[str, Any],
+    enriched_webl: Dict[str, Any],
+    enriched_weball: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """
     Aggregate FEC official candidate summaries across all cycles.
@@ -93,7 +93,7 @@ def candidate_summaries(
     }
     
     with mongo.get_client() as client:
-        summaries_collection = mongo.get_collection(client, "candidate_summaries", database_name="legal_tender")
+        summaries_collection = mongo.get_collection(client, "candidate_summaries", database_name="aggregation")
         
         # Clear existing data
         summaries_collection.delete_many({})
@@ -105,7 +105,7 @@ def candidate_summaries(
         # Process webl data (cycle-specific)
         for cycle in config.cycles:
             context.log.info(f"Processing webl for cycle {cycle}")
-            webl_collection = mongo.get_collection(client, "webl", database_name=f"lt_{cycle}")
+            webl_collection = mongo.get_collection(client, "webl", database_name=f"enriched_{cycle}")
             
             for doc in webl_collection.find():
                 bioguide_id = doc.get('bioguide_id')
@@ -142,7 +142,7 @@ def candidate_summaries(
         # Process weball data (all-candidate)
         for cycle in config.cycles:
             context.log.info(f"Processing weball for cycle {cycle}")
-            weball_collection = mongo.get_collection(client, "weball", database_name=f"lt_{cycle}")
+            weball_collection = mongo.get_collection(client, "weball", database_name=f"enriched_{cycle}")
             
             for doc in weball_collection.find():
                 bioguide_id = doc.get('bioguide_id')

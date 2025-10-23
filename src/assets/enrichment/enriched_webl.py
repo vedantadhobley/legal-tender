@@ -5,7 +5,7 @@ Filters webl.zip data to tracked members only and enriches with bioguide IDs.
 This contains OFFICIAL FEC summary data for candidates running in the specific cycle.
 
 Input: fec_{cycle}.webl (raw FEC candidate summaries)
-Output: lt_{cycle}.webl (filtered to tracked members)
+Output: enriched_{cycle}.webl (filtered to tracked members)
 
 Key Features:
 - Filters to tracked members via member_fec_mapping
@@ -34,23 +34,23 @@ from dagster import (
 from src.resources.mongo import MongoDBResource
 
 
-class LtWeblConfig(Config):
+class EnrichedWeblConfig(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
 
 
 @asset(
-    name="lt_webl",
+    name="enriched_webl",
     description="FEC candidate financial summaries filtered to tracked members (cycle-specific)",
-    group_name="lt",
-    compute_kind="computation",
+    group_name="enrichment",
+    compute_kind="enrichment",
     ins={
         "webl": AssetIn("webl"),
         "member_fec_mapping": AssetIn("member_fec_mapping"),
     },
 )
-def lt_webl_asset(
+def enriched_webl_asset(
     context: AssetExecutionContext,
-    config: LtWeblConfig,
+    config: EnrichedWeblConfig,
     mongo: MongoDBResource,
     webl: Dict[str, Any],
     member_fec_mapping: Dict[str, Any],
@@ -69,7 +69,7 @@ def lt_webl_asset(
     
     with mongo.get_client() as client:
         # Get member FEC mapping
-        mapping_collection = mongo.get_collection(client, "member_fec_mapping", database_name="legal_tender")
+        mapping_collection = mongo.get_collection(client, "member_fec_mapping", database_name="aggregation")
         
         # Build lookup: candidate_id -> bioguide_id
         cand_to_bioguide = {}
@@ -86,10 +86,10 @@ def lt_webl_asset(
             context.log.info(f"Processing cycle {cycle}")
             
             webl_collection = mongo.get_collection(client, "webl", database_name=f"fec_{cycle}")
-            lt_webl_collection = mongo.get_collection(client, "webl", database_name=f"lt_{cycle}")
+            enriched_webl_collection = mongo.get_collection(client, "webl", database_name=f"enriched_{cycle}")
             
             # Clear existing data
-            lt_webl_collection.delete_many({})
+            enriched_webl_collection.delete_many({})
             
             # Filter to tracked candidates
             batch = []
@@ -114,7 +114,7 @@ def lt_webl_asset(
             
             # Insert batch
             if batch:
-                lt_webl_collection.insert_many(batch, ordered=False)
+                enriched_webl_collection.insert_many(batch, ordered=False)
                 context.log.info(f"  ✅ {cycle}: {len(batch)} tracked candidates")
                 stats['by_cycle'][cycle] = len(batch)
                 stats['total_candidates'] += len(batch)
@@ -123,10 +123,10 @@ def lt_webl_asset(
                 stats['by_cycle'][cycle] = 0
             
             # Create indexes
-            lt_webl_collection.create_index([("CAND_ID", 1)])
-            lt_webl_collection.create_index([("bioguide_id", 1)])
-            lt_webl_collection.create_index([("CAND_NAME", 1)])
-            lt_webl_collection.create_index([("TTL_RECEIPTS", -1)])
+            enriched_webl_collection.create_index([("CAND_ID", 1)])
+            enriched_webl_collection.create_index([("bioguide_id", 1)])
+            enriched_webl_collection.create_index([("CAND_NAME", 1)])
+            enriched_webl_collection.create_index([("TTL_RECEIPTS", -1)])
     
     return Output(
         value=stats,

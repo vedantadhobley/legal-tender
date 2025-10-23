@@ -6,7 +6,7 @@ This contains OFFICIAL FEC summary data for ALL candidates with activity in the 
 regardless of when they're up for election.
 
 Input: fec_{cycle}.weball (raw FEC all-candidate summaries)
-Output: lt_{cycle}.weball (filtered to tracked members)
+Output: enriched_{cycle}.weball (filtered to tracked members)
 
 Key Features:
 - Filters to tracked members via member_fec_mapping
@@ -39,23 +39,23 @@ from dagster import (
 from src.resources.mongo import MongoDBResource
 
 
-class LtWeballConfig(Config):
+class EnrichedWeballConfig(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
 
 
 @asset(
-    name="lt_weball",
+    name="enriched_weball",
     description="FEC all-candidate financial summaries filtered to tracked members (includes future cycle activity)",
-    group_name="lt",
-    compute_kind="computation",
+    group_name="enrichment",
+    compute_kind="enrichment",
     ins={
         "weball": AssetIn("weball"),
         "member_fec_mapping": AssetIn("member_fec_mapping"),
     },
 )
-def lt_weball_asset(
+def enriched_weball_asset(
     context: AssetExecutionContext,
-    config: LtWeballConfig,
+    config: EnrichedWeballConfig,
     mongo: MongoDBResource,
     weball: Dict[str, Any],
     member_fec_mapping: Dict[str, Any],
@@ -74,7 +74,7 @@ def lt_weball_asset(
     
     with mongo.get_client() as client:
         # Get member FEC mapping
-        mapping_collection = mongo.get_collection(client, "member_fec_mapping", database_name="legal_tender")
+        mapping_collection = mongo.get_collection(client, "member_fec_mapping", database_name="aggregation")
         
         # Build lookup: candidate_id -> bioguide_id
         cand_to_bioguide = {}
@@ -91,10 +91,10 @@ def lt_weball_asset(
             context.log.info(f"Processing cycle {cycle}")
             
             weball_collection = mongo.get_collection(client, "weball", database_name=f"fec_{cycle}")
-            lt_weball_collection = mongo.get_collection(client, "weball", database_name=f"lt_{cycle}")
+            enriched_weball_collection = mongo.get_collection(client, "weball", database_name=f"enriched_{cycle}")
             
             # Clear existing data
-            lt_weball_collection.delete_many({})
+            enriched_weball_collection.delete_many({})
             
             # Filter to tracked candidates
             batch = []
@@ -119,7 +119,7 @@ def lt_weball_asset(
             
             # Insert batch
             if batch:
-                lt_weball_collection.insert_many(batch, ordered=False)
+                enriched_weball_collection.insert_many(batch, ordered=False)
                 context.log.info(f"  ✅ {cycle}: {len(batch)} tracked candidates")
                 stats['by_cycle'][cycle] = len(batch)
                 stats['total_candidates'] += len(batch)
@@ -128,10 +128,10 @@ def lt_weball_asset(
                 stats['by_cycle'][cycle] = 0
             
             # Create indexes
-            lt_weball_collection.create_index([("CAND_ID", 1)])
-            lt_weball_collection.create_index([("bioguide_id", 1)])
-            lt_weball_collection.create_index([("CAND_NAME", 1)])
-            lt_weball_collection.create_index([("TTL_RECEIPTS", -1)])
+            enriched_weball_collection.create_index([("CAND_ID", 1)])
+            enriched_weball_collection.create_index([("bioguide_id", 1)])
+            enriched_weball_collection.create_index([("CAND_NAME", 1)])
+            enriched_weball_collection.create_index([("TTL_RECEIPTS", -1)])
     
     return Output(
         value=stats,
