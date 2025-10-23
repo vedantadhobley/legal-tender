@@ -283,6 +283,7 @@ def donor_financials(
             oppexp_count = sum(c['transaction_count'] for c in oppexp_categories.values())
             
             cross_cycle_record = {
+                '_id': cmte_data['committee_id'],
                 'committee_id': cmte_data['committee_id'],
                 'committee_name': cmte_data['committee_name'],
                 'committee_type': cmte_data['committee_type'],

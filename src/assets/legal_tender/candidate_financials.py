@@ -208,6 +208,7 @@ def candidate_financials(
             pac_count = sum(c['transaction_count'] for c in pac_committees.values())
             
             cross_cycle_record = {
+                '_id': cand_data['candidate_id'],
                 'candidate_id': cand_data['candidate_id'],
                 'bioguide_id': cand_data['bioguide_id'],
                 'candidate_name': cand_data['candidate_name'],

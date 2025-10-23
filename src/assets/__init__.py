@@ -18,19 +18,22 @@ from .fec.webl import webl_asset
 from .fec.webk import webk_asset
 from .fec.itpas2 import itpas2_asset
 from .fec.oppexp import oppexp_asset
-from .fec.independent_expenditure import independent_expenditure_asset
 
 # LT Cycle Computations (fec_{cycle} + member_fec_mapping → lt_{cycle} databases)
-from .lt.lt_independent_expenditure import lt_independent_expenditure_asset
 from .lt.lt_itpas2 import lt_itpas2_asset
 from .lt.lt_oppexp import lt_oppexp_asset
 from .lt.lt_candidate_financials import lt_candidate_financials_asset
 from .lt.lt_donor_financials import lt_donor_financials_asset
+from .lt.lt_webl import lt_webl_asset
+from .lt.lt_weball import lt_weball_asset
+from .lt.lt_webk import lt_webk_asset
 
 # Legal Tender Cross-Cycle Assets (lt_YYYY → legal_tender database)
 from .legal_tender.member_fec_mapping import member_fec_mapping_asset
 from .legal_tender.candidate_financials import candidate_financials
 from .legal_tender.donor_financials import donor_financials
+from .legal_tender.candidate_summaries import candidate_summaries
+from .legal_tender.committee_summaries import committee_summaries
 
 __all__ = [
     # Data sync
@@ -45,17 +48,20 @@ __all__ = [
     "webk_asset",          # webk.zip - PAC summary
     "itpas2_asset",        # pas2.zip - itemized transactions (ALL types)
     "oppexp_asset",        # oppexp.zip - operating expenditures
-    "independent_expenditure_asset",  # independent_expenditure.csv
     
     # LT cycle computations (→ lt_{cycle} databases)
-    "lt_independent_expenditure_asset",
     "lt_itpas2_asset",
     "lt_oppexp_asset",
     "lt_candidate_financials_asset",
     "lt_donor_financials_asset",
+    "lt_webl_asset",
+    "lt_weball_asset",
+    "lt_webk_asset",
     
     # Legal tender cross-cycle data (aggregated → legal_tender database)
     "member_fec_mapping_asset",
     "candidate_financials",
     "donor_financials",
+    "candidate_summaries",
+    "committee_summaries",
 ]

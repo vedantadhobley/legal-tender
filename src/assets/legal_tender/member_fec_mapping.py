@@ -39,12 +39,12 @@ class MemberMappingConfig(Config):
 
 @asset(
     name="member_fec_mapping",
-    description="Complete mapping of Congress members to FEC IDs, committees, and financial data",
-    group_name="fec",
-    compute_kind="bulk_data",
+    description="Complete mapping of Congress members to FEC IDs, committees, and external identifiers",
+    group_name="legal_tender",
+    compute_kind="mapping",
     ins={"data_sync": AssetIn("data_sync")},
     metadata={
-        "source": "GitHub legislators + FEC bulk data + ProPublica API",
+        "source": "GitHub legislators + FEC bulk data (cn, cm, ccl)",
         "cycles": "2024, 2026",
         "cache_strategy": "7-day TTL",
     },

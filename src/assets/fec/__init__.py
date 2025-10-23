@@ -7,9 +7,8 @@ Collection names match FEC file prefixes:
 - weball.zip → weball collection (candidate summary - all)
 - webl.zip → webl collection (committee summary)
 - webk.zip → webk collection (PAC summary)
-- pas2.zip → itpas2 collection (itemized transactions - ALL types)
+- pas2.zip → itpas2 collection (itemized transactions - ALL types including 24A/24E for independent expenditures)
 - oppexp.zip → oppexp collection (operating expenditures)
-- independent_expenditure.csv → independent_expenditures collection
 """
 
 from .cn import cn_asset
@@ -20,7 +19,6 @@ from .webl import webl_asset
 from .webk import webk_asset
 from .itpas2 import itpas2_asset
 from .oppexp import oppexp_asset
-from .independent_expenditure import independent_expenditure_asset
 
 __all__ = [
     'cn_asset',
@@ -31,5 +29,4 @@ __all__ = [
     'webk_asset',
     'itpas2_asset',
     'oppexp_asset',
-    'independent_expenditure_asset',
 ]

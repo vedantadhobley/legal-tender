@@ -24,24 +24,25 @@ fec_pipeline_job = define_asset_job(
         # Phase 1: Download all source data
         "data_sync",
         
-        # Phase 2: Parse all 9 FEC files into per-year databases (using raw FEC names)
+        # Phase 2: Parse all 8 FEC files into per-year databases (using raw FEC names)
         "cn",                       # cn.zip - candidate master
         "cm",                       # cm.zip - committee master
         "ccl",                      # ccl.zip - candidate-committee linkages
         "weball",                   # weball.zip - candidate summary (all)
         "webl",                     # webl.zip - committee summary
         "webk",                     # webk.zip - PAC summary
-        "itpas2",                   # pas2.zip - itemized transactions (ALL types)
+        "itpas2",                   # pas2.zip - itemized transactions (ALL types, including 24A/24E for indie expenditures)
         "oppexp",                   # oppexp.zip - operating expenditures
-        "independent_expenditure",  # independent_expenditure.csv
         
         # Phase 3: Build member→FEC mapping
         "member_fec_mapping",
         
         # Phase 4: LT cycle computations (enriched views per cycle)
-        "lt_independent_expenditure",
         "lt_itpas2",
         "lt_oppexp",
+        "lt_webl",                  # Filter webl to tracked members
+        "lt_weball",                # Filter weball to tracked members
+        "lt_webk",                  # Filter webk to linked committees
         
         # Phase 5: LT cycle aggregations (per-cycle financial summaries)
         "lt_candidate_financials",
@@ -50,6 +51,8 @@ fec_pipeline_job = define_asset_job(
         # Phase 6: Cross-cycle aggregations (legal_tender database)
         "candidate_financials",
         "donor_financials",
+        "candidate_summaries",      # FEC official candidate summaries (webl + weball)
+        "committee_summaries",      # FEC official committee summaries (webk)
     ),
     tags={
         "team": "data-engineering",

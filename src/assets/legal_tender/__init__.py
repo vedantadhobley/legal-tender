@@ -17,6 +17,14 @@ Collections:
   Aggregates ALL money flows FROM each committee across all cycles,
   with detailed breakdowns by candidates, categories, and payees.
 
+- candidate_summaries → legal_tender.candidate_summaries
+  Aggregates FEC official candidate financial summaries (webl + weball) across
+  all cycles, providing official totals for validation against our calculated values.
+
+- committee_summaries → legal_tender.committee_summaries
+  Aggregates FEC official committee/PAC financial summaries (webk) across
+  all cycles, including independent expenditure totals for validation.
+
 Future:
 - member_influence_scores → aggregated influence metrics across all cycles
 - pac_relationship_graph → network analysis across all cycles
@@ -25,9 +33,13 @@ Future:
 from .member_fec_mapping import member_fec_mapping_asset
 from .candidate_financials import candidate_financials
 from .donor_financials import donor_financials
+from .candidate_summaries import candidate_summaries
+from .committee_summaries import committee_summaries
 
 __all__ = [
     "member_fec_mapping_asset",
     "candidate_financials",
     "donor_financials",
+    "candidate_summaries",
+    "committee_summaries",
 ]
