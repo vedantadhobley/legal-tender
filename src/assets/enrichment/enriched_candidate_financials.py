@@ -126,28 +126,46 @@ def enriched_candidate_financials_asset(
             context.log.info(f"Cleared existing candidate_financials for cycle {cycle}")
             
             # Get all unique tracked candidates from itpas2
+            # Group by bioguide_id (not candidate_id) since members can have multiple candidate IDs
             tracked_candidates = {}
             
             # Gather from itpas2 (covers both indie expenditures and PAC contributions)
             for doc in itpas2_collection.find({"is_tracked_member": True}):
+                bioguide_id = doc.get('candidate_bioguide_id')
                 cand_id = doc.get('candidate_id')
-                if cand_id and cand_id not in tracked_candidates:
-                    tracked_candidates[cand_id] = {
-                        'candidate_id': cand_id,
-                        'bioguide_id': doc.get('candidate_bioguide_id'),
+                
+                if not bioguide_id:
+                    context.log.warning(f"Skipping candidate {cand_id} - missing bioguide_id")
+                    continue
+                
+                if bioguide_id not in tracked_candidates:
+                    tracked_candidates[bioguide_id] = {
+                        'bioguide_id': bioguide_id,
+                        'candidate_ids': set(),  # Track ALL candidate IDs for this person
                         'candidate_name': doc.get('candidate_name'),
                         'party': doc.get('candidate_party'),
                         'office': doc.get('candidate_office'),
                         'state': doc.get('candidate_state'),
                         'district': doc.get('candidate_district'),
                     }
+                
+                # Add this candidate_id to the set for this person
+                if cand_id:
+                    tracked_candidates[bioguide_id]['candidate_ids'].add(cand_id)
             
-            context.log.info(f"Found {len(tracked_candidates)} unique tracked candidates in cycle {cycle}")
+            # Convert sets to lists for MongoDB
+            for bioguide_id in tracked_candidates:
+                tracked_candidates[bioguide_id]['candidate_ids'] = sorted(list(tracked_candidates[bioguide_id]['candidate_ids']))
             
-            # Process each candidate
+            context.log.info(f"Found {len(tracked_candidates)} unique tracked members (by bioguide_id) in cycle {cycle}")
+            
+            # Process each member (grouped by bioguide_id)
             batch = []
-            for cand_id, cand_info in tracked_candidates.items():
-                context.log.info(f"Processing candidate {cand_id} - {cand_info['candidate_name']}")
+            for bioguide_id, member_info in tracked_candidates.items():
+                context.log.info(f"Processing {member_info['candidate_name']} ({bioguide_id}) with {len(member_info['candidate_ids'])} candidate IDs")
+                
+                # Query using ALL candidate IDs for this member (they might have multiple!)
+                candidate_ids = member_info['candidate_ids']
                 
                 # === INDEPENDENT EXPENDITURES ===
                 # Using itpas2 data instead of independent_expenditure collection
@@ -161,7 +179,7 @@ def enriched_candidate_financials_asset(
                 indie_oppose_committees = {}
                 
                 for doc in itpas2_collection.find({
-                    "candidate_id": cand_id,
+                    "candidate_id": {"$in": candidate_ids},  # Match ANY of this member's candidate IDs
                     "transaction_type": {"$in": ["24A", "24E", "24F", "24N"]}
                 }):
                     cmte_id = doc.get('filer_committee_id')
@@ -230,7 +248,7 @@ def enriched_candidate_financials_asset(
                 # Note: 24A/24E are independent expenditures (tracked separately)
                 pac_committees = {}
 
-                for doc in itpas2_collection.find({"candidate_id": cand_id}):
+                for doc in itpas2_collection.find({"candidate_id": {"$in": candidate_ids}}):  # Match ANY of this member's candidate IDs
                     cmte_id = doc.get('filer_committee_id')
                     amount = doc.get('amount', 0)
                     transaction_type = doc.get('transaction_type', '')
@@ -283,9 +301,16 @@ def enriched_candidate_financials_asset(
                 oppexp_total = 0
                 oppexp_count = 0
                 
-                # Build final record
+                # Build final record (keyed by bioguide_id)
                 financial_record = {
-                    **cand_info,
+                    '_id': bioguide_id,  # Use bioguide_id as primary key
+                    'bioguide_id': bioguide_id,
+                    'candidate_ids': member_info['candidate_ids'],  # Store ALL candidate IDs
+                    'candidate_name': member_info['candidate_name'],
+                    'party': member_info['party'],
+                    'office': member_info['office'],
+                    'state': member_info['state'],
+                    'district': member_info['district'],
                     
                     'independent_expenditures': {
                         'support': {

@@ -45,6 +45,7 @@ def candidate_financials_asset(
         context.log.info("Cleared existing cross-cycle candidate_financials")
         
         # Collect all candidates across all cycles
+        # Group by bioguide_id (not candidate_id) since members can have multiple candidate IDs
         all_candidates = {}
         
         for cycle in config.cycles:
@@ -52,14 +53,15 @@ def candidate_financials_asset(
             lt_financials = mongo.get_collection(client, "candidate_financials", database_name=f"enriched_{cycle}")
             
             for doc in lt_financials.find():
-                cand_id = doc.get('candidate_id')
-                if not cand_id:
+                bioguide_id = doc.get('bioguide_id')
+                if not bioguide_id:
+                    context.log.warning(f"Skipping document - missing bioguide_id")
                     continue
                 
-                if cand_id not in all_candidates:
-                    all_candidates[cand_id] = {
-                        'candidate_id': cand_id,
-                        'bioguide_id': doc.get('bioguide_id'),
+                if bioguide_id not in all_candidates:
+                    all_candidates[bioguide_id] = {
+                        'bioguide_id': bioguide_id,
+                        'candidate_ids': set(),  # Accumulate ALL candidate IDs across cycles
                         'candidate_name': doc.get('candidate_name'),
                         'party': doc.get('party'),
                         'office': doc.get('office'),
@@ -67,6 +69,10 @@ def candidate_financials_asset(
                         'district': doc.get('district'),
                         'by_cycle': {},
                     }
+                
+                # Add candidate IDs from this cycle
+                doc_candidate_ids = doc.get('candidate_ids', [])
+                all_candidates[bioguide_id]['candidate_ids'].update(doc_candidate_ids)
                 
                 # Store cycle-specific data (without transactions to save space)
                 cycle_data = {
@@ -116,18 +122,21 @@ def candidate_financials_asset(
                     'summary': doc['summary']
                 }
                 
-                all_candidates[cand_id]['by_cycle'][cycle] = cycle_data
+                all_candidates[bioguide_id]['by_cycle'][cycle] = cycle_data
         
-        context.log.info(f"Found {len(all_candidates)} unique candidates across all cycles")
+        context.log.info(f"Found {len(all_candidates)} unique members (by bioguide_id) across all cycles")
         
         # Compute totals across cycles
         batch = []
-        for cand_id, cand_data in all_candidates.items():
+        for bioguide_id, member_data in all_candidates.items():
+            # Convert candidate_ids set to sorted list
+            candidate_ids_list = sorted(list(member_data['candidate_ids']))
+            
             # Aggregate independent expenditures support
             indie_support_committees = {}
             indie_oppose_committees = {}
             
-            for cycle, cycle_data in cand_data['by_cycle'].items():
+            for cycle, cycle_data in member_data['by_cycle'].items():
                 # Support
                 for cmte in cycle_data['independent_expenditures']['support']['committees']:
                     cmte_id = cmte['committee_id']
@@ -162,7 +171,7 @@ def candidate_financials_asset(
             
             # Aggregate PAC contributions
             pac_committees = {}
-            for cycle, cycle_data in cand_data['by_cycle'].items():
+            for cycle, cycle_data in member_data['by_cycle'].items():
                 for cmte in cycle_data['pac_contributions']['committees']:
                     cmte_id = cmte['committee_id']
                     if cmte_id not in pac_committees:
@@ -216,14 +225,14 @@ def candidate_financials_asset(
             net_benefit = (indie_support_total + pac_total) - indie_oppose_total
             
             cross_cycle_record = {
-                '_id': cand_data['candidate_id'],
-                'candidate_id': cand_data['candidate_id'],
-                'bioguide_id': cand_data['bioguide_id'],
-                'candidate_name': cand_data['candidate_name'],
-                'party': cand_data['party'],
-                'office': cand_data['office'],
-                'state': cand_data['state'],
-                'district': cand_data['district'],
+                '_id': bioguide_id,
+                'bioguide_id': bioguide_id,
+                'candidate_ids': candidate_ids_list,
+                'candidate_name': member_data['candidate_name'],
+                'party': member_data['party'],
+                'office': member_data['office'],
+                'state': member_data['state'],
+                'district': member_data['district'],
                 
                 # 🎯 TOP-LEVEL QUICK STATS (for easy viewing/sorting)
                 'total_independent_support': total_independent_support,      # Super PAC money FOR
@@ -233,10 +242,10 @@ def candidate_financials_asset(
                 'net_support': net_support,                                  # PAC + net indie
                 'net_benefit': net_benefit,                                  # Everything helping - opposition
                 'total_transactions': indie_support_count + indie_oppose_count + pac_count,
-                'cycles_active': sorted(cand_data['by_cycle'].keys()),
+                'cycles_active': sorted(member_data['by_cycle'].keys()),
                 
                 # Detailed breakdowns
-                'by_cycle': cand_data['by_cycle'],
+                'by_cycle': member_data['by_cycle'],
                 
                 'totals': {
                     'independent_expenditures': {
@@ -264,7 +273,7 @@ def candidate_financials_asset(
                         'net_support': net_support,
                         'net_benefit': net_benefit,
                         'total_transactions': indie_support_count + indie_oppose_count + pac_count,
-                        'cycles_tracked': sorted(cand_data['by_cycle'].keys())
+                        'cycles_tracked': sorted(member_data['by_cycle'].keys())
                     }
                 },
                 
