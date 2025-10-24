@@ -51,7 +51,7 @@ def enriched_donor_financials_asset(
             support: {
                 total_amount: 5000000,
                 transaction_count: 234,
-                candidates: [
+                candidates: [  // ALL candidates sorted by amount (descending)
                     {
                         candidate_id: "H8TX21091",
                         candidate_name: "CRUZ, TED",
@@ -61,14 +61,14 @@ def enriched_donor_financials_asset(
                         office: "S",
                         total_amount: 500000,
                         transaction_count: 15,
-                        transactions: [...]  // top 10 largest
+                        transactions: [...]  // largest 10 transactions only
                     }
                 ]
             },
             oppose: {
                 total_amount: 800000,
                 transaction_count: 45,
-                candidates: [...]
+                candidates: [...]  // ALL candidates sorted by amount
             }
         },
         
@@ -76,7 +76,7 @@ def enriched_donor_financials_asset(
         pac_contributions: {
             total_amount: 1200000,
             transaction_count: 456,
-            candidates: [
+            candidates: [  // ALL candidates sorted by amount (descending)
                 {
                     candidate_id: "H8TX21091",
                     candidate_name: "CRUZ, TED",
@@ -86,7 +86,7 @@ def enriched_donor_financials_asset(
                     office: "S",
                     total_amount: 50000,
                     transaction_count: 5,
-                    transactions: [...]  // top 10 largest
+                    transactions: [...]  // largest 10 transactions only
                 }
             ]
         },
@@ -95,19 +95,19 @@ def enriched_donor_financials_asset(
         operating_expenditures: {
             total_amount: 350000,
             transaction_count: 123,
-            top_categories: [
+            categories: [  // ALL categories sorted by amount (descending)
                 {
                     category: "Advertising",
                     total_amount: 150000,
                     transaction_count: 45
                 }
             ],
-            top_payees: [
+            payees: [  // ALL payees sorted by amount (descending)
                 {
                     payee_name: "Media Vendor Inc",
                     total_amount: 75000,
                     transaction_count: 12,
-                    transactions: [...]  // top 10 largest
+                    transactions: [...]  // largest 10 transactions only
                 }
             ]
         },
@@ -371,13 +371,13 @@ def enriched_donor_financials_asset(
                     oppexp_categories.values(),
                     key=lambda x: x['total_amount'],
                     reverse=True
-                )[:20]  # Top 20 categories
+                )  # All categories sorted
                 
                 oppexp_payees_list = sorted(
                     oppexp_payees.values(),
                     key=lambda x: x['total_amount'],
                     reverse=True
-                )[:20]  # Top 20 payees
+                )  # All payees sorted
                 
                 oppexp_total = sum(c['total_amount'] for c in oppexp_categories.values())
                 oppexp_count = sum(c['transaction_count'] for c in oppexp_categories.values())
@@ -414,16 +414,23 @@ def enriched_donor_financials_asset(
                     'operating_expenditures': {
                         'total_amount': oppexp_total,
                         'transaction_count': oppexp_count,
-                        'top_categories': oppexp_categories_list,
-                        'top_payees': oppexp_payees_list
+                        'categories': oppexp_categories_list,  # All categories, sorted by amount
+                        'payees': oppexp_payees_list  # All payees, sorted by amount
                     },
                     
                     'summary': {
-                        'total_spent': indie_support_total + indie_oppose_total + pac_total + oppexp_total,
-                        'total_to_candidates': indie_support_total + indie_oppose_total + pac_total,
-                        'total_support': indie_support_total + pac_total,
-                        'total_oppose': indie_oppose_total,
+                        # Raw totals by category
+                        'total_independent_support': indie_support_total,
+                        'total_independent_oppose': indie_oppose_total,
+                        'total_pac_contributions': pac_total,
                         'total_operating': oppexp_total,
+                        
+                        # Calculated fields
+                        'net_independent_expenditures': indie_support_total - indie_oppose_total,
+                        'total_to_candidates': indie_support_total + indie_oppose_total + pac_total,
+                        'total_spent': indie_support_total + indie_oppose_total + pac_total + oppexp_total,
+                        
+                        # Counts
                         'total_transactions': indie_support_count + indie_oppose_count + pac_count + oppexp_count,
                         'tracked_candidates_count': len(tracked_candidates)
                     },
@@ -436,14 +443,25 @@ def enriched_donor_financials_asset(
                 stats['total_independent_expenditures'] += indie_support_count + indie_oppose_count
                 stats['total_pac_contributions'] += pac_count
                 stats['total_operating_expenditures'] += oppexp_count
-                
-                if len(batch) >= 100:
-                    financials_collection.insert_many(batch)
-                    batch = []
-        
-            # Insert remaining
+            
+            # Sort by total_to_candidates before inserting (highest to lowest)
+            context.log.info(f"Sorting {len(batch)} committees by total_to_candidates...")
+            batch.sort(key=lambda x: x['summary']['total_to_candidates'], reverse=True)
+            
+            # Insert in sorted order
             if batch:
-                financials_collection.insert_many(batch)
+                financials_collection.insert_many(batch, ordered=True)
+                
+                # Log top 5 for this cycle
+                context.log.info(f"📊 Top 5 committees in {cycle} by total to candidates:")
+                for i, cmte in enumerate(batch[:5], 1):
+                    indie_net = cmte['summary']['net_independent_expenditures']
+                    pac = cmte['summary']['total_pac_contributions']
+                    context.log.info(
+                        f"  {i}. {cmte['committee_name']}: "
+                        f"${cmte['summary']['total_to_candidates']:,.0f} "
+                        f"(${pac:,.0f} PAC + ${indie_net:,.0f} net indie)"
+                    )
             
             stats['committees_processed'] += len(all_committees)
             stats['cycles_processed'].append(cycle)
