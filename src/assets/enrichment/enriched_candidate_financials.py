@@ -53,20 +53,20 @@ def enriched_candidate_financials_asset(
             support: {
                 total_amount: 1500000,
                 transaction_count: 45,
-                committees: [
+                committees: [  // ALL committees sorted by amount (descending)
                     {
                         committee_id: "C00...",
                         committee_name: "Pro-Cruz Super PAC",
                         total_amount: 500000,
                         transaction_count: 15,
-                        transactions: [...]  // top 10 largest
+                        transactions: [...]  // largest 10 transactions only
                     }
                 ]
             },
             oppose: {
                 total_amount: 300000,
                 transaction_count: 12,
-                committees: [...]
+                committees: [...]  // ALL committees sorted by amount
             }
         },
         
@@ -74,14 +74,14 @@ def enriched_candidate_financials_asset(
         pac_contributions: {
             total_amount: 250000,
             transaction_count: 89,
-            committees: [
+            committees: [  // ALL committees sorted by amount (descending)
                 {
                     committee_id: "C00...",
                     committee_name: "AIPAC",
                     committee_type: "Q",
                     total_amount: 50000,
                     transaction_count: 5,
-                    transactions: [...]  // top 10 largest
+                    transactions: [...]  // largest 10 transactions only
                 }
             ]
         },
@@ -313,9 +313,17 @@ def enriched_candidate_financials_asset(
                     },
                     
                     'summary': {
-                        'total_support': indie_support_total + pac_total,
-                        'total_oppose': indie_oppose_total,
-                        'net_support': (indie_support_total + pac_total) - indie_oppose_total,
+                        # Raw totals by category
+                        'total_independent_support': indie_support_total,      # Super PAC money FOR
+                        'total_independent_oppose': indie_oppose_total,        # Super PAC money AGAINST
+                        'total_pac_contributions': pac_total,                  # Direct PAC donations
+                        
+                        # Calculated fields
+                        'net_independent_expenditures': indie_support_total - indie_oppose_total,  # Indie support - oppose
+                        'net_support': pac_total + (indie_support_total - indie_oppose_total),     # PAC + net indie
+                        'net_benefit': (indie_support_total + pac_total) - indie_oppose_total,     # Everything helping - opposition
+                        
+                        # Metadata
                         'total_transactions': indie_support_count + indie_oppose_count + pac_count + oppexp_count
                     },
                     
@@ -326,14 +334,24 @@ def enriched_candidate_financials_asset(
                 batch.append(financial_record)
                 stats['total_independent_expenditures'] += indie_support_count + indie_oppose_count
                 stats['total_pac_contributions'] += pac_count
-                
-                if len(batch) >= 100:
-                    financials_collection.insert_many(batch)
-                    batch = []
             
-            # Insert remaining
+            # Sort by net_benefit before inserting (highest to lowest)
+            context.log.info(f"Sorting {len(batch)} candidates by net_benefit...")
+            batch.sort(key=lambda x: x['summary']['net_benefit'], reverse=True)
+            
+            # Insert in sorted order
             if batch:
-                financials_collection.insert_many(batch)
+                financials_collection.insert_many(batch, ordered=True)
+                
+                # Log top 5 for this cycle
+                context.log.info(f"📊 Top 5 candidates in {cycle} by net benefit:")
+                for i, cand in enumerate(batch[:5], 1):
+                    context.log.info(
+                        f"  {i}. {cand['candidate_name']}: "
+                        f"${cand['summary']['net_benefit']:,.0f} net "
+                        f"(${cand['summary']['total_pac_contributions']:,.0f} PAC + "
+                        f"${cand['summary']['net_independent_expenditures']:,.0f} net indie)"
+                    )
             
             stats['candidates_processed'] += len(tracked_candidates)
             stats['cycles_processed'].append(cycle)

@@ -124,14 +124,14 @@ def donor_financials_asset(
                     'operating_expenditures': {
                         'total_amount': doc['operating_expenditures']['total_amount'],
                         'transaction_count': doc['operating_expenditures']['transaction_count'],
-                        'top_categories': doc['operating_expenditures']['top_categories'],
-                        'top_payees': [
+                        'categories': doc['operating_expenditures']['categories'],
+                        'payees': [
                             {
                                 'payee_name': p['payee_name'],
                                 'total_amount': p['total_amount'],
                                 'transaction_count': p['transaction_count'],
                             }
-                            for p in doc['operating_expenditures']['top_payees']
+                            for p in doc['operating_expenditures']['payees']
                         ]
                     },
                     'summary': doc['summary']
@@ -216,7 +216,7 @@ def donor_financials_asset(
             oppexp_payees = {}
             
             for cycle, cycle_data in cmte_data['by_cycle'].items():
-                for cat in cycle_data['operating_expenditures']['top_categories']:
+                for cat in cycle_data['operating_expenditures']['categories']:
                     cat_name = cat['category']
                     if cat_name not in oppexp_categories:
                         oppexp_categories[cat_name] = {
@@ -227,7 +227,7 @@ def donor_financials_asset(
                     oppexp_categories[cat_name]['total_amount'] += cat['total_amount']
                     oppexp_categories[cat_name]['transaction_count'] += cat['transaction_count']
                 
-                for payee in cycle_data['operating_expenditures']['top_payees']:
+                for payee in cycle_data['operating_expenditures']['payees']:
                     payee_name = payee['payee_name']
                     if payee_name not in oppexp_payees:
                         oppexp_payees[payee_name] = {
@@ -241,36 +241,36 @@ def donor_financials_asset(
                     if cycle not in oppexp_payees[payee_name]['cycles']:
                         oppexp_payees[payee_name]['cycles'].append(cycle)
             
-            # Sort and take top 20
+            # Sort all (keep ALL for UI linking)
             indie_support_top = sorted(
                 indie_support_candidates.values(),
                 key=lambda x: x['total_amount'],
                 reverse=True
-            )[:20]
+            )
             
             indie_oppose_top = sorted(
                 indie_oppose_candidates.values(),
                 key=lambda x: x['total_amount'],
                 reverse=True
-            )[:20]
+            )
             
             pac_top = sorted(
                 pac_candidates.values(),
                 key=lambda x: x['total_amount'],
                 reverse=True
-            )[:20]
+            )
             
             oppexp_categories_top = sorted(
                 oppexp_categories.values(),
                 key=lambda x: x['total_amount'],
                 reverse=True
-            )[:20]
+            )
             
             oppexp_payees_top = sorted(
                 oppexp_payees.values(),
                 key=lambda x: x['total_amount'],
                 reverse=True
-            )[:20]
+            )
             
             # Calculate totals
             indie_support_total = sum(c['total_amount'] for c in indie_support_candidates.values())
@@ -282,6 +282,11 @@ def donor_financials_asset(
             oppexp_total = sum(c['total_amount'] for c in oppexp_categories.values())
             oppexp_count = sum(c['transaction_count'] for c in oppexp_categories.values())
             
+            # Calculate top-level summary metrics for easy sorting/filtering
+            total_to_candidates = indie_support_total + indie_oppose_total + pac_total
+            total_spent = total_to_candidates + oppexp_total
+            net_independent_expenditures = indie_support_total - indie_oppose_total
+            
             cross_cycle_record = {
                 '_id': cmte_data['committee_id'],
                 'committee_id': cmte_data['committee_id'],
@@ -290,6 +295,18 @@ def donor_financials_asset(
                 'connected_org': cmte_data['connected_org'],
                 'party': cmte_data['party'],
                 
+                # 🎯 TOP-LEVEL QUICK STATS (for easy viewing/sorting)
+                'total_spent': total_spent,                              # Everything this committee spent
+                'total_to_candidates': total_to_candidates,              # Money to candidates (indie + PAC)
+                'total_pac_contributions': pac_total,                    # Direct PAC contributions
+                'total_independent_support': indie_support_total,        # Independent expenditures FOR
+                'total_independent_oppose': indie_oppose_total,          # Independent expenditures AGAINST
+                'net_independent_expenditures': net_independent_expenditures,  # Net indie (support - oppose)
+                'total_operating_expenditures': oppexp_total,            # Operating expenses (ads, vendors, etc)
+                'total_transactions': indie_support_count + indie_oppose_count + pac_count + oppexp_count,
+                'cycles_active': sorted(cmte_data['by_cycle'].keys()),
+                
+                # Detailed breakdowns
                 'by_cycle': cmte_data['by_cycle'],
                 
                 'totals': {
@@ -297,31 +314,38 @@ def donor_financials_asset(
                         'support': {
                             'total_amount': indie_support_total,
                             'transaction_count': indie_support_count,
-                            'top_candidates': indie_support_top
+                            'candidates': indie_support_top  # All candidates, sorted by amount
                         },
                         'oppose': {
                             'total_amount': indie_oppose_total,
                             'transaction_count': indie_oppose_count,
-                            'top_candidates': indie_oppose_top
+                            'candidates': indie_oppose_top  # All candidates, sorted by amount
                         }
                     },
                     'pac_contributions': {
                         'total_amount': pac_total,
                         'transaction_count': pac_count,
-                        'top_candidates': pac_top
+                        'candidates': pac_top  # All candidates, sorted by amount
                     },
                     'operating_expenditures': {
                         'total_amount': oppexp_total,
                         'transaction_count': oppexp_count,
-                        'top_categories': oppexp_categories_top,
-                        'top_payees': oppexp_payees_top
+                        'categories': oppexp_categories_top,  # All categories, sorted by amount
+                        'payees': oppexp_payees_top  # All payees, sorted by amount
                     },
                     'summary': {
-                        'total_spent': indie_support_total + indie_oppose_total + pac_total + oppexp_total,
-                        'total_to_candidates': indie_support_total + indie_oppose_total + pac_total,
-                        'total_support': indie_support_total + pac_total,
-                        'total_oppose': indie_oppose_total,
+                        # Raw totals
+                        'total_independent_support': indie_support_total,
+                        'total_independent_oppose': indie_oppose_total,
+                        'total_pac_contributions': pac_total,
                         'total_operating': oppexp_total,
+                        
+                        # Calculated fields
+                        'net_independent_expenditures': net_independent_expenditures,
+                        'total_to_candidates': total_to_candidates,
+                        'total_spent': total_spent,
+                        
+                        # Metadata
                         'total_transactions': indie_support_count + indie_oppose_count + pac_count + oppexp_count,
                         'cycles_tracked': sorted(cmte_data['by_cycle'].keys())
                     }
@@ -331,13 +355,39 @@ def donor_financials_asset(
             }
             
             batch.append(cross_cycle_record)
-            
-            if len(batch) >= 100:
-                financials_collection.insert_many(batch)
-                batch = []
         
+        # Sort all committees by total_to_candidates (descending) before inserting
+        context.log.info(f"Sorting {len(batch)} committees by total_to_candidates (highest to lowest)...")
+        batch.sort(key=lambda x: x['total_to_candidates'], reverse=True)
+        
+        # Insert in sorted order
         if batch:
-            financials_collection.insert_many(batch)
+            financials_collection.insert_many(batch, ordered=True)  # ordered=True preserves sort order
+            
+            # Log top 10 for visibility
+            context.log.info("📊 Top 10 committees by total to candidates:")
+            for i, cmte in enumerate(batch[:10], 1):
+                pac = cmte['total_pac_contributions']
+                indie_net = cmte['net_independent_expenditures']
+                context.log.info(
+                    f"  {i}. {cmte['committee_name']}: "
+                    f"${cmte['total_to_candidates']:,.0f} to candidates "
+                    f"(${pac:,.0f} PAC + ${indie_net:,.0f} net indie)"
+                )
+        
+        # Create indexes for fast sorting/filtering on top-level fields
+        context.log.info("Creating indexes for quick stats...")
+        financials_collection.create_index([("total_spent", -1)])                     # Sort by total spending
+        financials_collection.create_index([("total_to_candidates", -1)])            # Sort by candidate contributions
+        financials_collection.create_index([("total_pac_contributions", -1)])        # Sort by PAC contributions
+        financials_collection.create_index([("total_independent_support", -1)])      # Sort by indie support
+        financials_collection.create_index([("total_independent_oppose", -1)])       # Sort by indie opposition
+        financials_collection.create_index([("net_independent_expenditures", -1)])   # Sort by net indie
+        financials_collection.create_index([("total_operating_expenditures", -1)])   # Sort by operating expenses
+        financials_collection.create_index([("committee_type", 1)])                  # Filter by type
+        financials_collection.create_index([("party", 1)])                           # Filter by party
+        financials_collection.create_index([("committee_name", 1)])                  # Search by name
+        financials_collection.create_index([("connected_org", 1)])                   # Search by connected org
         
         stats = {
             'committees_aggregated': len(all_committees),
