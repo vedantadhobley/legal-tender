@@ -143,7 +143,7 @@ def enriched_itpas2_asset(
                 
                 context.log.info(f"   ✅ {len(committee_to_candidate)} committee→candidate links")
                 
-                # Load Candidate Master
+                # Load Candidate Master from FEC cn file
                 context.log.info(f"📥 Loading candidate master ({cycle})...")
                 cn_collection = mongo.get_collection(client, "cn", database_name=f"fec_{cycle}")
                 
@@ -160,7 +160,77 @@ def enriched_itpas2_asset(
                             'district': cn_doc.get('CAND_OFFICE_DISTRICT', ''),
                         }
                 
-                context.log.info(f"   ✅ {len(candidate_details)} candidate records")
+                context.log.info(f"   ✅ {len(candidate_details)} candidate records from cn")
+                
+                # Backfill missing names from member_fec_mapping (for tracked members not in cn)
+                context.log.info("📥 Backfilling tracked member names from mapping...")
+                mapping_collection = mongo.get_collection(client, "member_fec_mapping", database_name="aggregation")
+                
+                # Parse cycle year for term matching
+                cycle_year = int(cycle)
+                
+                backfill_count = 0
+                for member_doc in mapping_collection.find():
+                    bioguide_id = member_doc.get('bioguide_id')
+                    fec_ids = member_doc.get('fec', {}).get('candidate_ids', [])
+                    
+                    # Get official name from legislators data
+                    member_name = member_doc.get('name', {})
+                    official_name = member_name.get('official_full', '')
+                    if not official_name:
+                        first = member_name.get('first', '')
+                        last = member_name.get('last', '')
+                        official_name = f"{first} {last}".strip()
+                    
+                    # Find the term that covers this cycle (or closest term)
+                    terms = member_doc.get('terms', [])
+                    relevant_term = None
+                    
+                    # Try to find term that overlaps with cycle year
+                    for term in terms:
+                        start = int(term.get('start', '9999')[:4])
+                        end = int(term.get('end', '0000')[:4])
+                        if start <= cycle_year <= end:
+                            relevant_term = term
+                            break
+                    
+                    # Fallback to most recent term
+                    if not relevant_term and terms:
+                        relevant_term = terms[-1]
+                    
+                    # Extract party/office/state/district from relevant term
+                    if relevant_term:
+                        party_code = {'Democrat': 'DEM', 'Republican': 'REP', 'Independent': 'IND'}.get(
+                            relevant_term.get('party', ''), ''
+                        )
+                        office_code = {'sen': 'S', 'rep': 'H'}.get(relevant_term.get('type', ''), '')
+                        state_code = relevant_term.get('state', '')
+                        district = relevant_term.get('district', '')
+                    else:
+                        party_code = ''
+                        office_code = ''
+                        state_code = ''
+                        district = ''
+                    
+                    # Backfill for EACH FEC candidate ID (members can have multiple!)
+                    for cand_id in fec_ids:
+                        if cand_id not in candidate_details:
+                            # Not in cn file, add from mapping
+                            candidate_details[cand_id] = {
+                                'candidate_id': cand_id,
+                                'candidate_name': official_name,
+                                'party': party_code,
+                                'office': office_code,
+                                'state': state_code,
+                                'district': str(district) if district else '',
+                            }
+                            backfill_count += 1
+                        elif not candidate_details[cand_id]['candidate_name']:
+                            # In cn file but missing name, update
+                            candidate_details[cand_id]['candidate_name'] = official_name
+                            backfill_count += 1
+                
+                context.log.info(f"   ✅ Backfilled {backfill_count} missing names from mapping (handles multiple candidate IDs per member)")
                 
                 # Load Committee Master
                 context.log.info(f"📥 Loading committee master ({cycle})...")
