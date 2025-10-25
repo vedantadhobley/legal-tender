@@ -283,7 +283,8 @@ def donor_financials_asset(
             oppexp_count = sum(c['transaction_count'] for c in oppexp_categories.values())
             
             # Calculate top-level summary metrics for easy sorting/filtering
-            total_to_candidates = indie_support_total + indie_oppose_total + pac_total
+            total_independent_expenditures = indie_support_total + indie_oppose_total
+            total_to_candidates = total_independent_expenditures + pac_total
             total_spent = total_to_candidates + oppexp_total
             net_independent_expenditures = indie_support_total - indie_oppose_total
             
@@ -297,11 +298,12 @@ def donor_financials_asset(
                 
                 # 🎯 TOP-LEVEL QUICK STATS (for easy viewing/sorting)
                 'total_spent': total_spent,                              # Everything this committee spent
-                'total_to_candidates': total_to_candidates,              # Money to candidates (indie + PAC)
-                'total_pac_contributions': pac_total,                    # Direct PAC contributions
+                'total_to_candidates': total_to_candidates,              # Money directly to/about candidates (indie + PAC)
+                'total_independent_expenditures': total_independent_expenditures,  # Total indie spending (support + oppose)
                 'total_independent_support': indie_support_total,        # Independent expenditures FOR
                 'total_independent_oppose': indie_oppose_total,          # Independent expenditures AGAINST
                 'net_independent_expenditures': net_independent_expenditures,  # Net indie (support - oppose)
+                'total_pac_contributions': pac_total,                    # Direct PAC contributions
                 'total_operating_expenditures': oppexp_total,            # Operating expenses (ads, vendors, etc)
                 'total_transactions': indie_support_count + indie_oppose_count + pac_count + oppexp_count,
                 'cycles_active': sorted(cmte_data['by_cycle'].keys()),
@@ -335,6 +337,7 @@ def donor_financials_asset(
                     },
                     'summary': {
                         # Raw totals
+                        'total_independent_expenditures': total_independent_expenditures,
                         'total_independent_support': indie_support_total,
                         'total_independent_oppose': indie_oppose_total,
                         'total_pac_contributions': pac_total,
@@ -347,7 +350,6 @@ def donor_financials_asset(
                         
                         # Metadata
                         'total_transactions': indie_support_count + indie_oppose_count + pac_count + oppexp_count,
-                        'cycles_tracked': sorted(cmte_data['by_cycle'].keys())
                     }
                 },
                 
