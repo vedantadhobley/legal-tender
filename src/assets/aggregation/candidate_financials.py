@@ -221,8 +221,8 @@ def candidate_financials_asset(
             total_independent_oppose = indie_oppose_total
             total_pac_contributions = pac_total
             net_independent_expenditures = indie_support_total - indie_oppose_total
-            net_support = pac_total + net_independent_expenditures
-            net_benefit = (indie_support_total + pac_total) - indie_oppose_total
+            net_support = indie_support_total + pac_total  # Total positive support (indie support + PAC)
+            net_benefit = (indie_support_total + pac_total) - indie_oppose_total  # Everything helping - opposition
             
             cross_cycle_record = {
                 '_id': bioguide_id,
@@ -237,9 +237,10 @@ def candidate_financials_asset(
                 # 🎯 TOP-LEVEL QUICK STATS (for easy viewing/sorting)
                 'total_independent_support': total_independent_support,      # Super PAC money FOR
                 'total_independent_oppose': total_independent_oppose,        # Super PAC money AGAINST
+                'total_independent_expenditures': indie_support_total + indie_oppose_total,  # Total indie (support + oppose)
                 'total_pac_contributions': total_pac_contributions,          # Direct PAC donations
                 'net_independent_expenditures': net_independent_expenditures, # Indie support - oppose
-                'net_support': net_support,                                  # PAC + net indie
+                'net_support': net_support,                                  # Total positive money (indie support + PAC)
                 'net_benefit': net_benefit,                                  # Everything helping - opposition
                 'total_transactions': indie_support_count + indie_oppose_count + pac_count,
                 'cycles_active': sorted(member_data['by_cycle'].keys()),
@@ -268,12 +269,12 @@ def candidate_financials_asset(
                     'summary': {
                         'total_independent_support': total_independent_support,
                         'total_independent_oppose': total_independent_oppose,
+                        'total_independent_expenditures': indie_support_total + indie_oppose_total,
                         'total_pac_contributions': total_pac_contributions,
                         'net_independent_expenditures': net_independent_expenditures,
                         'net_support': net_support,
                         'net_benefit': net_benefit,
                         'total_transactions': indie_support_count + indie_oppose_count + pac_count,
-                        'cycles_tracked': sorted(member_data['by_cycle'].keys())
                     }
                 },
                 
