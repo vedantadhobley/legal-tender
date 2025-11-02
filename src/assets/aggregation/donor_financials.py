@@ -21,15 +21,17 @@ class DonorFinancialsConfig(Config):
     group_name="aggregation",
     ins={
         "enriched_donor_financials": AssetIn(key="enriched_donor_financials"),
+        "enriched_committee_funding": AssetIn(key="enriched_committee_funding"),
     },
     compute_kind="aggregation",
-    description="Cross-cycle aggregation of donor financials with top candidates and spending across all cycles"
+    description="Cross-cycle aggregation of donor financials with upstream funding sources and spending across all cycles"
 )
 def donor_financials_asset(
     context: AssetExecutionContext,
     config: DonorFinancialsConfig,
     mongo: MongoDBResource,
     enriched_donor_financials: Dict[str, Any],
+    enriched_committee_funding: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Roll up ALL cycles of donor financial data.
@@ -288,6 +290,118 @@ def donor_financials_asset(
             total_spent = total_to_candidates + oppexp_total
             net_independent_expenditures = indie_support_total - indie_oppose_total
             
+            # 🎯 FETCH UPSTREAM FUNDING SOURCES (who funds THIS committee)
+            upstream_funding = {
+                'from_committees': [],
+                'from_individuals': [],
+                'from_organizations': [],
+                'totals': {
+                    'from_committees': 0,
+                    'from_individuals': 0,
+                    'from_organizations': 0,
+                    'total_disclosed': 0
+                },
+                'transparency_score': None,
+                'red_flags': []
+            }
+            
+            # Pull from each cycle's committee_funding_sources
+            for cycle in config.cycles:
+                funding_collection = mongo.get_collection(
+                    client, 
+                    "committee_funding_sources", 
+                    database_name=f"enriched_{cycle}"
+                )
+                
+                funding_doc = funding_collection.find_one({'_id': cmte_data['committee_id']})
+                if funding_doc:
+                    # Aggregate from_committees across cycles
+                    for cmte_source in funding_doc.get('funding_sources', {}).get('from_committees', []):
+                        # Check if we already have this committee
+                        existing = next(
+                            (c for c in upstream_funding['from_committees'] if c['committee_id'] == cmte_source['committee_id']),
+                            None
+                        )
+                        if existing:
+                            existing['total_amount'] += cmte_source['total_amount']
+                            existing['transaction_count'] += cmte_source['transaction_count']
+                            if cycle not in existing['cycles']:
+                                existing['cycles'].append(cycle)
+                        else:
+                            upstream_funding['from_committees'].append({
+                                'committee_id': cmte_source['committee_id'],
+                                'committee_name': cmte_source['committee_name'],
+                                'committee_type': cmte_source.get('committee_type'),
+                                'total_amount': cmte_source['total_amount'],
+                                'transaction_count': cmte_source['transaction_count'],
+                                'cycles': [cycle]
+                            })
+                    
+                    # Aggregate from_individuals across cycles
+                    for ind_source in funding_doc.get('funding_sources', {}).get('from_individuals', []):
+                        donor_key = f"{ind_source['contributor_name']}|{ind_source.get('employer', 'Unknown')}"
+                        existing = next(
+                            (i for i in upstream_funding['from_individuals'] 
+                             if f"{i['contributor_name']}|{i.get('employer', 'Unknown')}" == donor_key),
+                            None
+                        )
+                        if existing:
+                            existing['total_amount'] += ind_source['total_amount']
+                            existing['contribution_count'] += ind_source['contribution_count']
+                            if cycle not in existing['cycles']:
+                                existing['cycles'].append(cycle)
+                        else:
+                            upstream_funding['from_individuals'].append({
+                                'contributor_name': ind_source['contributor_name'],
+                                'employer': ind_source.get('employer'),
+                                'occupation': ind_source.get('occupation'),
+                                'total_amount': ind_source['total_amount'],
+                                'contribution_count': ind_source['contribution_count'],
+                                'cycles': [cycle]
+                            })
+                    
+                    # Aggregate from_organizations across cycles
+                    for org_source in funding_doc.get('funding_sources', {}).get('from_organizations', []):
+                        existing = next(
+                            (o for o in upstream_funding['from_organizations'] 
+                             if o['organization_name'] == org_source['organization_name']),
+                            None
+                        )
+                        if existing:
+                            existing['total_amount'] += org_source['total_amount']
+                            existing['contribution_count'] += org_source['contribution_count']
+                            if cycle not in existing['cycles']:
+                                existing['cycles'].append(cycle)
+                        else:
+                            upstream_funding['from_organizations'].append({
+                                'organization_name': org_source['organization_name'],
+                                'total_amount': org_source['total_amount'],
+                                'contribution_count': org_source['contribution_count'],
+                                'cycles': [cycle]
+                            })
+                    
+                    # Aggregate transparency data
+                    if funding_doc.get('transparency'):
+                        trans = funding_doc['transparency']
+                        upstream_funding['totals']['from_committees'] += trans.get('from_committees', 0)
+                        upstream_funding['totals']['from_individuals'] += trans.get('from_individuals', 0)
+                        upstream_funding['totals']['from_organizations'] += trans.get('from_organizations', 0)
+                        upstream_funding['totals']['total_disclosed'] += trans.get('total_disclosed', 0)
+                        
+                        # Use most recent transparency score
+                        if trans.get('transparency_score') is not None:
+                            upstream_funding['transparency_score'] = trans['transparency_score']
+                        
+                        # Collect red flags
+                        for flag in trans.get('red_flags', []):
+                            if flag not in upstream_funding['red_flags']:
+                                upstream_funding['red_flags'].append(flag)
+            
+            # Sort upstream sources by amount
+            upstream_funding['from_committees'].sort(key=lambda x: x['total_amount'], reverse=True)
+            upstream_funding['from_individuals'].sort(key=lambda x: x['total_amount'], reverse=True)
+            upstream_funding['from_organizations'].sort(key=lambda x: x['total_amount'], reverse=True)
+            
             cross_cycle_record = {
                 '_id': cmte_data['committee_id'],
                 'committee_id': cmte_data['committee_id'],
@@ -307,6 +421,9 @@ def donor_financials_asset(
                 'total_operating_expenditures': oppexp_total,            # Operating expenses (ads, vendors, etc)
                 'total_transactions': indie_support_count + indie_oppose_count + pac_count + oppexp_count,
                 'cycles_active': sorted(cmte_data['by_cycle'].keys()),
+                
+                # 🎯 UPSTREAM FUNDING (WHO funds this committee - the ROOT MONEY!)
+                'upstream_funding': upstream_funding,
                 
                 # Detailed breakdowns
                 'by_cycle': cmte_data['by_cycle'],

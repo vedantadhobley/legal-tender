@@ -32,6 +32,7 @@ from .enrichment.enriched_donor_financials import enriched_donor_financials_asse
 from .enrichment.enriched_webl import enriched_webl_asset
 from .enrichment.enriched_weball import enriched_weball_asset
 from .enrichment.enriched_webk import enriched_webk_asset
+from .enrichment.enriched_committee_funding import enriched_committee_funding_asset
 
 # Aggregation Assets (enriched_{cycle} → aggregation database)
 from .aggregation.candidate_financials import candidate_financials_asset
@@ -64,6 +65,7 @@ __all__ = [
     "enriched_webl_asset",
     "enriched_weball_asset",
     "enriched_webk_asset",
+    "enriched_committee_funding_asset",
     
     # Aggregation assets (cross-cycle rollups → aggregation database)
     "candidate_financials_asset",
