@@ -4,34 +4,30 @@
 
 ---
 
-## 🎉 MAJOR DISCOVERY: We Already Have The Data!
+## � CURRENT STATUS: Upstream Tracing Implemented!
 
-**TL;DR**: We thought we needed to download 3 new FEC files (`itoth.zip`, `itcont.zip`, `oth.zip`) totaling ~17 GB. 
+**What We Built** (November 2025):
+- ✅ **Corporate PAC Reclassification**: Q/N type committees (corporate/union PACs) now classified as `from_organizations` instead of `from_committees`
+- ✅ **Upstream Committee Tracing**: Using `pas2.zip` (itpas2 collection) to trace committee→committee money flows
+- ✅ **Data Model Correction**: Fixed CMTE_ID/OTHER_ID inversion (CMTE_ID = donor, OTHER_ID = recipient)
+- ✅ **Transparency Scoring**: Red flag detection for dark money sources and shell game patterns
 
-**REALITY**: `pas2.zip` (which we already download and parse) contains **ALL** itemized transactions including:
-- ✅ Committee → Committee transfers (upstream funding!)
-- ✅ Individual → Committee donations (billionaire money!)
-- ✅ Organization → Committee contributions (corporate money!)
-- ✅ Committee → Candidate transfers (what we use now)
+**What's in `pas2.zip`**:
+- ✅ Committee → Committee transfers (ENTITY_TP: COM/PAC/PTY/CCM)
+- ✅ Individual → Committee donations (ENTITY_TP: IND) - BUT these are PAC-attributed, not direct
+- ✅ Organization → Committee contributions (ENTITY_TP: ORG) - earmarked transfers
+- ✅ Committee → Candidate transfers (what we use for downstream)
 
-**What This Means**:
-- ❌ NO new downloads needed
-- ❌ NO new storage (we have the data in `itpas2` collection)
-- ❌ NO new parsing code
-- ✅ Just need to filter `itpas2` differently in enrichment layer
-- ✅ Upstream tracing can be built in 2-3 days, not 1 week
-- ✅ Zero cost impact
+**What We Still Need**:
+- 📋 **Direct Individual Donations** (`indiv.zip`) - for billionaire money tracking
+  - Currently DISABLED in data_sync (marked "deprecated")
+  - Need streaming parser with >$10K threshold filter
+  - Will reduce 40M records → 150K records (billionaires only)
+- 📋 **Direct Corporate Contributions** - NOT available (illegal - corporations use PACs)
 
-**How We Discovered This**:
-1. Planned to add `itoth.zip` for committee→committee transfers
-2. Reviewed existing `itpas2.py` asset
-3. Found comment: "Contains ALL itemized transactions... Entity types include CCM, ORG, IND, PAC, COM, PTY"
-4. Realized `pas2.zip` has everything we need!
-
-**Next Steps**: 
-- Create enrichment asset that filters `itpas2` by entity type
-- Build `committee_funding_sources` collection
-- Start tracing money upstream from Super PACs to corporate sources
+**Key Documents**:
+- `docs/PAS2_DATA_MODEL.md` - Explains the corrected data model
+- `src/assets/enrichment/enriched_committee_funding.py` - Implements upstream tracing
 
 ---
 
@@ -67,116 +63,131 @@ Unknown/Dark Money ($1.5M) ─→ Senate Leadership Fund → Ted Cruz ($5M)
 
 ---
 
-### Files We Need to Add (Upstream = Where Money Comes FROM)
+### What We Have Now vs What We Need
 
-#### 1. `itoth{YY}.zip` - Any Transaction FROM One Committee TO Another ✅ PRIORITY
+#### ✅ Currently Implemented: Committee→Committee Transfers (from pas2.zip)
 
-**What**: Committee → Committee transfers (the reverse of what we track now)  
-**Size**: ~100 MB per cycle (~400 MB for 4 cycles)  
-**Processing**: ~10 min per cycle (40 min total)  
-**Purpose**: See WHO funds Super PACs and Party Committees
+**What**: Committee → Committee transfers using `pas2.zip` (itpas2 collection)  
+**Size**: Already downloaded (~300 MB per cycle)  
+**Processing**: Already parsed, just filtered differently in enrichment layer  
+**Purpose**: See WHO funds Super PACs and Party Committees (corporate PACs)
 
-**Example Records**:
+**Example Records** (from itpas2 with ENTITY_TP: COM/PAC/PTY):
 ```
-Koch Industries PAC → Senate Leadership Fund: $2,000,000
-Citadel PAC → Congressional Leadership Fund: $1,500,000
-Corporate PAC Network → America PAC: $5,000,000
+ExxonMobil PAC → Steve Scalise: $250,000
+Lockheed Martin PAC → Jason Smith: $180,000
+AIPAC → Multiple Republicans: $7.8M total
 ```
 
-**Why Critical**:
-- Reveals corporate funding of Super PACs
-- Shows party committee funding networks
-- Enables transparency scoring (how much is traceable?)
-- **This is the file we thought we had but DON'T!**
+**Corporate PAC Reclassification** (November 2025):
+- **Q/N types** (Qualified/Non-qualified PACs) → Classified as `from_organizations`
+  - ExxonMobil PAC, Hallmark PAC, AMA PAC, Teamsters PAC
+  - Represent corporate/union interests
+- **W/O/I types** (Non-connected/Super PACs) → Stay in `from_committees`
+  - Conservative Leadership PAC, Business-Industry PAC
+  - Political causes, not organizational interests
 
-**Status**: ❌ NOT INGESTED YET (we have `pas2` which is different - see below)
+**Status**: ✅ IMPLEMENTED (enriched_committee_funding.py)
 
 ---
 
-#### 2. `itcont{YY}.zip` - Individual Contributions TO Committees ⚠️ LARGE
+#### 📋 Next: Individual→Committee Donations (indiv.zip, NOT itcont.zip)
 
-**What**: Individual → Committee donations (billionaires funding Super PACs)  
-**Size**: ~2-4 GB per cycle (~16 GB for 4 cycles)  
-**Processing**: ~30 min per cycle (2 hours total, requires streaming)  
-**Purpose**: See billionaire funding of Super PACs and dark money groups
+**Discovery** (November 2025): `itcont.zip` files **DON'T EXIST** (HTTP 404). Use `indiv.zip` instead!
 
-**Example Records**:
+**What**: Individual → Committee donations (billionaires funding Super PACs/committees)  
+**Size**: ~4-5 GB per cycle (~15 GB for 4 cycles)  
+**Processing**: Stream + filter >$10K = 30-60 sec per cycle (vs 20 min unfiltered)  
+**Purpose**: Track billionaire money (Elon Musk, Koch brothers, etc.)
+
+**Example Records** (from indiv.zip):
 ```
 MUSK, ELON (TESLA/SPACEX) → America PAC: $75,000,000
 ADELSON, MIRIAM (Las Vegas Sands) → Preserve America PAC: $90,000,000
 ```
 
-**Why Different from `indiv{YY}.zip` (which we removed)**:
-- `indiv{YY}.zip`: Individual → **Candidate Committee** (has $3,300 limit per election)
-- `itcont{YY}.zip`: Individual → **Super PAC/Party Committee** (NO LIMIT!)
+**File Verification** (curl tests):
+- ✅ `indiv20.zip`: 5.46 GB (exists, HTTP 200)
+- ✅ `indiv22.zip`: 4.86 GB (exists, HTTP 200)
+- ✅ `indiv24.zip`: 4.02 GB (exists, HTTP 200)
+- ✅ `indiv26.zip`: 0.55 GB (exists, HTTP 200)
+- ❌ `itcont{20,22,24,26}.zip`: ALL HTTP 404 (don't exist!)
 
-**Key Insight**: Super PACs can accept unlimited individual donations! That's why billionaires use them.
+**Optimization Strategy** (to prevent gaming):
+1. **Aggregate by contributor FIRST** (NAME + EMPLOYER + CMTE_ID + Cycle)
+2. Sum ALL donations per person per committee per cycle
+3. **Then filter** contributors with total > $10,000
+4. This catches: Person gives $9,999 x 10 = $99,990 ✅
 
-**Optimization Strategy**:
-- Don't ingest ALL records (too big)
-- Filter to contributions > $10,000 (major donors only)
-- This reduces 16 GB → ~500 MB
-- Still captures 90% of the money
+**Performance Impact**:
+- Full parsing: 40M records, 4.5 GB, 20 min (would fail on Raspberry Pi 5)
+- Filtered: 150K records, 90 MB, 30-60 sec (266x fewer records, 50x smaller)
+- Memory: <500 MB with streaming (RP5 compatible!)
 
-**Status**: ❌ NOT INGESTED YET (deferred until after itoth)
+**Status**: 📋 PLANNED (need to create streaming parser asset)
 
 ---
 
-#### 3. `oth{YY}.zip` - Other Receipts (Loans, Refunds, Interest)
+#### ⏸️ Deferred: Other Receipts (oth.zip)
 
-**What**: Miscellaneous committee income  
+**What**: Miscellaneous committee income (loans, refunds, interest)  
 **Size**: ~50 MB per cycle (~200 MB for 4 cycles)  
-**Processing**: ~5 min per cycle (20 min total)  
-**Purpose**: Complete the funding picture (loans, refunds, interest income)
+**Purpose**: Complete funding picture with non-contribution income
 
-**Status**: ❌ NOT INGESTED YET (low priority)
+**Status**: ⏸️ LOW PRIORITY (focus on committee and individual money first)
 
 ---
 
-## What About `pas2{YY}.zip`?
+## Understanding pas2.zip - CRITICAL Data Model Insights
 
-**MAJOR DISCOVERY**: We ARE already ingesting upstream data! 🎉
+**CRITICAL DISCOVERY**: `pas2.zip` was INVERTED from what we thought! See `docs/PAS2_DATA_MODEL.md` for full details.
 
-`pas2.zip` contains **ALL itemized transactions**, including:
-- Committee → Candidate (Schedule A/B - what we filter for now)
-- Committee → Committee (Schedule A/B - **UPSTREAM DATA WE NEED!**)
-- Individual → Committee (Schedule A - large donors!)
-- Organization → Committee (Schedule A - corporate contributions!)
+### What pas2.zip Actually Contains:
 
-**Current State**:
-- ✅ We HAVE the data in `fec_{cycle}.itpas2` collection
-- ❌ We're NOT filtering/using it for upstream tracing yet
-- ❌ We're only using entity type = candidate in enrichment layer
+`pas2.zip` contains transactions from the **FILER's perspective** (money OUT), NOT recipient's perspective:
+- **CMTE_ID** = Committee FILING report (DONOR - giving money)
+- **OTHER_ID** = Recipient committee ID (RECIPIENT - receiving money)
+- **ENTITY_TP** = Type of transaction/recipient
 
-**The Data We Need is Already There**:
+### What We Get from pas2.zip:
+
+✅ **Committee → Committee transfers**:
+```python
+# Query: Find who gave TO a committee
+itpas2.find({
+  "OTHER_ID": target_committee_id,  # Committee receiving money
+  "ENTITY_TP": {"$in": ["COM", "PAC", "PTY", "CCM"]},
+  "TRANSACTION_TP": "24K"  # Direct contributions
+})
+# CMTE_ID = donor, OTHER_ID = recipient
 ```
-pas2.zip contains:
-├── Committee → Candidate (entity_tp = CAN) ← We use this ✅
-├── Committee → Committee (entity_tp = COM/PAC/PTY) ← We IGNORE this ❌
-├── Individual → Committee (entity_tp = IND) ← We IGNORE this ❌
-└── Organization → Committee (entity_tp = ORG) ← We IGNORE this ❌
-```
 
-**What We Need to Do**:
-1. Create new enrichment asset that filters `itpas2` for:
-   - `entity_tp IN ('COM', 'PAC', 'PTY')` → Committee → Committee
-   - `entity_tp = 'IND'` AND `amount > 10000` → Large individual donors
-   - `entity_tp = 'ORG'` → Corporate contributions
-2. Build `committee_funding_sources` collection from existing data
-3. NO NEW DOWNLOADS NEEDED! 🚀
+⚠️ **ENTITY_TP="IND" is MISLEADING**:
+- NOT direct individual→committee donations!
+- These are PAC→Candidate transfers attributed to individual PAC members
+- Example: "Steel PAC gave $1,000 to Terri Sewell, attributed to Philip Bell"
 
-**The Files We DON'T Need**:
-- ❌ `itoth.zip` - redundant, data is in `pas2.zip`!
-- ❌ `itcont.zip` - redundant, data is in `pas2.zip`!
-- ❌ `oth.zip` - might still need for loans/refunds, TBD
+⚠️ **ENTITY_TP="ORG" is ALSO MISLEADING**:
+- NOT direct organization→committee contributions!
+- These are committee→committee transfers with org attribution
+- Often earmarked contributions (e.g., "IAO Property Holdings via PAC to candidate")
 
-**This Changes Everything**:
-- No new downloads (we have the data!)
-- No new storage (it's already there!)
-- No new processing time (data already parsed!)
-- Just need to filter differently in enrichment layer!
+### What We DON'T Get from pas2.zip:
 
-**Implementation is now MUCH simpler** - see revised Phase 1 below.
+❌ **Direct Individual → Committee Donations**:
+- Need `indiv.zip` for true billionaire→committee money
+- pas2 only has PAC-attributed names, not direct donations
+
+❌ **Direct Organization → Committee Contributions**:
+- Would need different data source
+- Direct corporate contributions are illegal anyway (corporations use PACs)
+
+### Implementation Status (November 2025):
+
+✅ **Fixed pas2 data model** (CMTE_ID/OTHER_ID swap corrected)
+✅ **Implemented committee→committee upstream tracing**
+✅ **Reclassified corporate PACs** (Q/N types) as organizations
+📋 **Need to add indiv.zip parsing** for direct individual donations
 
 ---
 
@@ -648,42 +659,113 @@ db.bills.aggregate([
 - Candidate financials (who receives money)
 - Donor financials (who gives money downstream)
 
-### 🚀 Phase 1: Upstream Tracing (Next - 2-3 days) **SIMPLIFIED!**
-**Priority: Filter existing `itpas2` data for upstream sources**
+### ✅ Phase 1: Upstream Committee Tracing (COMPLETE - November 2025)
+**Status**: Implemented in `src/assets/enrichment/enriched_committee_funding.py`
 
-**Discovery**: We already have ALL the data in `pas2.zip` / `itpas2` collections!
+**What We Built**:
+1. ✅ Fixed pas2 data model understanding (CMTE_ID/OTHER_ID swap)
+2. ✅ Committee→committee upstream tracing using itpas2
+3. ✅ Corporate PAC reclassification (Q/N types → from_organizations)
+4. ✅ Transparency scoring with red flag detection
+5. ✅ Created `enriched_{cycle}.committee_funding_sources` collection
 
-**New Implementation Plan**:
-1. ~~Create new FEC asset~~ ← NOT NEEDED!
-2. ~~Add to data_sync downloads~~ ← NOT NEEDED!
-3. Create enrichment asset: `src/assets/enrichment/enriched_committee_funding.py`
-4. Query existing `fec_{cycle}.itpas2` collection with filters:
-   ```python
-   # Committee → Committee transfers
-   itpas2.find({"ENTITY_TP": {"$in": ["COM", "PAC", "PTY"]}})
-   
-   # Large individual donors (>$10K)
-   itpas2.find({"ENTITY_TP": "IND", "TRANSACTION_AMT": {"$gt": 10000}})
-   
-   # Corporate contributions
-   itpas2.find({"ENTITY_TP": "ORG"})
-   ```
-5. Build `enriched_{cycle}.committee_funding_sources` collection
-6. Calculate transparency scores
-7. Add upstream fields to `aggregation.donor_financials`
+**Example Output**:
+```javascript
+{
+  committee_id: "C00541862",  // Jason Smith For Congress
+  funding_sources: {
+    from_organizations: [  // Reclassified corporate PACs
+      {
+        organization_name: "EXXONMOBIL POLITICAL ACTION COMMITTEE",
+        organization_type: "Corporate PAC",
+        pac_committee_type: "Q",
+        total_amount: 250000
+      }
+    ],
+    from_committees: [  // Political PACs/Super PACs
+      {
+        committee_name: "AMERICAN BRIDGE 21ST CENTURY",
+        committee_type: "O",  // Super PAC
+        total_amount: 150000
+      }
+    ],
+    from_individuals: []  // Empty until Phase 2
+  }
+}
+```
 
-**Deliverable**: See corporate PACs funding Super PACs **using data we already have!**
+**Results**:
+- Steve Scalise: $7.3M from corporate PACs (ExxonMobil, Lockheed, AIPAC)
+- Jason Smith: $7.8M from corporate PACs (Valero, Marathon Petroleum)
+- Corporate PACs correctly showing as `from_organizations` instead of `from_committees`
 
-**Files to create**:
-- `src/assets/enrichment/enriched_committee_funding.py`
-
-**Processing impact**: +15 min, +0 MB storage (data already exists!)
+**Processing impact**: +15 min per cycle, +0 MB storage (uses existing itpas2 data)
 
 **Cost impact**: $0 (no new downloads!)
 
 ---
 
-### 🎯 Phase 2: AI Committee Positions (1-2 days)
+### 🚀 Phase 2: Individual Billionaire Tracking (NEXT - 2-3 days)
+**Priority: Add `indiv.zip` streaming parser with >$10K threshold**
+
+**Implementation Plan**:
+1. Create `src/assets/fec/indiv.py` - Streaming download + parse asset
+2. Implement aggregation strategy (aggregate by contributor FIRST, then filter):
+   ```python
+   # Step 1: Aggregate all donations by (NAME + EMPLOYER + CMTE_ID + Cycle)
+   contributor_totals = defaultdict(lambda: {'total': 0, 'count': 0, 'contributions': []})
+   
+   for txn in stream_indiv_zip():
+       key = (txn['NAME'], txn['EMPLOYER'], txn['CMTE_ID'], cycle)
+       contributor_totals[key]['total'] += txn['TRANSACTION_AMT']
+       contributor_totals[key]['count'] += 1
+       contributor_totals[key]['contributions'].append(txn)
+   
+   # Step 2: Filter contributors with total > $10K
+   large_contributors = {
+       k: v for k, v in contributor_totals.items() 
+       if v['total'] > 10000
+   }
+   ```
+3. Insert into `fec_{cycle}.indiv_large` collection (150K records vs 40M)
+4. Update `enriched_committee_funding.py` to query indiv_large
+5. Populate `from_individuals` in committee_funding_sources
+
+**This Prevents Gaming**:
+- Person gives $9,999 x 10 = $99,990 → Will be captured ✅
+- Aggregate first, then filter (not filter individual transactions)
+
+**Example Output After Implementation**:
+```javascript
+{
+  committee_id: "C00571703",  // Senate Leadership Fund
+  funding_sources: {
+    from_individuals: [  // NEW!
+      {
+        contributor_name: "MUSK, ELON",
+        employer: "TESLA INC",
+        total_amount: 75000000,
+        contribution_count: 3
+      }
+    ],
+    from_organizations: [...],  // Corporate PACs
+    from_committees: [...]       // Political PACs
+  }
+}
+```
+
+**Files to create**:
+- `src/assets/fec/indiv.py` - Streaming parser with aggregation
+
+**Processing impact**: +30-60 sec per cycle (vs 20 min unfiltered)
+
+**Storage impact**: +90 MB per cycle (vs 4.5 GB unfiltered) = 95% reduction!
+
+**Cost impact**: $0 (just parsing time, no API costs)
+
+---
+
+### 🎯 Phase 3: AI Committee Positions (1-2 days)
 **Priority: Generate legislative positions for top committees**
 
 1. Add Anthropic SDK to requirements: `anthropic>=0.34.0`
@@ -702,7 +784,7 @@ db.bills.aggregate([
 
 ---
 
-### 📊 Phase 3: Lobbying Integration (1 week)
+### 📊 Phase 4: Lobbying Integration (1 week)
 **Priority: Ingest Senate LDA API data**
 
 1. Use existing `src/api/lobbying_api.py`
@@ -721,7 +803,7 @@ db.bills.aggregate([
 
 ---
 
-### 📖 Phase 4: Bill Ingestion (1 week)
+### 📖 Phase 5: Bill Ingestion (1 week)
 **Priority: Congress.gov API integration**
 
 1. Use existing `src/api/congress_api.py`
@@ -741,7 +823,7 @@ db.bills.aggregate([
 
 ---
 
-### 🤖 Phase 5: AI Bill Matching (2-3 days)
+### 🤖 Phase 6: AI Bill Matching (2-3 days)
 **Priority: Match bills to committee positions**
 
 1. Create asset: `src/assets/ai/bill_matching.py`
@@ -760,7 +842,7 @@ db.bills.aggregate([
 
 ---
 
-### 🎨 Phase 6: Dashboard Queries (ongoing)
+### 🎨 Phase 7: Dashboard Queries (ongoing)
 **Priority: Build aggregation pipelines for UI**
 
 Common queries to optimize:
@@ -774,105 +856,133 @@ Common queries to optimize:
 
 ---
 
-### ⏳ Phase 7: Large Donor Tracking (deferred)
-**Priority: Add `itcont{YY}.zip` with filtering**
+### ⏸️ Phase 8: Other Receipts Tracking (deferred)
+**Priority: Add `oth{YY}.zip` for loans/refunds**
 
-Only if needed for billionaire tracking:
-1. Download `itcont` with streaming
-2. Filter to contributions > $10,000
-3. Store in `enriched_{cycle}.large_individual_donors`
-4. Link to committees
+Only if needed for complete financial picture:
+1. Download `oth.zip` files (~50 MB per cycle)
+2. Parse loans, refunds, interest income
+3. Store in `fec_{cycle}.oth` collection
+4. Add to committee_funding_sources
 
-**Processing impact**: +2 hours, +500 MB (filtered)
+**Processing impact**: +5 min per cycle, +200 MB total
 
-**Decision point**: Do after Phase 1-6, evaluate if needed
+**Decision point**: Low priority - focus on committee and individual money first
 
 ---
 
 ## Cost Summary
 
-| Phase | Storage | Processing Time | Monthly Cost | One-Time Cost |
-|-------|---------|-----------------|--------------|---------------|
-| Current | 1.4 GB | 25 min | $0 | $0 |
-| + Upstream (filter itpas2) | +0 MB | +15 min | $0 | $0 |
-| + AI Positions | +10 MB | +30 min | $1 | $25 |
-| + Lobbying | +200 MB | +2 hours | $0 | $0 |
-| + Bills | +100 MB | +4 hours | $0 | $0 |
-| + AI Matching | +50 MB | +1 hour | $8 | $0 |
-| **TOTAL** | **1.76 GB** | **8.25 hours initial** | **$9/month** | **$25** |
+| Phase | Storage | Processing Time | Monthly Cost | One-Time Cost | Status |
+|-------|---------|-----------------|--------------|---------------|--------|
+| Current (pas2, etc.) | 1.4 GB | 25 min | $0 | $0 | ✅ Done |
+| + Upstream Committee Tracing | +0 MB | +15 min | $0 | $0 | ✅ Done |
+| + Individual Donations (indiv.zip filtered) | +360 MB | +2 min | $0 | $0 | 📋 Next |
+| + AI Positions | +10 MB | +30 min | $1 | $25 | 🎯 Later |
+| + Lobbying | +200 MB | +2 hours | $0 | $0 | 📊 Later |
+| + Bills | +100 MB | +4 hours | $0 | $0 | 📖 Later |
+| + AI Matching | +50 MB | +1 hour | $8 | $0 | 🤖 Later |
+| **TOTAL** | **2.12 GB** | **8.5 hours initial** | **$9/month** | **$25** | |
 
-**Steady state**: 
-- Monthly processing: ~30 min (updates only)
-- Monthly cost: $9 (Claude API)
-- Storage: 1.76 GB (no new downloads needed!)
+**Current State** (November 2025):
+- Storage: 1.4 GB (raw FEC + enrichments)
+- Processing: 40 min per cycle (data sync + enrichments)
+- Monthly cost: $0 (no API usage yet)
+- **Upstream committee tracing WORKING** - showing corporate PAC → politician flows
+
+**After Individual Donations** (Phase 2):
+- Storage: 1.76 GB (+360 MB for indiv_large across 4 cycles)
+- Processing: 42 min per cycle (+2 min for streaming indiv parser)
+- Monthly cost: $0 (still no API usage)
+- **Will show billionaire → committee flows**
+
+**Steady State** (All phases complete):
+- Monthly processing: ~45 min (updates only)
+- Monthly cost: $9 (Claude API for AI matching)
+- Storage: 2.12 GB
 - Monthly value: **PRICELESS** 🚀
 
 ---
 
 ## Technical Notes
 
-### Why itcont vs indiv?
+### Why indiv.zip vs itcont.zip vs pas2.zip?
 
-**IMPORTANT DISCOVERY**: Both `indiv.zip` and `itcont.zip` data are IN `pas2.zip`!
+**CRITICAL DISCOVERY** (November 2025): File structure is NOT what we thought!
 
-**The Real Story**:
+#### File Existence Reality Check:
 
-`pas2.zip` contains **ALL itemized transactions**:
-- Schedule A (Receipts): Money coming INTO committees
-- Schedule B (Disbursements): Money going OUT of committees
+✅ **`indiv{YY}.zip`** - EXISTS (verified via curl):
+- indiv20.zip: 5.46 GB (HTTP 200)
+- indiv22.zip: 4.86 GB (HTTP 200)
+- indiv24.zip: 4.02 GB (HTTP 200)
+- indiv26.zip: 0.55 GB (HTTP 200)
+- **Total: ~15 GB across 4 cycles**
 
-**What this means**:
+❌ **`itcont{YY}.zip`** - DOES NOT EXIST:
+- itcont20.zip: HTTP 404
+- itcont22.zip: HTTP 404
+- itcont24.zip: HTTP 404
+- itcont26.zip: HTTP 404
+- **Contrary to documentation - these files don't exist!**
 
-**`indiv{YY}.zip`** (standalone file - REMOVED, now redundant):
-- Individual → **Candidate Committee** donations
-- Subject to $3,300 per election limit (hard cap)
-- 40M+ records per cycle
-- **Redundant with `pas2.zip` where `ENTITY_TP = 'IND'` AND recipient is candidate committee**
-- We removed this because:
-  - Already in `pas2.zip`!
-  - Too large (16 GB) for limited value
-  - Capped contributions (not major influence)
-  - Aggregates available in `webl.zip` summaries
+⚠️ **`pas2{YY}.zip`** - EXISTS but MISLEADING:
+- Contains ENTITY_TP="IND" but these are PAC-attributed, NOT direct donations
+- "IND" means: PAC→Candidate transfer attributed to individual PAC member
+- Example: "Steel PAC gave $1,000 to Terri Sewell, attributed to Philip Bell"
+- **NOT the same as direct individual donations!**
 
-**`itcont{YY}.zip`** (standalone file - ALSO REDUNDANT!):
-- Individual → **Super PAC/Party Committee** donations
-- **NO CONTRIBUTION LIMITS** (post-Citizens United)
-- Same size as `indiv` (~2-4 GB per cycle)
-- **Also redundant with `pas2.zip` where `ENTITY_TP = 'IND'` AND recipient is Super PAC/Party**
-- Contains $10M+ donations from billionaires
-- Can be filtered to >$10K contributions = 90% of money, 10% of records
+#### What Each File Actually Contains:
 
-**Your Insight is Correct**:
-- `indiv`: Individual → Candidate (limited to $3,300)
-- `itcont`: Individual → Super PAC (UNLIMITED!)
-- **But BOTH are in `pas2.zip` already!**
+**`indiv.zip`** (standalone file):
+- **Direct** Individual → Committee/Candidate donations
+- Includes ALL committees (candidates, PACs, Super PACs, party committees)
+- NO CONTRIBUTION LIMITS for Super PAC donations (post-Citizens United)
+- 40M+ records per cycle (includes $5, $10, $25 donations)
+- **This is the billionaire money we need!**
 
-**Why FEC has separate files**:
-- Historical reasons (different filing schedules)
-- Convenience for researchers who only want one type
-- But for comprehensive analysis, `pas2.zip` has it all
+**`pas2.zip`** (itpas2 collection):
+- Committee-filed transactions (Schedule A/B)
+- ENTITY_TP="IND" = PAC-attributed contributions (NOT direct individual donations)
+- ENTITY_TP="COM/PAC/PTY" = Committee→Committee transfers ✅ (this we use)
+- ENTITY_TP="ORG" = Earmarked contributions (NOT direct org donations)
 
-**What we're doing**:
+#### Our Approach (November 2025):
+
+**For Committee→Committee Money** (corporate PACs):
 ```python
-# We already have this data in itpas2!
-# Just need to filter by ENTITY_TP and CMTE_TP:
-
-# Large donors to Super PACs (the billionaire money)
+# Use pas2.zip (itpas2 collection) - ALREADY IMPLEMENTED
 itpas2.find({
-  "ENTITY_TP": "IND",           # From individual
-  "TRANSACTION_AMT": {"$gt": 10000},  # Major donation
-  # Recipient is Super PAC (can query committee type from cm collection)
+  "ENTITY_TP": {"$in": ["COM", "PAC", "PTY", "CCM"]},
+  "TRANSACTION_TP": "24K",
+  "OTHER_ID": target_committee_id  # Who received money
 })
-
-# Small donors to candidates (grassroots)
-itpas2.find({
-  "ENTITY_TP": "IND",           # From individual  
-  "TRANSACTION_AMT": {"$lte": 3300},  # Within limit
-  # Recipient is candidate committee
-})
+# ✅ This works! Shows ExxonMobil PAC → politicians
 ```
 
-**Bottom Line**: We already have ALL the individual contribution data in `pas2.zip` / `itpas2` collection. No need to download separate files!
+**For Individual→Committee Money** (billionaires):
+```python
+# Need indiv.zip (NOT pas2!) - PLANNED FOR PHASE 2
+# Step 1: Aggregate by contributor
+contributor_totals = {}
+for txn in stream_indiv_zip():
+    key = (txn['NAME'], txn['EMPLOYER'], txn['CMTE_ID'], cycle)
+    contributor_totals[key]['total'] += txn['TRANSACTION_AMT']
+
+# Step 2: Filter contributors with total > $10K
+large_contributors = {k: v for k, v in contributor_totals.items() if v['total'] > 10000}
+# 📋 Reduces 40M records → 150K (billionaires only)
+```
+
+**Why We Can't Use pas2 for Individual Donations**:
+1. ENTITY_TP="IND" in pas2 = PAC-attributed (indirect), not direct
+2. Only 309 records with ENTITY_TP="IND" in pas2_2024 (vs 40M in indiv.zip)
+3. Missing the actual billionaire→Super PAC money trail
+
+**Bottom Line**: 
+- ✅ Committee money = Use pas2 (already done)
+- 📋 Individual money = Need indiv.zip (phase 2)
+- ❌ itcont.zip doesn't exist (was a documentation error)
 
 ---
 
@@ -903,6 +1013,13 @@ itpas2.find({
 
 ## Document Version
 
-**Last Updated**: October 25, 2025  
-**Status**: Planning phase - upstream tracing ready to implement  
-**Next Action**: Create `itoth.py` asset and begin Phase 1
+**Last Updated**: November 1, 2025  
+**Status**: Phase 1 complete (upstream committee tracing), Phase 2 planned (individual donations)  
+**Next Action**: Create `src/assets/fec/indiv.py` streaming parser with >$10K threshold aggregation
+
+**Recent Changes**:
+- November 2025: Implemented upstream committee tracing using pas2.zip
+- November 2025: Fixed pas2 data model (CMTE_ID/OTHER_ID inversion)
+- November 2025: Reclassified corporate PACs (Q/N types) as organizations
+- November 2025: Discovered itcont.zip doesn't exist (use indiv.zip instead)
+- November 2025: Designed aggregation strategy to prevent threshold gaming

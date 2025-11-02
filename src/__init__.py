@@ -45,6 +45,7 @@ from src.assets import (
     enriched_webl_asset,
     enriched_weball_asset,
     enriched_webk_asset,
+    enriched_committee_funding_asset,  # 🎯 NEW: Upstream money tracing!
     
     # Aggregation assets (cross-cycle rollups → aggregation database)
     candidate_financials_asset,
@@ -88,6 +89,7 @@ defs = Definitions(
         enriched_webl_asset,
         enriched_weball_asset,
         enriched_webk_asset,
+        enriched_committee_funding_asset,
         
         # Aggregation assets (cross-cycle rollups → aggregation database)
         candidate_financials_asset,

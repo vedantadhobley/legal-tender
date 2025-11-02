@@ -45,6 +45,7 @@ fec_pipeline_job = define_asset_job(
         "enriched_webk",                  # Filter webk to linked committees
         "enriched_candidate_financials",  # Per-cycle candidate financial summaries
         "enriched_donor_financials",      # Per-cycle donor financial summaries
+        "enriched_committee_funding",     # Per-cycle upstream funding sources (WHO funds committees)
         
         # Phase 5: Aggregation (cross-cycle rollups)
         "candidate_financials",
