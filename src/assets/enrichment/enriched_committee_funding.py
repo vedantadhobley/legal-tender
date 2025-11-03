@@ -175,13 +175,26 @@ def enriched_committee_funding_asset(
                         'count': 0
                     }
                 
-                funding_by_committee[recipient_id]['from_committees'][donor_id]['transactions'].append({
+                # Always aggregate totals
+                funding_by_committee[recipient_id]['from_committees'][donor_id]['total'] += amount
+                funding_by_committee[recipient_id]['from_committees'][donor_id]['count'] += 1
+                
+                # Only keep top 10 transactions (memory optimization)
+                transactions = funding_by_committee[recipient_id]['from_committees'][donor_id]['transactions']
+                txn_data = {
                     'amount': amount,
                     'date': txn.get('TRANSACTION_DT'),
                     'transaction_id': txn.get('TRAN_ID')
-                })
-                funding_by_committee[recipient_id]['from_committees'][donor_id]['total'] += amount
-                funding_by_committee[recipient_id]['from_committees'][donor_id]['count'] += 1
+                }
+                
+                if len(transactions) < 10:
+                    transactions.append(txn_data)
+                else:
+                    # Keep top 10 by amount (like indiv pattern)
+                    transactions.sort(key=lambda x: x['amount'], reverse=True)
+                    if amount > transactions[-1]['amount']:
+                        transactions[-1] = txn_data
+                
                 cmte_count += 1
             
             context.log.info(f"   ✅ Found {cmte_count:,} committee→committee transfers")
@@ -246,14 +259,27 @@ def enriched_committee_funding_asset(
                         'count': 0
                     }
                 
-                funding_by_committee[recipient_id]['from_committees'][donor_id]['transactions'].append({
+                # Always aggregate totals
+                funding_by_committee[recipient_id]['from_committees'][donor_id]['total'] += amount
+                funding_by_committee[recipient_id]['from_committees'][donor_id]['count'] += 1
+                
+                # Only keep top 10 transactions (memory optimization)
+                transactions = funding_by_committee[recipient_id]['from_committees'][donor_id]['transactions']
+                txn_data = {
                     'amount': amount,
                     'date': txn.get('TRANSACTION_DT'),
                     'transaction_id': txn.get('TRAN_ID'),
                     'memo': f"Attributed to: {org_name}"
-                })
-                funding_by_committee[recipient_id]['from_committees'][donor_id]['total'] += amount
-                funding_by_committee[recipient_id]['from_committees'][donor_id]['count'] += 1
+                }
+                
+                if len(transactions) < 10:
+                    transactions.append(txn_data)
+                else:
+                    # Keep top 10 by amount
+                    transactions.sort(key=lambda x: x['amount'], reverse=True)
+                    if amount > transactions[-1]['amount']:
+                        transactions[-1] = txn_data
+                
                 earmark_count += 1
             
             context.log.info(f"   ✅ Found {earmark_count:,} org-attributed committee contributions")

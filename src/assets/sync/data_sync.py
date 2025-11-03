@@ -367,53 +367,7 @@ def data_sync_asset(
                 stats['errors'].append(f"fec/{cycle}/transactions/indiv: {str(e)}")
     
     # =========================================================================
-    # =========================================================================
-    # Phase 5: Operating Expenditures (oppexp.zip - Committee Spending on Vendors/Services)
-    # =========================================================================
-    
-    if config.sync_fec_core:  # oppexp is part of core FEC data
-        context.log.info("\n💸 Phase 5.5: Syncing Operating Expenditures (oppexp.zip - WHERE committees spend money)")
-        context.log.info("-" * 80)
-        context.log.info("    These show committee spending on vendors, advertising, services, etc.")
-        
-        for cycle in config.cycles:
-            context.log.info(f"\n{cycle} Cycle:")
-            
-            try:
-                path_method = getattr(repo, FEC_FILE_MAPPING['oppexp'])
-                local_path = path_method(cycle)
-                
-                year_suffix = cycle[-2:]
-                fec_filename = f"oppexp{year_suffix}.zip"
-                remote_url = f"https://www.fec.gov/files/bulk-downloads/{cycle}/{fec_filename}"
-                
-                if should_download_file(
-                    local_path,
-                    remote_url,
-                    config.force_refresh,
-                    config.check_remote_modified,
-                    context
-                ):
-                    context.log.info(f"⬇️  Downloading {local_path.name}...")
-                    path = download_fec_file('oppexp', cycle, config.force_refresh, repo)
-                    
-                    file_size = path.stat().st_size
-                    stats['files_downloaded'].append(f"fec/{cycle}/transactions/{local_path.name}")
-                    stats['fec'][cycle]['files_downloaded'].append(local_path.name)
-                    stats['fec'][cycle]['bytes'] += file_size
-                    stats['total_bytes'] += file_size
-                    
-                    context.log.info(f"✓ Downloaded {local_path.name} ({file_size/1024/1024:.1f} MB)")
-                else:
-                    stats['files_skipped'].append(f"fec/{cycle}/transactions/{local_path.name}")
-                    stats['fec'][cycle]['files_skipped'].append(local_path.name)
-            
-            except Exception as e:
-                context.log.error(f"❌ Error downloading oppexp for {cycle}: {e}")
-                stats['errors'].append(f"fec/{cycle}/transactions/oppexp: {str(e)}")
-    
-    # =========================================================================
-    # Phase 6: Committee Transfers (pas2.zip - Leadership PAC Tracking)
+    # Phase 5: Committee Transfers (pas2.zip - Leadership PAC Tracking)
     # =========================================================================
     
     if config.sync_committee_transfers:
