@@ -244,22 +244,32 @@ def enriched_candidate_financials_asset(
                 # 24K = Contribution to nonaffiliated committee (454K transactions - main one!)
                 # 24Z = In-kind contribution to registered filer (1,650 transactions)
                 # Note: 24A/24E are independent expenditures (tracked separately)
-                pac_committees = {}
+                
+                # NEW: Separate by committee type (Corporate PACs vs Political PACs)
+                corporate_pac_types = {'Q', 'N'}  # Q = Qualified connected, N = Non-qualified
+                
+                corporate_pac_committees = {}  # Q/N types - represent organizations directly
+                political_pac_committees = {}   # O/W/I/S types - need upstream tracing
 
                 for doc in itpas2_collection.find({"candidate_id": {"$in": candidate_ids}}):  # Match ANY of this member's candidate IDs
                     cmte_id = doc.get('filer_committee_id')
                     amount = doc.get('amount', 0)
                     transaction_type = doc.get('transaction_type', '')
+                    cmte_type = doc.get('filer_committee_type', '')
                     
                     # Only include direct contribution types
                     if transaction_type not in ['24C', '24F', '24K', '24Z']:
                         continue
                     
-                    if cmte_id not in pac_committees:
-                        pac_committees[cmte_id] = {
+                    # Determine which bucket this committee belongs to
+                    is_corporate_pac = cmte_type in corporate_pac_types
+                    target_dict = corporate_pac_committees if is_corporate_pac else political_pac_committees
+                    
+                    if cmte_id not in target_dict:
+                        target_dict[cmte_id] = {
                             'committee_id': cmte_id,
                             'committee_name': doc.get('filer_committee_name', ''),
-                            'committee_type': doc.get('filer_committee_type', ''),
+                            'committee_type': cmte_type,
                             'connected_org': doc.get('filer_connected_org', ''),
                             'total_amount': 0,
                             'transaction_count': 0,
@@ -267,31 +277,44 @@ def enriched_candidate_financials_asset(
                         }
                     
                     # Add the amount as-is (signs are already correct)
-                    pac_committees[cmte_id]['total_amount'] += amount
-                    pac_committees[cmte_id]['transaction_count'] += 1
-                    pac_committees[cmte_id]['transactions'].append({
+                    target_dict[cmte_id]['total_amount'] += amount
+                    target_dict[cmte_id]['transaction_count'] += 1
+                    target_dict[cmte_id]['transactions'].append({
                         'amount': amount,
                         'date': doc.get('transaction_date', ''),
                         'transaction_type': transaction_type,
                         'transaction_id': doc.get('transaction_id', ''),
                     })
                 
-                # Sort and limit (sort by absolute value for display purposes)
-                for cmte in pac_committees.values():
+                # Sort and limit transactions (sort by absolute value for display purposes)
+                for cmte in list(corporate_pac_committees.values()) + list(political_pac_committees.values()):
                     cmte['transactions'] = sorted(
                         cmte['transactions'],
                         key=lambda x: abs(x['amount']),
                         reverse=True
                     )[:10]
                 
-                pac_list = sorted(
-                    pac_committees.values(),
+                # Sort each list by total amount
+                corporate_pac_list = sorted(
+                    corporate_pac_committees.values(),
+                    key=lambda x: x['total_amount'],
+                    reverse=True
+                )
+                political_pac_list = sorted(
+                    political_pac_committees.values(),
                     key=lambda x: x['total_amount'],
                     reverse=True
                 )
                 
-                pac_total = sum(c['total_amount'] for c in pac_list)
-                pac_count = sum(c['transaction_count'] for c in pac_list)
+                # Calculate totals for each type
+                corporate_pac_total = sum(c['total_amount'] for c in corporate_pac_list)
+                corporate_pac_count = sum(c['transaction_count'] for c in corporate_pac_list)
+                political_pac_total = sum(c['total_amount'] for c in political_pac_list)
+                political_pac_count = sum(c['transaction_count'] for c in political_pac_list)
+                
+                # Combined totals (for backward compatibility)
+                pac_total = corporate_pac_total + political_pac_total
+                pac_count = corporate_pac_count + political_pac_count
                 
                 # Build final record (keyed by bioguide_id)
                 financial_record = {
@@ -317,10 +340,25 @@ def enriched_candidate_financials_asset(
                         }
                     },
                     
+                    # NEW: Separated PAC contributions by type
+                    'direct_contributions': {
+                        'from_corporate_pacs': {
+                            'total_amount': corporate_pac_total,
+                            'transaction_count': corporate_pac_count,
+                            'committees': corporate_pac_list
+                        },
+                        'from_political_pacs': {
+                            'total_amount': political_pac_total,
+                            'transaction_count': political_pac_count,
+                            'committees': political_pac_list
+                        }
+                    },
+                    
+                    # DEPRECATED: Keep for backward compatibility (will remove in aggregation layer)
                     'pac_contributions': {
                         'total_amount': pac_total,
                         'transaction_count': pac_count,
-                        'committees': pac_list
+                        'committees': corporate_pac_list + political_pac_list  # Combined list
                     },
                     
                     'summary': {
