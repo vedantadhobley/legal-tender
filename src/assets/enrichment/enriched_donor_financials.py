@@ -22,7 +22,6 @@ class EnrichedDonorFinancialsConfig(Config):
     group_name="enrichment",
     ins={
         "enriched_itpas2": AssetIn(key="enriched_itpas2"),
-        "enriched_oppexp": AssetIn(key="enriched_oppexp"),
     },
     compute_kind="aggregation",
     description="Per-cycle aggregation of all money flows from each committee with recipient and category separation"
@@ -32,7 +31,6 @@ def enriched_donor_financials_asset(
     config: EnrichedDonorFinancialsConfig,
     mongo: MongoDBResource,
     enriched_itpas2: Dict[str, Any],
-    enriched_oppexp: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Aggregate ALL money flows FROM each committee within a single cycle.
@@ -91,35 +89,13 @@ def enriched_donor_financials_asset(
             ]
         },
         
-        // Operating Expenditures (spending on vendors/services)
-        operating_expenditures: {
-            total_amount: 350000,
-            transaction_count: 123,
-            categories: [  // ALL categories sorted by amount (descending)
-                {
-                    category: "Advertising",
-                    total_amount: 150000,
-                    transaction_count: 45
-                }
-            ],
-            payees: [  // ALL payees sorted by amount (descending)
-                {
-                    payee_name: "Media Vendor Inc",
-                    total_amount: 75000,
-                    transaction_count: 12,
-                    transactions: [...]  // largest 10 transactions only
-                }
-            ]
-        },
-        
         // Summary totals
         summary: {
-            total_spent: 7350000,  // all expenditures combined
+            total_spent: 7000000,  // all expenditures combined
             total_to_candidates: 6200000,  // indie + pac
             total_support: 5000000,
             total_oppose: 800000,
-            total_operating: 350000,
-            total_transactions: 813,
+            total_transactions: 690,
             tracked_candidates_count: 45  // number of tracked candidates supported/opposed
         },
         
@@ -133,7 +109,6 @@ def enriched_donor_financials_asset(
         'committees_processed': 0,
         'total_independent_expenditures': 0,
         'total_pac_contributions': 0,
-        'total_operating_expenditures': 0,
     }
     
     with mongo.get_client() as client:
@@ -141,14 +116,13 @@ def enriched_donor_financials_asset(
             context.log.info(f"Processing cycle {cycle}")
             
             itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"enriched_{cycle}")
-            oppexp_collection = mongo.get_collection(client, "oppexp", database_name=f"enriched_{cycle}")
             financials_collection = mongo.get_collection(client, "donor_financials", database_name=f"enriched_{cycle}")
             
             # Clear existing data for this cycle
             financials_collection.delete_many({})
             context.log.info(f"Cleared existing donor_financials for cycle {cycle}")
             
-            # Get all unique committees from itpas2 and oppexp
+            # Get all unique committees from itpas2
             all_committees = {}
             
             # Gather from itpas2 (covers both indie expenditures and PAC contributions)
@@ -170,18 +144,6 @@ def enriched_donor_financials_asset(
                         all_committees[cmte_id]['connected_org'] = doc.get('filer_connected_org', '')
                     if not all_committees[cmte_id]['party']:
                         all_committees[cmte_id]['party'] = doc.get('filer_party', '')
-            
-            # Gather from oppexp
-            for doc in oppexp_collection.find():
-                cmte_id = doc.get('committee_id')
-                if cmte_id and cmte_id not in all_committees:
-                    all_committees[cmte_id] = {
-                        'committee_id': cmte_id,
-                        'committee_name': doc.get('committee_name', ''),
-                        'committee_type': '',
-                        'connected_org': '',
-                        'party': '',
-                    }
             
             context.log.info(f"Found {len(all_committees)} unique committees in cycle {cycle}")
             
@@ -323,65 +285,6 @@ def enriched_donor_financials_asset(
                 pac_total = sum(c['total_amount'] for c in pac_list)
                 pac_count = sum(c['transaction_count'] for c in pac_list)
                 
-                # === OPERATING EXPENDITURES ===
-                oppexp_categories = {}
-                oppexp_payees = {}
-                
-                for doc in oppexp_collection.find({"committee_id": cmte_id}):
-                    amount = doc.get('amount', 0)
-                    category = doc.get('category_desc', '') or doc.get('category', '') or 'Uncategorized'
-                    payee = doc.get('payee_name', '') or 'Unknown'
-                    
-                    # Track by category
-                    if category not in oppexp_categories:
-                        oppexp_categories[category] = {
-                            'category': category,
-                            'total_amount': 0,
-                            'transaction_count': 0
-                        }
-                    oppexp_categories[category]['total_amount'] += amount
-                    oppexp_categories[category]['transaction_count'] += 1
-                    
-                    # Track by payee
-                    if payee not in oppexp_payees:
-                        oppexp_payees[payee] = {
-                            'payee_name': payee,
-                            'total_amount': 0,
-                            'transaction_count': 0,
-                            'transactions': []
-                        }
-                    oppexp_payees[payee]['total_amount'] += amount
-                    oppexp_payees[payee]['transaction_count'] += 1
-                    oppexp_payees[payee]['transactions'].append({
-                        'amount': amount,
-                        'date': doc.get('transaction_date', ''),
-                        'purpose': doc.get('purpose', ''),
-                        'transaction_id': doc.get('transaction_id', ''),
-                    })
-                
-                # Sort and limit
-                for payee in oppexp_payees.values():
-                    payee['transactions'] = sorted(
-                        payee['transactions'],
-                        key=lambda x: x['amount'],
-                        reverse=True
-                    )[:10]
-                
-                oppexp_categories_list = sorted(
-                    oppexp_categories.values(),
-                    key=lambda x: x['total_amount'],
-                    reverse=True
-                )  # All categories sorted
-                
-                oppexp_payees_list = sorted(
-                    oppexp_payees.values(),
-                    key=lambda x: x['total_amount'],
-                    reverse=True
-                )  # All payees sorted
-                
-                oppexp_total = sum(c['total_amount'] for c in oppexp_categories.values())
-                oppexp_count = sum(c['transaction_count'] for c in oppexp_categories.values())
-                
                 # Build final record
                 tracked_candidates = set(
                     list(indie_support_candidates.keys()) + 
@@ -411,27 +314,19 @@ def enriched_donor_financials_asset(
                         'candidates': pac_list
                     },
                     
-                    'operating_expenditures': {
-                        'total_amount': oppexp_total,
-                        'transaction_count': oppexp_count,
-                        'categories': oppexp_categories_list,  # All categories, sorted by amount
-                        'payees': oppexp_payees_list  # All payees, sorted by amount
-                    },
-                    
                     'summary': {
                         # Raw totals by category
                         'total_independent_support': indie_support_total,
                         'total_independent_oppose': indie_oppose_total,
                         'total_pac_contributions': pac_total,
-                        'total_operating': oppexp_total,
                         
                         # Calculated fields
                         'net_independent_expenditures': indie_support_total - indie_oppose_total,
                         'total_to_candidates': indie_support_total + indie_oppose_total + pac_total,
-                        'total_spent': indie_support_total + indie_oppose_total + pac_total + oppexp_total,
+                        'total_spent': indie_support_total + indie_oppose_total + pac_total,
                         
                         # Counts
-                        'total_transactions': indie_support_count + indie_oppose_count + pac_count + oppexp_count,
+                        'total_transactions': indie_support_count + indie_oppose_count + pac_count,
                         'tracked_candidates_count': len(tracked_candidates)
                     },
                     
@@ -442,7 +337,6 @@ def enriched_donor_financials_asset(
                 batch.append(financial_record)
                 stats['total_independent_expenditures'] += indie_support_count + indie_oppose_count
                 stats['total_pac_contributions'] += pac_count
-                stats['total_operating_expenditures'] += oppexp_count
             
             # Sort by total_to_candidates before inserting (highest to lowest)
             context.log.info(f"Sorting {len(batch)} committees by total_to_candidates...")

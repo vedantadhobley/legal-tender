@@ -164,16 +164,6 @@ class DataRepository:
         """Path to FEC individual contributions file (indiv.zip) - flat structure per fec.md."""
         return self.fec_cycle_dir(cycle) / "indiv.zip"
     
-    def fec_oppexp_path(self, cycle: str) -> Path:
-        """Path to FEC operating expenditures file (oppexp.zip).
-        
-        Operating expenditures show WHERE committees spend money (ads, printing,
-        consulting, events, etc.). This is different from independent_expenditure.csv
-        which shows Super PAC spending FOR/AGAINST candidates.
-        Flat structure per fec.md.
-        """
-        return self.fec_cycle_dir(cycle) / "oppexp.zip"
-    
     def fec_pas2_path(self, cycle: str) -> Path:
         """Path to FEC itemized transactions file (pas2.zip).
         
@@ -349,7 +339,6 @@ FEC_FILE_MAPPING = {
     'webl': 'fec_webl_path',
     'webk': 'fec_webk_path',
     'indiv': 'fec_indiv_path',
-    'oppexp': 'fec_oppexp_path',
     'pas2': 'fec_pas2_path',
 }
 

@@ -22,7 +22,6 @@ class EnrichedCandidateFinancialsConfig(Config):
     group_name="enrichment",
     ins={
         "enriched_itpas2": AssetIn(key="enriched_itpas2"),
-        "enriched_oppexp": AssetIn(key="enriched_oppexp"),
     },
     compute_kind="aggregation",
     description="Per-cycle aggregation of all money flows to each tracked candidate with source separation"
@@ -32,7 +31,6 @@ def enriched_candidate_financials_asset(
     config: EnrichedCandidateFinancialsConfig,
     mongo: MongoDBResource,
     enriched_itpas2: Dict[str, Any],
-    enriched_oppexp: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Aggregate ALL money flows TO each tracked candidate within a single cycle.
@@ -295,12 +293,6 @@ def enriched_candidate_financials_asset(
                 pac_total = sum(c['total_amount'] for c in pac_list)
                 pac_count = sum(c['transaction_count'] for c in pac_list)
                 
-                # === OPERATING EXPENDITURES ===
-                # Note: oppexp doesn't directly link to candidates, so this is a placeholder
-                # We'd need to match by candidate name in memo_text or other fields
-                oppexp_total = 0
-                oppexp_count = 0
-                
                 # Build final record (keyed by bioguide_id)
                 financial_record = {
                     '_id': bioguide_id,  # Use bioguide_id as primary key
@@ -331,12 +323,6 @@ def enriched_candidate_financials_asset(
                         'committees': pac_list
                     },
                     
-                    'operating_expenditures': {
-                        'total_amount': oppexp_total,
-                        'transaction_count': oppexp_count,
-                        'committees': []
-                    },
-                    
                     'summary': {
                         # Raw totals by category
                         'total_independent_support': indie_support_total,      # Super PAC money FOR
@@ -349,7 +335,7 @@ def enriched_candidate_financials_asset(
                         'net_benefit': (indie_support_total + pac_total) - indie_oppose_total,     # Everything helping - opposition
                         
                         # Metadata
-                        'total_transactions': indie_support_count + indie_oppose_count + pac_count + oppexp_count
+                        'total_transactions': indie_support_count + indie_oppose_count + pac_count
                     },
                     
                     'cycle': cycle,

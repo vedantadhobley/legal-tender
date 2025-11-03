@@ -24,7 +24,7 @@ from src.assets import (
     # Data sync
     data_sync_asset,
     
-    # FEC parsers (raw data → fec_YYYY databases) - 8 files, 8 parsers
+    # FEC parsers (raw data → fec_YYYY databases) - 7 files, 7 parsers
     cn_asset,
     cm_asset,
     ccl_asset,
@@ -32,14 +32,12 @@ from src.assets import (
     webl_asset,
     webk_asset,
     itpas2_asset,
-    oppexp_asset,
     
     # Mapping assets (ID mapping → aggregation database)
     member_fec_mapping_asset,
     
     # Enrichment assets (per-cycle enriched data → enriched_{cycle} databases)
     enriched_itpas2_asset,
-    enriched_oppexp_asset,
     enriched_candidate_financials_asset,
     enriched_donor_financials_asset,
     enriched_webl_asset,
@@ -68,7 +66,7 @@ defs = Definitions(
         # Data sync (downloads all files)
         data_sync_asset,
         
-        # FEC raw data parsers (→ fec_YYYY databases) - 8 files, 8 parsers
+        # FEC raw data parsers (→ fec_YYYY databases) - 7 files, 7 parsers
         cn_asset,
         cm_asset,
         ccl_asset,
@@ -76,14 +74,12 @@ defs = Definitions(
         webl_asset,
         webk_asset,
         itpas2_asset,
-        oppexp_asset,
         
         # Mapping assets (ID mapping → aggregation database)
         member_fec_mapping_asset,
         
         # Enrichment assets (per-cycle enriched data → enriched_{cycle} databases)
         enriched_itpas2_asset,
-        enriched_oppexp_asset,
         enriched_candidate_financials_asset,
         enriched_donor_financials_asset,
         enriched_webl_asset,
