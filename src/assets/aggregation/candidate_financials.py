@@ -171,25 +171,73 @@ def candidate_financials_asset(
                     if cycle not in indie_oppose_committees[cmte_id]['cycles']:
                         indie_oppose_committees[cmte_id]['cycles'].append(cycle)
             
-            # Aggregate PAC contributions
-            pac_committees = {}
+            # Aggregate Direct Contributions (NEW: Separated by type)
+            corporate_pac_committees = {}
+            political_pac_committees = {}
+            
             for cycle, cycle_data in member_data['by_cycle'].items():
-                for cmte in cycle_data['pac_contributions']['committees']:
-                    cmte_id = cmte['committee_id']
-                    if cmte_id not in pac_committees:
-                        pac_committees[cmte_id] = {
-                            'committee_id': cmte_id,
-                            'committee_name': cmte['committee_name'],
-                            'committee_type': cmte['committee_type'],
-                            'connected_org': cmte['connected_org'],
-                            'total_amount': 0,
-                            'transaction_count': 0,
-                            'cycles': []
-                        }
-                    pac_committees[cmte_id]['total_amount'] += cmte['total_amount']
-                    pac_committees[cmte_id]['transaction_count'] += cmte['transaction_count']
-                    if cycle not in pac_committees[cmte_id]['cycles']:
-                        pac_committees[cmte_id]['cycles'].append(cycle)
+                # NEW: Use separated direct_contributions structure
+                if 'direct_contributions' in cycle_data:
+                    # Corporate PACs (Q/N types)
+                    for cmte in cycle_data['direct_contributions']['from_corporate_pacs']['committees']:
+                        cmte_id = cmte['committee_id']
+                        if cmte_id not in corporate_pac_committees:
+                            corporate_pac_committees[cmte_id] = {
+                                'committee_id': cmte_id,
+                                'committee_name': cmte['committee_name'],
+                                'committee_type': cmte['committee_type'],
+                                'connected_org': cmte['connected_org'],
+                                'total_amount': 0,
+                                'transaction_count': 0,
+                                'cycles': []
+                            }
+                        corporate_pac_committees[cmte_id]['total_amount'] += cmte['total_amount']
+                        corporate_pac_committees[cmte_id]['transaction_count'] += cmte['transaction_count']
+                        if cycle not in corporate_pac_committees[cmte_id]['cycles']:
+                            corporate_pac_committees[cmte_id]['cycles'].append(cycle)
+                    
+                    # Political PACs (O/W/I types)
+                    for cmte in cycle_data['direct_contributions']['from_political_pacs']['committees']:
+                        cmte_id = cmte['committee_id']
+                        if cmte_id not in political_pac_committees:
+                            political_pac_committees[cmte_id] = {
+                                'committee_id': cmte_id,
+                                'committee_name': cmte['committee_name'],
+                                'committee_type': cmte['committee_type'],
+                                'connected_org': cmte['connected_org'],
+                                'total_amount': 0,
+                                'transaction_count': 0,
+                                'cycles': []
+                            }
+                        political_pac_committees[cmte_id]['total_amount'] += cmte['total_amount']
+                        political_pac_committees[cmte_id]['transaction_count'] += cmte['transaction_count']
+                        if cycle not in political_pac_committees[cmte_id]['cycles']:
+                            political_pac_committees[cmte_id]['cycles'].append(cycle)
+                
+                # FALLBACK: Support old pac_contributions structure for backward compatibility
+                elif 'pac_contributions' in cycle_data:
+                    for cmte in cycle_data['pac_contributions']['committees']:
+                        cmte_id = cmte['committee_id']
+                        cmte_type = cmte.get('committee_type', 'Unknown')
+                        
+                        # Separate by type
+                        is_corporate = cmte_type in ['Q', 'N']
+                        target_dict = corporate_pac_committees if is_corporate else political_pac_committees
+                        
+                        if cmte_id not in target_dict:
+                            target_dict[cmte_id] = {
+                                'committee_id': cmte_id,
+                                'committee_name': cmte['committee_name'],
+                                'committee_type': cmte_type,
+                                'connected_org': cmte['connected_org'],
+                                'total_amount': 0,
+                                'transaction_count': 0,
+                                'cycles': []
+                            }
+                        target_dict[cmte_id]['total_amount'] += cmte['total_amount']
+                        target_dict[cmte_id]['transaction_count'] += cmte['transaction_count']
+                        if cycle not in target_dict[cmte_id]['cycles']:
+                            target_dict[cmte_id]['cycles'].append(cycle)
             
             # Sort all committees (keep ALL for UI linking)
             indie_support_top = sorted(
@@ -204,8 +252,14 @@ def candidate_financials_asset(
                 reverse=True
             )
             
-            pac_top = sorted(
-                pac_committees.values(),
+            corporate_pac_top = sorted(
+                corporate_pac_committees.values(),
+                key=lambda x: x['total_amount'],
+                reverse=True
+            )
+            
+            political_pac_top = sorted(
+                political_pac_committees.values(),
                 key=lambda x: x['total_amount'],
                 reverse=True
             )
@@ -215,8 +269,15 @@ def candidate_financials_asset(
             indie_support_count = sum(c['transaction_count'] for c in indie_support_committees.values())
             indie_oppose_total = sum(c['total_amount'] for c in indie_oppose_committees.values())
             indie_oppose_count = sum(c['transaction_count'] for c in indie_oppose_committees.values())
-            pac_total = sum(c['total_amount'] for c in pac_committees.values())
-            pac_count = sum(c['transaction_count'] for c in pac_committees.values())
+            
+            corporate_pac_total = sum(c['total_amount'] for c in corporate_pac_committees.values())
+            corporate_pac_count = sum(c['transaction_count'] for c in corporate_pac_committees.values())
+            political_pac_total = sum(c['total_amount'] for c in political_pac_committees.values())
+            political_pac_count = sum(c['transaction_count'] for c in political_pac_committees.values())
+            
+            # Combined totals (for backward compatibility in summary)
+            pac_total = corporate_pac_total + political_pac_total
+            pac_count = corporate_pac_count + political_pac_count
             
             # Calculate top-level summary metrics for easy sorting/filtering
             total_independent_support = indie_support_total
@@ -244,16 +305,13 @@ def candidate_financials_asset(
             
             context.log.info(f"  Tracing upstream funding for political committees influencing {bioguide_id}...")
             
-            # Collect all committees that need upstream tracing
+            # NEW: Collect all committees that need upstream tracing
             # 1. All indie expenditure committees (almost all are O/W/I types)
-            # 2. Only O/W/I type PAC contribution committees (not Q/N corporate PACs)
+            # 2. Political PAC contribution committees (already separated - political_pac_committees)
             committees_to_trace = list(indie_support_committees.keys()) + list(indie_oppose_committees.keys())
             
-            # Add O/W/I type PAC contribution committees
-            for cmte_id, cmte_data in pac_committees.items():
-                cmte_type = cmte_data.get('committee_type', 'Unknown')
-                if cmte_type in ['O', 'W', 'I']:
-                    committees_to_trace.append(cmte_id)
+            # Add political PAC contribution committees (O/W/I types already separated)
+            committees_to_trace.extend(list(political_pac_committees.keys()))
             
             upstream_by_committee = {}
             for cycle in config.cycles:
@@ -278,21 +336,9 @@ def candidate_financials_asset(
                     upstream_by_committee[cmte_id]['from_individuals'] += funding_doc.get('transparency', {}).get('from_individuals', 0)
                     upstream_by_committee[cmte_id]['from_organizations'] += funding_doc.get('transparency', {}).get('from_organizations', 0)
             
-            # Initialize upstream funding sources
-            # Tracks who ultimately funds political committees that influence this candidate
+            # Initialize upstream funding sources for independent expenditures
+            # (PAC contributions now tracked per-committee in direct_funding structure)
             upstream_funding = {
-                'pac_contributions': {
-                    'direct_from_corporate_pacs': 0,      # Q/N types (no tracing needed)
-                    'via_political_committees': {         # O/W/I types (traced upstream)
-                        'total_amount': 0,
-                        'funded_by': {
-                            'organizations': 0,           # Org → Political PAC → Candidate
-                            'individuals': 0,             # Individual → Political PAC → Candidate
-                            'political_committees': 0,    # PAC → Political PAC → Candidate
-                            'unknown': 0                  # Dark money
-                        }
-                    }
-                },
                 'independent_expenditures': {
                     'supporting': {
                         'total_amount': indie_support_total,
@@ -322,45 +368,10 @@ def candidate_financials_asset(
             }
             
             # ========================================================================
-            # PROCESS PAC CONTRIBUTIONS
+            # PROCESS INDEPENDENT EXPENDITURES (Super PAC ads)
             # ========================================================================
-            
-            for cmte_id, cmte_data in pac_committees.items():
-                cmte_type = cmte_data.get('committee_type', 'Unknown')
-                amount = cmte_data['total_amount']
-                
-                # Corporate/Union PACs (Q/N) - these ARE the organizations
-                if cmte_type in ['Q', 'N']:
-                    upstream_funding['pac_contributions']['direct_from_corporate_pacs'] += amount
-                
-                # Political Committees (O/W/I) - trace upstream
-                elif cmte_type in ['O', 'W', 'I']:
-                    upstream = upstream_by_committee.get(cmte_id, {})
-                    upstream_funding['pac_contributions']['via_political_committees']['total_amount'] += amount
-                    
-                    if upstream:
-                        total_upstream = (
-                            upstream.get('from_organizations', 0) +
-                            upstream.get('from_individuals', 0) +
-                            upstream.get('from_committees', 0)
-                        )
-                        
-                        if total_upstream > 0:
-                            org_proportion = upstream.get('from_organizations', 0) / total_upstream
-                            ind_proportion = upstream.get('from_individuals', 0) / total_upstream
-                            pac_proportion = upstream.get('from_committees', 0) / total_upstream
-                            
-                            upstream_funding['pac_contributions']['via_political_committees']['funded_by']['organizations'] += amount * org_proportion
-                            upstream_funding['pac_contributions']['via_political_committees']['funded_by']['individuals'] += amount * ind_proportion
-                            upstream_funding['pac_contributions']['via_political_committees']['funded_by']['political_committees'] += amount * pac_proportion
-                        else:
-                            upstream_funding['pac_contributions']['via_political_committees']['funded_by']['unknown'] += amount
-                    else:
-                        upstream_funding['pac_contributions']['via_political_committees']['funded_by']['unknown'] += amount
-            
-            # ========================================================================
-            # PROCESS INDEPENDENT EXPENDITURES
-            # ========================================================================
+            # NOTE: Direct PAC contributions now stored per-committee in direct_funding
+            # structure with individual upstream_funding for each political PAC
             
             # Process independent expenditures FOR candidate
             for cmte_id, cmte_data in indie_support_committees.items():
@@ -438,17 +449,6 @@ def candidate_financials_asset(
             )
             
             # Round all values
-            upstream_funding['pac_contributions']['direct_from_corporate_pacs'] = round(
-                upstream_funding['pac_contributions']['direct_from_corporate_pacs'], 2
-            )
-            upstream_funding['pac_contributions']['via_political_committees']['total_amount'] = round(
-                upstream_funding['pac_contributions']['via_political_committees']['total_amount'], 2
-            )
-            for key in upstream_funding['pac_contributions']['via_political_committees']['funded_by']:
-                upstream_funding['pac_contributions']['via_political_committees']['funded_by'][key] = round(
-                    upstream_funding['pac_contributions']['via_political_committees']['funded_by'][key], 2
-                )
-            
             for section in ['supporting', 'opposing']:
                 for key in upstream_funding['independent_expenditures'][section]['funded_by']:
                     upstream_funding['independent_expenditures'][section]['funded_by'][key] = round(
@@ -480,8 +480,11 @@ def candidate_financials_asset(
                 'total_transactions': indie_support_count + indie_oppose_count + pac_count,
                 'cycles_active': sorted(member_data['by_cycle'].keys()),
                 
-                # 💰 UPSTREAM FUNDING (traces through political committees)
-                'upstream_funding': upstream_funding,
+                # 💰 UPSTREAM FUNDING for Independent Expenditures (Super PAC ads)
+                # (Direct PAC contributions now in totals.direct_funding with per-committee upstream)
+                'upstream_funding': {
+                    'independent_expenditures': upstream_funding['independent_expenditures']
+                },
                 
                 # Detailed breakdowns
                 'by_cycle': member_data['by_cycle'],
@@ -499,10 +502,45 @@ def candidate_financials_asset(
                             'committees': indie_oppose_top  # All committees, sorted by amount
                         }
                     },
+                    
+                    # NEW: Direct funding structure with separated lists
+                    'direct_funding': {
+                        'from_corporate_pacs': {
+                            'total_amount': sum(c['total_amount'] for c in corporate_pac_committees.values()),
+                            'transaction_count': sum(c['transaction_count'] for c in corporate_pac_committees.values()),
+                            'committees': corporate_pac_top  # Q/N types - these ARE the organizations
+                        },
+                        'from_political_pacs': {
+                            'total_amount': sum(c['total_amount'] for c in political_pac_committees.values()),
+                            'transaction_count': sum(c['transaction_count'] for c in political_pac_committees.values()),
+                            'committees': [
+                                {
+                                    **cmte,
+                                    'upstream_funding': upstream_by_committee.get(cmte['committee_id'], {
+                                        'from_organizations': 0,
+                                        'from_individuals': 0,
+                                        'from_committees': 0
+                                    })
+                                }
+                                for cmte in political_pac_top
+                            ]  # O/W/I types - with per-committee upstream tracing
+                        },
+                        'from_individuals': {
+                            'total_amount': 0,  # Future implementation
+                            'transaction_count': 0,
+                            'donors': []
+                        }
+                    },
+                    
+                    # DEPRECATED: Keep for backward compatibility
                     'pac_contributions': {
                         'total_amount': pac_total,
                         'transaction_count': pac_count,
-                        'committees': pac_top  # All committees, sorted by amount
+                        'committees': sorted(
+                            corporate_pac_top + political_pac_top,
+                            key=lambda x: x['total_amount'],
+                            reverse=True
+                        )[:20]  # Combined top 20 from both types
                     },
                     'summary': {
                         'total_independent_support': total_independent_support,
