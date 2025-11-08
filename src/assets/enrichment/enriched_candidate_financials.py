@@ -183,6 +183,7 @@ def enriched_candidate_financials_asset(
                     cmte_id = doc.get('filer_committee_id')
                     amount = doc.get('amount', 0)
                     transaction_type = doc.get('transaction_type', '')
+                    cmte_type = doc.get('filer_committee_type', '')  # Capture committee type
                     
                     # Map transaction types to support/oppose
                     # 24E/24F = support, 24A/24N = oppose
@@ -195,6 +196,8 @@ def enriched_candidate_financials_asset(
                         committees_dict[cmte_id] = {
                             'committee_id': cmte_id,
                             'committee_name': doc.get('filer_committee_name', ''),
+                            'committee_type': cmte_type,  # Store committee type
+                            'connected_org': doc.get('filer_connected_org', ''),
                             'total_amount': 0,
                             'transaction_count': 0,
                             'transactions': []
@@ -245,6 +248,9 @@ def enriched_candidate_financials_asset(
                 # 24Z = In-kind contribution to registered filer (1,650 transactions)
                 # Note: 24A/24E are independent expenditures (tracked separately)
                 
+                # FILTER: Exclude payment processors/conduits (operating expenses, not contributions)
+                payment_processors = {'C00694323', 'C00401224'}  # WINRED, ActBlue
+                
                 # NEW: Separate by committee type (Corporate PACs vs Political PACs)
                 corporate_pac_types = {'Q', 'N'}  # Q = Qualified connected, N = Non-qualified
                 
@@ -259,6 +265,10 @@ def enriched_candidate_financials_asset(
                     
                     # Only include direct contribution types
                     if transaction_type not in ['24C', '24F', '24K', '24Z']:
+                        continue
+                    
+                    # Skip payment processors (these are operating expenses, not contributions)
+                    if cmte_id in payment_processors:
                         continue
                     
                     # Determine which bucket this committee belongs to
@@ -312,7 +322,7 @@ def enriched_candidate_financials_asset(
                 political_pac_total = sum(c['total_amount'] for c in political_pac_list)
                 political_pac_count = sum(c['transaction_count'] for c in political_pac_list)
                 
-                # Combined totals (for backward compatibility)
+                # Combined totals for summary stats
                 pac_total = corporate_pac_total + political_pac_total
                 pac_count = corporate_pac_count + political_pac_count
                 
@@ -352,13 +362,6 @@ def enriched_candidate_financials_asset(
                             'transaction_count': political_pac_count,
                             'committees': political_pac_list
                         }
-                    },
-                    
-                    # DEPRECATED: Keep for backward compatibility (will remove in aggregation layer)
-                    'pac_contributions': {
-                        'total_amount': pac_total,
-                        'transaction_count': pac_count,
-                        'committees': corporate_pac_list + political_pac_list  # Combined list
                     },
                     
                     'summary': {

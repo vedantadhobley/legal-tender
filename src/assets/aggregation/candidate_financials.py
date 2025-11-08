@@ -106,20 +106,37 @@ def candidate_financials_asset(
                             ]
                         }
                     },
-                    'pac_contributions': {
-                        'total_amount': doc['pac_contributions']['total_amount'],
-                        'transaction_count': doc['pac_contributions']['transaction_count'],
-                        'committees': [
-                            {
-                                'committee_id': c['committee_id'],
-                                'committee_name': c['committee_name'],
-                                'committee_type': c['committee_type'],
-                                'connected_org': c['connected_org'],
-                                'total_amount': c['total_amount'],
-                                'transaction_count': c['transaction_count'],
-                            }
-                            for c in doc['pac_contributions']['committees']
-                        ]
+                    'direct_contributions': {
+                        'from_corporate_pacs': {
+                            'total_amount': doc['direct_contributions']['from_corporate_pacs']['total_amount'],
+                            'transaction_count': doc['direct_contributions']['from_corporate_pacs']['transaction_count'],
+                            'committees': [
+                                {
+                                    'committee_id': c['committee_id'],
+                                    'committee_name': c['committee_name'],
+                                    'committee_type': c['committee_type'],
+                                    'connected_org': c['connected_org'],
+                                    'total_amount': c['total_amount'],
+                                    'transaction_count': c['transaction_count'],
+                                }
+                                for c in doc['direct_contributions']['from_corporate_pacs']['committees']
+                            ]
+                        },
+                        'from_political_pacs': {
+                            'total_amount': doc['direct_contributions']['from_political_pacs']['total_amount'],
+                            'transaction_count': doc['direct_contributions']['from_political_pacs']['transaction_count'],
+                            'committees': [
+                                {
+                                    'committee_id': c['committee_id'],
+                                    'committee_name': c['committee_name'],
+                                    'committee_type': c['committee_type'],
+                                    'connected_org': c['connected_org'],
+                                    'total_amount': c['total_amount'],
+                                    'transaction_count': c['transaction_count'],
+                                }
+                                for c in doc['direct_contributions']['from_political_pacs']['committees']
+                            ]
+                        }
                     },
                     'summary': doc['summary']
                 }
@@ -213,31 +230,6 @@ def candidate_financials_asset(
                         political_pac_committees[cmte_id]['transaction_count'] += cmte['transaction_count']
                         if cycle not in political_pac_committees[cmte_id]['cycles']:
                             political_pac_committees[cmte_id]['cycles'].append(cycle)
-                
-                # FALLBACK: Support old pac_contributions structure for backward compatibility
-                elif 'pac_contributions' in cycle_data:
-                    for cmte in cycle_data['pac_contributions']['committees']:
-                        cmte_id = cmte['committee_id']
-                        cmte_type = cmte.get('committee_type', 'Unknown')
-                        
-                        # Separate by type
-                        is_corporate = cmte_type in ['Q', 'N']
-                        target_dict = corporate_pac_committees if is_corporate else political_pac_committees
-                        
-                        if cmte_id not in target_dict:
-                            target_dict[cmte_id] = {
-                                'committee_id': cmte_id,
-                                'committee_name': cmte['committee_name'],
-                                'committee_type': cmte_type,
-                                'connected_org': cmte['connected_org'],
-                                'total_amount': 0,
-                                'transaction_count': 0,
-                                'cycles': []
-                            }
-                        target_dict[cmte_id]['total_amount'] += cmte['total_amount']
-                        target_dict[cmte_id]['transaction_count'] += cmte['transaction_count']
-                        if cycle not in target_dict[cmte_id]['cycles']:
-                            target_dict[cmte_id]['cycles'].append(cycle)
             
             # Sort all committees (keep ALL for UI linking)
             indie_support_top = sorted(
@@ -275,7 +267,7 @@ def candidate_financials_asset(
             political_pac_total = sum(c['total_amount'] for c in political_pac_committees.values())
             political_pac_count = sum(c['transaction_count'] for c in political_pac_committees.values())
             
-            # Combined totals (for backward compatibility in summary)
+            # Combined PAC totals for summary stats
             pac_total = corporate_pac_total + political_pac_total
             pac_count = corporate_pac_count + political_pac_count
             
@@ -459,6 +451,23 @@ def candidate_financials_asset(
                     upstream_funding['independent_expenditures']['net'][key], 2
                 )
             
+            # 💰 Calculate aggregate upstream for political PAC contributions
+            political_pac_aggregate_upstream = {
+                'from_organizations': 0,
+                'from_individuals': 0,
+                'from_committees': 0
+            }
+            for cmte_data in political_pac_committees.values():
+                cmte_id = cmte_data['committee_id']
+                upstream = upstream_by_committee.get(cmte_id, {})
+                political_pac_aggregate_upstream['from_organizations'] += upstream.get('from_organizations', 0)
+                political_pac_aggregate_upstream['from_individuals'] += upstream.get('from_individuals', 0)
+                political_pac_aggregate_upstream['from_committees'] += upstream.get('from_committees', 0)
+            
+            # Round
+            for key in political_pac_aggregate_upstream:
+                political_pac_aggregate_upstream[key] = round(political_pac_aggregate_upstream[key], 2)
+            
             cross_cycle_record = {
                 '_id': bioguide_id,
                 'bioguide_id': bioguide_id,
@@ -468,23 +477,7 @@ def candidate_financials_asset(
                 'office': member_data['office'],
                 'state': member_data['state'],
                 'district': member_data['district'],
-                
-                # 🎯 TOP-LEVEL QUICK STATS (for easy viewing/sorting)
-                'total_independent_support': total_independent_support,      # Super PAC money FOR
-                'total_independent_oppose': total_independent_oppose,        # Super PAC money AGAINST
-                'total_independent_expenditures': indie_support_total + indie_oppose_total,  # Total indie (support + oppose)
-                'total_pac_contributions': total_pac_contributions,          # Direct PAC donations
-                'net_independent_expenditures': net_independent_expenditures, # Indie support - oppose
-                'net_support': net_support,                                  # Total positive money (indie support + PAC)
-                'net_benefit': net_benefit,                                  # Everything helping - opposition
-                'total_transactions': indie_support_count + indie_oppose_count + pac_count,
                 'cycles_active': sorted(member_data['by_cycle'].keys()),
-                
-                # 💰 UPSTREAM FUNDING for Independent Expenditures (Super PAC ads)
-                # (Direct PAC contributions now in totals.direct_funding with per-committee upstream)
-                'upstream_funding': {
-                    'independent_expenditures': upstream_funding['independent_expenditures']
-                },
                 
                 # Detailed breakdowns
                 'by_cycle': member_data['by_cycle'],
@@ -500,7 +493,9 @@ def candidate_financials_asset(
                             'total_amount': indie_oppose_total,
                             'transaction_count': indie_oppose_count,
                             'committees': indie_oppose_top  # All committees, sorted by amount
-                        }
+                        },
+                        # 💰 UPSTREAM FUNDING: WHO funded the Super PAC ads (aggregated)
+                        'upstream_funding': upstream_funding['independent_expenditures']
                     },
                     
                     # NEW: Direct funding structure with separated lists
@@ -523,7 +518,9 @@ def candidate_financials_asset(
                                     })
                                 }
                                 for cmte in political_pac_top
-                            ]  # O/W/I types - with per-committee upstream tracing
+                            ],  # O/W/I types - with per-committee upstream tracing
+                            # 💰 UPSTREAM FUNDING: WHO funded these political PACs (aggregated)
+                            'upstream_funding': political_pac_aggregate_upstream
                         },
                         'from_individuals': {
                             'total_amount': 0,  # Future implementation
@@ -532,16 +529,6 @@ def candidate_financials_asset(
                         }
                     },
                     
-                    # DEPRECATED: Keep for backward compatibility
-                    'pac_contributions': {
-                        'total_amount': pac_total,
-                        'transaction_count': pac_count,
-                        'committees': sorted(
-                            corporate_pac_top + political_pac_top,
-                            key=lambda x: x['total_amount'],
-                            reverse=True
-                        )[:20]  # Combined top 20 from both types
-                    },
                     'summary': {
                         'total_independent_support': total_independent_support,
                         'total_independent_oppose': total_independent_oppose,
@@ -561,7 +548,7 @@ def candidate_financials_asset(
         
         # Sort all candidates by net_benefit (descending) before inserting
         context.log.info(f"Sorting {len(batch)} candidates by net_benefit (highest to lowest)...")
-        batch.sort(key=lambda x: x['net_benefit'], reverse=True)
+        batch.sort(key=lambda x: x['totals']['summary']['net_benefit'], reverse=True)
         
         # Insert in sorted order
         if batch:
@@ -570,11 +557,12 @@ def candidate_financials_asset(
             # Log top 10 for visibility
             context.log.info("📊 Top 10 candidates by net benefit:")
             for i, cand in enumerate(batch[:10], 1):
+                summary = cand['totals']['summary']
                 context.log.info(
                     f"  {i}. {cand['candidate_name']} ({cand['party']}): "
-                    f"${cand['net_benefit']:,.0f} net benefit "
-                    f"(${cand['total_pac_contributions']:,.0f} PAC + "
-                    f"${cand['net_independent_expenditures']:,.0f} net indie)"
+                    f"${summary['net_benefit']:,.0f} net benefit "
+                    f"(${summary['total_pac_contributions']:,.0f} PAC + "
+                    f"${summary['net_independent_expenditures']:,.0f} net indie)"
                 )
         
         # Create indexes for fast sorting/filtering on top-level fields
