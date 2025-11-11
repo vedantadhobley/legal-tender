@@ -43,6 +43,7 @@ class EnrichedCommitteeFundingConfig(Config):
     group_name="enrichment",
     ins={
         "itpas2": AssetIn(key="itpas2"),
+        "itoth": AssetIn(key="itoth"),
         "cm": AssetIn(key="cm"),
         "member_fec_mapping": AssetIn(key="member_fec_mapping"),
     },
@@ -54,6 +55,7 @@ def enriched_committee_funding_asset(
     config: EnrichedCommitteeFundingConfig,
     mongo: MongoDBResource,
     itpas2: Dict[str, Any],
+    itoth: Dict[str, Any],
     cm: Dict[str, Any],
     member_fec_mapping: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
@@ -125,12 +127,16 @@ def enriched_committee_funding_asset(
             context.log.info("")
             
             # ========================================================================
-            # STEP 3: Find all donors TO tracked candidates' committees
+            # STEP 3: Find all committees influencing tracked candidates
             # ========================================================================
-            context.log.info("Finding donors to tracked candidates...")
+            # This includes:
+            # 1. Direct donors (24K transactions TO candidate committees)
+            # 2. Independent expenditure committees (24A/24E FOR/AGAINST candidates)
+            context.log.info("Finding committees influencing tracked candidates...")
             
             donor_committees = {}
             
+            # Query 1: Direct donations TO candidate committees
             query_result = itpas2_collection.find({
                 "ENTITY_TP": {"$in": ["COM", "PAC", "PTY", "CCM"]},
                 "TRANSACTION_TP": "24K",
@@ -163,7 +169,55 @@ def enriched_committee_funding_asset(
                 donor_committees[donor_id]['transaction_count'] += 1
                 txn_count += 1
             
-            context.log.info(f"✅ Found {len(donor_committees):,} donor committees ({txn_count:,} transactions)")
+            context.log.info(f"✅ Found {len(donor_committees):,} direct donor committees ({txn_count:,} transactions)")
+            
+            # Query 2: Independent expenditure committees (Super PACs making ads)
+            # Get all tracked candidate IDs (not just their committee IDs)
+            tracked_candidate_ids = set()
+            for mapping in mapping_collection.find():
+                fec_data = mapping.get('fec', {})
+                for cand_id in fec_data.get('candidate_ids', []):
+                    tracked_candidate_ids.add(cand_id)
+            
+            context.log.info(f"Searching indie expenditures for {len(tracked_candidate_ids):,} candidate IDs...")
+            
+            # Query enriched_itpas2 (already filtered to tracked candidates)
+            # No need to query raw data since we only care about our tracked members
+            enriched_itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"enriched_{cycle}")
+            
+            indie_query = enriched_itpas2_collection.find({
+                "transaction_type": {"$in": ["24A", "24E"]},  # Independent expenditures
+                "amount": {"$ne": None},
+                "candidate_id": {"$in": list(tracked_candidate_ids)}
+            })
+            
+            indie_count = 0
+            for txn in indie_query:
+                filer_id = txn.get('filer_committee_id')  # Committee making the ad spend
+                candidate_id = txn.get('candidate_id')
+                amount = abs(txn.get('amount', 0))  # Use absolute value
+                
+                if not filer_id or not candidate_id or amount <= 0:
+                    continue
+                
+                if filer_id not in donor_committees:
+                    filer_info = committee_info.get(filer_id, {'name': 'Unknown', 'type': 'Unknown'})
+                    donor_committees[filer_id] = {
+                        'committee_id': filer_id,
+                        'committee_name': filer_info['name'],
+                        'committee_type': filer_info['type'],
+                        'donated_to_tracked_committees': set(),
+                        'total_to_tracked': 0,
+                        'transaction_count': 0
+                    }
+                
+                donor_committees[filer_id]['donated_to_tracked_committees'].add(candidate_id)
+                donor_committees[filer_id]['total_to_tracked'] += amount
+                donor_committees[filer_id]['transaction_count'] += 1
+                indie_count += 1
+            
+            context.log.info(f"✅ Found {indie_count:,} indie expenditure transactions from {len([c for c in donor_committees.values() if c['transaction_count'] > 0]):,} Super PACs")
+            
             stats['donor_committees_found'] += len(donor_committees)
             
             # ========================================================================
@@ -195,17 +249,23 @@ def enriched_committee_funding_asset(
             funding_by_political_pac = {}
             
             if political_pacs:
-                upstream_query = itpas2_collection.find({
-                    "ENTITY_TP": {"$in": ["COM", "PAC", "PTY", "CCM"]},
-                    "TRANSACTION_TP": "24K",
+                # Query RAW FEC itoth (other receipts) to find WHO gave money TO political PACs
+                # itoth.CMTE_ID = recipient committee (the political PAC)
+                # itoth.OTHER_ID = donor committee (if committee-to-committee transfer)
+                # itoth.NAME = donor name (if individual/organization)
+                raw_itoth_collection = mongo.get_collection(client, "itoth", database_name=f"fec_{cycle}")
+                
+                upstream_query = raw_itoth_collection.find({
+                    "ENTITY_TP": {"$in": ["COM", "PAC", "PTY", "CCM", "ORG"]},
                     "TRANSACTION_AMT": {"$ne": None},
-                    "OTHER_ID": {"$in": political_pacs}
+                    "CMTE_ID": {"$in": political_pacs}  # CRITICAL: CMTE_ID in itoth = recipient!
                 })
                 
                 upstream_count = 0
                 for txn in upstream_query:
-                    upstream_donor_id = txn.get('CMTE_ID')
-                    political_pac_id = txn.get('OTHER_ID')
+                    political_pac_id = txn.get('CMTE_ID')  # Recipient (the political PAC)
+                    upstream_donor_id = txn.get('OTHER_ID')  # Donor committee (if transfer)
+                    donor_name = txn.get('NAME')  # Donor name (if individual/org)
                     amount = txn.get('TRANSACTION_AMT', 0)
                     
                     if not upstream_donor_id or not political_pac_id or amount <= 0:

@@ -19,6 +19,7 @@ from .fec.weball import weball_asset
 from .fec.webl import webl_asset
 from .fec.webk import webk_asset
 from .fec.itpas2 import itpas2_asset
+from .fec.itoth import itoth_asset
 
 # Mapping Assets (fec_{cycle} → aggregation database)
 from .mapping.member_fec_mapping import member_fec_mapping_asset
@@ -42,7 +43,7 @@ __all__ = [
     # Data sync
     "data_sync_asset",
     
-    # FEC parsers (raw data → fec_YYYY databases) - 7 files, 7 parsers, raw FEC names
+    # FEC parsers (raw data → fec_YYYY databases) - 8 files, 8 parsers, raw FEC names
     "cn_asset",            # cn.zip - candidate master
     "cm_asset",            # cm.zip - committee master
     "ccl_asset",           # ccl.zip - candidate-committee linkages
@@ -50,6 +51,7 @@ __all__ = [
     "webl_asset",          # webl.zip - committee summary
     "webk_asset",          # webk.zip - PAC summary
     "itpas2_asset",        # pas2.zip - itemized transactions (ALL types)
+    "itoth_asset",         # oth.zip - other receipts (committee upstream funding)
     
     # Mapping assets (ID mapping → aggregation database)
     "member_fec_mapping_asset",

@@ -41,6 +41,9 @@ class DataSyncConfig(Config):
     sync_committee_transfers: bool = True
     """Download committee transfers (pas2) - ~300MB per cycle, CRITICAL for Leadership PAC tracking AND independent expenditures (24A/24E)"""
     
+    sync_other_receipts: bool = True
+    """Download other receipts (oth) - ~50MB per cycle, CRITICAL for tracing corporate PAC → political PAC upstream funding"""
+    
     sync_fec_transactions: bool = False
     """Download OTHER FEC transaction files (deprecated - use specific flags above)"""
     
@@ -413,12 +416,58 @@ def data_sync_asset(
                 stats['errors'].append(f"fec/{cycle}/transactions/pas2: {str(e)}")
     
     # =========================================================================
-    # Phase 7: Other Transaction Files (deprecated - use specific flags)
+    # Phase 7: Other Receipts (oth.zip - Upstream Funding)
+    # =========================================================================
+    
+    if config.sync_other_receipts:
+        context.log.info("\n📥 Phase 7: Syncing Other Receipts (Upstream Funding)")
+        context.log.info("-" * 80)
+        context.log.info("    These receipts are CRITICAL for tracing corporate PAC → political PAC funding")
+        context.log.info("    Shows WHO gave money TO committees (including PAC-to-PAC transfers)")
+        
+        for cycle in config.cycles:
+            context.log.info(f"\n{cycle} Cycle:")
+            
+            try:
+                path_method = getattr(repo, FEC_FILE_MAPPING['oth'])
+                local_path = path_method(cycle)
+                
+                year_suffix = cycle[-2:]
+                fec_filename = f"oth{year_suffix}.zip"
+                remote_url = f"https://www.fec.gov/files/bulk-downloads/{cycle}/{fec_filename}"
+                
+                if should_download_file(
+                    local_path,
+                    remote_url,
+                    config.force_refresh,
+                    config.check_remote_modified,
+                    context
+                ):
+                    context.log.info(f"⬇️  Downloading {local_path.name}...")
+                    path = download_fec_file('oth', cycle, config.force_refresh, repo)
+                    
+                    file_size = path.stat().st_size
+                    stats['files_downloaded'].append(f"fec/{cycle}/transactions/{local_path.name}")
+                    stats['fec'][cycle]['files_downloaded'].append(local_path.name)
+                    stats['fec'][cycle]['bytes'] += file_size
+                    stats['total_bytes'] += file_size
+                    
+                    context.log.info(f"✓ Downloaded {local_path.name} ({file_size/1024/1024:.1f} MB)")
+                else:
+                    stats['files_skipped'].append(f"fec/{cycle}/transactions/{local_path.name}")
+                    stats['fec'][cycle]['files_skipped'].append(local_path.name)
+            
+            except Exception as e:
+                context.log.error(f"❌ Error downloading oth for {cycle}: {e}")
+                stats['errors'].append(f"fec/{cycle}/transactions/oth: {str(e)}")
+    
+    # =========================================================================
+    # Phase 8: Other Transaction Files (deprecated - use specific flags)
     # =========================================================================
     
     if config.sync_fec_transactions:
         context.log.warning("\n⚠️  sync_fec_transactions is deprecated!")
-        context.log.warning("    Use sync_committee_transfers and sync_independent_expenditures instead")
+        context.log.warning("    Use sync_committee_transfers, sync_other_receipts, etc. instead")
     
     # =========================================================================
     # Summary

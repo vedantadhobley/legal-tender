@@ -305,7 +305,17 @@ def candidate_financials_asset(
             # Add political PAC contribution committees (O/W/I types already separated)
             committees_to_trace.extend(list(political_pac_committees.keys()))
             
-            upstream_by_committee = {}
+            # Initialize ALL committees with empty upstream arrays
+            # This ensures committees with no upstream data still have the structure
+            upstream_by_committee = {
+                cmte_id: {
+                    'from_committees': [],
+                    'from_individuals': [],
+                    'from_organizations': []
+                }
+                for cmte_id in committees_to_trace
+            }
+            
             for cycle in config.cycles:
                 funding_collection = mongo.get_collection(
                     client, 
@@ -314,159 +324,46 @@ def candidate_financials_asset(
                 )
                 
                 # Batch query: get funding sources for political committees
+                # Note: Committees not found in this collection will keep their empty arrays
                 for funding_doc in funding_collection.find({'_id': {'$in': committees_to_trace}}):
                     cmte_id = funding_doc['_id']
-                    if cmte_id not in upstream_by_committee:
-                        upstream_by_committee[cmte_id] = {
-                            'from_committees': 0,
-                            'from_individuals': 0,
-                            'from_organizations': 0
-                        }
                     
-                    # Aggregate totals from this cycle
-                    upstream_by_committee[cmte_id]['from_committees'] += funding_doc.get('transparency', {}).get('from_committees', 0)
-                    upstream_by_committee[cmte_id]['from_individuals'] += funding_doc.get('transparency', {}).get('from_individuals', 0)
-                    upstream_by_committee[cmte_id]['from_organizations'] += funding_doc.get('transparency', {}).get('from_organizations', 0)
-            
-            # Initialize upstream funding sources for independent expenditures
-            # (PAC contributions now tracked per-committee in direct_funding structure)
-            upstream_funding = {
-                'independent_expenditures': {
-                    'supporting': {
-                        'total_amount': indie_support_total,
-                        'funded_by': {
-                            'organizations': 0,           # Org → Super PAC → Ad FOR candidate
-                            'individuals': 0,             # Individual → Super PAC → Ad FOR candidate
-                            'political_committees': 0,    # PAC → Super PAC → Ad FOR candidate
-                            'unknown': 0                  # Dark money
-                        }
-                    },
-                    'opposing': {
-                        'total_amount': indie_oppose_total,
-                        'funded_by': {
-                            'organizations': 0,           # Org → Super PAC → Ad AGAINST candidate
-                            'individuals': 0,             # Individual → Super PAC → Ad AGAINST candidate
-                            'political_committees': 0,    # PAC → Super PAC → Ad AGAINST candidate
-                            'unknown': 0                  # Dark money
-                        }
-                    },
-                    'net': {
-                        'organizations': 0,               # Support - Oppose from orgs
-                        'individuals': 0,                 # Support - Oppose from individuals
-                        'political_committees': 0,        # Support - Oppose from PACs
-                        'unknown': 0                      # Net dark money
-                    }
-                }
-            }
+                    # Extract detailed funding sources (WHO gave WHAT)
+                    funding_sources = funding_doc.get('funding_sources', {})
+                    
+                    # Organizations (includes reclassified corporate PACs)
+                    for org in funding_sources.get('from_organizations', []):
+                        upstream_by_committee[cmte_id]['from_organizations'].append({
+                            'organization_name': org.get('organization_name', 'Unknown'),
+                            'amount': org.get('total_amount', 0),
+                            'pac_committee_id': org.get('pac_committee_id'),
+                            'organization_type': org.get('organization_type', 'Unknown')
+                        })
+                    
+                    # Individuals (future: when indiv.zip is parsed)
+                    for ind in funding_sources.get('from_individuals', []):
+                        upstream_by_committee[cmte_id]['from_individuals'].append({
+                            'name': ind.get('name', 'Unknown'),
+                            'amount': ind.get('amount', 0)
+                        })
+                    
+                    # Committees (political PACs funding other political PACs)
+                    for cmte in funding_sources.get('from_committees', []):
+                        upstream_by_committee[cmte_id]['from_committees'].append({
+                            'committee_name': cmte.get('committee_name', 'Unknown'),
+                            'committee_id': cmte.get('committee_id'),
+                            'committee_type': cmte.get('committee_type', 'Unknown'),
+                            'amount': cmte.get('total_amount', 0)
+                        })
             
             # ========================================================================
-            # PROCESS INDEPENDENT EXPENDITURES (Super PAC ads)
+            # NO AGGREGATE UPSTREAM CALCULATIONS
             # ========================================================================
-            # NOTE: Direct PAC contributions now stored per-committee in direct_funding
-            # structure with individual upstream_funding for each political PAC
+            # We provide upstream funding detail at the PER-COMMITTEE level only.
+            # Each committee in the arrays below has its own upstream_funding showing
+            # WHO gave them WHAT amount.
             
-            # Process independent expenditures FOR candidate
-            for cmte_id, cmte_data in indie_support_committees.items():
-                amount = cmte_data['total_amount']
-                upstream = upstream_by_committee.get(cmte_id, {})
-                
-                if upstream:
-                    total_upstream = (
-                        upstream.get('from_organizations', 0) +
-                        upstream.get('from_individuals', 0) +
-                        upstream.get('from_committees', 0)
-                    )
-                    
-                    if total_upstream > 0:
-                        # Proportionally attribute ad spending to ultimate sources
-                        # Example: Super PAC spent $1M on ads FOR candidate
-                        # Super PAC is 60% org-funded, 30% individual-funded, 10% PAC-funded
-                        # → $600K from orgs, $300K from individuals, $100K from PACs
-                        org_proportion = upstream.get('from_organizations', 0) / total_upstream
-                        ind_proportion = upstream.get('from_individuals', 0) / total_upstream
-                        pac_proportion = upstream.get('from_committees', 0) / total_upstream
-                        
-                        upstream_funding['independent_expenditures']['supporting']['funded_by']['organizations'] += amount * org_proportion
-                        upstream_funding['independent_expenditures']['supporting']['funded_by']['individuals'] += amount * ind_proportion
-                        upstream_funding['independent_expenditures']['supporting']['funded_by']['political_committees'] += amount * pac_proportion
-                    else:
-                        # No upstream funding = dark money
-                        upstream_funding['independent_expenditures']['supporting']['funded_by']['unknown'] += amount
-                else:
-                    # No upstream data available
-                    upstream_funding['independent_expenditures']['supporting']['funded_by']['unknown'] += amount
-            
-            # Process independent expenditures AGAINST candidate
-            for cmte_id, cmte_data in indie_oppose_committees.items():
-                amount = cmte_data['total_amount']
-                upstream = upstream_by_committee.get(cmte_id, {})
-                
-                if upstream:
-                    total_upstream = (
-                        upstream.get('from_organizations', 0) +
-                        upstream.get('from_individuals', 0) +
-                        upstream.get('from_committees', 0)
-                    )
-                    
-                    if total_upstream > 0:
-                        # Proportionally attribute opposition ad spending
-                        org_proportion = upstream.get('from_organizations', 0) / total_upstream
-                        ind_proportion = upstream.get('from_individuals', 0) / total_upstream
-                        pac_proportion = upstream.get('from_committees', 0) / total_upstream
-                        
-                        upstream_funding['independent_expenditures']['opposing']['funded_by']['organizations'] += amount * org_proportion
-                        upstream_funding['independent_expenditures']['opposing']['funded_by']['individuals'] += amount * ind_proportion
-                        upstream_funding['independent_expenditures']['opposing']['funded_by']['political_committees'] += amount * pac_proportion
-                    else:
-                        upstream_funding['independent_expenditures']['opposing']['funded_by']['unknown'] += amount
-                else:
-                    upstream_funding['independent_expenditures']['opposing']['funded_by']['unknown'] += amount
-            
-            # Calculate net effect for independent expenditures (support - oppose)
-            upstream_funding['independent_expenditures']['net']['organizations'] = (
-                upstream_funding['independent_expenditures']['supporting']['funded_by']['organizations'] - 
-                upstream_funding['independent_expenditures']['opposing']['funded_by']['organizations']
-            )
-            upstream_funding['independent_expenditures']['net']['individuals'] = (
-                upstream_funding['independent_expenditures']['supporting']['funded_by']['individuals'] - 
-                upstream_funding['independent_expenditures']['opposing']['funded_by']['individuals']
-            )
-            upstream_funding['independent_expenditures']['net']['political_committees'] = (
-                upstream_funding['independent_expenditures']['supporting']['funded_by']['political_committees'] - 
-                upstream_funding['independent_expenditures']['opposing']['funded_by']['political_committees']
-            )
-            upstream_funding['independent_expenditures']['net']['unknown'] = (
-                upstream_funding['independent_expenditures']['supporting']['funded_by']['unknown'] - 
-                upstream_funding['independent_expenditures']['opposing']['funded_by']['unknown']
-            )
-            
-            # Round all values
-            for section in ['supporting', 'opposing']:
-                for key in upstream_funding['independent_expenditures'][section]['funded_by']:
-                    upstream_funding['independent_expenditures'][section]['funded_by'][key] = round(
-                        upstream_funding['independent_expenditures'][section]['funded_by'][key], 2
-                    )
-            for key in upstream_funding['independent_expenditures']['net']:
-                upstream_funding['independent_expenditures']['net'][key] = round(
-                    upstream_funding['independent_expenditures']['net'][key], 2
-                )
-            
-            # 💰 Calculate aggregate upstream for political PAC contributions
-            political_pac_aggregate_upstream = {
-                'from_organizations': 0,
-                'from_individuals': 0,
-                'from_committees': 0
-            }
-            for cmte_data in political_pac_committees.values():
-                cmte_id = cmte_data['committee_id']
-                upstream = upstream_by_committee.get(cmte_id, {})
-                political_pac_aggregate_upstream['from_organizations'] += upstream.get('from_organizations', 0)
-                political_pac_aggregate_upstream['from_individuals'] += upstream.get('from_individuals', 0)
-                political_pac_aggregate_upstream['from_committees'] += upstream.get('from_committees', 0)
-            
-            # Round
-            for key in political_pac_aggregate_upstream:
-                political_pac_aggregate_upstream[key] = round(political_pac_aggregate_upstream[key], 2)
+
             
             cross_cycle_record = {
                 '_id': bioguide_id,
@@ -487,15 +384,25 @@ def candidate_financials_asset(
                         'support': {
                             'total_amount': indie_support_total,
                             'transaction_count': indie_support_count,
-                            'committees': indie_support_top  # All committees, sorted by amount
+                            'committees': [
+                                {
+                                    **cmte,
+                                    'upstream_funding': upstream_by_committee[cmte['committee_id']]
+                                }
+                                for cmte in indie_support_top
+                            ]
                         },
                         'oppose': {
                             'total_amount': indie_oppose_total,
                             'transaction_count': indie_oppose_count,
-                            'committees': indie_oppose_top  # All committees, sorted by amount
-                        },
-                        # 💰 UPSTREAM FUNDING: WHO funded the Super PAC ads (aggregated)
-                        'upstream_funding': upstream_funding['independent_expenditures']
+                            'committees': [
+                                {
+                                    **cmte,
+                                    'upstream_funding': upstream_by_committee[cmte['committee_id']]
+                                }
+                                for cmte in indie_oppose_top
+                            ]
+                        }
                     },
                     
                     # NEW: Direct funding structure with separated lists
@@ -511,16 +418,10 @@ def candidate_financials_asset(
                             'committees': [
                                 {
                                     **cmte,
-                                    'upstream_funding': upstream_by_committee.get(cmte['committee_id'], {
-                                        'from_organizations': 0,
-                                        'from_individuals': 0,
-                                        'from_committees': 0
-                                    })
+                                    'upstream_funding': upstream_by_committee[cmte['committee_id']]
                                 }
                                 for cmte in political_pac_top
-                            ],  # O/W/I types - with per-committee upstream tracing
-                            # 💰 UPSTREAM FUNDING: WHO funded these political PACs (aggregated)
-                            'upstream_funding': political_pac_aggregate_upstream
+                            ]  # O/W/I types - with per-committee upstream tracing
                         },
                         'from_individuals': {
                             'total_amount': 0,  # Future implementation

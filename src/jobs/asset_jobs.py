@@ -24,7 +24,7 @@ fec_pipeline_job = define_asset_job(
         # Phase 1: Download all source data
         "data_sync",
         
-        # Phase 2: Parse all 7 FEC files into per-year databases (using raw FEC names)
+        # Phase 2: Parse all 8 FEC files into per-year databases (using raw FEC names)
         "cn",                       # cn.zip - candidate master
         "cm",                       # cm.zip - committee master
         "ccl",                      # ccl.zip - candidate-committee linkages
@@ -32,6 +32,7 @@ fec_pipeline_job = define_asset_job(
         "webl",                     # webl.zip - committee summary
         "webk",                     # webk.zip - PAC summary
         "itpas2",                   # pas2.zip - itemized transactions (ALL types, including 24A/24E for indie expenditures)
+        "itoth",                    # oth.zip - other receipts (committee upstream funding)
         
         # Phase 3: Build member→FEC mapping
         "member_fec_mapping",
