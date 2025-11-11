@@ -174,6 +174,17 @@ class DataRepository:
         """
         return self.fec_cycle_dir(cycle) / "pas2.zip"
     
+    def fec_oth_path(self, cycle: str) -> Path:
+        """Path to FEC other receipts file (oth.zip).
+        
+        Contains Schedule A receipts that don't fit other categories:
+        - Committee-to-committee transfers (PAC → PAC, PAC → Party)
+        - Corporate/union contributions to PACs
+        - Refunds, interest, other miscellaneous receipts
+        Flat structure per fec.md.
+        """
+        return self.fec_cycle_dir(cycle) / "oth.zip"
+    
     def fec_cycle_metadata_path(self, cycle: str) -> Path:
         """Path to FEC cycle metadata file."""
         return self.fec_cycle_dir(cycle) / "metadata.json"
@@ -340,6 +351,7 @@ FEC_FILE_MAPPING = {
     'webk': 'fec_webk_path',
     'indiv': 'fec_indiv_path',
     'pas2': 'fec_pas2_path',
+    'oth': 'fec_oth_path',
 }
 
 
