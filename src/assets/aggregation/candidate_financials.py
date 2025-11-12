@@ -357,6 +357,22 @@ def candidate_financials_asset(
                         })
             
             # ========================================================================
+            # SORT UPSTREAM FUNDING ARRAYS
+            # ========================================================================
+            # After aggregating across cycles, sort each committee's upstream arrays
+            # by amount (descending) so the largest donors appear first
+            for cmte_id in upstream_by_committee:
+                upstream_by_committee[cmte_id]['from_committees'].sort(
+                    key=lambda x: x['amount'], reverse=True
+                )
+                upstream_by_committee[cmte_id]['from_organizations'].sort(
+                    key=lambda x: x['amount'], reverse=True
+                )
+                upstream_by_committee[cmte_id]['from_individuals'].sort(
+                    key=lambda x: x['amount'], reverse=True
+                )
+            
+            # ========================================================================
             # NO AGGREGATE UPSTREAM CALCULATIONS
             # ========================================================================
             # We provide upstream funding detail at the PER-COMMITTEE level only.
