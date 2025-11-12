@@ -35,8 +35,8 @@ class DataSyncConfig(Config):
     sync_fec_summaries: bool = True
     """Download FEC summary files (webl, webk - ~10MB total, gives us committee & PAC financial summaries)"""
     
-    sync_individual_contributions: bool = False
-    """DEPRECATED: Individual contributions no longer needed. We use webl.zip summary files for aggregate individual donor totals."""
+    sync_individual_contributions: bool = True
+    """Individual contributions (indiv.zip) - CRITICAL for Super PAC mega-donor visibility. Itemized donations >$200. Will be filtered to ≥$10K at parse time. 2-4GB per cycle."""
     
     sync_committee_transfers: bool = True
     """Download committee transfers (pas2) - ~300MB per cycle, CRITICAL for Leadership PAC tracking AND independent expenditures (24A/24E)"""

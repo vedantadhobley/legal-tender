@@ -24,7 +24,7 @@ from src.assets import (
     # Data sync
     data_sync_asset,
     
-    # FEC parsers (raw data → fec_YYYY databases) - 8 files, 8 parsers
+    # FEC parsers (raw data → fec_YYYY databases) - 9 files, 9 parsers
     cn_asset,
     cm_asset,
     ccl_asset,
@@ -33,6 +33,7 @@ from src.assets import (
     webk_asset,
     itpas2_asset,
     itoth_asset,
+    itcont_asset,
     
     # Mapping assets (ID mapping → aggregation database)
     member_fec_mapping_asset,
@@ -67,7 +68,7 @@ defs = Definitions(
         # Data sync (downloads all files)
         data_sync_asset,
         
-        # FEC raw data parsers (→ fec_YYYY databases) - 8 files, 8 parsers
+        # FEC raw data parsers (→ fec_YYYY databases) - 9 files, 9 parsers
         cn_asset,
         cm_asset,
         ccl_asset,
@@ -76,6 +77,7 @@ defs = Definitions(
         webk_asset,
         itpas2_asset,
         itoth_asset,
+        itcont_asset,
         
         # Mapping assets (ID mapping → aggregation database)
         member_fec_mapping_asset,

@@ -18,6 +18,9 @@ Currently extracts:
   - Corporate/Union PAC contributions (reclassified as from_organizations)
     • Q/N type committees = Corporate/Union PACs (no upstream tracing needed)
     • W/O/I type committees = Political PACs (trace upstream sources)
+  - Individual mega-donations ≥$10K (from itcont/indiv.zip) ✅ NOW AVAILABLE!
+    • Critical for Super PAC transparency (44.9% had ZERO visible funding)
+    • Enables billionaire → Super PAC → Candidate influence tracking
   
 LIMITATION: Q-type is overly broad
   - Q includes: Corporate PACs, Leadership PACs, AND Ideological PACs
@@ -26,8 +29,7 @@ LIMITATION: Q-type is overly broad
   - For now, all Q/N types treated as "organizations" (end of money trail)
   
 NOT YET AVAILABLE (need different data sources):
-  - Direct individual donations (need indiv.zip parsing - Phase 2)
-  - Individual donors to Q-type PACs (also requires indiv.zip)
+  - Small individual donations <$10K (excluded for performance)
   - Direct corporate contributions (illegal - corps use PACs instead)
 
 See docs/PAS2_DATA_MODEL.md for detailed explanation of the data model.
@@ -51,6 +53,7 @@ class EnrichedCommitteeFundingConfig(Config):
     ins={
         "enriched_itpas2": AssetIn(key="enriched_itpas2"),
         "itoth": AssetIn(key="itoth"),
+        "itcont": AssetIn(key="itcont"),
         "cm": AssetIn(key="cm"),
         "member_fec_mapping": AssetIn(key="member_fec_mapping"),
     },
@@ -62,9 +65,6 @@ def enriched_committee_funding_asset(
     config: EnrichedCommitteeFundingConfig,
     mongo: MongoDBResource,
     enriched_itpas2: Dict[str, Any],
-    itoth: Dict[str, Any],
-    cm: Dict[str, Any],
-    member_fec_mapping: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """
     Trace money UPSTREAM for committees that donate to tracked candidates.
@@ -328,6 +328,73 @@ def enriched_committee_funding_asset(
                 context.log.info(f"✅ Found {upstream_count:,} upstream transactions for {len(funding_by_political_pac):,} political PACs")
             
             # ========================================================================
+            # STEP 5.5: Query individual mega-donations (itcont) for political PACs
+            # ========================================================================
+            context.log.info("Querying individual mega-donations...")
+            
+            if political_pacs:
+                raw_itcont_collection = mongo.get_collection(client, "itcont", database_name=f"fec_{cycle}")
+                
+                individual_query = raw_itcont_collection.find({
+                    "ENTITY_TP": "IND",  # Individual donors only
+                    "TRANSACTION_AMT": {"$gte": 10000},  # Should be pre-filtered, but double-check
+                    "CMTE_ID": {"$in": political_pacs}  # Recipient is political PAC
+                })
+                
+                individual_count = 0
+                for txn in individual_query:
+                    political_pac_id = txn.get('CMTE_ID')  # Recipient PAC
+                    donor_name = txn.get('NAME')
+                    employer = txn.get('EMPLOYER') or 'Not Provided'
+                    amount = txn.get('TRANSACTION_AMT', 0)
+                    
+                    if not donor_name or not political_pac_id or amount < 10000:
+                        continue
+                    
+                    if political_pac_id not in funding_by_political_pac:
+                        funding_by_political_pac[political_pac_id] = {
+                            'from_committees': {},
+                            'from_individuals': {},
+                            'from_organizations': {}
+                        }
+                    
+                    # Aggregate by (name, employer) to combine multiple donations from same person
+                    donor_key = f"{donor_name}|{employer}"
+                    
+                    if donor_key not in funding_by_political_pac[political_pac_id]['from_individuals']:
+                        funding_by_political_pac[political_pac_id]['from_individuals'][donor_key] = {
+                            'donor_name': donor_name,
+                            'employer': employer,
+                            'total_amount': 0,
+                            'contribution_count': 0,
+                            'contributions': []
+                        }
+                    
+                    funding_by_political_pac[political_pac_id]['from_individuals'][donor_key]['total_amount'] += amount
+                    funding_by_political_pac[political_pac_id]['from_individuals'][donor_key]['contribution_count'] += 1
+                    
+                    # Keep top 10 contributions
+                    contributions = funding_by_political_pac[political_pac_id]['from_individuals'][donor_key]['contributions']
+                    txn_data = {
+                        'amount': amount,
+                        'date': txn.get('TRANSACTION_DT'),
+                        'transaction_id': txn.get('TRAN_ID')
+                    }
+                    
+                    if len(contributions) < 10:
+                        contributions.append(txn_data)
+                    else:
+                        contributions.sort(key=lambda x: x['amount'], reverse=True)
+                        if amount > contributions[-1]['amount']:
+                            contributions[-1] = txn_data
+                    
+                    individual_count += 1
+                
+                # Count unique mega-donors
+                total_mega_donors = sum(len(pac_data['from_individuals']) for pac_data in funding_by_political_pac.values())
+                context.log.info(f"✅ Found {individual_count:,} mega-donation transactions from {total_mega_donors:,} unique donors")
+            
+            # ========================================================================
             # STEP 6: Build committee funding records
             # ========================================================================
             context.log.info("Building funding records...")
@@ -381,8 +448,24 @@ def enriched_committee_funding_asset(
                 from_committees.sort(key=lambda x: x['total_amount'], reverse=True)
                 from_organizations.sort(key=lambda x: x['total_amount'], reverse=True)
                 
+                # Build from_individuals list
+                from_individuals = []
+                total_from_individuals = 0
+                
+                for donor_key, donor_data in upstream['from_individuals'].items():
+                    from_individuals.append({
+                        'donor_name': donor_data['donor_name'],
+                        'employer': donor_data['employer'],
+                        'total_amount': donor_data['total_amount'],
+                        'contribution_count': donor_data['contribution_count'],
+                        'contributions': sorted(donor_data['contributions'], key=lambda x: x['amount'], reverse=True)[:10]
+                    })
+                    total_from_individuals += donor_data['total_amount']
+                
+                from_individuals.sort(key=lambda x: x['total_amount'], reverse=True)
+                
                 # Calculate totals
-                total_disclosed = total_from_committees + total_from_organizations
+                total_disclosed = total_from_committees + total_from_organizations + total_from_individuals
                 transparency_score = 1.0 if total_disclosed > 0 else 0.0
                 
                 # Red flags
@@ -407,14 +490,14 @@ def enriched_committee_funding_asset(
                     
                     'funding_sources': {
                         'from_committees': from_committees,
-                        'from_individuals': [],  # Future: indiv.zip
+                        'from_individuals': from_individuals,
                         'from_organizations': from_organizations
                     },
                     
                     'transparency': {
                         'total_disclosed': total_disclosed,
                         'from_committees': total_from_committees,
-                        'from_individuals': 0,  # Future
+                        'from_individuals': total_from_individuals,
                         'from_organizations': total_from_organizations,
                         'transparency_score': transparency_score,
                         'red_flags': red_flags
