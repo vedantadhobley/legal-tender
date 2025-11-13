@@ -76,9 +76,9 @@ def itcont_asset(
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue
                 
-                # PHASE 1: Aggregate all donations by (name, employer, committee)
-                context.log.info("   📂 Phase 1: Aggregating donations by donor...")
-                donor_aggregates = {}
+                # PHASE 1: Calculate donor totals (memory-efficient - only store totals)
+                context.log.info("   📂 Phase 1: Calculating donor totals...")
+                donor_totals = {}  # {(name, employer, cmte_id): total_amount}
                 
                 total_parsed = 0
                 individual_count = 0
@@ -104,7 +104,7 @@ def itcont_asset(
                             if total_parsed % 1000000 == 0:
                                 context.log.info(
                                     f"      Parsed {total_parsed:,} records, "
-                                    f"tracking {len(donor_aggregates):,} unique donors..."
+                                    f"tracking {len(donor_totals):,} unique donors..."
                                 )
                             
                             # Only aggregate individual donations
@@ -122,20 +122,79 @@ def itcont_asset(
                             
                             individual_count += 1
                             
-                            # Aggregate by (name, employer, committee)
+                            # Aggregate by (name, employer, committee) - ONLY STORE TOTAL
                             name = fields[7]
                             employer = fields[11] or 'Not Provided'
                             cmte_id = fields[0]
                             donor_key = (name, employer, cmte_id)
                             
-                            if donor_key not in donor_aggregates:
-                                donor_aggregates[donor_key] = {
-                                    'total_amount': 0,
-                                    'transactions': []
-                                }
-                            
-                            donor_aggregates[donor_key]['total_amount'] += transaction_amt
-                            donor_aggregates[donor_key]['transactions'].append({
+                            donor_totals[donor_key] = donor_totals.get(donor_key, 0) + transaction_amt
+                
+                # Identify mega-donors (≥$100K total)
+                mega_donor_keys = {k for k, v in donor_totals.items() if v >= config.threshold}
+                
+                context.log.info(f"   ✅ Phase 1 complete: {total_parsed:,} total records, {individual_count:,} individual donations")
+                context.log.info(f"      Found {len(donor_totals):,} unique donors")
+                context.log.info(f"      Mega-donors: {len(mega_donor_keys):,} ({(len(mega_donor_keys)/len(donor_totals)*100):.3f}%)")
+                
+                # PHASE 2: Second pass - extract transactions for mega-donors only
+                context.log.info(f"   📂 Phase 2: Extracting transactions for {len(mega_donor_keys):,} mega-donors...")
+                
+                batch = []
+                mega_donations = 0
+                cycle_stats = {
+                    'amount_distribution': {
+                        '100k-250k': 0,
+                        '250k-500k': 0,
+                        '500k-1M': 0,
+                        '1M+': 0
+                    }
+                }
+                
+                # Track distribution
+                for donor_key in mega_donor_keys:
+                    total = donor_totals[donor_key]
+                    if total >= 1000000:
+                        cycle_stats['amount_distribution']['1M+'] += 1
+                    elif total >= 500000:
+                        cycle_stats['amount_distribution']['500k-1M'] += 1
+                    elif total >= 250000:
+                        cycle_stats['amount_distribution']['250k-500k'] += 1
+                    else:
+                        cycle_stats['amount_distribution']['100k-250k'] += 1
+                
+                # Second pass through the file to extract transactions
+                with zf.open(txt_files[0]) as f:
+                    for line in f:
+                        decoded = line.decode('utf-8', errors='ignore').strip()
+                        if not decoded:
+                            continue
+                        
+                        fields = decoded.split('|')
+                        if len(fields) < 21:
+                            continue
+                        
+                        entity_tp = fields[6]
+                        if entity_tp != "IND":
+                            continue
+                        
+                        try:
+                            transaction_amt = float(fields[14]) if fields[14] else 0
+                        except (ValueError, IndexError):
+                            continue
+                        
+                        if transaction_amt <= 0:
+                            continue
+                        
+                        # Check if this donor is a mega-donor
+                        name = fields[7]
+                        employer = fields[11] or 'Not Provided'
+                        cmte_id = fields[0]
+                        donor_key = (name, employer, cmte_id)
+                        
+                        if donor_key in mega_donor_keys:
+                            # Store this transaction
+                            batch.append({
                                 'CMTE_ID': cmte_id,
                                 'AMNDT_IND': fields[1],
                                 'RPT_TP': fields[2],
@@ -157,45 +216,8 @@ def itcont_asset(
                                 'MEMO_CD': fields[18],
                                 'MEMO_TEXT': fields[19],
                                 'SUB_ID': fields[20],
+                                'updated_at': datetime.now()
                             })
-                
-                context.log.info(f"   ✅ Phase 1 complete: {total_parsed:,} total records, {individual_count:,} individual donations")
-                context.log.info(f"      Found {len(donor_aggregates):,} unique (donor, committee) pairs")
-                
-                # PHASE 2: Filter for mega-donors (≥$100K aggregate) and insert
-                context.log.info(f"   📂 Phase 2: Filtering for mega-donors (≥${config.threshold:,})...")
-                
-                batch = []
-                mega_donors = 0
-                mega_donations = 0
-                cycle_stats = {
-                    'amount_distribution': {
-                        '100k-250k': 0,
-                        '250k-500k': 0,
-                        '500k-1M': 0,
-                        '1M+': 0
-                    }
-                }
-                
-                for donor_key, donor_data in donor_aggregates.items():
-                    if donor_data['total_amount'] >= config.threshold:
-                        mega_donors += 1
-                        
-                        # Track distribution
-                        total = donor_data['total_amount']
-                        if total >= 1000000:
-                            cycle_stats['amount_distribution']['1M+'] += 1
-                        elif total >= 500000:
-                            cycle_stats['amount_distribution']['500k-1M'] += 1
-                        elif total >= 250000:
-                            cycle_stats['amount_distribution']['250k-500k'] += 1
-                        else:
-                            cycle_stats['amount_distribution']['100k-250k'] += 1
-                        
-                        # Insert all transactions from this mega-donor
-                        for txn in donor_data['transactions']:
-                            txn['updated_at'] = datetime.now()
-                            batch.append(txn)
                             mega_donations += 1
                             
                             if len(batch) >= 10000:
@@ -207,21 +229,15 @@ def itcont_asset(
                     collection.insert_many(batch, ordered=False)
                 
                 context.log.info(
-                    f"   ✅ {cycle}: {mega_donors:,} mega-donors (≥${config.threshold:,}), "
+                    f"   ✅ {cycle}: {len(mega_donor_keys):,} mega-donors (≥${config.threshold:,}), "
                     f"{mega_donations:,} total transactions"
                 )
                 context.log.info(f"      Total parsed: {total_parsed:,} records")
                 context.log.info(f"      Individual donations: {individual_count:,}")
-                context.log.info(f"      Mega-donors: {mega_donors:,} ({(mega_donors/len(donor_aggregates)*100):.3f}% of unique donors)")
                 context.log.info(f"      Amount distribution: {cycle_stats['amount_distribution']}")
-                if cycle_stats['by_transaction_type']:
-                    context.log.info(
-                        f"      Top transaction types: "
-                        f"{dict(sorted(cycle_stats['by_transaction_type'].items(), key=lambda x: x[1], reverse=True)[:5])}"
-                    )
                 
                 stats['by_cycle'][cycle] = {
-                    'mega_donors': mega_donors,
+                    'mega_donors': len(mega_donor_keys),
                     'total_donations': mega_donations,
                     'total_parsed': total_parsed,
                     'individual_count': individual_count,
