@@ -13,6 +13,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
+# Install MongoDB Database Tools from official MongoDB releases
+RUN wget -qO- https://fastdl.mongodb.org/tools/db/mongodb-database-tools-debian12-x86_64-100.10.0.tgz | tar xz -C /tmp \
+    && mv /tmp/mongodb-database-tools-*/bin/* /usr/local/bin/ \
+    && rm -rf /tmp/mongodb-database-tools-*
+
 # Copy requirements and install Python dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \

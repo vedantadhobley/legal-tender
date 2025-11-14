@@ -21,7 +21,7 @@ class EnrichedDonorFinancialsConfig(Config):
     name="enriched_donor_financials",
     group_name="enrichment",
     ins={
-        "enriched_itpas2": AssetIn(key="enriched_itpas2"),
+        "enriched_pas2": AssetIn(key="enriched_pas2"),
     },
     compute_kind="aggregation",
     description="Per-cycle aggregation of all money flows from each committee with recipient and category separation"
@@ -30,7 +30,7 @@ def enriched_donor_financials_asset(
     context: AssetExecutionContext,
     config: EnrichedDonorFinancialsConfig,
     mongo: MongoDBResource,
-    enriched_itpas2: Dict[str, Any],
+    enriched_pas2: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Aggregate ALL money flows FROM each committee within a single cycle.
@@ -115,18 +115,18 @@ def enriched_donor_financials_asset(
         for cycle in config.cycles:
             context.log.info(f"Processing cycle {cycle}")
             
-            itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"enriched_{cycle}")
+            pas2_collection = mongo.get_collection(client, "pas2", database_name=f"enriched_{cycle}")
             financials_collection = mongo.get_collection(client, "donor_financials", database_name=f"enriched_{cycle}")
             
             # Clear existing data for this cycle
             financials_collection.delete_many({})
             context.log.info(f"Cleared existing donor_financials for cycle {cycle}")
             
-            # Get all unique committees from itpas2
+            # Get all unique committees from pas2
             all_committees = {}
             
-            # Gather from itpas2 (covers both indie expenditures and PAC contributions)
-            for doc in itpas2_collection.find():
+            # Gather from pas2 (covers both indie expenditures and PAC contributions)
+            for doc in pas2_collection.find():
                 cmte_id = doc.get('filer_committee_id')
                 if cmte_id and cmte_id not in all_committees:
                     all_committees[cmte_id] = {
@@ -152,7 +152,7 @@ def enriched_donor_financials_asset(
             for cmte_id, cmte_info in all_committees.items():
             
                 # === INDEPENDENT EXPENDITURES ===
-                # Using itpas2 data instead of independent_expenditure collection
+                # Using pas2 data instead of independent_expenditure collection
                 # because independent_expenditure.csv contains billions in fake/troll filings
                 # Transaction types (per official FEC documentation):
                 # 24E = Independent expenditure advocating election (58,432 txns, $1.9B) → support
@@ -162,7 +162,7 @@ def enriched_donor_financials_asset(
                 indie_support_candidates = {}
                 indie_oppose_candidates = {}
                 
-                for doc in itpas2_collection.find({
+                for doc in pas2_collection.find({
                     "filer_committee_id": cmte_id,
                     "transaction_type": {"$in": ["24A", "24E", "24F", "24N"]}
                 }):
@@ -196,7 +196,7 @@ def enriched_donor_financials_asset(
                         'amount': amount,
                         'date': doc.get('transaction_date', ''),
                         'description': doc.get('memo_text', ''),
-                        'payee': '',  # itpas2 doesn't have payee info for indie expenditures
+                        'payee': '',  # pas2 doesn't have payee info for indie expenditures
                         'transaction_id': doc.get('transaction_id', ''),
                         'transaction_type': transaction_type,  # Include type for reference
                     })
@@ -236,7 +236,7 @@ def enriched_donor_financials_asset(
                 # Note: 24A/24E are independent expenditures (tracked separately)
                 pac_candidates = {}
 
-                for doc in itpas2_collection.find({"filer_committee_id": cmte_id}):
+                for doc in pas2_collection.find({"filer_committee_id": cmte_id}):
                     cand_id = doc.get('candidate_id')
                     amount = doc.get('amount', 0)
                     transaction_type = doc.get('transaction_type', '')

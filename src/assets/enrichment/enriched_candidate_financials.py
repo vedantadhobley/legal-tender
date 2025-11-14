@@ -21,7 +21,7 @@ class EnrichedCandidateFinancialsConfig(Config):
     name="enriched_candidate_financials",
     group_name="enrichment",
     ins={
-        "enriched_itpas2": AssetIn(key="enriched_itpas2"),
+        "enriched_pas2": AssetIn(key="enriched_pas2"),
     },
     compute_kind="aggregation",
     description="Per-cycle aggregation of all money flows to each tracked candidate with source separation"
@@ -30,7 +30,7 @@ def enriched_candidate_financials_asset(
     context: AssetExecutionContext,
     config: EnrichedCandidateFinancialsConfig,
     mongo: MongoDBResource,
-    enriched_itpas2: Dict[str, Any],
+    enriched_pas2: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Aggregate ALL money flows TO each tracked candidate within a single cycle.
@@ -68,7 +68,7 @@ def enriched_candidate_financials_asset(
             }
         },
         
-        // PAC Contributions (from itpas2 - PAC to Candidate committee)
+        // PAC Contributions (from pas2 - PAC to Candidate committee)
         pac_contributions: {
             total_amount: 250000,
             transaction_count: 89,
@@ -116,19 +116,19 @@ def enriched_candidate_financials_asset(
         for cycle in config.cycles:
             context.log.info(f"Processing cycle {cycle}")
             
-            itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"enriched_{cycle}")
+            pas2_collection = mongo.get_collection(client, "pas2", database_name=f"enriched_{cycle}")
             financials_collection = mongo.get_collection(client, "candidate_financials", database_name=f"enriched_{cycle}")
             
             # Clear existing data for this cycle
             financials_collection.delete_many({})
             context.log.info(f"Cleared existing candidate_financials for cycle {cycle}")
             
-            # Get all unique tracked candidates from itpas2
+            # Get all unique tracked candidates from pas2
             # Group by bioguide_id (not candidate_id) since members can have multiple candidate IDs
             tracked_candidates = {}
             
-            # Gather from itpas2 (covers both indie expenditures and PAC contributions)
-            for doc in itpas2_collection.find({"is_tracked_member": True}):
+            # Gather from pas2 (covers both indie expenditures and PAC contributions)
+            for doc in pas2_collection.find({"is_tracked_member": True}):
                 bioguide_id = doc.get('candidate_bioguide_id')
                 cand_id = doc.get('candidate_id')
                 
@@ -166,7 +166,7 @@ def enriched_candidate_financials_asset(
                 candidate_ids = member_info['candidate_ids']
                 
                 # === INDEPENDENT EXPENDITURES ===
-                # Using itpas2 data instead of independent_expenditure collection
+                # Using pas2 data instead of independent_expenditure collection
                 # because independent_expenditure.csv contains billions in fake/troll filings
                 # Transaction types (per official FEC documentation):
                 # 24E = Independent expenditure advocating election (58,432 txns, $1.9B) → support
@@ -176,7 +176,7 @@ def enriched_candidate_financials_asset(
                 indie_support_committees = {}
                 indie_oppose_committees = {}
                 
-                for doc in itpas2_collection.find({
+                for doc in pas2_collection.find({
                     "candidate_id": {"$in": candidate_ids},  # Match ANY of this member's candidate IDs
                     "transaction_type": {"$in": ["24A", "24E", "24F", "24N"]}
                 }):
@@ -209,7 +209,7 @@ def enriched_candidate_financials_asset(
                         'amount': amount,
                         'date': doc.get('transaction_date', ''),
                         'description': doc.get('memo_text', ''),
-                        'payee': '',  # itpas2 doesn't have payee info for indie expenditures
+                        'payee': '',  # pas2 doesn't have payee info for indie expenditures
                         'transaction_id': doc.get('transaction_id', ''),
                         'transaction_type': transaction_type,  # Include type for reference
                     })
@@ -257,7 +257,7 @@ def enriched_candidate_financials_asset(
                 corporate_pac_committees = {}  # Q/N types - represent organizations directly
                 political_pac_committees = {}   # O/W/I/S types - need upstream tracing
 
-                for doc in itpas2_collection.find({"candidate_id": {"$in": candidate_ids}}):  # Match ANY of this member's candidate IDs
+                for doc in pas2_collection.find({"candidate_id": {"$in": candidate_ids}}):  # Match ANY of this member's candidate IDs
                     cmte_id = doc.get('filer_committee_id')
                     amount = doc.get('amount', 0)
                     transaction_type = doc.get('transaction_type', '')

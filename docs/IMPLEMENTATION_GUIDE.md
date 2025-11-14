@@ -1,6 +1,6 @@
 # Legal Tender Implementation Guide
 
-**Last Updated**: November 11, 2025
+**Last Updated**: November 13, 2025
 
 This document consolidates all technical implementation details, data model explanations, and architectural decisions for the Legal Tender project.
 
@@ -9,10 +9,11 @@ This document consolidates all technical implementation details, data model expl
 ## Table of Contents
 
 1. [FEC Data Model Understanding](#fec-data-model-understanding)
-2. [Upstream Money Tracing Strategy](#upstream-money-tracing-strategy)
-3. [MongoDB Structure](#mongodb-structure)
-4. [Memory Optimization](#memory-optimization)
-5. [Data Quality & Known Issues](#data-quality--known-issues)
+2. [Dump-Based Architecture](#dump-based-architecture)
+3. [Upstream Money Tracing Strategy](#upstream-money-tracing-strategy)
+4. [MongoDB Structure](#mongodb-structure)
+5. [Memory Optimization](#memory-optimization)
+6. [Data Quality & Known Issues](#data-quality--known-issues)
 
 ---
 
@@ -54,30 +55,35 @@ After extensive investigation and analysis of actual FEC data, here's what each 
 - **OTHER_ID** = Donor committee ID (if committee-to-committee transfer) OR empty string
 - **NAME** = Donor name (if individual/organization donation)
 - **ENTITY_TP** = Type of donor
-  - `"IND"` = Individual donations (17.1M records, 91% of file)
-  - `"PAC"` = PAC-to-PAC transfers (156K records, $2.4B)
-  - `"COM"` = Committee transfers (24K records, $2.4B)
-  - `"PTY"` = Party committee transfers (112K records, $2.4B)
-  - `"CCM"` = Candidate committee transfers/refunds (1.2M records)
-  - `"ORG"` = Organization donations (85K records, $5.4B)
+  - `"IND"` = Individual donations (17.1M records, 91% of file) **← FILTERED OUT at parse time**
+  - `"PAC"` = PAC-to-PAC transfers (156K records, $2.4B) **← KEPT**
+  - `"COM"` = Committee transfers (24K records, $2.4B) **← KEPT**
+  - `"PTY"` = Party committee transfers (112K records, $2.4B) **← KEPT**
+  - `"CCM"` = Candidate committee transfers/refunds (1.2M records) **← FILTERED OUT (mostly refunds)**
+  - `"ORG"` = Organization donations (85K records, $5.4B) **← KEPT**
+  - `"CAN"` = Direct candidate entities (minimal) **← FILTERED OUT**
 
-**What it contains**:
+**Our filtering strategy (November 2025)**:
+```python
+# Parse-time filtering for oth.zip
+if entity_tp not in ["PAC", "COM", "PTY", "ORG"]:
+    continue  # Skip IND, CCM, CAN
+```
+
+**What we load (377K records, 2% of file)**:
 - ✅ PAC-to-PAC transfers (156K records) - **CRITICAL for upstream tracing**
 - ✅ Committee-to-committee transfers (24K records)
-- ✅ Individual donations to ANY committee type (17.1M records)
-  - Including mega-donations to party committees ($860M over $6,600 limit)
-  - Including donations to Super PACs
-- ✅ Refunds, loans, adjustments
-- ⚠️ 99.1% of IND records are form type **15J** (late/amended filings)
+- ✅ Party committee transfers (112K records)
+- ✅ Organization donations (85K records)
 
-**Size**: ~483 MB for 2024 alone (931MB total across 4 cycles), 18.7M records
-**Key insight**: This is NOT the primary source for individual donations!
+**What we skip (18.3M records, 98% of file)**:
+- ❌ Individual donations (17.1M IND records) - Use indiv.zip instead (complete dataset)
+- ❌ Candidate committee refunds (1.2M CCM records) - Not upstream influence
+- ❌ Direct candidate entities (CAN) - Rare, not useful
 
-**Critical finding**:
-- itoth contains only **17.1M individual donation records**
-- FEC documentation states itcont should have **~40M records per cycle**
-- This means itoth has only ~43% of individual donations
-- The 99.1% form 15J suggests these are **late-filed or amended contributions**, NOT the main dataset
+**Size**: ~483 MB compressed, 18.7M records raw → 377K records after filtering
+**Processing time**: 2-3 minutes (with filtering) vs 20+ minutes (without)
+**Key insight**: oth.zip individual donations are INCOMPLETE (43% coverage, mostly late filings)
 
 ---
 
@@ -100,7 +106,16 @@ After extensive investigation and analysis of actual FEC data, here's what each 
 - **1989-2014**: Contributions ≥$200 per reporting period
 - **1975-1988**: Contributions ≥$500 per reporting period
 
-**What it contains**:
+**Our loading strategy (November 2025)**:
+```python
+# Load ALL records raw, NO filtering at parse time
+# Filtering happens in enrichment layer
+for line in indiv_file:
+    record = parse_line(line)
+    batch.append(record)  # Keep everything
+```
+
+**What we load (69M records per cycle, 100% of file)**:
 - ✅ ALL itemized individual donations >$200 to ANY committee
 - ✅ Donations to candidate committees (limited to $6,600 per election)
 - ✅ Donations to party committees (higher limits ~$400K per year)
@@ -108,11 +123,17 @@ After extensive investigation and analysis of actual FEC data, here's what each 
 - ✅ Donations to corporate PACs
 - ✅ Complete donor information (employer, occupation, address)
 
-**Size**: 2-4 GB per cycle compressed, ~40M records
-**Key insight**: This is the AUTHORITATIVE source for individual donations!
+**Size**: 2-4 GB per cycle compressed, ~40-69M records raw
+**Processing time**: 15 minutes parse + 18 minutes index creation + 5 minutes dump = ~38 minutes first run
+**Key insight**: This is the AUTHORITATIVE and COMPLETE source for individual donations!
+
+**Why load everything raw**:
+- Flexibility: Apply different thresholds in enrichment layer without re-parsing
+- Completeness: No premature data loss
+- Speed: Dump/restore in 30 seconds vs 38 minutes re-parse
 
 **Critical differences from itoth**:
-- itcont: ~40M records (100% coverage of itemized donations)
+- itcont: ~69M records (100% coverage of itemized donations)
 - itoth: ~17M IND records (43% coverage, mostly late filings)
 - itcont: All donation types and amounts >$200
 - itoth: Mostly form 15J (late/amended filings)
@@ -121,15 +142,15 @@ After extensive investigation and analysis of actual FEC data, here's what each 
 
 ### Summary: Which File for What Purpose?
 
-| Purpose | Use This File | Filter | Why |
-|---------|--------------|--------|-----|
-| **PAC → Candidate transfers** | `pas2.zip` (itpas2) | `TRANSACTION_TP: "24K"` | Only file with candidate transfers |
-| **Independent expenditures** | `pas2.zip` (itpas2) | `TRANSACTION_TP: "24A/24E"` | Super PAC ad spending |
-| **PAC → PAC transfers** | `oth.zip` (itoth) | `ENTITY_TP: "PAC/COM/PTY"` | Shows upstream dark money flow |
-| **Individual mega-donations** | `indiv.zip` (itcont) | `ENTITY_TP: "IND", amount ≥ $10K` | Primary source, 40M records |
-| **Party committee mega-donors** | `indiv.zip` (itcont) | Recipient CMTE_TP: "Y", amount > $6,600 | UNLIMITED donations to parties |
-| **Super PAC mega-donors** | `indiv.zip` (itcont) | Recipient CMTE_TP: "O/W/I", any amount | UNLIMITED donations to Super PACs |
-| **Corporate PAC receipts** | `oth.zip` (itoth) | `ENTITY_TP: "PAC/COM/ORG"` | Who funds corporate PACs |
+| Purpose | Use This File | Filter (Parse Time) | Filter (Enrichment) | Why |
+|---------|--------------|---------------------|---------------------|-----|
+| **PAC → Candidate transfers** | `pas2.zip` | None (load all raw) | `TRANSACTION_TP: "24K"` | Only file with candidate transfers |
+| **Independent expenditures** | `pas2.zip` | None (load all raw) | `TRANSACTION_TP: "24A/24E"` | Super PAC ad spending |
+| **PAC → PAC transfers** | `oth.zip` | `ENTITY_TP IN ["PAC","COM","PTY","ORG"]` | None | Shows upstream dark money flow |
+| **Individual mega-donations** | `indiv.zip` | None (load all raw) | `amount ≥ $10K` | Primary source, 69M records |
+| **Party committee mega-donors** | `indiv.zip` | None (load all raw) | `CMTE_TP: "Y", amount > $6,600` | UNLIMITED donations to parties |
+| **Super PAC mega-donors** | `indiv.zip` | None (load all raw) | `CMTE_TP: "O/W/I"` | UNLIMITED donations to Super PACs |
+| **Corporate PAC receipts** | `oth.zip` | `ENTITY_TP IN ["PAC","COM","PTY","ORG"]` | None | Who funds corporate PACs |
 
 ---
 
@@ -137,30 +158,200 @@ After extensive investigation and analysis of actual FEC data, here's what each 
 
 **Performance implications**:
 ```
-itpas2: 621,922 records (2024) - FAST, filtered to candidates only
-itoth:  18,758,696 records (2024) - SLOW, needs filtering at parse time
-itcont: ~40,000,000 records (2024) - HUGE, stream with threshold filtering
+itpas2: 621,922 records (2024) - FAST, load all raw
+itoth:  18,758,696 records (2024) - FILTERED at parse time to 377K (98% reduction)
+itcont: ~69,000,000 records (2020) - HUGE, load all raw (no filtering)
 ```
 
-**Filtering strategy for itoth** (98.4% reduction):
+**Filtering strategy for oth.zip** (98% reduction at parse time):
 ```python
 # Filter at parse time to only committee-to-committee transfers
-if fields[6] not in ["PAC", "COM", "PTY"]:  # ENTITY_TP
-    continue  # Skip IND, CCM, ORG, CAN
+entity_tp = record.get('ENTITY_TP')
+if entity_tp not in ["PAC", "COM", "PTY", "ORG"]:
+    filtered_out += 1
+    continue  # Skip IND, CCM, CAN
     
-# Result: 18.7M → 292K records (156K PAC + 24K COM + 112K PTY)
+# Result: 18.7M → 377K records (156K PAC + 24K COM + 112K PTY + 85K ORG)
 # Processing time: 20+ min → ~2 min
+# Why: IND records duplicated in indiv.zip, CCM are refunds (not influence)
 ```
 
-**Filtering strategy for itcont** (99.9% reduction):
+**NO filtering for indiv.zip** (load everything raw):
 ```python
-# Filter to high-dollar donations only
-if float(fields[14]) < 10000:  # TRANSACTION_AMT
-    continue  # Skip donations under $10K
+# Load ALL records, no filtering
+for line in indiv_file:
+    record = schema.parse_line('indiv', decoded)
+    batch.append(record)  # Keep everything!
     
-# Result: ~40M → ~150K records
-# Focus on billionaire/mega-donor influence only
+# Result: 69M records loaded raw
+# Processing time: 15 min parse + 18 min indexes + 5 min dump = 38 min
+# Why: Flexibility - filter in enrichment layer, not at parse time
+# Future: enriched_donor_financials can apply $10K/$100K thresholds
 ```
+
+---
+
+## Dump-Based Architecture
+
+### Overview: Parse Once, Restore Fast
+
+**The Problem**: Parsing 69M indiv records takes 38 minutes every time.
+
+**The Solution**: Parse → Index → Dump → Restore in 30 seconds.
+
+### Workflow
+
+```
+FIRST RUN (Parse + Dump):
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Download ZIP from FEC (one-time, manual)                │
+│ 2. Parse ZIP → MongoDB (15 min for indiv)                  │
+│ 3. Create indexes (18 min for indiv, 7 indexes)            │
+│ 4. mongodump → BSON files (5 min for indiv, 36GB)          │
+│ 5. Save metadata (source file timestamp, record count)     │
+└─────────────────────────────────────────────────────────────┘
+Total: ~38 minutes for indiv, <3 minutes for all other files
+
+SUBSEQUENT RUNS (Restore from Dump):
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Check if source file changed (timestamp comparison)     │
+│ 2. If unchanged: mongorestore → MongoDB (30 seconds)       │
+│ 3. Indexes automatically restored from dump metadata       │
+└─────────────────────────────────────────────────────────────┘
+Total: ~30 seconds for ALL collections
+```
+
+### Critical Design Decisions
+
+#### 1. **Indexes Created BEFORE Dump**
+
+**Why**: mongodump includes indexes in `{collection}.metadata.json`, so they restore instantly.
+
+```python
+# CORRECT - Create indexes before dump
+collection.insert_many(batch)
+collection.create_index([("CMTE_ID", 1)])      # 7 indexes for indiv
+collection.create_index([("NAME", 1)])
+# ... 5 more indexes ...
+create_collection_dump(cycle, "indiv", ...)    # Dump includes indexes
+
+# On restore: mongorestore automatically recreates all 7 indexes
+```
+
+**Performance impact**:
+- First run: 18 minutes creating indexes (unavoidable for 69M records)
+- Restore: <1 second (indexes included in dump)
+- Without this: 18 minutes EVERY restore
+
+#### 2. **No Filtering at Parse Time (Except oth.zip)**
+
+**Why**: Maximum flexibility in enrichment layer.
+
+```python
+# indiv.py - Load EVERYTHING raw
+for line in indiv_file:
+    record = schema.parse_line('indiv', decoded)
+    batch.append(record)  # No filtering!
+
+# Filtering happens in enrichment layer
+# Want $10K threshold? enriched_donor_financials filters it
+# Want $100K threshold? Change enrichment, don't re-parse
+```
+
+**Exception**: oth.zip filters to committee transfers only (PAC/COM/PTY/ORG)
+- Why: 98% of records are IND (duplicated in indiv.zip)
+- Result: 18.7M → 377K records, 20 min → 2 min
+
+#### 3. **Dump Structure Mirrors Database Names**
+
+**Why**: Simplicity and clarity.
+
+```
+data/mongo/
+├── fec_2020/
+│   ├── cn.bson + cn.metadata.json
+│   ├── cm.bson + cm.metadata.json
+│   ├── ccl.bson + ccl.metadata.json
+│   ├── pas2.bson + pas2.metadata.json
+│   ├── oth.bson + oth.metadata.json
+│   ├── indiv.bson + indiv.metadata.json  (36GB!)
+│   └── metadata.json (cycle-level tracking)
+├── fec_2022/ [same structure]
+├── fec_2024/ [same structure]
+└── fec_2026/ [same structure]
+```
+
+**MongoDB databases**: `fec_2020`, `fec_2022`, `fec_2024`, `fec_2026`
+**Dump paths**: `data/mongo/fec_{cycle}/`
+**Perfect alignment**: No confusion, no translation needed
+
+#### 4. **Source File Change Detection**
+
+**How it works**:
+```python
+def should_restore_from_dump(cycle, collection, source_file):
+    # Check if dump exists
+    if not dump_exists(cycle, collection):
+        return False
+    
+    # Load metadata
+    metadata = load_metadata(cycle)
+    dump_created = metadata['collections'][collection]['dump_created']
+    
+    # Compare timestamps
+    source_modified = source_file.stat().st_mtime
+    
+    # If source is newer than dump, must re-parse
+    return source_modified < dump_created
+```
+
+**What this means**:
+- FEC updates a file → Automatic re-parse on next run
+- Source unchanged → Always restore from dump (30 sec)
+- No manual intervention needed
+
+### Performance Comparison
+
+| Operation | First Run (Parse) | Subsequent Run (Restore) | Speedup |
+|-----------|------------------|--------------------------|---------|
+| **cn** (candidates) | ~1 second | ~1 second | 1x |
+| **cm** (committees) | ~1 second | ~1 second | 1x |
+| **ccl** (linkages) | ~1 second | ~1 second | 1x |
+| **pas2** (transfers) | ~40 seconds | ~2 seconds | 20x |
+| **oth** (receipts, filtered) | ~2 minutes | ~3 seconds | 40x |
+| **indiv** (individuals) | ~38 minutes | ~30 seconds | **76x** |
+| **TOTAL per cycle** | ~40-45 minutes | ~30 seconds | **80x** |
+
+### Storage Requirements
+
+| Collection | Records (2020) | BSON Size | Indexes | Total Size |
+|-----------|---------------|-----------|---------|------------|
+| cn | 7,758 | 2.9 MB | 6 | 3 MB |
+| cm | 18,286 | 6.9 MB | 3 | 7 MB |
+| ccl | 7,055 | 1.4 MB | 2 | 1.5 MB |
+| pas2 | 887,829 | 459 MB | 8 | 480 MB |
+| oth | 828,152 | 416 MB | 8 | 435 MB |
+| indiv | 69,377,425 | 36 GB | 7 | 37 GB |
+| **Total** | **70M records** | **37 GB** | **34 indexes** | **38 GB** |
+
+**Across 4 cycles (2020, 2022, 2024, 2026)**: ~150-175 GB total
+
+### Backup Strategy
+
+**For development**: Keep `data/mongo/` dumps
+- One-time parse: 2+ hours
+- Backup: Copy 175 GB to external drive
+- Restore: Copy back, instant use
+
+**For production**: Keep both `data/fec/` and `data/mongo/`
+- Source files: 8-10 GB compressed
+- Dumps: 150-175 GB
+- Rebuild: Can regenerate dumps from source if needed
+
+**For Windows reinstall**: Minimum backup:
+- `data/fec/*.zip` (required, 8-10 GB)
+- `data/mongo/fec_*/` (highly recommended, 150-175 GB)
+- Code on GitHub (git clone, easy)
 
 ---
 
@@ -180,27 +371,31 @@ Candidate Committee (Ted Cruz)
 
 ### Data Sources Required
 
-1. **itpas2** (pas2.zip):
+1. **pas2** (pas2.zip):
    - Shows: PAC → Candidate direct transfers
    - Shows: Independent expenditures FOR/AGAINST candidates
-   - Filtered: Only transactions involving our 564 tracked candidates
-   - Collection: `enriched_{cycle}.itpas2`
+   - Parse strategy: Load all raw (~887K records)
+   - Enrichment: Filter to 564 tracked candidates only
+   - Collection: `fec_{cycle}.pas2` (raw) → `enriched_{cycle}.pas2` (filtered)
 
-2. **itoth** (oth.zip) - **FILTERED**:
+2. **oth** (oth.zip) - **PARSE-TIME FILTERED**:
    - Shows: PAC → Political PAC/Party Committee transfers
-   - Filter: `ENTITY_TP IN ["PAC", "COM", "PTY"]` only (ignore IND records)
-   - Reduces: 18.7M → 292K records (98.4% reduction)
-   - Collection: `fec_{cycle}.itoth`
+   - Parse filter: `ENTITY_TP IN ["PAC", "COM", "PTY", "ORG"]` only
+   - Reduces: 18.7M → 377K records (98% reduction at parse time)
+   - Why filter: IND records duplicated in indiv.zip, CCM are refunds
+   - Collection: `fec_{cycle}.oth`
 
-3. **itcont** (indiv.zip) - **FUTURE PHASE**:
-   - Shows: Individual mega-donations to any committee
-   - Filter: `TRANSACTION_AMT >= $10,000` only
-   - Reduces: 40M → ~150K records (99.6% reduction)
-   - Collection: `fec_{cycle}.itcont` (not yet implemented)
+3. **indiv** (indiv.zip) - **RAW, NO PARSE-TIME FILTERING**:
+   - Shows: Individual donations to any committee
+   - Parse strategy: Load ALL 69M records raw (no filtering)
+   - Enrichment: Apply $10K/$100K thresholds per use case
+   - Why no filter: Flexibility for different analysis needs
+   - Collection: `fec_{cycle}.indiv` (raw) → `enriched_{cycle}.donor_financials` (filtered)
 
 4. **cm** (cm.zip):
    - Committee master data (names, types, affiliations)
    - Used to identify committee types and categorize transfers
+   - Parse strategy: Load all raw (~18K records)
    - Collection: `fec_{cycle}.cm`
 
 ### Implementation Architecture
@@ -572,17 +767,25 @@ def calculate_optimal_batch_size():
 ```python
 @asset
 def parse_fec_file(context, mongo, data_sync):
+    # Check if we can restore from dump first
+    if should_restore_from_dump(cycle, collection, source_file):
+        restore_collection_from_dump(cycle, collection, mongo_uri, context)
+        return  # Done in 30 seconds!
+    
+    # Otherwise parse from scratch
     batch = []
-    batch_size = calculate_optimal_batch_size()
+    batch_size = 10000  # Fixed batch size for consistency
     
     with zipfile.ZipFile(file_path) as zf:
         with zf.open(txt_file) as f:
             for line in f:
-                # Parse line
-                record = parse_line(line)
+                decoded = line.decode('utf-8', errors='ignore')
                 
-                # Optional: Filter at parse time
-                if not should_include(record):
+                # Parse using official FEC schema
+                record = schema.parse_line(file_type, decoded)
+                
+                # Optional: Filter at parse time (oth.zip only)
+                if collection == 'oth' and not should_include(record):
                     continue
                 
                 batch.append(record)
@@ -595,15 +798,25 @@ def parse_fec_file(context, mongo, data_sync):
         # Flush remaining
         if batch:
             collection.insert_many(batch, ordered=False)
+    
+    # Create indexes BEFORE dump (so they're included)
+    collection.create_index([("CMTE_ID", 1)])
+    # ... more indexes ...
+    
+    # Create dump for next time
+    create_collection_dump(cycle, collection, mongo_uri, source_file, 
+                          record_count, context)
 ```
 
 **Key principles**:
-1. **Never load entire file into memory**
-2. **Stream line-by-line** from ZIP
-3. **Filter early** (at parse time, not after)
-4. **Batch for performance** (bulk inserts are 900x faster)
-5. **Clear immediately** (free memory after each batch)
-6. **Handle remainders** (flush final partial batch)
+1. **Check for dump first** - 30 sec restore vs 40 min parse
+2. **Never load entire file into memory**
+3. **Stream line-by-line** from ZIP
+4. **Filter early** (oth.zip only, at parse time)
+5. **Batch for performance** (10K batch size, ordered=False)
+6. **Clear immediately** (free memory after each batch)
+7. **Index before dump** (includes indexes in dump metadata)
+8. **Create dump** (enables fast restore next time)
 
 ---
 
@@ -785,11 +998,42 @@ mega_donors = [
 
 This implementation guide consolidates all technical knowledge for the Legal Tender project. Key takeaways:
 
-1. **itpas2**: Direct PAC → Candidate transfers (enriched to tracked candidates)
-2. **itoth**: PAC → PAC upstream transfers (filter to PAC/COM/PTY only, 98% reduction)
-3. **itcont**: Individual mega-donations (future phase, filter to ≥$10K, 99.6% reduction)
-4. **Memory**: Stream + batch + filter early = safe processing on 4-16GB machines
-5. **MongoDB**: Per-cycle raw data + enriched data + cross-cycle aggregation
+### Data Strategy (November 2025)
+
+1. **pas2.zip**: Load all raw, filter in enrichment to tracked candidates
+2. **oth.zip**: Filter at parse time to committee transfers only (PAC/COM/PTY/ORG, 98% reduction)
+3. **indiv.zip**: Load all 69M records raw, filter in enrichment layer (no parse-time filtering)
+4. **cn/cm/ccl**: Load all raw, small files (<20K records)
+
+### Architecture Strategy
+
+1. **Parse → Index → Dump → Restore**: First run 40 min, subsequent runs 30 sec (80x speedup)
+2. **Indexes before dump**: mongodump includes indexes, mongorestore recreates them automatically
+3. **Source change detection**: Automatic re-parse when FEC updates files
+4. **MongoDB structure**: Per-cycle raw (`fec_{cycle}`) + enriched (`enriched_{cycle}`) + aggregated (`aggregation`)
+
+### Memory Strategy
+
+1. **Stream line-by-line**: Never load entire file into memory
+2. **Batch inserts**: 10K records per batch with `ordered=False`
+3. **Clear immediately**: Free memory after each batch
+4. **Filter early**: Only oth.zip filters at parse time (IND/CCM duplicates)
+
+### Storage Requirements
+
+- **Source files**: 8-10 GB compressed (data/fec/)
+- **Dumps**: 150-175 GB across 4 cycles (data/mongo/)
+- **Per cycle**: ~38 GB (mostly indiv: 36 GB)
+
+### Performance Benchmarks
+
+| Operation | First Run | Restore | Records |
+|-----------|-----------|---------|---------|
+| cn, cm, ccl | <3 sec | <1 sec | <10K each |
+| pas2 | ~40 sec | ~2 sec | ~887K |
+| oth (filtered) | ~2 min | ~3 sec | ~377K (18.7M raw) |
+| indiv (raw) | ~38 min | ~30 sec | ~69M |
+| **Total per cycle** | **~40-45 min** | **~30 sec** | **~70M** |
 
 For detailed FEC file descriptions, see `FEC.md`.
 For specific implementation questions, see code comments in `src/assets/`.
