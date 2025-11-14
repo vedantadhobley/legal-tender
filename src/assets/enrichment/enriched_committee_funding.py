@@ -18,7 +18,7 @@ Currently extracts:
   - Corporate/Union PAC contributions (reclassified as from_organizations)
     • Q/N type committees = Corporate/Union PACs (no upstream tracing needed)
     • W/O/I type committees = Political PACs (trace upstream sources)
-  - Individual mega-donations ≥$10K (from itcont/indiv.zip) ✅ NOW AVAILABLE!
+  - Individual mega-donations ≥$10K (from indiv/indiv.zip) ✅ NOW AVAILABLE!
     • Critical for Super PAC transparency (44.9% had ZERO visible funding)
     • Enables billionaire → Super PAC → Candidate influence tracking
   
@@ -51,9 +51,9 @@ class EnrichedCommitteeFundingConfig(Config):
     name="enriched_committee_funding",
     group_name="enrichment",
     ins={
-        "enriched_itpas2": AssetIn(key="enriched_itpas2"),
-        "itoth": AssetIn(key="itoth"),
-        "itcont": AssetIn(key="itcont"),
+        "enriched_pas2": AssetIn(key="enriched_pas2"),
+        "oth": AssetIn(key="oth"),
+        "indiv": AssetIn(key="indiv"),
         "cm": AssetIn(key="cm"),
         "member_fec_mapping": AssetIn(key="member_fec_mapping"),
     },
@@ -64,7 +64,11 @@ def enriched_committee_funding_asset(
     context: AssetExecutionContext,
     config: EnrichedCommitteeFundingConfig,
     mongo: MongoDBResource,
-    enriched_itpas2: Dict[str, Any],
+    enriched_pas2: Dict[str, Any],
+    oth: Dict[str, Any],
+    indiv: Dict[str, Any],
+    cm: Dict[str, Any],
+    member_fec_mapping: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """
     Trace money UPSTREAM for committees that donate to tracked candidates.
@@ -161,12 +165,12 @@ def enriched_committee_funding_asset(
             
             donor_committees = {}
             
-            # Query enriched_itpas2 (already filtered to tracked candidates)
-            # No need to query raw itpas2 since enriched is filtered to our tracked members
-            enriched_itpas2_collection = mongo.get_collection(client, "itpas2", database_name=f"enriched_{cycle}")
+            # Query enriched_pas2 (already filtered to tracked candidates)
+            # No need to query raw pas2 since enriched is filtered to our tracked members
+            enriched_pas2_collection = mongo.get_collection(client, "pas2", database_name=f"enriched_{cycle}")
             
             # Query 1: Direct donations (24K transactions)
-            query_result = enriched_itpas2_collection.find({
+            query_result = enriched_pas2_collection.find({
                 "entity_type": {"$in": ["COM", "PAC", "PTY", "CCM"]},
                 "transaction_type": "24K",
                 "amount": {"$ne": None},
@@ -202,7 +206,7 @@ def enriched_committee_funding_asset(
             # Query 2: Independent expenditure committees (Super PACs making ads)
             context.log.info("Searching indie expenditures...")
             
-            indie_query = enriched_itpas2_collection.find({
+            indie_query = enriched_pas2_collection.find({
                 "transaction_type": {"$in": ["24A", "24E"]},  # Independent expenditures
                 "amount": {"$ne": None},
                 "candidate_id": {"$in": list(tracked_candidate_ids)}
@@ -265,16 +269,16 @@ def enriched_committee_funding_asset(
             funding_by_political_pac = {}
             
             if political_pacs:
-                # Query RAW FEC itoth (other receipts) to find WHO gave money TO political PACs
-                # itoth.CMTE_ID = donor committee (who gives the money)
-                # itoth.OTHER_ID = recipient committee (who receives the money)
-                # itoth.NAME = donor name (if individual/organization)
-                raw_itoth_collection = mongo.get_collection(client, "itoth", database_name=f"fec_{cycle}")
+                # Query RAW FEC oth (other receipts) to find WHO gave money TO political PACs
+                # oth.CMTE_ID = donor committee (who gives the money)
+                # oth.OTHER_ID = recipient committee (who receives the money)
+                # oth.NAME = donor name (if individual/organization)
+                raw_oth_collection = mongo.get_collection(client, "oth", database_name=f"fec_{cycle}")
                 
-                upstream_query = raw_itoth_collection.find({
+                upstream_query = raw_oth_collection.find({
                     "ENTITY_TP": {"$in": ["COM", "PAC", "PTY", "CCM", "ORG"]},
                     "TRANSACTION_AMT": {"$ne": None},
-                    "OTHER_ID": {"$in": political_pacs}  # CRITICAL: OTHER_ID in itoth = recipient!
+                    "OTHER_ID": {"$in": political_pacs}  # CRITICAL: OTHER_ID in oth = recipient!
                 })
                 
                 upstream_count = 0
@@ -328,14 +332,14 @@ def enriched_committee_funding_asset(
                 context.log.info(f"✅ Found {upstream_count:,} upstream transactions for {len(funding_by_political_pac):,} political PACs")
             
             # ========================================================================
-            # STEP 5.5: Query individual mega-donations (itcont) for political PACs
+            # STEP 5.5: Query individual mega-donations (indiv) for political PACs
             # ========================================================================
             context.log.info("Querying individual mega-donations...")
             
             if political_pacs:
-                raw_itcont_collection = mongo.get_collection(client, "itcont", database_name=f"fec_{cycle}")
+                raw_indiv_collection = mongo.get_collection(client, "indiv", database_name=f"fec_{cycle}")
                 
-                individual_query = raw_itcont_collection.find({
+                individual_query = raw_indiv_collection.find({
                     "ENTITY_TP": "IND",  # Individual donors only
                     "TRANSACTION_AMT": {"$gte": 10000},  # Should be pre-filtered, but double-check
                     "CMTE_ID": {"$in": political_pacs}  # Recipient is political PAC

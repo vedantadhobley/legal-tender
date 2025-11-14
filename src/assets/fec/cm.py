@@ -8,6 +8,8 @@ from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config,
 
 from src.data import get_repository
 from src.resources.mongo import MongoDBResource
+from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+from src.utils.fec_schema import FECSchema
 
 
 class CommitteesConfig(Config):
@@ -38,15 +40,39 @@ def cm_asset(
             
             try:
                 collection = mongo.get_collection(client, "cm", database_name=f"fec_{cycle}")
-                collection.delete_many({})
-                
                 zip_path = repo.fec_cm_path(cycle)
+                
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue
                 
+                # Check if we can restore from dump
+                if should_restore_from_dump(cycle, "cm", zip_path):
+                    context.log.info("   🚀 Restoring from dump (30 sec)...")
+                    
+                    if restore_collection_from_dump(
+                        cycle=cycle,
+                        collection="cm",
+                        mongo_uri=mongo.connection_string,
+                        context=context
+                    ):
+                        record_count = collection.count_documents({})
+                        leadership_count = collection.count_documents({"CMTE_TP": "O"})
+                        stats['by_cycle'][cycle] = {'total': record_count, 'leadership_pacs': leadership_count}
+                        stats['total_committees'] += record_count
+                        stats['leadership_pacs'] += leadership_count
+                        continue
+                    else:
+                        context.log.warning("   ⚠️ Restore failed, falling back to parsing...")
+                
+                # Parse from ZIP
+                context.log.info(f"   📂 Parsing {zip_path.name}...")
+                collection.delete_many({})
+                
                 batch = []
                 leadership_count = 0
+                schema = FECSchema()
+                
                 with zipfile.ZipFile(zip_path) as zf:
                     txt_files = [f for f in zf.namelist() if f.endswith('.txt')]
                     if not txt_files:
@@ -58,35 +84,19 @@ def cm_asset(
                             if not decoded:
                                 continue
                             
-                            fields = decoded.split('|')
-                            if len(fields) < 15:
+                            # Parse using official FEC schema
+                            record = schema.parse_line('cm', decoded)
+                            if not record:
                                 continue
                             
-                            cmte_tp = fields[9]  # Committee type
+                            # Add timestamp
+                            record['updated_at'] = datetime.now()
                             
-                            if cmte_tp == 'O':
+                            # Track leadership PACs
+                            if record.get('CMTE_TP') == 'O':
                                 leadership_count += 1
                             
-                            # Use EXACT field names from fec.md
-                            batch.append({
-
-                                'CMTE_ID': fields[0],
-                                'CMTE_NM': fields[1],
-                                'TRES_NM': fields[2],
-                                'CMTE_ST1': fields[3],
-                                'CMTE_ST2': fields[4],
-                                'CMTE_CITY': fields[5],
-                                'CMTE_ST': fields[6],
-                                'CMTE_ZIP': fields[7],
-                                'CMTE_DSGN': fields[8],
-                                'CMTE_TP': cmte_tp,
-                                'CMTE_PTY_AFFILIATION': fields[10],
-                                'CMTE_FILING_FREQ': fields[11],
-                                'ORG_TP': fields[12],
-                                'CONNECTED_ORG_NM': fields[13],
-                                'CAND_ID': fields[14],
-                                'updated_at': datetime.now(),
-                            })
+                            batch.append(record)
                 
                 if batch:
                     collection.insert_many(batch, ordered=False)
@@ -94,11 +104,21 @@ def cm_asset(
                     stats['by_cycle'][cycle] = {'total': len(batch), 'leadership_pacs': leadership_count}
                     stats['total_committees'] += len(batch)
                     stats['leadership_pacs'] += leadership_count
-                
-                # Create indexes on key fields
-                collection.create_index([("CMTE_TP", 1)])
-                collection.create_index([("CONNECTED_ORG_NM", 1)])
-                collection.create_index([("CMTE_NM", 1)])
+                    
+                    # Create indexes BEFORE dump
+                    collection.create_index([("CMTE_TP", 1)])
+                    collection.create_index([("CONNECTED_ORG_NM", 1)])
+                    collection.create_index([("CMTE_NM", 1)])
+                    
+                    # Create dump for next time (includes indexes)
+                    create_collection_dump(
+                        cycle=cycle,
+                        collection="cm",
+                        mongo_uri=mongo.connection_string,
+                        source_file=zip_path,
+                        record_count=len(batch),
+                        context=context
+                    )
                 
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}")

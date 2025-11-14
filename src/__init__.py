@@ -24,34 +24,26 @@ from src.assets import (
     # Data sync
     data_sync_asset,
     
-    # FEC parsers (raw data → fec_YYYY databases) - 9 files, 9 parsers
+    # FEC parsers (raw data → fec_YYYY databases) - 6 core files
     cn_asset,
     cm_asset,
     ccl_asset,
-    weball_asset,
-    webl_asset,
-    webk_asset,
-    itpas2_asset,
-    itoth_asset,
-    itcont_asset,
+    pas2_asset,
+    oth_asset,
+    indiv_asset,
     
     # Mapping assets (ID mapping → aggregation database)
     member_fec_mapping_asset,
     
     # Enrichment assets (per-cycle enriched data → enriched_{cycle} databases)
-    enriched_itpas2_asset,
+    enriched_pas2_asset,
     enriched_candidate_financials_asset,
     enriched_donor_financials_asset,
-    enriched_webl_asset,
-    enriched_weball_asset,
-    enriched_webk_asset,
-    enriched_committee_funding_asset,  # 🎯 NEW: Upstream money tracing!
+    enriched_committee_funding_asset,
     
     # Aggregation assets (cross-cycle rollups → aggregation database)
     candidate_financials_asset,
     donor_financials_asset,
-    candidate_summaries_asset,
-    committee_summaries_asset,
 )
 from src.jobs import fec_pipeline_job
 from src.schedules import (
@@ -68,34 +60,26 @@ defs = Definitions(
         # Data sync (downloads all files)
         data_sync_asset,
         
-        # FEC raw data parsers (→ fec_YYYY databases) - 9 files, 9 parsers
+        # FEC raw data parsers (→ fec_YYYY databases) - 6 core files
         cn_asset,
         cm_asset,
         ccl_asset,
-        weball_asset,
-        webl_asset,
-        webk_asset,
-        itpas2_asset,
-        itoth_asset,
-        itcont_asset,
+        pas2_asset,
+        oth_asset,
+        indiv_asset,
         
         # Mapping assets (ID mapping → aggregation database)
         member_fec_mapping_asset,
         
         # Enrichment assets (per-cycle enriched data → enriched_{cycle} databases)
-        enriched_itpas2_asset,
+        enriched_pas2_asset,
         enriched_candidate_financials_asset,
         enriched_donor_financials_asset,
-        enriched_webl_asset,
-        enriched_weball_asset,
-        enriched_webk_asset,
         enriched_committee_funding_asset,
         
         # Aggregation assets (cross-cycle rollups → aggregation database)
         candidate_financials_asset,
         donor_financials_asset,
-        candidate_summaries_asset,
-        committee_summaries_asset,
     ],
     resources={
         "mongo": mongo_resource,

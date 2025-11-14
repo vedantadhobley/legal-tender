@@ -13,13 +13,9 @@ Collections:
   Aggregates ALL money flows FROM each committee across all cycles,
   with detailed breakdowns by candidates, categories, and payees.
 
-- candidate_summaries → aggregation.candidate_summaries
-  Aggregates FEC official candidate financial summaries (webl + weball) across
-  all cycles, providing official totals for validation against our calculated values.
-
-- committee_summaries → aggregation.committee_summaries
-  Aggregates FEC official committee/PAC financial summaries (webk) across
-  all cycles, including independent expenditure totals for validation.
+DEPRECATED (moved to src/assets/deprecated/):
+- candidate_summaries (used deprecated webl/weball files)
+- committee_summaries (used deprecated webk files)
 
 Future:
 - member_influence_scores → aggregated influence metrics across all cycles
@@ -28,12 +24,8 @@ Future:
 
 from .candidate_financials import candidate_financials_asset
 from .donor_financials import donor_financials_asset
-from .candidate_summaries import candidate_summaries_asset
-from .committee_summaries import committee_summaries_asset
 
 __all__ = [
     "candidate_financials_asset",
     "donor_financials_asset",
-    "candidate_summaries_asset",
-    "committee_summaries_asset",
 ]

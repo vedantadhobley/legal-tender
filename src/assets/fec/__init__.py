@@ -1,35 +1,31 @@
 """FEC Bulk Data Assets - Raw FEC file parsers using original FEC field names
 
-Collection names match FEC file prefixes:
+CORE 6 FILES (focusing on raw transactional data):
 - cn.zip → cn collection (candidate master)
 - cm.zip → cm collection (committee master)
 - ccl.zip → ccl collection (candidate-committee linkages)
-- weball.zip → weball collection (candidate summary - all)
-- webl.zip → webl collection (committee summary)
-- webk.zip → webk collection (PAC summary)
-- pas2.zip → itpas2 collection (itemized transactions - ALL types including 24A/24E for independent expenditures)
-- oth.zip → itoth collection (other receipts - committee-to-committee transfers, corporate/union to PAC, etc.)
-- indiv.zip → itcont collection (individual contributions - mega-donations ≥$10K only for Super PAC visibility)
+- pas2.zip → pas2 collection (itemized transactions - ALL types)
+- oth.zip → oth collection (other receipts - PAC-to-PAC transfers)
+- indiv.zip → indiv collection (individual contributions)
+
+DEPRECATED (moved to src/assets/deprecated/):
+- weball.zip → weball collection (candidate summary - derive from raw data)
+- webl.zip → webl collection (committee summary - derive from raw data)
+- webk.zip → webk collection (PAC summary - derive from raw data)
 """
 
 from .cn import cn_asset
 from .cm import cm_asset
 from .ccl import ccl_asset
-from .weball import weball_asset
-from .webl import webl_asset
-from .webk import webk_asset
-from .itpas2 import itpas2_asset
-from .itoth import itoth_asset
-from .itcont import itcont_asset
+from .pas2 import pas2_asset
+from .oth import oth_asset
+from .indiv import indiv_asset
 
 __all__ = [
     'cn_asset',
     'cm_asset',
     'ccl_asset',
-    'weball_asset',
-    'webl_asset',
-    'webk_asset',
-    'itpas2_asset',
-    'itoth_asset',
-    'itcont_asset',
+    'pas2_asset',
+    'oth_asset',
+    'indiv_asset',
 ]

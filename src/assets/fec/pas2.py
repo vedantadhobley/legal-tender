@@ -13,6 +13,8 @@ from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config,
 
 from src.data import get_repository
 from src.resources.mongo import MongoDBResource
+from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+from src.utils.fec_schema import FECSchema
 
 
 class ItemizedTransactionsConfig(Config):
@@ -20,19 +22,19 @@ class ItemizedTransactionsConfig(Config):
 
 
 @asset(
-    name="itpas2",
+    name="pas2",
     description="FEC itemized transactions file (pas2.zip) - ALL transaction types with raw FEC field names",
     group_name="fec",
     compute_kind="bulk_data",
     ins={"data_sync": AssetIn("data_sync")},
 )
-def itpas2_asset(
+def pas2_asset(
     context: AssetExecutionContext,
     config: ItemizedTransactionsConfig,
     mongo: MongoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
-    """Parse pas2.zip files and store in fec_{cycle}.itpas2 collections using raw FEC field names."""
+    """Parse pas2.zip files and store in fec_{cycle}.pas2 collections using raw FEC field names."""
     
     repo = get_repository()
     stats = {'total_transactions': 0, 'by_cycle': {}, 'by_transaction_type': {}, 'by_entity_type': {}}
@@ -42,17 +44,46 @@ def itpas2_asset(
             context.log.info(f"📊 {cycle} Cycle:")
             
             try:
-                collection = mongo.get_collection(client, "itpas2", database_name=f"fec_{cycle}")
-                collection.delete_many({})
-                
+                collection = mongo.get_collection(client, "pas2", database_name=f"fec_{cycle}")
                 zip_path = repo.fec_pas2_path(cycle)
+                
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue
                 
+                # Check if we can restore from dump
+                if should_restore_from_dump(cycle, "pas2", zip_path):
+                    context.log.info("   🚀 Restoring from dump (30 sec)...")
+                    
+                    if restore_collection_from_dump(
+                        cycle=cycle,
+                        collection="pas2",
+                        mongo_uri=mongo.connection_string,
+                        context=context
+                    ):
+                        record_count = collection.count_documents({})
+                        stats['by_cycle'][cycle] = record_count
+                        stats['total_transactions'] += record_count
+                        
+                        # Get transaction/entity type breakdown
+                        for tt in collection.distinct("TRANSACTION_TP"):
+                            count = collection.count_documents({"TRANSACTION_TP": tt})
+                            stats['by_transaction_type'][tt] = stats['by_transaction_type'].get(tt, 0) + count
+                        for et in collection.distinct("ENTITY_TP"):
+                            count = collection.count_documents({"ENTITY_TP": et})
+                            stats['by_entity_type'][et] = stats['by_entity_type'].get(et, 0) + count
+                        continue
+                    else:
+                        context.log.warning("   ⚠️ Restore failed, falling back to parsing...")
+                
+                # Parse from ZIP
+                context.log.info(f"   📂 Parsing {zip_path.name} (takes ~15 min)...")
+                collection.delete_many({})
+                
                 batch = []
                 cycle_transaction_types = {}
                 cycle_entity_types = {}
+                schema = FECSchema()
                 
                 with zipfile.ZipFile(zip_path) as zf:
                     txt_files = [f for f in zf.namelist() if f.endswith('.txt')]
@@ -65,43 +96,28 @@ def itpas2_asset(
                             if not decoded:
                                 continue
                             
-                            fields = decoded.split('|')
-                            if len(fields) < 22:
+                            # Parse using official FEC schema
+                            record = schema.parse_line('pas2', decoded)
+                            if not record:
                                 continue
                             
+                            # Add timestamp
+                            record['updated_at'] = datetime.now()
+                            
                             # Track transaction and entity types
-                            transaction_tp = fields[5]
-                            entity_tp = fields[6]
+                            transaction_tp = record.get('TRANSACTION_TP', '')
+                            entity_tp = record.get('ENTITY_TP', '')
                             cycle_transaction_types[transaction_tp] = cycle_transaction_types.get(transaction_tp, 0) + 1
                             cycle_entity_types[entity_tp] = cycle_entity_types.get(entity_tp, 0) + 1
                             
-                            # Use EXACT field names from fec.md - ALL 22 fields
-                            batch.append({
-
-                                'CMTE_ID': fields[0],
-                                'AMNDT_IND': fields[1],
-                                'RPT_TP': fields[2],
-                                'TRANSACTION_PGI': fields[3],
-                                'IMAGE_NUM': fields[4],
-                                'TRANSACTION_TP': transaction_tp,
-                                'ENTITY_TP': entity_tp,
-                                'NAME': fields[7],
-                                'CITY': fields[8],
-                                'STATE': fields[9],
-                                'ZIP_CODE': fields[10],
-                                'EMPLOYER': fields[11],
-                                'OCCUPATION': fields[12],
-                                'TRANSACTION_DT': fields[13],
-                                'TRANSACTION_AMT': float(fields[14]) if fields[14] else None,
-                                'OTHER_ID': fields[15],
-                                'CAND_ID': fields[16],
-                                'TRAN_ID': fields[17],
-                                'FILE_NUM': fields[18],
-                                'MEMO_CD': fields[19],
-                                'MEMO_TEXT': fields[20],
-                                'SUB_ID': fields[21],
-                                'updated_at': datetime.now(),
-                            })
+                            # Type conversion for transaction amount
+                            if record.get('TRANSACTION_AMT'):
+                                try:
+                                    record['TRANSACTION_AMT'] = float(record['TRANSACTION_AMT'])
+                                except (ValueError, TypeError):
+                                    record['TRANSACTION_AMT'] = None
+                            
+                            batch.append(record)
                             
                             # Batch insert for performance
                             if len(batch) >= 10000:
@@ -130,7 +146,7 @@ def itpas2_asset(
                 for et, count in cycle_entity_types.items():
                     stats['by_entity_type'][et] = stats['by_entity_type'].get(et, 0) + count
                 
-                # Create indexes on key fields
+                # Create indexes BEFORE dump
                 collection.create_index([("CMTE_ID", 1)])
                 collection.create_index([("CAND_ID", 1)])
                 collection.create_index([("OTHER_ID", 1)])
@@ -139,6 +155,16 @@ def itpas2_asset(
                 collection.create_index([("TRANSACTION_DT", -1)])
                 collection.create_index([("TRANSACTION_AMT", -1)])
                 collection.create_index([("TRANSACTION_TP", 1), ("ENTITY_TP", 1)])
+                
+                # Create dump for next time (includes indexes)
+                create_collection_dump(
+                    cycle=cycle,
+                    collection="pas2",
+                    mongo_uri=mongo.connection_string,
+                    source_file=zip_path,
+                    record_count=total_cycle,
+                    context=context
+                )
                 
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}")
@@ -151,6 +177,6 @@ def itpas2_asset(
             "entity_types": MetadataValue.json(dict(sorted(stats['by_entity_type'].items(), key=lambda x: x[1], reverse=True))),
             "cycles_processed": MetadataValue.json(config.cycles),
             "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
-            "mongodb_collection": "itpas2",
+            "mongodb_collection": "pas2",
         }
     )

@@ -8,6 +8,8 @@ from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config,
 
 from src.data import get_repository
 from src.resources.mongo import MongoDBResource
+from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+from src.utils.fec_schema import FECSchema
 
 
 class LinkagesConfig(Config):
@@ -38,14 +40,36 @@ def ccl_asset(
             
             try:
                 collection = mongo.get_collection(client, "ccl", database_name=f"fec_{cycle}")
-                collection.delete_many({})
-                
                 zip_path = repo.fec_ccl_path(cycle)
+                
                 if not zip_path.exists():
                     context.log.warning(f"⚠️  File not found: {zip_path}")
                     continue
                 
+                # Check if we can restore from dump
+                if should_restore_from_dump(cycle, "ccl", zip_path):
+                    context.log.info("   🚀 Restoring from dump (30 sec)...")
+                    
+                    if restore_collection_from_dump(
+                        cycle=cycle,
+                        collection="ccl",
+                        mongo_uri=mongo.connection_string,
+                        context=context
+                    ):
+                        record_count = collection.count_documents({})
+                        stats['by_cycle'][cycle] = record_count
+                        stats['total_linkages'] += record_count
+                        continue
+                    else:
+                        context.log.warning("   ⚠️ Restore failed, falling back to parsing...")
+                
+                # Parse from ZIP
+                context.log.info(f"   📂 Parsing {zip_path.name}...")
+                collection.delete_many({})
+                
                 batch = []
+                schema = FECSchema()
+                
                 with zipfile.ZipFile(zip_path) as zf:
                     txt_files = [f for f in zf.namelist() if f.endswith('.txt')]
                     if not txt_files:
@@ -57,32 +81,35 @@ def ccl_asset(
                             if not decoded:
                                 continue
                             
-                            fields = decoded.split('|')
-                            if len(fields) < 7:
+                            # Parse using official FEC schema
+                            record = schema.parse_line('ccl', decoded)
+                            if not record:
                                 continue
                             
-                            # Use EXACT field names from fec.md
-                            batch.append({
-
-                                'CAND_ID': fields[0],
-                                'CAND_ELECTION_YR': fields[1],
-                                'FEC_ELECTION_YR': fields[2],
-                                'CMTE_ID': fields[3],
-                                'CMTE_TP': fields[4],
-                                'CMTE_DSGN': fields[5],
-                                'LINKAGE_ID': fields[6],
-                                'updated_at': datetime.now(),
-                            })
+                            # Add timestamp
+                            record['updated_at'] = datetime.now()
+                            
+                            batch.append(record)
                 
                 if batch:
                     collection.insert_many(batch, ordered=False)
                     context.log.info(f"   ✅ {cycle}: {len(batch):,} linkages")
                     stats['by_cycle'][cycle] = len(batch)
                     stats['total_linkages'] += len(batch)
-                
-                # Create indexes on key fields
-                collection.create_index([("CAND_ID", 1)])
-                collection.create_index([("CMTE_ID", 1)])
+                    
+                    # Create indexes BEFORE dump
+                    collection.create_index([("CAND_ID", 1)])
+                    collection.create_index([("CMTE_ID", 1)])
+                    
+                    # Create dump for next time (includes indexes)
+                    create_collection_dump(
+                        cycle=cycle,
+                        collection="ccl",
+                        mongo_uri=mongo.connection_string,
+                        source_file=zip_path,
+                        record_count=len(batch),
+                        context=context
+                    )
                 
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}")

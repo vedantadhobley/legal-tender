@@ -1,11 +1,11 @@
-"""Enriched itpas2 Asset - Enriched itemized contributions and transfers.
+"""Enriched pas2 Asset - Enriched itemized contributions and transfers.
 
 This asset processes pas2.zip (itemized transactions) and enriches it with 
 full donor and recipient details. This is THE critical file for tracking
 PAC → Candidate money flows.
 
-Input: fec_{cycle}.itpas2 (raw transaction data)
-Output: enriched_{cycle}.itpas2 (enriched with donor/recipient names, offices, parties)
+Input: fec_{cycle}.pas2 (raw transaction data)
+Output: enriched_{cycle}.pas2 (enriched with donor/recipient names, offices, parties)
 
 Key Features:
 - Tracks contributions from PACs to candidates
@@ -34,29 +34,29 @@ from dagster import (
 from src.resources.mongo import MongoDBResource
 
 
-class EnrichedItpas2Config(Config):
+class EnrichedPas2Config(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
     force_refresh: bool = False
 
 
 @asset(
-    name="enriched_itpas2",
+    name="enriched_pas2",
     description="Enriched itemized contributions for tracked members across all cycles",
     group_name="enrichment",
     compute_kind="enrichment",
     ins={
-        "itpas2": AssetIn("itpas2"),
+        "pas2": AssetIn("pas2"),
         "cn": AssetIn("cn"),
         "cm": AssetIn("cm"),
         "ccl": AssetIn("ccl"),
         "member_fec_mapping": AssetIn("member_fec_mapping"),
     },
 )
-def enriched_itpas2_asset(
+def enriched_pas2_asset(
     context: AssetExecutionContext,
-    config: EnrichedItpas2Config,
+    config: EnrichedPas2Config,
     mongo: MongoDBResource,
-    itpas2: Dict[str, Any],
+    pas2: Dict[str, Any],
     cn: Dict[str, Any],
     cm: Dict[str, Any],
     ccl: Dict[str, Any],
@@ -71,12 +71,12 @@ def enriched_itpas2_asset(
        - Load ccl → map committee IDs to candidate IDs
        - Load cn → get candidate details
        - Load cm → get committee (donor) details
-       - Load itpas2 → get transaction records
+       - Load pas2 → get transaction records
        - Join and enrich → create denormalized records
-       - Store in enriched_{cycle}.itpas2
+       - Store in enriched_{cycle}.pas2
     """
     context.log.info("=" * 80)
-    context.log.info("💰 PROCESSING ITEMIZED CONTRIBUTIONS (itpas2)")
+    context.log.info("💰 PROCESSING ITEMIZED CONTRIBUTIONS (pas2)")
     context.log.info("=" * 80)
     
     overall_stats = {
@@ -251,25 +251,25 @@ def enriched_itpas2_asset(
                 
                 context.log.info(f"   ✅ {len(committee_details)} committee records")
                 
-                # Process itpas2 Transactions
+                # Process pas2 Transactions
                 context.log.info(f"🔨 Processing itemized transactions ({cycle})...")
                 
-                itpas2_collection = mongo.get_collection(
-                    client, "itpas2", database_name=f"fec_{cycle}"
+                pas2_collection = mongo.get_collection(
+                    client, "pas2", database_name=f"fec_{cycle}"
                 )
                 
-                enriched_itpas2_collection = mongo.get_collection(
-                    client, "itpas2", database_name=f"enriched_{cycle}"
+                enriched_pas2_collection = mongo.get_collection(
+                    client, "pas2", database_name=f"enriched_{cycle}"
                 )
                 
                 # Clear existing data
-                enriched_itpas2_collection.delete_many({})
+                enriched_pas2_collection.delete_many({})
                 
                 batch = []
                 batch_size = 5000
                 processed = 0
                 
-                for tx_doc in itpas2_collection.find():
+                for tx_doc in pas2_collection.find():
                     cycle_stats['total_transactions'] += 1
                     
                     # Get recipient candidate ID
@@ -342,7 +342,7 @@ def enriched_itpas2_asset(
                         
                         # Metadata
                         'cycle': cycle,
-                        'source_file': 'itpas2',
+                        'source_file': 'pas2',
                         'computed_at': datetime.now(),
                     }
                     
@@ -358,24 +358,24 @@ def enriched_itpas2_asset(
                     
                     # Insert batch
                     if len(batch) >= batch_size:
-                        enriched_itpas2_collection.insert_many(batch)
+                        enriched_pas2_collection.insert_many(batch)
                         processed += len(batch)
                         context.log.info(f"   💾 Inserted {processed:,} records...")
                         batch = []
                 
                 # Insert remaining
                 if batch:
-                    enriched_itpas2_collection.insert_many(batch)
+                    enriched_pas2_collection.insert_many(batch)
                     processed += len(batch)
                 
                 # Create Indexes
-                enriched_itpas2_collection.create_index([("candidate_bioguide_id", 1)])
-                enriched_itpas2_collection.create_index([("candidate_id", 1)])
-                enriched_itpas2_collection.create_index([("filer_committee_id", 1)])
-                enriched_itpas2_collection.create_index([("filer_committee_name", 1)])
-                enriched_itpas2_collection.create_index([("filer_connected_org", 1)])
-                enriched_itpas2_collection.create_index([("amount", -1)])
-                enriched_itpas2_collection.create_index([("transaction_date", -1)])
+                enriched_pas2_collection.create_index([("candidate_bioguide_id", 1)])
+                enriched_pas2_collection.create_index([("candidate_id", 1)])
+                enriched_pas2_collection.create_index([("filer_committee_id", 1)])
+                enriched_pas2_collection.create_index([("filer_committee_name", 1)])
+                enriched_pas2_collection.create_index([("filer_connected_org", 1)])
+                enriched_pas2_collection.create_index([("amount", -1)])
+                enriched_pas2_collection.create_index([("transaction_date", -1)])
                 
                 context.log.info(f"✅ {cycle}: {cycle_stats['tracked_member_transactions']:,} tracked transactions (${cycle_stats['total_amount']:,.2f})")
                 context.log.info("")

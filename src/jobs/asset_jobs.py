@@ -24,33 +24,31 @@ fec_pipeline_job = define_asset_job(
         # Phase 1: Download all source data
         "data_sync",
         
-        # Phase 2: Parse all 8 FEC files into per-year databases (using raw FEC names)
+        # Phase 2: Parse 6 core FEC files into per-year databases (using official FEC names)
         "cn",                       # cn.zip - candidate master
         "cm",                       # cm.zip - committee master
         "ccl",                      # ccl.zip - candidate-committee linkages
-        "weball",                   # weball.zip - candidate summary (all)
-        "webl",                     # webl.zip - committee summary
-        "webk",                     # webk.zip - PAC summary
-        "itpas2",                   # pas2.zip - itemized transactions (ALL types, including 24A/24E for indie expenditures)
-        "itoth",                    # oth.zip - other receipts (committee upstream funding)
+        "pas2",                     # pas2.zip - itemized transactions (ALL types)
+        "oth",                      # oth.zip - other receipts (PAC-to-PAC transfers)
+        "indiv",                    # indiv.zip - individual contributions
+        
+        # DEPRECATED: weball, webl, webk (derive summaries from raw data instead)
         
         # Phase 3: Build member→FEC mapping
         "member_fec_mapping",
         
         # Phase 4: Enrichment (filtered per-cycle data)
-        "enriched_itpas2",
-        "enriched_webl",                  # Filter webl to tracked members
-        "enriched_weball",                # Filter weball to tracked members
-        "enriched_webk",                  # Filter webk to linked committees
+        "enriched_pas2",
         "enriched_candidate_financials",  # Per-cycle candidate financial summaries
         "enriched_donor_financials",      # Per-cycle donor financial summaries
         "enriched_committee_funding",     # Per-cycle upstream funding sources (WHO funds committees)
         
+        # DEPRECATED: enriched_webl, enriched_weball, enriched_webk
+        
         # Phase 5: Aggregation (cross-cycle rollups)
         "candidate_financials",
         "donor_financials",
-        "candidate_summaries",      # FEC official candidate summaries (webl + weball)
-        "committee_summaries",      # FEC official committee summaries (webk)
+        # DEPRECATED: candidate_summaries, committee_summaries (will derive from raw later)
     ),
     tags={
         "team": "data-engineering",

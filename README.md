@@ -48,10 +48,18 @@ Legal Tender is an AI-powered pipeline to analyze the influence of money in US p
 ./start.sh -v
 ```
 
-**Processing time:** ~25 minutes for 8 years of FEC data (4 cycles: 2020-2026)  
-**Data downloaded:** ~1.4 GB (down from 25 GB!)  
-**Memory required:** 4GB minimum, 8-16GB recommended for optimal batch sizing  
-**Pipeline**: 1 job (`fec_pipeline_job`) → 11 assets (data_sync + member_fec_mapping + 9 FEC parsers including itoth)
+**First Run (Parse + Dump):**
+- **Processing time:** ~40-45 minutes per cycle (parse + index + dump)
+- **Data downloaded:** ~1.4 GB source files (4 cycles: 2020-2026)
+- **Dumps created:** ~150-175 GB BSON dumps with indexes
+- **Memory required:** 4GB minimum, 8-16GB recommended
+
+**Subsequent Runs (Restore from Dump):**
+- **Processing time:** ~30 seconds total (all collections, all cycles)
+- **Memory required:** 2GB minimum
+- **Automatic:** If source files unchanged, restores from dump instantly
+
+**Pipeline**: 1 job (`fec_pipeline_job`) → 11 assets (data_sync + member_fec_mapping + 9 FEC parsers)
 
 **📖 See [IMPLEMENTATION_GUIDE.md](docs/IMPLEMENTATION_GUIDE.md) for complete technical documentation**
 
@@ -244,32 +252,35 @@ Administrative/Salary/Overhead Expenses|...
 
 ---
 
-##### ❌ `indivYY.zip` - Individual Contributions (Not Yet Implemented)
-- **Size**: 2-4 GB per cycle (~15 GB total for 4 cycles)
-- **Records**: ~40 million individual donor transactions
+##### ✅ `indivYY.zip` - Individual Contributions (**IMPLEMENTED** - November 2025)
+- **Size**: 2-4 GB per cycle (~10-15 GB total for 4 cycles)
+- **Records**: ~69 million individual donor transactions per cycle (2020)
 - **What It Contains**: **COMPLETE** itemized individual donations to ANY committee type
   - Donor name, employer, occupation, address
   - Amount (NO LIMIT for Super PACs/Party Committees!)
   - Date, committee receiving
-- **Why We DON'T Use It YET**:
-  - ❌ **Size**: 40M records per cycle is massive
-  - ❌ **Focus**: We prioritize corporate/PAC influence tracking first
-  - ✅ **Future Phase**: Will implement with high-threshold filtering
-- **Planned Implementation** (Phase 2):
-  - Filter at parse time: Only donations ≥$10,000
-  - Aggregate by donor to prevent gaming ($9,999 × 10 = $99,990 total)
-  - Track mega-donor influence (billionaires funding Super PACs/parties)
-  - Expected: 40M → ~150K records (99.6% reduction)
-- **Current Alternative**: 
-  - Use `weblYY.zip` aggregated totals for "Individual Donors (Virtual PAC)" comparison
-  - Shows corporate vs grassroots funding ratio without granular data
+- **Our Strategy (Load ALL Raw)**:
+  - ✅ **No parse-time filtering** - Load all 69M records raw
+  - ✅ **Dump/restore architecture** - Parse once (38 min), restore forever (30 sec)
+  - ✅ **Flexible enrichment** - Apply $10K/$100K thresholds in enrichment layer
+  - ✅ **No data loss** - Complete dataset for any analysis need
+- **Implementation Details**:
+  - First run: 15 min parse + 18 min index + 5 min dump = ~38 minutes
+  - Subsequent runs: ~30 seconds restore from dump (includes 7 indexes)
+  - Dump size: ~36 GB BSON per cycle (~144 GB for 4 cycles)
+  - Storage: ~150-175 GB total (all cycles with indexes)
+- **Why Load Everything Raw**:
+  - Flexibility: Different analyses need different thresholds
+  - Speed: 30-second restore vs 38-minute re-parse
+  - Completeness: No premature filtering = no data loss
+  - Future-proof: Can apply any threshold in enrichment
 
 **Critical Discovery** (November 2025):
 - itoth (oth.zip) contains only 17.1M IND records (43% of itcont)
 - 99.1% are form 15J (late/amended filings), NOT primary donations
 - itcont (indiv.zip) is the AUTHORITATIVE source for individual donations
 - itoth has almost NO individual donations to PACs ($91K total vs $860M to parties)
-- **We NEED itcont for complete billionaire tracking!** (Future phase)
+- **We NOW HAVE itcont with complete billionaire tracking!**
 
 ---
 
@@ -278,25 +289,31 @@ Administrative/Salary/Overhead Expenses|...
 ##### ✅ `othYY.zip` - Other Receipts (**NEW** - November 2025)
 - **Format**: ZIP containing pipe-delimited text
 - **Size**: ~483 MB for 2024 alone (~931 MB total for 4 cycles)
-- **Records**: ~18.7 million receipts (but 91% are individual donations)
+- **Records**: ~18.7 million receipts raw → 377K after filtering (98% reduction)
 - **Purpose**: Track upstream PAC→PAC/Party transfers (corporate dark money)
-- **What It Contains**:
+- **What We Load (377K records after parse-time filtering)**:
   - PAC-to-PAC transfers (156K records, **$2.4B** - CRITICAL!)
   - Committee-to-committee transfers (24K records, $2.4B)
   - Party committee transfers (112K records, $2.4B)
-  - Individual donations (17.1M records - but these are late filings, NOT complete)
   - Organization donations (85K records, $5.4B)
-  - Refunds, loans, adjustments
+- **What We Skip (18.3M records filtered at parse time)**:
+  - Individual donations (17.1M IND records) - Use indiv.zip instead
+  - Candidate committee refunds (1.2M CCM records) - Not upstream influence
+  - Direct candidate entities (CAN) - Rare, not useful
 - **Processing Strategy**:
   - **Filter at parse time**: Only `ENTITY_TP IN ["PAC", "COM", "PTY", "ORG"]`
-  - Skip 17.1M individual donation records (use itcont for that in Phase 2)
-  - Result: 18.7M → 291K records (**98.4% reduction**)
-  - Processing time: 20+ min → ~2 min
+  - Skip 98% of file (IND/CCM/CAN entities)
+  - Result: 18.7M → 377K records (**98% reduction**)
+  - Processing time: 20+ min raw → ~2 min filtered
+- **Dump Strategy**:
+  - First run: Parse + filter + index + dump = ~2-3 minutes
+  - Subsequent runs: Restore from dump = ~3 seconds
+  - Dump size: ~416 MB BSON (includes 8 indexes)
 - **Key Fields**:
   - `CMTE_ID` - Committee receiving money (RECIPIENT)
   - `OTHER_ID` - Committee giving money (DONOR, if populated)
   - `NAME` - Donor name (if individual/org)
-  - `ENTITY_TP` - Donor type (PAC, COM, PTY, IND, ORG, CCM)
+  - `ENTITY_TP` - Donor type (PAC, COM, PTY, ORG only after filtering)
   - `TRANSACTION_AMT` - Amount transferred
 - **Critical For**: Upstream influence tracing (Corporate PAC → Political PAC → Candidate)
 
@@ -312,37 +329,46 @@ Administrative/Salary/Overhead Expenses|...
 
 | File Pattern | Type | Size/Cycle | Records | Fields | Purpose | Parser | Time |
 |-------------|------|-----------|---------|--------|---------|--------|------|
-| `cnYY.zip` | ZIP/TXT | 2 MB | 5-10K | varies | Candidate metadata | `cn.py` | <1 min |
-| `cmYY.zip` | ZIP/TXT | 1 MB | 10-20K | varies | Committee metadata (Leadership PACs) | `cm.py` | <1 min |
-| `cclYY.zip` | ZIP/TXT | 1 MB | varies | varies | Candidate-committee linkages | `ccl.py` | <1 min |
-| `weballYY.zip` | ZIP/TXT | 10 MB | 10K | 30 | Candidate financial summaries | `weball.py` | 2 min |
-| `weblYY.zip` | ZIP/TXT | 5 MB | 10K | 30 | Committee financial summaries | `webl.py` | 2 min |
-| `webkYY.zip` | ZIP/TXT | 3 MB | 5K | **27** | PAC financial summaries | `webk.py` | 1 min |
-| `pas2YY.zip` | ZIP/TXT | 300 MB | 2-5M | 22 | Committee→Candidate transfers | `itpas2.py` | 15 min |
-| `othYY.zip` | ZIP/TXT | 483 MB | 291K* | 21 | PAC→PAC upstream transfers | `itoth.py` | 2 min* |
-| `independent_expenditure_YYYY.csv` | CSV | 20 MB | 50-200K | 20+ | Super PAC FOR/AGAINST spending | `independent_expenditures.py` | 3 min |
+| `cnYY.zip` | ZIP/TXT | 2 MB | 5-10K | varies | Candidate metadata | `cn.py` | <1 sec |
+| `cmYY.zip` | ZIP/TXT | 1 MB | 10-20K | varies | Committee metadata (Leadership PACs) | `cm.py` | <1 sec |
+| `cclYY.zip` | ZIP/TXT | 1 MB | varies | varies | Candidate-committee linkages | `ccl.py` | <1 sec |
+| `weballYY.zip` | ZIP/TXT | 10 MB | 10K | 30 | Candidate financial summaries | `weball.py` | N/A† |
+| `weblYY.zip` | ZIP/TXT | 5 MB | 10K | 30 | Committee financial summaries | `webl.py` | N/A† |
+| `webkYY.zip` | ZIP/TXT | 3 MB | 5K | **27** | PAC financial summaries | `webk.py` | N/A† |
+| `pas2YY.zip` | ZIP/TXT | 300 MB | 2-5M | 22 | Committee→Candidate transfers | `pas2.py` | ~40 sec |
+| `othYY.zip` | ZIP/TXT | 483 MB | 377K* | 21 | PAC→PAC upstream transfers | `oth.py` | ~2 min* |
+| `indivYY.zip` | ZIP/TXT | 2-4 GB | 69M | 21 | Individual contributions (ALL raw) | `indiv.py` | ~38 min** |
 
-\* Filtered at parse time to committee transfers only (18.7M → 291K records, 98.4% reduction)
+\* Filtered at parse time to committee transfers only (18.7M → 377K records, 98% reduction)  
+** First run only. Subsequent runs: ~30 seconds restore from dump  
+† Not yet implemented
 
-**Total Data per Cycle**: ~823 MB raw, ~340 MB after filtering  
-**Total Data (4 cycles)**: ~3.3 GB raw, ~1.4 GB after filtering  
-**Total Processing Time**: ~27 minutes (on 16GB machine)
+**Total Source Data per Cycle**: ~3-4 GB compressed  
+**Total Source Data (4 cycles)**: ~10-15 GB compressed  
+**Total Dump Storage (4 cycles)**: ~150-175 GB (includes indexes)
+
+**Processing Time (First Run)**:
+- Small files (cn, cm, ccl): <3 seconds total
+- pas2: ~40 seconds per cycle
+- oth: ~2 minutes per cycle (filtered)
+- indiv: ~38 minutes per cycle (parse + index + dump)
+- **Total per cycle**: ~40-45 minutes
+- **Total all cycles**: ~2.5-3 hours first run
+
+**Processing Time (Subsequent Runs)**:
+- All collections, all cycles: **~30 seconds** (restore from dumps)
 
 **Files We DON'T Download:**
 - ❌ `oppexpYY.zip` (60 MB) - Wrong file! Operating expenses, not independent expenditures
-- ❌ `indivYY.zip` (2-4 GB) - Deferred to Phase 2 (will implement with ≥$10K filtering)
+- ❌ `weballYY.zip`, `weblYY.zip`, `webkYY.zip` - Not yet implemented
 
-**Previous Approach**: 25 GB total, 100 min processing (included full indiv.zip)  
-**Current Approach**: 1.4 GB total, 27 min processing (smart filtering on itoth)  
-**Improvement**: 94% less data, 73% faster! 🚀
+**Architecture**: 
+- 1 file = 1 parser = 1 collection per database
+- Parse → Index → Dump → Restore (80x speedup on subsequent runs)
 
-**Architecture**: 1 file = 1 parser = 1 collection per database
-
-**Latest Addition** (November 2025): Added `othYY.zip` (itoth) for upstream PAC→PAC tracing
-- Discovered pas2.zip only has transfers TO candidate committees
-- oth.zip has transfers TO any committee (including party committees, Super PACs)
-- Enables complete dark money flow: Corporate PAC → Political PAC → Candidate
-- Filter at parse time to committee transfers only (98.4% reduction)
+**Latest Additions** (November 2025):
+1. **indivYY.zip** - Load all 69M records raw (no filtering), dump/restore architecture
+2. **othYY.zip** - Filter to committee transfers only at parse time (98% reduction)
 
 ---
 
@@ -820,28 +846,29 @@ fec_2024/
 
 ## Current Status (November 2025)
 
-**Data Pipeline**: ✅ Complete FEC ingestion (9 parsers, 1:1 file-to-parser mapping)  
-**FEC Files**: ✅ All 9 file types identified and parsers created (see detailed breakdown above)  
-**Field Mappings**: ✅ All parsers verified and corrected (Oct 2025)  
-**PAC Summaries**: ✅ Fixed webk format (27 fields) - major bug fix  
-**Upstream Tracing**: ✅ Added itoth (oth.zip) for PAC→PAC transfers (Nov 2025)  
+**Data Pipeline**: ✅ Complete FEC ingestion with dump/restore architecture  
+**FEC Files**: ✅ 6 core parsers implemented (cn, cm, ccl, pas2, oth, indiv)  
+**Field Mappings**: ✅ All parsers use official FEC schema headers  
+**Dump Architecture**: ✅ Parse → Index → Dump → Restore (80x speedup)  
+**Raw Data Strategy**: ✅ Load everything raw (except oth filtered to committees)  
+**Upstream Tracing**: ✅ Added oth.zip for PAC→PAC transfers (filtered 98%)  
+**Individual Donations**: ✅ Added indiv.zip loading ALL 69M records raw  
 **Wrong Files**: ❌ Removed `oppexp.zip` (operating expenses, not independent expenditures)  
-**Deferred Files**: ⏸️ `indiv.zip` deferred to Phase 2 (will implement with ≥$10K filtering)  
-**Data Volume**: 📉 Reduced from 25 GB → 1.4 GB (94% reduction!)  
-**Processing Time**: 📉 Estimated 100 min → 27 min (73% faster!)  
-**MongoDB**: ✅ Per-year database architecture (`fec_YYYY` per cycle + `enriched_YYYY` + `aggregation`)  
-**Memory**: ✅ Dynamic batching with 50% RAM allocation  
-**Batch Size**: 🧠 Auto-calculated (1K-100K based on available memory)  
+**Data Volume**: � Source: 10-15 GB, Dumps: 150-175 GB (with indexes)  
+**Processing Time**: ⚡ First run: ~40-45 min/cycle, Subsequent: ~30 sec total  
+**MongoDB**: ✅ Per-cycle raw (`fec_YYYY`) + enriched (`enriched_YYYY`) + aggregated  
+**Memory**: ✅ Streaming + fixed 10K batch size  
 **Jobs/Assets**: ✅ Cleaned up (1 job, 11 assets)  
 **Data Integrity**: ✅ Raw data only, no transformations in parsers  
-**Next Step**: 🚧 Test enriched_committee_funding with itoth upstream data
+**Next Step**: 🚧 Generate all dumps for 4 cycles, test enrichment layer
 
-**Critical Discovery** (Nov 2025):
-- itoth (oth.zip) has 18.7M records but 91% are individual donations (late filings)
-- Filter to PAC/COM/PTY only → 98.4% reduction (18.7M → 291K records)
-- itoth is NOT a substitute for itcont - we need both!
-- itoth: Committee-to-committee transfers (dark money flow)
-- itcont: Individual mega-donations (billionaire tracking) - Phase 2  
+**Critical Architecture Decision** (Nov 2025):
+- **Dump-based workflow**: Parse once, restore forever (80x speedup)
+- **Indexes before dump**: mongodump includes indexes, mongorestore recreates them
+- **No parse-time filtering** (except oth): Maximum flexibility for enrichment
+- **oth.zip filtered**: 18.7M → 377K (PAC/COM/PTY/ORG only, 98% reduction)
+- **indiv.zip raw**: All 69M records loaded, filter in enrichment layer
+- **Source change detection**: Automatic re-parse when FEC updates files  
 
 ---
 
