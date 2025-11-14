@@ -891,89 +891,107 @@ Several parsers had incorrect field mappings that caused data corruption. All ha
 
 ### Implementation Strategy
 
-**Phase 1**: Download and parse with high threshold filter
+**Current Implementation** (November 2025): Load ALL records raw, filter in enrichment layer
+
 ```python
 @asset
-def itcont_asset(context, mongo, data_sync):
-    """Parse individual contributions, filtering to mega-donations only."""
+def indiv_asset(context, mongo, data_sync):
+    """Parse ALL individual contributions with NO filtering."""
     
-    # Filter at parse time: only donations ≥ $10,000
-    threshold = 10000
+    # Load EVERYTHING raw - no threshold filtering at parse time
     batch = []
-    batch_size = calculate_optimal_batch_size()
-    skipped = 0
-    kept = 0
+    batch_size = 10000  # Fixed batch size
+    total = 0
     
     with zipfile.ZipFile(indiv_zip_path) as zf:
         with zf.open(f'indiv{cycle[-2:]}.txt') as f:
             for line in f:
-                fields = line.strip().split('|')
+                decoded = line.decode('utf-8', errors='replace').strip()
                 
-                # Field 14 = TRANSACTION_AMT
-                amount = float(fields[14] or 0)
-                
-                if amount < threshold:
-                    skipped += 1
-                    continue
-                
-                kept += 1
-                record = parse_itcont_record(fields)
+                # Use FECSchema to parse - NO filtering
+                record = schema.parse_line('indiv', decoded)
                 batch.append(record)
+                total += 1
                 
                 if len(batch) >= batch_size:
                     collection.insert_many(batch, ordered=False)
                     batch.clear()
                     
-                    if kept % 10000 == 0:
-                        context.log.info(
-                            f"Parsed {kept:,} mega-donations "
-                            f"(skipped {skipped:,} small donations)"
-                        )
+                    if total % 1000000 == 0:
+                        context.log.info(f"📥 Parsed {total:,} records")
     
-    context.log.info(
-        f"Final: {kept:,} mega-donations, "
-        f"{skipped:,} filtered out, "
-        f"{(kept/(kept+skipped)*100):.2f}% reduction"
-    )
+    # Insert remaining
+    if batch:
+        collection.insert_many(batch, ordered=False)
+    
+    # Create indexes BEFORE dump
+    context.log.info(f"🔧 Creating indexes for {total:,} records...")
+    collection.create_index([("CMTE_ID", 1)])
+    collection.create_index([("NAME", 1)])
+    collection.create_index([("EMPLOYER", 1)])
+    collection.create_index([("TRANSACTION_DT", 1)])
+    collection.create_index([("TRANSACTION_AMT", -1)])
+    collection.create_index([("ENTITY_TP", 1)])
+    collection.create_index([("CYCLE", 1)])
+    context.log.info("✅ Indexes created")
+    
+    # Create dump with indexes included
+    create_collection_dump(...)
 ```
 
-**Expected results**:
-- Input: ~40M records per cycle
-- Output: ~150K records per cycle (mega-donations only)
-- Reduction: 99.6%
-- Processing time: ~5-10 minutes (with streaming + filtering)
+**Actual results**:
+- Input: ~69M records per cycle (2020), varies by cycle
+- Output: ~69M records loaded (100% - NO filtering)
+- Processing time: 15 min parse + 18 min indexes + 5 min dump = ~38 minutes first run
+- Subsequent runs: ~30 seconds (restore from dump)
 
-**Phase 2**: Aggregate by donor for gaming prevention
+**Why load everything raw?**
+1. **Flexibility**: Apply different thresholds ($10K, $100K, $250K) in enrichment without re-parsing 38 minutes
+2. **Completeness**: Aggregate by donor AFTER loading to catch gaming (multiple $9,999 donations)
+3. **Speed**: Dump/restore in 30 seconds vs 38 minutes re-parse
+4. **Future-proof**: New analysis requirements don't need pipeline changes
+
+**Enrichment layer handles filtering** (future implementation):
 ```python
-# Group by (name, employer, committee, cycle) before final insert
-# This prevents gaming via multiple $9,999 donations
-from collections import defaultdict
-
-contributor_totals = defaultdict(lambda: {
-    'total': 0,
-    'count': 0,
-    'contributions': []
-})
-
-for record in filtered_records:
-    key = (
-        record['NAME'],
-        record['EMPLOYER'],
-        record['CMTE_ID'],
-        cycle
-    )
-    contributor_totals[key]['total'] += record['TRANSACTION_AMT']
-    contributor_totals[key]['count'] += 1
-    contributor_totals[key]['contributions'].append(record)
-
-# Then insert aggregated records
-mega_donors = [
-    v for v in contributor_totals.values()
-    if v['total'] >= threshold
-]
+@asset
+def enriched_donor_financials(context, mongo):
+    """Aggregate individual donations and apply threshold filtering."""
+    
+    # Group by (name, employer, committee, cycle) to catch gaming
+    pipeline = [
+        {
+            "$group": {
+                "_id": {
+                    "name": "$NAME",
+                    "employer": "$EMPLOYER",
+                    "cmte_id": "$CMTE_ID",
+                    "cycle": "$CYCLE"
+                },
+                "total_amount": {"$sum": "$TRANSACTION_AMT"},
+                "contribution_count": {"$count": {}},
+                "contributions": {"$push": "$$ROOT"}
+            }
+        },
+        # Apply threshold AFTER aggregation
+        {"$match": {"total_amount": {"$gte": 10000}}},
+        {
+            "$project": {
+                "donor_name": "$_id.name",
+                "employer": "$_id.employer",
+                "committee_id": "$_id.cmte_id",
+                "cycle": "$_id.cycle",
+                "total_amount": 1,
+                "contribution_count": 1,
+                "contributions": 1
+            }
+        }
+    ]
+    
+    # This prevents gaming: Multiple $9,999 donations show up as $50K total
+    enriched_collection.insert_many(list(raw_collection.aggregate(pipeline)))
 ```
 
-**Phase 3**: Link to committee funding sources
+**Next step**: Link to committee funding sources
 ```python
 # Add individual mega-donor data to enriched_committee_funding
 {
