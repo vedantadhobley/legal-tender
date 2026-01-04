@@ -1,5 +1,6 @@
 """MongoDB Resource for Dagster."""
 
+import os
 from contextlib import contextmanager
 from dagster import ConfigurableResource
 from pymongo import MongoClient
@@ -7,9 +8,16 @@ from pymongo.database import Database
 from pymongo.collection import Collection
 
 
+# Default connection string - overridden by MONGODB_URI env var
+DEFAULT_MONGODB_URI = "mongodb://ltuser:ltpass@legal-tender-dev-mongo:27017/"
+
+
 class MongoDBResource(ConfigurableResource):
     """
     Dagster resource for MongoDB connections.
+    
+    Connection string is read from MONGODB_URI environment variable,
+    falling back to the default for development.
     
     Usage in asset:
         @asset
@@ -20,8 +28,8 @@ class MongoDBResource(ConfigurableResource):
                 # ... do work
     """
     
-    connection_string: str = "mongodb://ltuser:ltpass@mongo:27017/"
-    """MongoDB connection string (uses 'mongo' service name in Docker with authentication)"""
+    connection_string: str = os.environ.get("MONGODB_URI", DEFAULT_MONGODB_URI)
+    """MongoDB connection string (from MONGODB_URI env var or default)"""
     
     @contextmanager
     def get_client(self):
@@ -79,5 +87,7 @@ class MongoDBResource(ConfigurableResource):
         return db[collection_name]
 
 
-# Default resource instance
-mongo_resource = MongoDBResource(connection_string="mongodb://ltuser:ltpass@mongo:27017/")
+# Default resource instance - uses env var or default
+mongo_resource = MongoDBResource(
+    connection_string=os.environ.get("MONGODB_URI", DEFAULT_MONGODB_URI)
+)

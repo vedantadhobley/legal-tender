@@ -1,50 +1,169 @@
-# Docker Compose overrides for local development
-# Use with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Development Docker Compose for Legal Tender
+#
+# Port allocation: legal-tender uses 4200-4209 (dev)
+#   4200: Dagster UI
+#   4201: Mongoku (MongoDB web GUI)
+#   4202: (reserved)
+#
+# Internal ports (not exposed to host):
+#   - postgres:5432 (Dagster metadata)
+#   - mongo:27017 (Application data)
+#
+# External services (on luv-dev network):
+#   - llama-chat:8080 (LLM API - if needed for AI features)
+#   - embedding:8081 (Embedding API - if needed for RAG)
+
+name: legal-tender-dev
 
 services:
-  # Development overrides for dagster-webserver
+  # DAGSTER WEBSERVER - UI and asset management
   dagster-webserver:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: development
-    volumes:
-      # Mount source code for live editing (no rebuild needed)
-      - .:/app
-      # Exclude Python cache and venv
-      - /app/.venv
-      - /app/__pycache__
-      - /app/src/__pycache__
+      dockerfile: Dockerfile.dev
+    container_name: legal-tender-dev-webserver
+    command: dagster dev -h 0.0.0.0 -p 3000 -w /workspace/workspace.yaml
+    ports:
+      - "4200:3000"  # Dagster UI
+    env_file:
+      - .env
     environment:
-      DAGSTER_HOME: /app
+      DAGSTER_HOME: /workspace
+      PYTHONPATH: /workspace
       PYTHONUNBUFFERED: "1"
-    # Override restart policy for faster development iteration
-    restart: "no"
+      # MongoDB connection (internal network)
+      MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-dev-mongo:27017
+      # Dagster Postgres connection
+      DAGSTER_PG_USER: ltuser
+      DAGSTER_PG_PASSWORD: ltpass
+      DAGSTER_PG_HOST: legal-tender-dev-postgres
+      DAGSTER_PG_DB: dagster
+      DAGSTER_COMPUTE_LOGS_DIR: /workspace/compute_logs
+    volumes:
+      - .:/workspace  # Mount entire project for live development
+      - legal-tender-dev-data:/workspace/data  # Persistent FEC data downloads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - legal-tender-dev
+      - luv-dev
 
-  # Development overrides for dagster-daemon
+  # DAGSTER DAEMON - Schedules and sensors
   dagster-daemon:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: development
-    volumes:
-      # Mount source code for live editing (no rebuild needed)
-      - .:/app
-      # Exclude Python cache and venv
-      - /app/.venv
-      - /app/__pycache__
-      - /app/src/__pycache__
+      dockerfile: Dockerfile.dev
+    container_name: legal-tender-dev-daemon
+    command: dagster-daemon run
+    env_file:
+      - .env
     environment:
-      DAGSTER_HOME: /app
+      DAGSTER_HOME: /workspace
+      PYTHONPATH: /workspace
       PYTHONUNBUFFERED: "1"
-    restart: "no"
+      MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-dev-mongo:27017
+      # Dagster Postgres connection
+      DAGSTER_PG_USER: ltuser
+      DAGSTER_PG_PASSWORD: ltpass
+      DAGSTER_PG_HOST: legal-tender-dev-postgres
+      DAGSTER_PG_DB: dagster
+      DAGSTER_COMPUTE_LOGS_DIR: /workspace/compute_logs
+    volumes:
+      - .:/workspace
+      - legal-tender-dev-data:/workspace/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dagster-webserver:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - legal-tender-dev
 
-  # Expose MongoDB port for local development tools (if needed)
+  # POSTGRESQL - Dagster metadata storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: legal-tender-dev-postgres
+    # No port exposed - internal only
+    environment:
+      POSTGRES_USER: ltuser
+      POSTGRES_PASSWORD: ltpass
+      POSTGRES_DB: dagster
+    volumes:
+      - legal-tender-dev-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ltuser -d dagster"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - legal-tender-dev
+
+  # MONGODB - Application data storage
   mongo:
-    ports:
-      - "27017:27017"
+    image: mongo:7-jammy
+    container_name: legal-tender-dev-mongo
+    # No port exposed - use Mongoku for GUI access
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ltuser
+      MONGO_INITDB_ROOT_PASSWORD: ltpass
+    volumes:
+      - legal-tender-dev-mongo-data:/data/db
+      - legal-tender-dev-mongo-config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - legal-tender-dev
+      - luv-dev  # Allow cross-project access if needed
 
-  # Expose PostgreSQL port for local development tools (if needed)
-  dagster-postgres:
+  # MONGOKU - MongoDB web GUI
+  mongoku:
+    image: huggingface/mongoku:latest
+    container_name: legal-tender-dev-mongoku
     ports:
-      - "5432:5432"
+      - "4201:3100"  # Mongoku Web UI
+    environment:
+      MONGOKU_DEFAULT_HOST: mongodb://ltuser:ltpass@legal-tender-dev-mongo:27017
+      MONGOKU_SERVER_ORIGIN: http://localhost:4201
+      MONGOKU_ALLOW_DELETE: "true"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - legal-tender-dev
+
+volumes:
+  legal-tender-dev-postgres-data:
+    name: legal-tender-dev-postgres-data
+    driver: local
+  legal-tender-dev-mongo-data:
+    name: legal-tender-dev-mongo-data
+    driver: local
+  legal-tender-dev-mongo-config:
+    name: legal-tender-dev-mongo-config
+    driver: local
+  legal-tender-dev-data:
+    name: legal-tender-dev-data
+    driver: local
+
+networks:
+  # Internal network for this project
+  legal-tender-dev:
+    name: legal-tender-dev
+    driver: bridge
+  
+  # Shared network - cross-project communication (LLM, embedding, etc.)
+  luv-dev:
+    external: true
