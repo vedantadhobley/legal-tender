@@ -1,105 +1,112 @@
 """
 MongoDB Collection Caching Utilities
 
-Simple check: if collection exists and source file unchanged, skip parsing.
-No external tools needed - just MongoDB metadata tracking.
+Manages BSON dumps for fast data loading with proper separation:
+- FEC raw data: ~/workspace/.legal-tender/bson/fec/{cycle}/
+- Enriched data: ~/workspace/.legal-tender/bson/enriched/{cycle}/
+- Aggregation data: ~/workspace/.legal-tender/bson/aggregation/
 
 Workflow:
 1. Parse FEC file → store in MongoDB (35 min)
-2. Store metadata (source file timestamp, record count)
-3. Next time: check if source file changed
-   - Unchanged → skip parsing (instant)
+2. Create indexes
+3. Create BSON dump (indexes included)
+4. Next time: check if source file changed
+   - Unchanged → restore from dump (~30 sec)
    - Changed → re-parse (35 min)
 """
 
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Literal
 import json
 import subprocess
+
+from src.utils.storage import get_fec_dump_dir, get_enriched_dump_dir, get_aggregation_dump_dir
+
+
+DumpType = Literal["fec", "enriched", "aggregation"]
 
 
 class MongoDumpManager:
     """Manages MongoDB dumps for fast data loading."""
     
-    def __init__(self, dumps_dir: Path | None = None):
+    def __init__(self, dump_type: DumpType = "fec"):
         """
         Initialize dump manager.
         
         Args:
-            dumps_dir: Directory for storing dumps. Defaults to data/mongo/
+            dump_type: Type of dumps to manage ("fec", "enriched", "aggregation")
         """
-        if dumps_dir is None:
-            repo_root = Path(__file__).parent.parent.parent
-            dumps_dir = repo_root / 'data' / 'mongo'
-        
-        self.dumps_dir = dumps_dir
-        self.dumps_dir.mkdir(parents=True, exist_ok=True)
+        self.dump_type = dump_type
     
-    def get_dump_path(self, cycle: str, collection: str) -> Path:
+    def _get_base_dir(self, cycle: Optional[str] = None) -> Path:
+        """Get base directory for dumps based on type and cycle."""
+        if self.dump_type == "fec":
+            if not cycle:
+                raise ValueError("Cycle required for FEC dumps")
+            return get_fec_dump_dir(cycle)
+        elif self.dump_type == "enriched":
+            if not cycle:
+                raise ValueError("Cycle required for enriched dumps")
+            return get_enriched_dump_dir(cycle)
+        elif self.dump_type == "aggregation":
+            return get_aggregation_dump_dir()
+        else:
+            raise ValueError(f"Unknown dump type: {self.dump_type}")
+    
+    def get_dump_path(self, collection: str, cycle: Optional[str] = None) -> Path:
         """
         Get path to dump directory for a collection.
         
         Args:
-            cycle: FEC cycle (e.g., "2024")
-            collection: Collection name (e.g., "pas2")
+            collection: Collection name (e.g., "cn", "pas2")
+            cycle: FEC cycle (required for fec/enriched, ignored for aggregation)
             
         Returns:
-            Path to dump directory (e.g., data/mongo/fec_2024/pas2)
+            Path to dump directory
         """
-        return self.dumps_dir / f"fec_{cycle}" / collection
+        return self._get_base_dir(cycle)
     
-    def get_metadata_path(self, cycle: str) -> Path:
-        """
-        Get path to metadata file for a cycle.
-        
-        Args:
-            cycle: FEC cycle (e.g., "2024")
-            
-        Returns:
-            Path to metadata.json (e.g., data/mongo/fec_2024/metadata.json)
-        """
-        return self.dumps_dir / f"fec_{cycle}" / "metadata.json"
+    def get_bson_path(self, collection: str, cycle: Optional[str] = None) -> Path:
+        """Get path to BSON file for a collection."""
+        return self._get_base_dir(cycle) / f"{collection}.bson"
     
-    def dump_exists(self, cycle: str, collection: str) -> bool:
-        """
-        Check if a dump exists for a collection.
-        
-        Args:
-            cycle: FEC cycle
-            collection: Collection name
-            
-        Returns:
-            True if dump exists
-        """
-        dump_path = self.get_dump_path(cycle, collection)
-        bson_file = dump_path.parent / f"{collection}.bson"
-        metadata_file = dump_path.parent / f"{collection}.metadata.json"
-        
+    def get_metadata_json_path(self, collection: str, cycle: Optional[str] = None) -> Path:
+        """Get path to MongoDB metadata JSON file for a collection."""
+        return self._get_base_dir(cycle) / f"{collection}.metadata.json"
+    
+    def get_cycle_metadata_path(self, cycle: Optional[str] = None) -> Path:
+        """Get path to cycle-level metadata.json (tracks all collections)."""
+        return self._get_base_dir(cycle) / "metadata.json"
+    
+    def dump_exists(self, collection: str, cycle: Optional[str] = None) -> bool:
+        """Check if a dump exists for a collection."""
+        bson_file = self.get_bson_path(collection, cycle)
+        metadata_file = self.get_metadata_json_path(collection, cycle)
         return bson_file.exists() and metadata_file.exists()
     
     def should_restore(
         self, 
-        cycle: str, 
         collection: str, 
-        source_file: Path
+        source_file: Path,
+        cycle: Optional[str] = None
     ) -> bool:
         """
         Determine if we should restore from dump or re-parse.
         
         Args:
-            cycle: FEC cycle
             collection: Collection name
-            source_file: Path to source ZIP file
+            source_file: Path to source file (ZIP or upstream data)
+            cycle: FEC cycle (required for fec/enriched)
             
         Returns:
             True if we should restore, False if we should re-parse
         """
         # No dump? Must parse
-        if not self.dump_exists(cycle, collection):
+        if not self.dump_exists(collection, cycle):
             return False
         
-        # Load dump metadata
+        # Load cycle metadata
         metadata = self.load_metadata(cycle)
         if not metadata:
             return False
@@ -118,24 +125,35 @@ class MongoDumpManager:
         
         return True
     
+    def _get_database_name(self, cycle: Optional[str] = None) -> str:
+        """Get MongoDB database name for dump type and cycle."""
+        if self.dump_type == "fec":
+            return f"fec_{cycle}"
+        elif self.dump_type == "enriched":
+            return f"enriched_{cycle}"
+        elif self.dump_type == "aggregation":
+            return "aggregation"
+        else:
+            raise ValueError(f"Unknown dump type: {self.dump_type}")
+    
     def create_dump(
         self,
-        cycle: str,
         collection: str,
         mongo_uri: str,
         source_file: Path,
         record_count: int,
+        cycle: Optional[str] = None,
         context = None
     ) -> bool:
         """
         Create BSON dump of a MongoDB collection.
         
         Args:
-            cycle: FEC cycle
             collection: Collection name
             mongo_uri: MongoDB connection URI
-            source_file: Path to source ZIP file (for metadata)
+            source_file: Path to source file (for metadata)
             record_count: Number of records in collection
+            cycle: FEC cycle (required for fec/enriched)
             context: Optional Dagster context for logging
             
         Returns:
@@ -147,44 +165,72 @@ class MongoDumpManager:
             else:
                 print(msg)
         
-        dump_path = self.get_dump_path(cycle, collection)
-        database = f"fec_{cycle}"
+        base_dir = self._get_base_dir(cycle)
+        database = self._get_database_name(cycle)
         
-        # Create dump directory
-        dump_path.parent.mkdir(parents=True, exist_ok=True)
+        # Ensure directory exists
+        base_dir.mkdir(parents=True, exist_ok=True)
         
-        log(f"📦 Creating dump: {database}.{collection}")
+        log(f"📦 Creating dump: {database}.{collection} → {base_dir}")
         
         try:
-            # Run mongodump - outputs to data/mongo/fec_{cycle}/
-            # Add authSource=admin to URI for authentication
-            uri_with_auth = mongo_uri if '?' in mongo_uri else f'{mongo_uri}?authSource=admin'
+            # Run mongodump
+            # Ensure URI has proper format for authSource parameter
+            if '?' in mongo_uri:
+                uri_with_auth = mongo_uri
+            elif mongo_uri.endswith('/'):
+                uri_with_auth = f'{mongo_uri}?authSource=admin'
+            else:
+                uri_with_auth = f'{mongo_uri}/?authSource=admin'
+            
+            # mongodump creates {out_dir}/{database}/{collection}.bson
+            # We want files directly in base_dir, so use a temp approach
+            temp_out = base_dir.parent / f".tmp_{database}"
             
             cmd = [
                 'mongodump',
                 f'--uri={uri_with_auth}',
                 f'--db={database}',
                 f'--collection={collection}',
-                f'--out={self.dumps_dir}'
+                f'--out={temp_out}'
             ]
             
-            subprocess.run(
+            result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 check=True
             )
             
+            # Move files from temp/{database}/ to base_dir/
+            temp_db_dir = temp_out / database
+            if temp_db_dir.exists():
+                for f in temp_db_dir.iterdir():
+                    dest = base_dir / f.name
+                    if dest.exists():
+                        dest.unlink()
+                    f.rename(dest)
+                # Cleanup temp dir
+                temp_db_dir.rmdir()
+                if temp_out.exists():
+                    try:
+                        temp_out.rmdir()
+                    except OSError:
+                        pass  # May have other cycle dirs
+            
             # Update metadata
             self._update_metadata(
-                cycle=cycle,
                 collection=collection,
                 source_file=source_file,
                 record_count=record_count,
-                database=database
+                database=database,
+                cycle=cycle
             )
             
-            log(f"✅ Dump created: {record_count:,} records")
+            bson_path = self.get_bson_path(collection, cycle)
+            size_mb = bson_path.stat().st_size / 1024 / 1024 if bson_path.exists() else 0
+            
+            log(f"✅ Dump created: {record_count:,} records ({size_mb:.1f} MB)")
             return True
             
         except subprocess.CalledProcessError as e:
@@ -196,18 +242,18 @@ class MongoDumpManager:
     
     def restore_dump(
         self,
-        cycle: str,
         collection: str,
         mongo_uri: str,
+        cycle: Optional[str] = None,
         context = None
     ) -> bool:
         """
         Restore BSON dump to MongoDB.
         
         Args:
-            cycle: FEC cycle
             collection: Collection name
             mongo_uri: MongoDB connection URI
+            cycle: FEC cycle (required for fec/enriched)
             context: Optional Dagster context for logging
             
         Returns:
@@ -219,26 +265,30 @@ class MongoDumpManager:
             else:
                 print(msg)
         
-        if not self.dump_exists(cycle, collection):
-            log(f"❌ No dump found for {cycle}.{collection}")
+        if not self.dump_exists(collection, cycle):
+            log(f"❌ No dump found for {collection}")
             return False
         
-        database = f"fec_{cycle}"
-        dump_path = self.dumps_dir / database
+        database = self._get_database_name(cycle)
+        bson_path = self.get_bson_path(collection, cycle)
         
         log(f"🔄 Restoring from dump: {database}.{collection}")
         
         try:
-            # Run mongorestore
-            # Add authSource=admin to URI for authentication
-            uri_with_auth = mongo_uri if '?' in mongo_uri else f'{mongo_uri}?authSource=admin'
+            # Ensure URI has proper format for authSource parameter
+            if '?' in mongo_uri:
+                uri_with_auth = mongo_uri
+            elif mongo_uri.endswith('/'):
+                uri_with_auth = f'{mongo_uri}?authSource=admin'
+            else:
+                uri_with_auth = f'{mongo_uri}/?authSource=admin'
             
             cmd = [
                 'mongorestore',
                 f'--uri={uri_with_auth}',
                 f'--db={database}',
                 f'--collection={collection}',
-                f'{dump_path}/{collection}.bson',
+                str(bson_path),
                 '--drop'  # Drop collection before restoring
             ]
             
@@ -251,13 +301,9 @@ class MongoDumpManager:
             
             # Get record count from metadata
             metadata = self.load_metadata(cycle)
-            if not metadata:
-                log(f"⚠️ No metadata found for {cycle}")
-                return False
+            record_count = metadata['collections'][collection]['record_count'] if metadata else "?"
             
-            record_count = metadata['collections'][collection]['record_count']
-            
-            log(f"✅ Restored {record_count:,} records in ~30 seconds")
+            log(f"✅ Restored {record_count:,} records (indexes included)")
             return True
             
         except subprocess.CalledProcessError as e:
@@ -269,14 +315,14 @@ class MongoDumpManager:
     
     def _update_metadata(
         self,
-        cycle: str,
         collection: str,
         source_file: Path,
         record_count: int,
-        database: str
+        database: str,
+        cycle: Optional[str] = None
     ):
         """Update metadata.json with dump information."""
-        metadata_path = self.get_metadata_path(cycle)
+        metadata_path = self.get_cycle_metadata_path(cycle)
         
         # Load existing metadata or create new
         if metadata_path.exists():
@@ -284,6 +330,7 @@ class MongoDumpManager:
                 metadata = json.load(f)
         else:
             metadata = {
+                'dump_type': self.dump_type,
                 'cycle': cycle,
                 'database': database,
                 'collections': {}
@@ -298,20 +345,13 @@ class MongoDumpManager:
         }
         
         # Save metadata
+        metadata_path.parent.mkdir(parents=True, exist_ok=True)
         with open(metadata_path, 'w') as f:
             json.dump(metadata, f, indent=2)
     
-    def load_metadata(self, cycle: str) -> Optional[Dict[str, Any]]:
-        """
-        Load metadata for a cycle.
-        
-        Args:
-            cycle: FEC cycle
-            
-        Returns:
-            Metadata dict or None if not found
-        """
-        metadata_path = self.get_metadata_path(cycle)
+    def load_metadata(self, cycle: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Load metadata for a cycle/type."""
+        metadata_path = self.get_cycle_metadata_path(cycle)
         
         if not metadata_path.exists():
             return None
@@ -322,20 +362,13 @@ class MongoDumpManager:
         except Exception:
             return None
     
-    def get_dump_stats(self, cycle: str) -> Dict[str, Any]:
-        """
-        Get statistics about dumps for a cycle.
-        
-        Args:
-            cycle: FEC cycle
-            
-        Returns:
-            Dict with dump statistics
-        """
+    def get_dump_stats(self, cycle: Optional[str] = None) -> Dict[str, Any]:
+        """Get statistics about dumps."""
         metadata = self.load_metadata(cycle)
         
         if not metadata:
             return {
+                'dump_type': self.dump_type,
                 'cycle': cycle,
                 'dumps_exist': False,
                 'collections': []
@@ -343,8 +376,7 @@ class MongoDumpManager:
         
         collections = []
         for coll_name, coll_meta in metadata.get('collections', {}).items():
-            dump_path = self.get_dump_path(cycle, coll_name)
-            bson_file = dump_path.parent / f"{coll_name}.bson"
+            bson_file = self.get_bson_path(coll_name, cycle)
             
             collections.append({
                 'name': coll_name,
@@ -355,26 +387,17 @@ class MongoDumpManager:
             })
         
         return {
+            'dump_type': self.dump_type,
             'cycle': cycle,
             'dumps_exist': True,
             'database': metadata['database'],
             'collections': collections
         }
     
-    def delete_dump(self, cycle: str, collection: str) -> bool:
-        """
-        Delete dump for a collection.
-        
-        Args:
-            cycle: FEC cycle
-            collection: Collection name
-            
-        Returns:
-            True if successful
-        """
-        dump_path = self.get_dump_path(cycle, collection)
-        bson_file = dump_path.parent / f"{collection}.bson"
-        metadata_file = dump_path.parent / f"{collection}.metadata.json"
+    def delete_dump(self, collection: str, cycle: Optional[str] = None) -> bool:
+        """Delete dump for a collection."""
+        bson_file = self.get_bson_path(collection, cycle)
+        metadata_file = self.get_metadata_json_path(collection, cycle)
         
         try:
             if bson_file.exists():
@@ -387,7 +410,7 @@ class MongoDumpManager:
             if metadata and collection in metadata.get('collections', {}):
                 del metadata['collections'][collection]
                 
-                with open(self.get_metadata_path(cycle), 'w') as f:
+                with open(self.get_cycle_metadata_path(cycle), 'w') as f:
                     json.dump(metadata, f, indent=2)
             
             return True
@@ -396,12 +419,15 @@ class MongoDumpManager:
             return False
 
 
-# Convenience functions for use in assets
+# =============================================================================
+# Convenience functions for FEC assets (backward compatible)
+# =============================================================================
+
 def should_restore_from_dump(
     cycle: str,
     collection: str,
     source_file: Path,
-    dumps_dir: Path | None = None
+    dump_type: DumpType = "fec"
 ) -> bool:
     """
     Check if we should restore from dump or re-parse.
@@ -409,14 +435,14 @@ def should_restore_from_dump(
     Args:
         cycle: FEC cycle
         collection: Collection name
-        source_file: Path to source ZIP file
-        dumps_dir: Optional dumps directory
+        source_file: Path to source file
+        dump_type: Type of dump ("fec", "enriched", "aggregation")
         
     Returns:
         True if should restore, False if should parse
     """
-    manager = MongoDumpManager(dumps_dir)
-    return manager.should_restore(cycle, collection, source_file)
+    manager = MongoDumpManager(dump_type)
+    return manager.should_restore(collection, source_file, cycle)
 
 
 def create_collection_dump(
@@ -425,7 +451,7 @@ def create_collection_dump(
     mongo_uri: str,
     source_file: Path,
     record_count: int,
-    dumps_dir: Path | None = None,
+    dump_type: DumpType = "fec",
     context = None
 ) -> bool:
     """
@@ -435,23 +461,23 @@ def create_collection_dump(
         cycle: FEC cycle
         collection: Collection name
         mongo_uri: MongoDB connection URI
-        source_file: Path to source ZIP file
+        source_file: Path to source file
         record_count: Number of records
-        dumps_dir: Optional dumps directory
+        dump_type: Type of dump ("fec", "enriched", "aggregation")
         context: Optional Dagster context
         
     Returns:
         True if successful
     """
-    manager = MongoDumpManager(dumps_dir)
-    return manager.create_dump(cycle, collection, mongo_uri, source_file, record_count, context)
+    manager = MongoDumpManager(dump_type)
+    return manager.create_dump(collection, mongo_uri, source_file, record_count, cycle, context)
 
 
 def restore_collection_from_dump(
     cycle: str,
     collection: str,
     mongo_uri: str,
-    dumps_dir: Path | None = None,
+    dump_type: DumpType = "fec",
     context = None
 ) -> bool:
     """
@@ -461,11 +487,11 @@ def restore_collection_from_dump(
         cycle: FEC cycle
         collection: Collection name
         mongo_uri: MongoDB connection URI
-        dumps_dir: Optional dumps directory
+        dump_type: Type of dump ("fec", "enriched", "aggregation")
         context: Optional Dagster context
         
     Returns:
         True if successful
     """
-    manager = MongoDumpManager(dumps_dir)
-    return manager.restore_dump(cycle, collection, mongo_uri, context)
+    manager = MongoDumpManager(dump_type)
+    return manager.restore_dump(collection, mongo_uri, cycle, context)

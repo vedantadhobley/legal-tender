@@ -12,6 +12,11 @@
 # External services (on luv-prod network):
 #   - llama-chat:8080 (LLM API)
 #   - embedding:8081 (Embedding API)
+#
+# Storage:
+#   All persistent data lives at ~/workspace/.legal-tender/ with subdirs:
+#   - data/       Raw FEC downloads
+#   - bson/       MongoDB BSON dumps (fec/enriched/aggregation)
 
 name: legal-tender-prod
 
@@ -20,7 +25,7 @@ services:
   dagster-webserver:
     build:
       context: .
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile
     image: legal-tender:latest
     container_name: legal-tender-prod-webserver
     command: dagster-webserver -h 0.0.0.0 -p 3000 -w /app/workspace.yaml
@@ -31,6 +36,10 @@ services:
     environment:
       DAGSTER_HOME: /app
       PYTHONPATH: /app
+      # Storage paths
+      LEGAL_TENDER_STORAGE: /storage
+      LEGAL_TENDER_DATA_DIR: /storage/data
+      LEGAL_TENDER_BSON_DIR: /storage/bson
       MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-prod-mongo:27017
       # Dagster Postgres connection
       DAGSTER_PG_USER: ltuser
@@ -39,7 +48,7 @@ services:
       DAGSTER_PG_DB: dagster
       DAGSTER_COMPUTE_LOGS_DIR: /app/compute_logs
     volumes:
-      - legal-tender-prod-data:/app/data  # Persistent FEC data downloads
+      - ~/workspace/.legal-tender:/storage  # Persistent storage (data + bson)
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,6 +75,10 @@ services:
     environment:
       DAGSTER_HOME: /app
       PYTHONPATH: /app
+      # Storage paths
+      LEGAL_TENDER_STORAGE: /storage
+      LEGAL_TENDER_DATA_DIR: /storage/data
+      LEGAL_TENDER_BSON_DIR: /storage/bson
       MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-prod-mongo:27017
       # Dagster Postgres connection
       DAGSTER_PG_USER: ltuser
@@ -74,7 +87,7 @@ services:
       DAGSTER_PG_DB: dagster
       DAGSTER_COMPUTE_LOGS_DIR: /app/compute_logs
     volumes:
-      - legal-tender-prod-data:/app/data
+      - ~/workspace/.legal-tender:/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,6 +121,8 @@ services:
   mongo:
     image: mongo:7-jammy
     container_name: legal-tender-prod-mongo
+    # Limit WiredTiger cache to 16GB to prevent system freeze
+    command: ["mongod", "--wiredTigerCacheSizeGB", "16"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: ltuser
       MONGO_INITDB_ROOT_PASSWORD: ltpass
@@ -152,9 +167,8 @@ volumes:
   legal-tender-prod-mongo-config:
     name: legal-tender-prod-mongo-config
     driver: local
-  legal-tender-prod-data:
-    name: legal-tender-prod-data
-    driver: local
+  # NOTE: FEC data and BSON dumps now stored at ~/workspace/.legal-tender/
+  # mounted as bind volume, not Docker volume
 
 networks:
   # Internal network for this project

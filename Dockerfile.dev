@@ -1,0 +1,39 @@
+# Development Dockerfile for Legal Tender
+# Volume-mounted code, dev tools, stays alive for VS Code Dev Containers
+
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    postgresql-client \
+    wget \
+    git \
+    # Docker CLI for dev container access
+    docker.io \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install MongoDB Database Tools for dump/restore
+RUN wget -qO- https://fastdl.mongodb.org/tools/db/mongodb-database-tools-debian12-x86_64-100.10.0.tgz | tar xz -C /tmp \
+    && mv /tmp/mongodb-database-tools-*/bin/* /usr/local/bin/ \
+    && rm -rf /tmp/mongodb-database-tools-*
+
+# Set working directory (dev uses /workspace convention)
+WORKDIR /workspace
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Install dev tools
+RUN pip install --no-cache-dir ipython ipdb pytest black ruff mypy
+
+# Environment variables
+ENV PYTHONPATH=/workspace \
+    DAGSTER_HOME=/workspace \
+    PYTHONUNBUFFERED=1
+
+# Default command: sleep infinity (dev container stays alive for VS Code)
+CMD ["sleep", "infinity"]

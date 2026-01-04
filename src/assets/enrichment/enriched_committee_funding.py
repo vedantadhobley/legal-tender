@@ -406,7 +406,7 @@ def enriched_committee_funding_asset(
             batch = []
             
             # Process each donor committee
-            for donor_id, donor_data in donor_committees.items():
+            for donor_id, committee_data in donor_committees.items():
                 # Get upstream funding if it's a political PAC
                 upstream = funding_by_political_pac.get(donor_id, {
                     'from_committees': {},
@@ -456,15 +456,15 @@ def enriched_committee_funding_asset(
                 from_individuals = []
                 total_from_individuals = 0
                 
-                for donor_key, donor_data in upstream['from_individuals'].items():
+                for donor_key, indiv_donor_data in upstream['from_individuals'].items():
                     from_individuals.append({
-                        'donor_name': donor_data['donor_name'],
-                        'employer': donor_data['employer'],
-                        'total_amount': donor_data['total_amount'],
-                        'contribution_count': donor_data['contribution_count'],
-                        'contributions': sorted(donor_data['contributions'], key=lambda x: x['amount'], reverse=True)[:10]
+                        'donor_name': indiv_donor_data['donor_name'],
+                        'employer': indiv_donor_data['employer'],
+                        'total_amount': indiv_donor_data['total_amount'],
+                        'contribution_count': indiv_donor_data['contribution_count'],
+                        'contributions': sorted(indiv_donor_data['contributions'], key=lambda x: x['amount'], reverse=True)[:10]
                     })
-                    total_from_individuals += donor_data['total_amount']
+                    total_from_individuals += indiv_donor_data['total_amount']
                 
                 from_individuals.sort(key=lambda x: x['total_amount'], reverse=True)
                 
@@ -486,11 +486,11 @@ def enriched_committee_funding_asset(
                 record = {
                     '_id': donor_id,
                     'committee_id': donor_id,
-                    'committee_name': donor_data['committee_name'],
-                    'committee_type': donor_data['committee_type'],
+                    'committee_name': committee_data['committee_name'],
+                    'committee_type': committee_data['committee_type'],
                     'cycle': cycle,
-                    'donated_to_tracked_committees': sorted(list(donor_data['donated_to_tracked_committees'])),
-                    'total_to_tracked_candidates': donor_data['total_to_tracked'],
+                    'donated_to_tracked_committees': sorted(list(committee_data['donated_to_tracked_committees'])),
+                    'total_to_tracked_candidates': committee_data['total_to_tracked'],
                     
                     'funding_sources': {
                         'from_committees': from_committees,

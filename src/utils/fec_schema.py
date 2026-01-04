@@ -1,13 +1,15 @@
 """FEC Schema Loader - Read field definitions directly from official FEC header files.
 
-This module loads CSV headers from data/fec/headers/*.csv (downloaded directly from FEC website)
-and provides them as the authoritative schema for parsing. This ensures zero drift between
-FEC's official format and our parsing logic.
+This module loads CSV headers from ~/workspace/.legal-tender/data/headers/*.csv 
+(downloaded directly from FEC website) and provides them as the authoritative schema 
+for parsing. This ensures zero drift between FEC's official format and our parsing logic.
 """
 
 from pathlib import Path
 from typing import List, Dict, Any
 import csv
+
+from src.utils.storage import get_data_dir
 
 
 # Map download file names to their header file names
@@ -29,12 +31,11 @@ class FECSchema:
         
         Args:
             headers_dir: Path to directory containing FEC header CSV files.
-                        Defaults to {repo_root}/data/fec/headers/
+                        Defaults to ~/workspace/.legal-tender/data/headers/
         """
         if headers_dir is None:
-            # Default to repo root + data/fec/headers/
-            repo_root = Path(__file__).parent.parent.parent
-            headers_dir = repo_root / 'data' / 'fec' / 'headers'
+            # Use storage location for headers
+            headers_dir = get_data_dir() / 'headers'
         
         self.headers_dir = headers_dir
         self._cache: Dict[str, List[str]] = {}
