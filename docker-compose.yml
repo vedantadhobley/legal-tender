@@ -1,45 +1,47 @@
-# Base Docker Compose configuration for Legal Tender
-# This file contains the core services needed for the application
+# Production Docker Compose for Legal Tender
+#
+# Port allocation: legal-tender uses 3200-3209 (production)
+#   3200: Dagster UI
+#   3201: Mongoku (MongoDB web GUI)
+#   3202: (reserved)
+#
+# Internal ports (not exposed to host):
+#   - postgres:5432 (Dagster metadata)
+#   - mongo:27017 (Application data)
+#
+# External services (on luv-prod network):
+#   - llama-chat:8080 (LLM API)
+#   - embedding:8081 (Embedding API)
+
+name: legal-tender-prod
 
 services:
-  # PostgreSQL database for Dagster metadata storage
-  dagster-postgres:
-    image: postgres:15-alpine
-    container_name: legal-tender-dagster-postgres
-    environment:
-      POSTGRES_USER: ltuser
-      POSTGRES_PASSWORD: ltpass
-      POSTGRES_DB: dagster
-    volumes:
-      - dagster_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ltuser -d dagster"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - legal-tender-network
-
-  # Dagster webserver (UI)
+  # DAGSTER WEBSERVER - UI and asset management
   dagster-webserver:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: production
+      dockerfile: Dockerfile.prod
     image: legal-tender:latest
-    container_name: legal-tender-dagster-webserver
+    container_name: legal-tender-prod-webserver
     command: dagster-webserver -h 0.0.0.0 -p 3000 -w /app/workspace.yaml
     ports:
-      - "3000:3000"
+      - "3200:3000"  # Dagster UI
     env_file:
       - .env
     environment:
       DAGSTER_HOME: /app
+      PYTHONPATH: /app
+      MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-prod-mongo:27017
+      # Dagster Postgres connection
+      DAGSTER_PG_USER: ltuser
+      DAGSTER_PG_PASSWORD: ltpass
+      DAGSTER_PG_HOST: legal-tender-prod-postgres
+      DAGSTER_PG_DB: dagster
+      DAGSTER_COMPUTE_LOGS_DIR: /app/compute_logs
     volumes:
-      - ./data:/app/data  # Mount data directory for file downloads
+      - legal-tender-prod-data:/app/data  # Persistent FEC data downloads
     depends_on:
-      dagster-postgres:
+      postgres:
         condition: service_healthy
       mongo:
         condition: service_healthy
@@ -51,83 +53,115 @@ services:
       retries: 15
       start_period: 60s
     networks:
-      - legal-tender-network
+      - legal-tender-prod
+      - luv-prod
 
-  # Dagster daemon (for schedules and sensors)
+  # DAGSTER DAEMON - Schedules and sensors
   dagster-daemon:
     image: legal-tender:latest
-    container_name: legal-tender-dagster-daemon
+    container_name: legal-tender-prod-daemon
     command: dagster-daemon run
     env_file:
       - .env
     environment:
       DAGSTER_HOME: /app
+      PYTHONPATH: /app
+      MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-prod-mongo:27017
+      # Dagster Postgres connection
+      DAGSTER_PG_USER: ltuser
+      DAGSTER_PG_PASSWORD: ltpass
+      DAGSTER_PG_HOST: legal-tender-prod-postgres
+      DAGSTER_PG_DB: dagster
+      DAGSTER_COMPUTE_LOGS_DIR: /app/compute_logs
     volumes:
-      - ./data:/app/data  # Mount data directory for file downloads
+      - legal-tender-prod-data:/app/data
     depends_on:
-      dagster-postgres:
+      postgres:
         condition: service_healthy
       dagster-webserver:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - legal-tender-network
+      - legal-tender-prod
 
-  # MongoDB for application data
+  # POSTGRESQL - Dagster metadata storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: legal-tender-prod-postgres
+    environment:
+      POSTGRES_USER: ltuser
+      POSTGRES_PASSWORD: ltpass
+      POSTGRES_DB: dagster
+    volumes:
+      - legal-tender-prod-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ltuser -d dagster"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - legal-tender-prod
+
+  # MONGODB - Application data storage
   mongo:
     image: mongo:7-jammy
-    container_name: legal-tender-mongo
+    container_name: legal-tender-prod-mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: ltuser
       MONGO_INITDB_ROOT_PASSWORD: ltpass
-      MONGO_INITDB_DATABASE: legal_tender
-    command: >
-      mongod
-      --setParameter logComponentVerbosity={network:{verbosity:0},storage:{verbosity:0}}
     volumes:
-      - mongo_data:/data/db
+      - legal-tender-prod-mongo-data:/data/db
+      - legal-tender-prod-mongo-config:/data/configdb
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    networks:
-      - legal-tender-network
-
-  # Mongo Express (database UI)
-  mongo-express:
-    image: mongo-express:1.0.2-20-alpine3.19
-    container_name: legal-tender-mongo-express
     restart: unless-stopped
+    networks:
+      - legal-tender-prod
+      - luv-prod
+
+  # MONGOKU - MongoDB web GUI
+  mongoku:
+    image: huggingface/mongoku:latest
+    container_name: legal-tender-prod-mongoku
     ports:
-      - "8081:8081"
+      - "3201:3100"  # Mongoku Web UI
     environment:
-      ME_CONFIG_MONGODB_SERVER: mongo
-      ME_CONFIG_MONGODB_PORT: 27017
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ltuser
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ltpass
-      ME_CONFIG_MONGODB_AUTH_DATABASE: admin
-      ME_CONFIG_BASICAUTH_USERNAME: ltuser
-      ME_CONFIG_BASICAUTH_PASSWORD: ltpass
+      MONGOKU_DEFAULT_HOST: mongodb://ltuser:ltpass@legal-tender-prod-mongo:27017
+      MONGOKU_SERVER_ORIGIN: http://localhost:3201
+      MONGOKU_ALLOW_DELETE: "false"  # No delete in production!
     depends_on:
       mongo:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+    restart: unless-stopped
     networks:
-      - legal-tender-network
+      - legal-tender-prod
 
 volumes:
-  mongo_data:
+  legal-tender-prod-postgres-data:
+    name: legal-tender-prod-postgres-data
     driver: local
-  dagster_postgres_data:
+  legal-tender-prod-mongo-data:
+    name: legal-tender-prod-mongo-data
+    driver: local
+  legal-tender-prod-mongo-config:
+    name: legal-tender-prod-mongo-config
+    driver: local
+  legal-tender-prod-data:
+    name: legal-tender-prod-data
     driver: local
 
 networks:
-  legal-tender-network:
+  # Internal network for this project
+  legal-tender-prod:
+    name: legal-tender-prod
     driver: bridge
+  
+  # Shared network - cross-project communication
+  luv-prod:
+    external: true

@@ -1,10 +1,14 @@
 storage:
   postgres:
     postgres_db:
-      username: ltuser
-      password: ltpass
-      hostname: dagster-postgres
-      db_name: dagster
+      username:
+        env: DAGSTER_PG_USER
+      password:
+        env: DAGSTER_PG_PASSWORD
+      hostname:
+        env: DAGSTER_PG_HOST
+      db_name:
+        env: DAGSTER_PG_DB
       port: 5432
 
 run_launcher:
@@ -15,4 +19,5 @@ compute_logs:
   module: dagster._core.storage.local_compute_log_manager
   class: LocalComputeLogManager
   config:
-    base_dir: /app/compute_logs
+    base_dir:
+      env: DAGSTER_COMPUTE_LOGS_DIR
