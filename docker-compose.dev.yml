@@ -12,6 +12,11 @@
 # External services (on luv-dev network):
 #   - llama-chat:8080 (LLM API - if needed for AI features)
 #   - embedding:8081 (Embedding API - if needed for RAG)
+#
+# Storage:
+#   All persistent data lives at ~/workspace/.legal-tender/ with subdirs:
+#   - data/       Raw FEC downloads
+#   - bson/       MongoDB BSON dumps (fec/enriched/aggregation)
 
 name: legal-tender-dev
 
@@ -31,6 +36,10 @@ services:
       DAGSTER_HOME: /workspace
       PYTHONPATH: /workspace
       PYTHONUNBUFFERED: "1"
+      # Storage paths (inside container, mapped to ~/workspace/.legal-tender/)
+      LEGAL_TENDER_STORAGE: /storage
+      LEGAL_TENDER_DATA_DIR: /storage/data
+      LEGAL_TENDER_BSON_DIR: /storage/bson
       # MongoDB connection (internal network)
       MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-dev-mongo:27017
       # Dagster Postgres connection
@@ -41,13 +50,19 @@ services:
       DAGSTER_COMPUTE_LOGS_DIR: /workspace/compute_logs
     volumes:
       - .:/workspace  # Mount entire project for live development
-      - legal-tender-dev-data:/workspace/data  # Persistent FEC data downloads
+      - ~/workspace/.legal-tender:/storage  # Persistent storage (data + bson)
     depends_on:
       postgres:
         condition: service_healthy
       mongo:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/server_info"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
     networks:
       - legal-tender-dev
       - luv-dev
@@ -65,6 +80,10 @@ services:
       DAGSTER_HOME: /workspace
       PYTHONPATH: /workspace
       PYTHONUNBUFFERED: "1"
+      # Storage paths
+      LEGAL_TENDER_STORAGE: /storage
+      LEGAL_TENDER_DATA_DIR: /storage/data
+      LEGAL_TENDER_BSON_DIR: /storage/bson
       MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-dev-mongo:27017
       # Dagster Postgres connection
       DAGSTER_PG_USER: ltuser
@@ -74,7 +93,7 @@ services:
       DAGSTER_COMPUTE_LOGS_DIR: /workspace/compute_logs
     volumes:
       - .:/workspace
-      - legal-tender-dev-data:/workspace/data
+      - ~/workspace/.legal-tender:/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -110,6 +129,9 @@ services:
     image: mongo:7-jammy
     container_name: legal-tender-dev-mongo
     # No port exposed - use Mongoku for GUI access
+    # Limit WiredTiger cache to 16GB to prevent system freeze
+    # (MongoDB defaults to using 50% of RAM which was causing OOM freezes)
+    command: ["mongod", "--wiredTigerCacheSizeGB", "16"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: ltuser
       MONGO_INITDB_ROOT_PASSWORD: ltpass
@@ -154,9 +176,8 @@ volumes:
   legal-tender-dev-mongo-config:
     name: legal-tender-dev-mongo-config
     driver: local
-  legal-tender-dev-data:
-    name: legal-tender-dev-data
-    driver: local
+  # NOTE: FEC data and BSON dumps now stored at ~/workspace/.legal-tender/
+  # mounted as bind volume, not Docker volume
 
 networks:
   # Internal network for this project

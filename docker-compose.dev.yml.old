@@ -1,0 +1,50 @@
+# Docker Compose overrides for local development
+# Use with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # Development overrides for dagster-webserver
+  dagster-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # Mount source code for live editing (no rebuild needed)
+      - .:/app
+      # Exclude Python cache and venv
+      - /app/.venv
+      - /app/__pycache__
+      - /app/src/__pycache__
+    environment:
+      DAGSTER_HOME: /app
+      PYTHONUNBUFFERED: "1"
+    # Override restart policy for faster development iteration
+    restart: "no"
+
+  # Development overrides for dagster-daemon
+  dagster-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # Mount source code for live editing (no rebuild needed)
+      - .:/app
+      # Exclude Python cache and venv
+      - /app/.venv
+      - /app/__pycache__
+      - /app/src/__pycache__
+    environment:
+      DAGSTER_HOME: /app
+      PYTHONUNBUFFERED: "1"
+    restart: "no"
+
+  # Expose MongoDB port for local development tools (if needed)
+  mongo:
+    ports:
+      - "27017:27017"
+
+  # Expose PostgreSQL port for local development tools (if needed)
+  dagster-postgres:
+    ports:
+      - "5432:5432"

@@ -5,6 +5,12 @@ Manages the local data repository structure for legal-tender project.
 All downloaded data (FEC bulk files, legislators data, etc.) is organized
 in a clear, maintainable directory structure.
 
+Storage location: ~/workspace/.legal-tender/data/
+This allows data to:
+- Survive container rebuilds
+- Be shared between dev/prod
+- Be excluded from git
+
 This module is Dagster-agnostic - it can be used standalone or orchestrated by Dagster.
 """
 
@@ -14,34 +20,31 @@ from datetime import datetime
 import json
 import shutil
 
+from src.utils.storage import get_data_dir, get_cycle_data_dir
+
 
 class DataRepository:
     """
     Manages the data repository structure and file organization.
     
-    Directory Structure:
-    data/
+    Directory Structure (at ~/workspace/.legal-tender/data/):
     ├── legislators/
     │   ├── current.yaml              # Current legislators
     │   ├── historical.yaml           # Historical legislators
     │   └── metadata.json             # Download timestamps, versions
-    ├── fec/
-    │   ├── 2024/
-    │   │   ├── cn24.zip              # Candidate Master File
-    │   │   ├── cm24.zip              # Committee Master File
-    │   │   ├── ccl24.zip             # Candidate-Committee Linkages
-    │   │   ├── independent_expenditure_2024.csv  # Independent Expenditures
-    │   │   ├── summaries/
-    │   │   │   ├── weball24.zip      # Candidate Summary (All)
-    │   │   │   ├── webl24.zip        # Committee Summary
-    │   │   │   └── webk24.zip        # PAC Summary
-    │   │   ├── transactions/
-    │   │   │   ├── indiv24.zip       # Individual Contributions
-    │   │   │   └── pas224.zip        # Itemized Transactions (ALL types, not just transfers!)
-    │   │   └── metadata.json
-    │   ├── 2026/
-    │   │   └── ... (same structure)
-    │   └── metadata.json             # FEC data metadata
+    ├── 2024/                         # FEC data by cycle (flat, no nesting)
+    │   ├── cn.zip                    # Candidate Master File
+    │   ├── cm.zip                    # Committee Master File
+    │   ├── ccl.zip                   # Candidate-Committee Linkages
+    │   ├── weball.zip                # Candidate Summary (All)
+    │   ├── webl.zip                  # Committee Summary
+    │   ├── webk.zip                  # PAC Summary
+    │   ├── indiv.zip                 # Individual Contributions (40M+ records!)
+    │   ├── pas2.zip                  # Itemized Transactions
+    │   ├── oth.zip                   # Other Receipts
+    │   └── metadata.json
+    ├── 2026/
+    │   └── ... (same structure)
     ├── congress_api/
     │   ├── members/
     │   │   ├── {bioguide_id}.json   # Individual member details
@@ -51,14 +54,18 @@ class DataRepository:
     └── metadata.json                 # Repository-level metadata
     """
     
-    def __init__(self, base_path: str = "data"):
+    def __init__(self, base_path: Optional[str] = None):
         """
         Initialize the data repository.
         
         Args:
-            base_path: Base directory for all data storage
+            base_path: Base directory for all data storage.
+                       Defaults to ~/workspace/.legal-tender/data/
         """
-        self.base_path = Path(base_path)
+        if base_path is None:
+            self.base_path = get_data_dir()
+        else:
+            self.base_path = Path(base_path)
         self._ensure_structure()
     
     def _ensure_structure(self):
@@ -87,8 +94,8 @@ class DataRepository:
     
     @property
     def fec_dir(self) -> Path:
-        """Directory for FEC bulk data."""
-        return self.base_path / "fec"
+        """Base directory for FEC data (backward compat - same as base_path)."""
+        return self.base_path
     
     @property
     def congress_api_dir(self) -> Path:
@@ -96,22 +103,10 @@ class DataRepository:
         return self.base_path / "congress_api"
     
     def fec_cycle_dir(self, cycle: str) -> Path:
-        """Get FEC directory for a specific cycle."""
-        cycle_dir = self.fec_dir / cycle
+        """Get FEC directory for a specific cycle (e.g., ~/workspace/.legal-tender/data/2024/)."""
+        cycle_dir = get_cycle_data_dir(cycle)
         cycle_dir.mkdir(parents=True, exist_ok=True)
         return cycle_dir
-    
-    def fec_summaries_dir(self, cycle: str) -> Path:
-        """Get FEC summaries directory for a cycle."""
-        summaries_dir = self.fec_cycle_dir(cycle) / "summaries"
-        summaries_dir.mkdir(parents=True, exist_ok=True)
-        return summaries_dir
-    
-    def fec_transactions_dir(self, cycle: str) -> Path:
-        """Get FEC transactions directory for a cycle."""
-        transactions_dir = self.fec_cycle_dir(cycle) / "transactions"
-        transactions_dir.mkdir(parents=True, exist_ok=True)
-        return transactions_dir
     
     # ==========================================================================
     # Legislators File Paths
@@ -432,12 +427,13 @@ def download_fec_file(
 _repository: Optional[DataRepository] = None
 
 
-def get_repository(base_path: str = "data") -> DataRepository:
+def get_repository(base_path: Optional[str] = None) -> DataRepository:
     """
     Get the global data repository instance.
     
     Args:
-        base_path: Base directory for data storage
+        base_path: Base directory for data storage.
+                   Defaults to ~/workspace/.legal-tender/data/ or LEGAL_TENDER_DATA_DIR env var.
         
     Returns:
         DataRepository instance

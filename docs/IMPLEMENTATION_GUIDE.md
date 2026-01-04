@@ -262,28 +262,57 @@ for line in indiv_file:
 - Why: 98% of records are IND (duplicated in indiv.zip)
 - Result: 18.7M → 377K records, 20 min → 2 min
 
-#### 3. **Dump Structure Mirrors Database Names**
+#### 3. **Storage Structure (Persistent)**
 
-**Why**: Simplicity and clarity.
+All persistent data lives at `~/workspace/.legal-tender/` (mounted as `/storage` in containers):
 
 ```
-data/mongo/
-├── fec_2020/
-│   ├── cn.bson + cn.metadata.json
-│   ├── cm.bson + cm.metadata.json
-│   ├── ccl.bson + ccl.metadata.json
-│   ├── pas2.bson + pas2.metadata.json
-│   ├── oth.bson + oth.metadata.json
-│   ├── indiv.bson + indiv.metadata.json  (36GB!)
-│   └── metadata.json (cycle-level tracking)
-├── fec_2022/ [same structure]
-├── fec_2024/ [same structure]
-└── fec_2026/ [same structure]
+~/workspace/.legal-tender/
+├── data/                          # Raw FEC downloads
+│   ├── 2020/
+│   │   ├── cn.zip
+│   │   ├── cm.zip
+│   │   ├── pas2.zip
+│   │   ├── oth.zip
+│   │   ├── indiv.zip              (4GB compressed!)
+│   │   └── metadata.json
+│   ├── 2022/
+│   ├── 2024/
+│   └── 2026/
+└── bson/                          # MongoDB BSON dumps
+    ├── fec/                       # Raw FEC collections
+    │   ├── 2020/
+    │   │   ├── cn.bson + cn.metadata.json
+    │   │   ├── cm.bson + cm.metadata.json
+    │   │   ├── ccl.bson + ccl.metadata.json
+    │   │   ├── pas2.bson + pas2.metadata.json
+    │   │   ├── oth.bson + oth.metadata.json
+    │   │   ├── indiv.bson + indiv.metadata.json  (36GB!)
+    │   │   └── metadata.json (cycle-level tracking)
+    │   ├── 2022/ [same structure]
+    │   ├── 2024/ [same structure]
+    │   └── 2026/ [same structure]
+    ├── enriched/                  # Enriched collections
+    │   ├── 2020/
+    │   ├── 2022/
+    │   ├── 2024/
+    │   └── 2026/
+    └── aggregation/               # Aggregation collections (cycle-independent)
+        ├── candidate_summaries.bson
+        ├── committee_summaries.bson
+        └── ...
 ```
 
-**MongoDB databases**: `fec_2020`, `fec_2022`, `fec_2024`, `fec_2026`
-**Dump paths**: `data/mongo/fec_{cycle}/`
-**Perfect alignment**: No confusion, no translation needed
+**Benefits**:
+- Survives container rebuilds
+- Shared between dev/prod
+- Easy backup (just `rsync ~/workspace/.legal-tender/`)
+- Clear separation of raw data vs BSON dumps
+
+**Environment Variables** (set in docker-compose):
+- `LEGAL_TENDER_STORAGE=/storage`
+- `LEGAL_TENDER_DATA_DIR=/storage/data`
+- `LEGAL_TENDER_BSON_DIR=/storage/bson`
 
 #### 4. **Source File Change Detection**
 
