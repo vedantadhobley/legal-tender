@@ -894,8 +894,19 @@ db._query(`
 - [x] Independent expenditure tracking (spent_on edges)
 - [x] Member FEC mapping for Congress members
 - [x] Five pies analysis capability
+- [x] Per-cycle edge tracking (cycle field on all edges)
+- [x] Fix transferred_to direction bug (pas2: CMTE_ID=giver, OTHER_ID=recipient)
 
 ### Phase 2 (In Progress)
+- [ ] **PAC classification/taxonomy**: Classify PACs to control upstream traversal behavior
+  - **Ideological PACs** (AIPAC, NRA): STOP here - the PAC is the identity, donors serve the cause
+  - **Corporate PACs** (Goldman Sachs PAC): TRACE through - the corporation is the true identity
+  - **Industry/Trade PACs** (Realtors PAC): TRACE to industry - aggregate interest matters
+  - **Leadership PACs** (McConnell PAC): TRACE to politician sponsor
+  - **Party PACs** (NRSC, DCCC): Configurable - party aggregator
+  - Use `ORG_TP` field + name patterns + manual overrides for classification
+  - Add `pac_category` field to committees for traversal control and embedding context
+- [ ] **Per-cycle traversal filtering**: Graph queries should filter by cycle to avoid cross-cycle "time travel"
 - [ ] **Lobbying data integration**: LD-1/LD-2 lobbying disclosure filings
 - [ ] **Legislation linking**: Connect money flows to specific bills
 - [ ] **Corporate parent resolution**: Trace subsidiaries to parent corporations
@@ -932,6 +943,21 @@ This requires:
 3. **Name fragmentation**: Donors appear with variations ("RICHARD UIHLEIN" vs "RICHARD E. UIHLEIN"). These need to be summed, not deduplicated.
 
 4. **24C transactions**: Coordinated expenditures (24C) are party committee spending. Currently not fully integrated into the 5 pies.
+
+5. **Cross-cycle traversals**: Graph traversals should be filtered by cycle. Money donated in 2024 cannot fund a 2020 campaign - traversing across cycles produces nonsensical paths.
+
+### FEC Field Direction Reference
+
+> **CRITICAL**: pas2 and oth files have opposite field semantics!
+
+| File | `CMTE_ID` | `OTHER_ID` | Use Case |
+|------|-----------|------------|----------|
+| **pas2** (Schedule B - Disbursements) | Committee **GIVING** money | Committee **RECEIVING** | PAC-to-PAC transfers, IE spending |
+| **oth** (Schedule A - Receipts) | Committee **RECEIVING** money | Committee that **GAVE** | Committee-to-committee receipts |
+
+For `transferred_to` edges:
+- **pas2**: `_from = CMTE_ID`, `_to = OTHER_ID` (giver → recipient)
+- **oth**: `_from = OTHER_ID`, `_to = CMTE_ID` (source → receiver)
 
 ---
 
