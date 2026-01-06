@@ -1,59 +1,95 @@
 """Asset materialization jobs for the legal-tender pipeline.
 
-Philosophy:
-- Individual assets can be materialized directly in the UI
-- Jobs are for scheduled/orchestrated workflows only
-- Keep it simple: one main pipeline job
+Asset Dependency Graph:
+=======================
 
-Available Job:
-- fec_pipeline_job: Complete FEC data pipeline (download → mapping → parse all 8 files)
+  data_sync
+      │
+      ├── cn (candidates)
+      ├── cm (committees)  
+      ├── ccl (candidate-committee linkages)
+      ├── pas2 (PAC transactions)
+      ├── oth (other receipts)
+      └── indiv (individual contributions)
+              │
+         ┌────┴────┐
+      donors    contributed_to ←── cm
+         │           │
+    employers   transferred_to ←── pas2, oth
+         │           │
+    employed_by  affiliated_with ←── ccl
+         └─────┬─────┘
+               │
+      political_money_graph
 
-All assets are accessible directly in the UI for ad-hoc materialization.
+Parallelization:
+- FEC raw files (cn, cm, ccl, pas2, oth, indiv) run in PARALLEL after data_sync
+- Graph layer builds sequentially based on dependencies
+- employers + contributed_to can run in parallel after donors
+- transferred_to + affiliated_with can run in parallel
+- employed_by depends only on donors + employers
 """
 
 from dagster import define_asset_job, AssetSelection
 
 # ============================================================================
-# MAIN PIPELINE JOB
+# MAIN PIPELINE JOB - Full data refresh
 # ============================================================================
 
 fec_pipeline_job = define_asset_job(
     name="fec_pipeline_job",
-    description="Complete FEC data pipeline: Download → Parse → Member mapping → Enrichment → Aggregation",
-    selection=AssetSelection.keys(
-        # Phase 1: Download all source data
-        "data_sync",
-        
-        # Phase 2: Parse 6 core FEC files into per-year databases (using official FEC names)
-        "cn",                       # cn.zip - candidate master
-        "cm",                       # cm.zip - committee master
-        "ccl",                      # ccl.zip - candidate-committee linkages
-        "pas2",                     # pas2.zip - itemized transactions (ALL types)
-        "oth",                      # oth.zip - other receipts (PAC-to-PAC transfers)
-        "indiv",                    # indiv.zip - individual contributions
-        
-        # DEPRECATED: weball, webl, webk (derive summaries from raw data instead)
-        
-        # Phase 3: Build member→FEC mapping
-        "member_fec_mapping",
-        
-        # Phase 4: Enrichment (filtered per-cycle data)
-        "enriched_pas2",
-        "enriched_candidate_financials",  # Per-cycle candidate financial summaries
-        "enriched_donor_financials",      # Per-cycle donor financial summaries
-        "enriched_committee_funding",     # Per-cycle upstream funding sources (WHO funds committees)
-        
-        # DEPRECATED: enriched_webl, enriched_weball, enriched_webk
-        
-        # Phase 5: Aggregation (cross-cycle rollups)
-        "candidate_financials",
-        "donor_financials",
-        # DEPRECATED: candidate_summaries, committee_summaries (will derive from raw later)
-    ),
+    description="Complete FEC pipeline: Download → Parse raw data → Build graph vertices/edges",
+    selection=AssetSelection.all(),  # Run everything in dependency order
     tags={
         "team": "data-engineering",
         "pipeline": "fec-complete",
         "priority": "high",
         "schedule": "weekly-sunday",
+    },
+)
+
+# ============================================================================
+# GRAPH-ONLY JOB - Rebuild graph from existing raw data
+# ============================================================================
+
+graph_rebuild_job = define_asset_job(
+    name="graph_rebuild_job",
+    description="Rebuild graph layer only (assumes raw FEC data already loaded)",
+    selection=AssetSelection.keys(
+        "donors",
+        "employers",
+        "contributed_to", 
+        "transferred_to",
+        "affiliated_with",
+        "employed_by",
+        "political_money_graph",
+    ),
+    tags={
+        "team": "data-engineering",
+        "pipeline": "graph-only",
+        "priority": "medium",
+    },
+)
+
+# ============================================================================
+# RAW DATA JOB - Just download and parse FEC files
+# ============================================================================
+
+raw_data_job = define_asset_job(
+    name="raw_data_job", 
+    description="Download and parse raw FEC files only (no graph)",
+    selection=AssetSelection.keys(
+        "data_sync",
+        "cn",
+        "cm",
+        "ccl",
+        "pas2",
+        "oth",
+        "indiv",
+    ),
+    tags={
+        "team": "data-engineering",
+        "pipeline": "raw-only",
+        "priority": "medium",
     },
 )

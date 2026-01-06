@@ -10,14 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     wget \
     git \
-    # Docker CLI for dev container access
-    docker.io \
     && rm -rf /var/lib/apt/lists/*
-
-# Install MongoDB Database Tools for dump/restore
-RUN wget -qO- https://fastdl.mongodb.org/tools/db/mongodb-database-tools-debian12-x86_64-100.10.0.tgz | tar xz -C /tmp \
-    && mv /tmp/mongodb-database-tools-*/bin/* /usr/local/bin/ \
-    && rm -rf /tmp/mongodb-database-tools-*
 
 # Set working directory (dev uses /workspace convention)
 WORKDIR /workspace

@@ -7,8 +7,8 @@ import zipfile
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config, AssetIn
 
 from src.data import get_repository
-from src.resources.mongo import MongoDBResource
-from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+from src.resources.arango import ArangoDBResource
+from src.utils.arango_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
 from src.utils.fec_schema import FECSchema
 
 
@@ -27,7 +27,7 @@ class CandidatesConfig(Config):
 def cn_asset(
     context: AssetExecutionContext,
     config: CandidatesConfig,
-    mongo: MongoDBResource,
+    arango: ArangoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """Parse cn.zip files and store in fec_{cycle}.cn collections using raw FEC field names."""
@@ -35,12 +35,13 @@ def cn_asset(
     repo = get_repository()
     stats = {'total_candidates': 0, 'by_cycle': {}}
     
-    with mongo.get_client() as client:
+    with arango.get_client() as client:
         for cycle in config.cycles:
             context.log.info(f"📊 {cycle} Cycle:")
             
             try:
-                collection = mongo.get_collection(client, "cn", database_name=f"fec_{cycle}")
+                db = arango.get_database(client, f"fec_{cycle}")
+                collection = arango.get_collection(db, "cn")
                 zip_path = repo.fec_cn_path(cycle)
                 
                 if not zip_path.exists():
@@ -48,16 +49,18 @@ def cn_asset(
                     continue
                 
                 # Check if we can restore from dump
-                if should_restore_from_dump(cycle, "cn", zip_path):
-                    context.log.info("   🚀 Restoring from dump (30 sec)...")
+                if not config.force_refresh and should_restore_from_dump("cn", zip_path, "fec", cycle):
+                    context.log.info("   🚀 Restoring from dump...")
                     
-                    if restore_collection_from_dump(
+                    result = restore_collection_from_dump(
+                        db=db,
+                        collection_name="cn",
+                        dump_type="fec",
                         cycle=cycle,
-                        collection="cn",
-                        mongo_uri=mongo.connection_string,
                         context=context
-                    ):
-                        record_count = collection.count_documents({})
+                    )
+                    if result:
+                        record_count = result['record_count']
                         stats['by_cycle'][cycle] = record_count
                         stats['total_candidates'] += record_count
                         continue
@@ -66,7 +69,9 @@ def cn_asset(
                 
                 # Parse from ZIP
                 context.log.info(f"   📂 Parsing {zip_path.name}...")
-                collection.delete_many({})
+                
+                # Clear existing data
+                collection.truncate()
                 
                 batch = []
                 schema = FECSchema()
@@ -87,8 +92,12 @@ def cn_asset(
                             if not record:
                                 continue
                             
+                            # Use CAND_ID as the document _key for ArangoDB
+                            if record.get('CAND_ID'):
+                                record['_key'] = record['CAND_ID']
+                            
                             # Add timestamp
-                            record['updated_at'] = datetime.now()
+                            record['updated_at'] = datetime.now().isoformat()
                             
                             # Type conversion for election year
                             if record.get('CAND_ELECTION_YR'):
@@ -100,38 +109,45 @@ def cn_asset(
                             batch.append(record)
                 
                 if batch:
-                    collection.insert_many(batch, ordered=False)
-                    context.log.info(f"   ✅ {cycle}: {len(batch):,} candidates")
+                    # Bulk import with upsert behavior
+                    result = arango.bulk_import(collection, batch, on_duplicate="replace")
+                    context.log.info(f"   ✅ {cycle}: {len(batch):,} candidates (created: {result['created']}, updated: {result['updated']})")
                     stats['by_cycle'][cycle] = len(batch)
                     stats['total_candidates'] += len(batch)
                     
-                    # Create indexes BEFORE dump
-                    collection.create_index([("CAND_ID", 1)])
-                    collection.create_index([("CAND_NAME", 1)])
-                    collection.create_index([("CAND_OFFICE_ST", 1), ("CAND_OFFICE_DISTRICT", 1)])
-                    collection.create_index([("CAND_PTY_AFFILIATION", 1)])
-                    collection.create_index([("CAND_OFFICE", 1)])
-                    collection.create_index([("CAND_ELECTION_YR", 1)])
+                    # Create indexes
+                    collection.add_persistent_index(fields=["CAND_ID"], unique=True)
+                    collection.add_persistent_index(fields=["CAND_NAME"])
+                    collection.add_persistent_index(fields=["CAND_OFFICE_ST", "CAND_OFFICE_DISTRICT"])
+                    collection.add_persistent_index(fields=["CAND_PTY_AFFILIATION"])
+                    collection.add_persistent_index(fields=["CAND_OFFICE"])
+                    collection.add_persistent_index(fields=["CAND_ELECTION_YR"])
                     
-                    # Create dump for next time (includes indexes)
+                    # Apply JSON schema for documentation
+                    from src.utils.arango_schema import apply_fec_schemas
+                    apply_fec_schemas(db, collections=["cn"], level="none")
+                    
+                    # Create dump for next time
                     create_collection_dump(
-                        cycle=cycle,
-                        collection="cn",
-                        mongo_uri=mongo.connection_string,
+                        db=db,
+                        collection_name="cn",
                         source_file=zip_path,
-                        record_count=len(batch),
+                        dump_type="fec",
+                        cycle=cycle,
                         context=context
                     )
                 
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}")
+                import traceback
+                context.log.error(traceback.format_exc())
     
     return Output(
         value=stats,
         metadata={
             "total_candidates": stats['total_candidates'],
             "cycles_processed": MetadataValue.json(config.cycles),
-            "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
-            "mongodb_collection": "cn",
+            "arangodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
+            "arangodb_collection": "cn",
         }
     )

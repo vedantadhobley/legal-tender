@@ -7,13 +7,14 @@ import zipfile
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config, AssetIn
 
 from src.data import get_repository
-from src.resources.mongo import MongoDBResource
-from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+from src.resources.arango import ArangoDBResource
+from src.utils.arango_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
 from src.utils.fec_schema import FECSchema
 
 
 class LinkagesConfig(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    force_refresh: bool = False
 
 
 @asset(
@@ -26,7 +27,7 @@ class LinkagesConfig(Config):
 def ccl_asset(
     context: AssetExecutionContext,
     config: LinkagesConfig,
-    mongo: MongoDBResource,
+    arango: ArangoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """Parse ccl.zip files and store in fec_{cycle}.ccl collections using raw FEC field names."""
@@ -34,12 +35,13 @@ def ccl_asset(
     repo = get_repository()
     stats = {'total_linkages': 0, 'by_cycle': {}}
     
-    with mongo.get_client() as client:
+    with arango.get_client() as client:
         for cycle in config.cycles:
             context.log.info(f"📊 {cycle} Cycle:")
             
             try:
-                collection = mongo.get_collection(client, "ccl", database_name=f"fec_{cycle}")
+                db = arango.get_database(client, f"fec_{cycle}")
+                collection = arango.get_collection(db, "ccl")
                 zip_path = repo.fec_ccl_path(cycle)
                 
                 if not zip_path.exists():
@@ -47,16 +49,18 @@ def ccl_asset(
                     continue
                 
                 # Check if we can restore from dump
-                if should_restore_from_dump(cycle, "ccl", zip_path):
-                    context.log.info("   🚀 Restoring from dump (30 sec)...")
+                if not config.force_refresh and should_restore_from_dump("ccl", zip_path, "fec", cycle):
+                    context.log.info("   🚀 Restoring from dump...")
                     
-                    if restore_collection_from_dump(
+                    result = restore_collection_from_dump(
+                        db=db,
+                        collection_name="ccl",
+                        dump_type="fec",
                         cycle=cycle,
-                        collection="ccl",
-                        mongo_uri=mongo.connection_string,
                         context=context
-                    ):
-                        record_count = collection.count_documents({})
+                    )
+                    if result:
+                        record_count = result['record_count']
                         stats['by_cycle'][cycle] = record_count
                         stats['total_linkages'] += record_count
                         continue
@@ -65,10 +69,13 @@ def ccl_asset(
                 
                 # Parse from ZIP
                 context.log.info(f"   📂 Parsing {zip_path.name}...")
-                collection.delete_many({})
+                
+                # Clear existing data
+                collection.truncate()
                 
                 batch = []
                 schema = FECSchema()
+                line_num = 0
                 
                 with zipfile.ZipFile(zip_path) as zf:
                     txt_files = [f for f in zf.namelist() if f.endswith('.txt')]
@@ -86,40 +93,55 @@ def ccl_asset(
                             if not record:
                                 continue
                             
+                            # CCL doesn't have a unique ID, so create a composite key
+                            # Format: CAND_ID_CMTE_ID_LINKAGE_ID (if available) or line number
+                            cand_id = record.get('CAND_ID', '')
+                            cmte_id = record.get('CMTE_ID', '')
+                            linkage_id = record.get('LINKAGE_ID', str(line_num))
+                            record['_key'] = f"{cand_id}_{cmte_id}_{linkage_id}"
+                            
                             # Add timestamp
-                            record['updated_at'] = datetime.now()
+                            record['updated_at'] = datetime.now().isoformat()
                             
                             batch.append(record)
+                            line_num += 1
                 
                 if batch:
-                    collection.insert_many(batch, ordered=False)
+                    # Bulk import with upsert behavior
+                    result = arango.bulk_import(collection, batch, on_duplicate="replace")
                     context.log.info(f"   ✅ {cycle}: {len(batch):,} linkages")
                     stats['by_cycle'][cycle] = len(batch)
                     stats['total_linkages'] += len(batch)
                     
-                    # Create indexes BEFORE dump
-                    collection.create_index([("CAND_ID", 1)])
-                    collection.create_index([("CMTE_ID", 1)])
+                    # Create indexes
+                    collection.add_persistent_index(fields=["CAND_ID"])
+                    collection.add_persistent_index(fields=["CMTE_ID"])
                     
-                    # Create dump for next time (includes indexes)
+                    # Apply JSON schema for documentation
+                    from src.utils.arango_schema import apply_fec_schemas
+                    apply_fec_schemas(db, collections=["ccl"], level="none")
+                    
+                    # Create dump for next time
                     create_collection_dump(
-                        cycle=cycle,
-                        collection="ccl",
-                        mongo_uri=mongo.connection_string,
+                        db=db,
+                        collection_name="ccl",
                         source_file=zip_path,
-                        record_count=len(batch),
+                        dump_type="fec",
+                        cycle=cycle,
                         context=context
                     )
                 
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}")
+                import traceback
+                context.log.error(traceback.format_exc())
     
     return Output(
         value=stats,
         metadata={
             "total_linkages": stats['total_linkages'],
             "cycles_processed": MetadataValue.json(config.cycles),
-            "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
-            "mongodb_collection": "ccl",
+            "arangodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
+            "arangodb_collection": "ccl",
         }
     )

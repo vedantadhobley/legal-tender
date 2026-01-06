@@ -1,10 +1,10 @@
-"""Individual Contributions Asset - Parse FEC individual contributions (indiv.zip) using raw FEC field names
+"""Individual Contributions Asset - Parse FEC individual contributions (indiv.zip)
 
 This file contains Schedule A itemized individual contributions >$200.
 
 RAW DATA STRATEGY (November 2025):
 - indiv.zip contains ~40M records per cycle (2-4GB compressed)
-- We load ALL records into MongoDB raw (no filtering at parse time)
+- We load ALL records into ArangoDB raw (no filtering at parse time)
 - PARALLEL PROCESSING: All 4 cycles processed simultaneously using ThreadPoolExecutor
 - Processing time: ~5 minutes with parallel processing (was 15-20 min sequential)
 - Dump/restore: 30 seconds to reload complete dataset
@@ -33,68 +33,84 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config, AssetIn
 
 from src.data import get_repository
-from src.resources.mongo import MongoDBResource
-from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+from src.resources.arango import ArangoDBResource
+from src.utils.arango_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
 from src.utils.fec_schema import FECSchema
 from src.utils.memory import get_processing_config
 
 
 class IndividualContributionsConfig(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    force_refresh: bool = False
 
 
 def _process_indiv_cycle(
     cycle: str,
-    mongo_uri: str,
+    arango_host: str,
+    arango_port: int,
+    arango_user: str,
+    arango_password: str,
     batch_size: int,
     tier: str,
+    force_refresh: bool = False,
 ) -> Tuple[str, Dict[str, Any]]:
     """Process a single cycle's indiv.zip file. Designed for parallel execution.
     
     Returns:
         Tuple of (cycle, result_dict) where result_dict contains count or error
     """
-    from pymongo import MongoClient
+    from arango import ArangoClient
     from src.data import get_repository
     from src.utils.fec_schema import FECSchema
-    from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+    from src.utils.arango_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
     
     repo = get_repository()
     result = {'cycle': cycle, 'count': 0, 'error': None}
     
     try:
-        # Connect to MongoDB (each thread gets its own connection)
-        client = MongoClient(mongo_uri)
-        db = client[f"fec_{cycle}"]
-        collection = db["indiv"]
+        # Connect to ArangoDB (each thread gets its own connection)
+        client = ArangoClient(hosts=f"http://{arango_host}:{arango_port}")
+        sys_db = client.db("_system", username=arango_user, password=arango_password)
+        
+        # Ensure database exists
+        db_name = f"fec_{cycle}"
+        if not sys_db.has_database(db_name):
+            sys_db.create_database(db_name)
+        
+        db = client.db(db_name, username=arango_user, password=arango_password)
+        
+        # Ensure collection exists
+        if not db.has_collection("indiv"):
+            db.create_collection("indiv")
+        collection = db.collection("indiv")
         
         zip_path = repo.fec_indiv_path(cycle)
         
         if not zip_path.exists():
             result['error'] = f"File not found: {zip_path}"
-            client.close()
             return (cycle, result)
         
         # Check if we can restore from dump
-        if should_restore_from_dump(cycle, "indiv", zip_path):
+        if not force_refresh and should_restore_from_dump("indiv", zip_path, "fec", cycle):
             print(f"[{cycle}] 🚀 Restoring from dump...")
             
-            if restore_collection_from_dump(
+            restore_result = restore_collection_from_dump(
+                db=db,
+                collection_name="indiv",
+                dump_type="fec",
                 cycle=cycle,
-                collection="indiv",
-                mongo_uri=mongo_uri,
-                context=None  # No context in thread
-            ):
-                result['count'] = collection.count_documents({})
+                context=None
+            )
+            if restore_result:
+                result['count'] = restore_result['record_count']
                 result['restored'] = True
-                client.close()
                 return (cycle, result)
             else:
                 print(f"[{cycle}] ⚠️ Restore failed, falling back to parsing...")
         
         # Parse from ZIP - NO FILTERING, load ALL records
         print(f"[{cycle}] 📂 Parsing indiv.zip (batch_size={batch_size:,}, tier={tier})...")
-        collection.delete_many({})
+        collection.truncate()
         
         batch = []
         total_records = 0
@@ -104,7 +120,6 @@ def _process_indiv_cycle(
             txt_files = [f for f in zf.namelist() if f.endswith('.txt')]
             if not txt_files:
                 result['error'] = "No .txt file in ZIP"
-                client.close()
                 return (cycle, result)
             
             with zf.open(txt_files[0]) as f:
@@ -124,8 +139,12 @@ def _process_indiv_cycle(
                     if total_records % 1000000 == 0:
                         print(f"[{cycle}] Parsed {total_records:,} records...")
                     
-                    # Add timestamp
-                    record['updated_at'] = datetime.now()
+                    # Add timestamp and _key for ArangoDB
+                    record['updated_at'] = datetime.now().isoformat()
+                    
+                    # Create unique _key from SUB_ID (FEC's unique transaction ID)
+                    if record.get('SUB_ID'):
+                        record['_key'] = str(record['SUB_ID'])
                     
                     # Type conversion for transaction amount
                     if record.get('TRANSACTION_AMT'):
@@ -138,12 +157,12 @@ def _process_indiv_cycle(
                     
                     # Batch insert for performance (dynamic sizing)
                     if len(batch) >= batch_size:
-                        collection.insert_many(batch, ordered=False)
+                        db.collection("indiv").import_bulk(batch, on_duplicate="replace")
                         batch = []
         
         # Insert remaining
         if batch:
-            collection.insert_many(batch, ordered=False)
+            db.collection("indiv").import_bulk(batch, on_duplicate="replace")
         
         print(f"[{cycle}] ✅ {total_records:,} records loaded")
         
@@ -151,28 +170,33 @@ def _process_indiv_cycle(
         
         # Create indexes
         print(f"[{cycle}] 🔧 Creating indexes...")
-        collection.create_index([("CMTE_ID", 1)])
-        collection.create_index([("NAME", 1)])
-        collection.create_index([("EMPLOYER", 1)])
-        collection.create_index([("ENTITY_TP", 1)])
-        collection.create_index([("TRANSACTION_AMT", -1)])
-        collection.create_index([("TRANSACTION_DT", -1)])
-        collection.create_index([("NAME", 1), ("EMPLOYER", 1)])
+        collection.add_persistent_index(fields=["CMTE_ID"])
+        collection.add_persistent_index(fields=["NAME"])
+        collection.add_persistent_index(fields=["EMPLOYER"])
+        collection.add_persistent_index(fields=["ENTITY_TP"])
+        collection.add_persistent_index(fields=["TRANSACTION_AMT"])
+        collection.add_persistent_index(fields=["TRANSACTION_DT"])
+        collection.add_persistent_index(fields=["NAME", "EMPLOYER"])
         
-        # Create dump for next time (includes indexes)
+        # Apply JSON schema for documentation
+        print(f"[{cycle}] 📋 Applying schema...")
+        from src.utils.arango_schema import apply_fec_schemas
+        apply_fec_schemas(db, collections=["indiv"], level="none")
+        
+        # Create dump for fast restore (with extended timeout for large datasets)
+        print(f"[{cycle}] 📦 Creating dump for {total_records:,} records...")
         create_collection_dump(
-            cycle=cycle,
-            collection="indiv",
-            mongo_uri=mongo_uri,
+            db=db,
+            collection_name="indiv",
             source_file=zip_path,
-            record_count=total_records,
-            context=None  # No context in thread
+            dump_type="fec",
+            cycle=cycle,
+            context=None
         )
         
-        client.close()
-        
     except Exception as e:
-        result['error'] = str(e)
+        import traceback
+        result['error'] = f"{str(e)}\n{traceback.format_exc()}"
     
     return (cycle, result)
 
@@ -187,7 +211,7 @@ def _process_indiv_cycle(
 def indiv_asset(
     context: AssetExecutionContext,
     config: IndividualContributionsConfig,
-    mongo: MongoDBResource,
+    arango: ArangoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """Parse indiv.zip files IN PARALLEL and store ALL individual contributions in fec_{cycle}.indiv collections."""
@@ -213,9 +237,13 @@ def indiv_asset(
             executor.submit(
                 _process_indiv_cycle,
                 cycle,
-                mongo.connection_string,
+                arango.host,
+                arango.port,
+                arango.username,
+                arango.password,
                 batch_size,
                 tier,
+                config.force_refresh,
             ): cycle
             for cycle in config.cycles
         }
@@ -249,7 +277,7 @@ def indiv_asset(
             "parallel_workers": max_workers,
             "batch_size": batch_size,
             "memory_tier": tier,
-            "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
-            "mongodb_collection": "indiv",
+            "arangodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
+            "arangodb_collection": "indiv",
         }
     )
