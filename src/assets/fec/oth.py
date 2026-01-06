@@ -1,4 +1,4 @@
-"""Other Receipts Asset - Parse FEC other receipts (oth.zip) using raw FEC field names
+"""Other Receipts Asset - Parse FEC other receipts (oth.zip)
 
 This file contains Schedule A receipts that don't fit other categories.
 
@@ -32,31 +32,36 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config, AssetIn
 
 from src.data import get_repository
-from src.resources.mongo import MongoDBResource
-from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+from src.resources.arango import ArangoDBResource
+from src.utils.arango_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
 from src.utils.fec_schema import FECSchema
 from src.utils.memory import get_processing_config
 
 
 class OtherReceiptsConfig(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    force_refresh: bool = False
 
 
 def _process_oth_cycle(
     cycle: str,
-    mongo_uri: str,
+    arango_host: str,
+    arango_port: int,
+    arango_user: str,
+    arango_password: str,
     batch_size: int,
     tier: str,
+    force_refresh: bool = False,
 ) -> Tuple[str, Dict[str, Any]]:
     """Process a single cycle's oth.zip file. Designed for parallel execution.
     
     Returns:
         Tuple of (cycle, result_dict) where result_dict contains stats or error
     """
-    from pymongo import MongoClient
+    from arango import ArangoClient
     from src.data import get_repository
     from src.utils.fec_schema import FECSchema
-    from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+    from src.utils.arango_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
     
     repo = get_repository()
     result = {
@@ -70,38 +75,49 @@ def _process_oth_cycle(
     }
     
     try:
-        # Connect to MongoDB (each thread gets its own connection)
-        client = MongoClient(mongo_uri)
-        db = client[f"fec_{cycle}"]
-        collection = db["oth"]
+        # Connect to ArangoDB (each thread gets its own connection)
+        client = ArangoClient(hosts=f"http://{arango_host}:{arango_port}")
+        sys_db = client.db("_system", username=arango_user, password=arango_password)
+        
+        # Ensure database exists
+        db_name = f"fec_{cycle}"
+        if not sys_db.has_database(db_name):
+            sys_db.create_database(db_name)
+        
+        db = client.db(db_name, username=arango_user, password=arango_password)
+        
+        # Ensure collection exists
+        if not db.has_collection("oth"):
+            db.create_collection("oth")
+        collection = db.collection("oth")
         
         zip_path = repo.fec_oth_path(cycle)
         
         if not zip_path.exists():
             result['error'] = f"File not found: {zip_path}"
-            client.close()
             return (cycle, result)
         
         # Check if we can restore from dump
-        if should_restore_from_dump(cycle, "oth", zip_path):
+        if not force_refresh and should_restore_from_dump("oth", zip_path, "fec", cycle):
             print(f"[{cycle}] 🚀 Restoring from dump...")
             
-            if restore_collection_from_dump(
+            restore_result = restore_collection_from_dump(
+                db=db,
+                collection_name="oth",
+                dump_type="fec",
                 cycle=cycle,
-                collection="oth",
-                mongo_uri=mongo_uri,
                 context=None
-            ):
-                result['count'] = collection.count_documents({})
+            )
+            if restore_result:
+                result['count'] = restore_result['record_count']
                 result['restored'] = True
-                client.close()
                 return (cycle, result)
             else:
                 print(f"[{cycle}] ⚠️ Restore failed, falling back to parsing...")
         
         # Parse from ZIP
         print(f"[{cycle}] 📂 Parsing oth.zip (batch_size={batch_size:,}, tier={tier})...")
-        collection.delete_many({})
+        collection.truncate()
         
         batch = []
         cycle_transaction_types = {}
@@ -114,7 +130,6 @@ def _process_oth_cycle(
             txt_files = [f for f in zf.namelist() if f.endswith('.txt')]
             if not txt_files:
                 result['error'] = "No .txt file in ZIP"
-                client.close()
                 return (cycle, result)
             
             with zf.open(txt_files[0]) as f:
@@ -141,8 +156,12 @@ def _process_oth_cycle(
                         filtered_out += 1
                         continue
                     
-                    # Add timestamp
-                    record['updated_at'] = datetime.now()
+                    # Add timestamp and _key for ArangoDB
+                    record['updated_at'] = datetime.now().isoformat()
+                    
+                    # Create unique _key from SUB_ID (FEC's unique transaction ID)
+                    if record.get('SUB_ID'):
+                        record['_key'] = str(record['SUB_ID'])
                     
                     # Track transaction type and entity types
                     transaction_tp = record.get('TRANSACTION_TP', '')
@@ -160,12 +179,12 @@ def _process_oth_cycle(
                     
                     # Batch insert for performance
                     if len(batch) >= batch_size:
-                        collection.insert_many(batch, ordered=False)
+                        db.collection("oth").import_bulk(batch, on_duplicate="replace")
                         batch = []
         
         # Insert remaining
         if batch:
-            collection.insert_many(batch, ordered=False)
+            db.collection("oth").import_bulk(batch, on_duplicate="replace")
         
         total_cycle = sum(cycle_transaction_types.values())
         reduction_pct = (filtered_out / total_parsed * 100) if total_parsed > 0 else 0
@@ -180,29 +199,33 @@ def _process_oth_cycle(
         
         # Create indexes
         print(f"[{cycle}] 🔧 Creating indexes...")
-        collection.create_index([("CMTE_ID", 1)])
-        collection.create_index([("OTHER_ID", 1)])
-        collection.create_index([("FORM_TP", 1)])
-        collection.create_index([("ENTITY_TP", 1)])
-        collection.create_index([("TRANSACTION_DT", -1)])
-        collection.create_index([("TRANSACTION_AMT", -1)])
-        collection.create_index([("CMTE_ID", 1), ("ENTITY_TP", 1)])
-        collection.create_index([("CMTE_ID", 1), ("OTHER_ID", 1)])
+        collection.add_persistent_index(fields=["CMTE_ID"])
+        collection.add_persistent_index(fields=["OTHER_ID"])
+        collection.add_persistent_index(fields=["FORM_TP"])
+        collection.add_persistent_index(fields=["ENTITY_TP"])
+        collection.add_persistent_index(fields=["TRANSACTION_DT"])
+        collection.add_persistent_index(fields=["TRANSACTION_AMT"])
+        collection.add_persistent_index(fields=["CMTE_ID", "ENTITY_TP"])
+        collection.add_persistent_index(fields=["CMTE_ID", "OTHER_ID"])
+        
+        # Apply JSON schema for documentation
+        print(f"[{cycle}] 📋 Applying schema...")
+        from src.utils.arango_schema import apply_fec_schemas
+        apply_fec_schemas(db, collections=["oth"], level="none")
         
         # Create dump for next time
         create_collection_dump(
-            cycle=cycle,
-            collection="oth",
-            mongo_uri=mongo_uri,
+            db=db,
+            collection_name="oth",
             source_file=zip_path,
-            record_count=total_cycle,
+            dump_type="fec",
+            cycle=cycle,
             context=None
         )
         
-        client.close()
-        
     except Exception as e:
-        result['error'] = str(e)
+        import traceback
+        result['error'] = f"{str(e)}\n{traceback.format_exc()}"
     
     return (cycle, result)
 
@@ -217,7 +240,7 @@ def _process_oth_cycle(
 def oth_asset(
     context: AssetExecutionContext,
     config: OtherReceiptsConfig,
-    mongo: MongoDBResource,
+    arango: ArangoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """Parse oth.zip files IN PARALLEL and store in fec_{cycle}.oth collections."""
@@ -240,9 +263,13 @@ def oth_asset(
             executor.submit(
                 _process_oth_cycle,
                 cycle,
-                mongo.connection_string,
+                arango.host,
+                arango.port,
+                arango.username,
+                arango.password,
                 batch_size,
                 tier,
+                config.force_refresh,
             ): cycle
             for cycle in config.cycles
         }
@@ -288,7 +315,7 @@ def oth_asset(
             "parallel_workers": max_workers,
             "batch_size": batch_size,
             "memory_tier": tier,
-            "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
-            "mongodb_collection": "oth",
+            "arangodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
+            "arangodb_collection": "oth",
         }
     )

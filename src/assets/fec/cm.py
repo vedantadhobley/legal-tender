@@ -7,13 +7,14 @@ import zipfile
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config, AssetIn
 
 from src.data import get_repository
-from src.resources.mongo import MongoDBResource
-from src.utils.mongo_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
+from src.resources.arango import ArangoDBResource
+from src.utils.arango_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
 from src.utils.fec_schema import FECSchema
 
 
 class CommitteesConfig(Config):
     cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    force_refresh: bool = False
 
 
 @asset(
@@ -26,7 +27,7 @@ class CommitteesConfig(Config):
 def cm_asset(
     context: AssetExecutionContext,
     config: CommitteesConfig,
-    mongo: MongoDBResource,
+    arango: ArangoDBResource,
     data_sync: Dict[str, Any],
 ) -> Output[Dict[str, Any]]:
     """Parse cm.zip files and store in fec_{cycle}.cm collections using raw FEC field names."""
@@ -34,12 +35,13 @@ def cm_asset(
     repo = get_repository()
     stats = {'total_committees': 0, 'leadership_pacs': 0, 'by_cycle': {}}
     
-    with mongo.get_client() as client:
+    with arango.get_client() as client:
         for cycle in config.cycles:
             context.log.info(f"📊 {cycle} Cycle:")
             
             try:
-                collection = mongo.get_collection(client, "cm", database_name=f"fec_{cycle}")
+                db = arango.get_database(client, f"fec_{cycle}")
+                collection = arango.get_collection(db, "cm")
                 zip_path = repo.fec_cm_path(cycle)
                 
                 if not zip_path.exists():
@@ -47,17 +49,21 @@ def cm_asset(
                     continue
                 
                 # Check if we can restore from dump
-                if should_restore_from_dump(cycle, "cm", zip_path):
-                    context.log.info("   🚀 Restoring from dump (30 sec)...")
+                if not config.force_refresh and should_restore_from_dump("cm", zip_path, "fec", cycle):
+                    context.log.info("   🚀 Restoring from dump...")
                     
-                    if restore_collection_from_dump(
+                    result = restore_collection_from_dump(
+                        db=db,
+                        collection_name="cm",
+                        dump_type="fec",
                         cycle=cycle,
-                        collection="cm",
-                        mongo_uri=mongo.connection_string,
                         context=context
-                    ):
-                        record_count = collection.count_documents({})
-                        leadership_count = collection.count_documents({"CMTE_TP": "O"})
+                    )
+                    if result:
+                        record_count = result['record_count']
+                        # Count leadership PACs after restore
+                        cursor = db.aql.execute('FOR doc IN cm FILTER doc.CMTE_TP == "O" RETURN 1')
+                        leadership_count = sum(1 for _ in cursor)
                         stats['by_cycle'][cycle] = {'total': record_count, 'leadership_pacs': leadership_count}
                         stats['total_committees'] += record_count
                         stats['leadership_pacs'] += leadership_count
@@ -67,7 +73,9 @@ def cm_asset(
                 
                 # Parse from ZIP
                 context.log.info(f"   📂 Parsing {zip_path.name}...")
-                collection.delete_many({})
+                
+                # Clear existing data
+                collection.truncate()
                 
                 batch = []
                 leadership_count = 0
@@ -89,8 +97,12 @@ def cm_asset(
                             if not record:
                                 continue
                             
+                            # Use CMTE_ID as the document _key for ArangoDB
+                            if record.get('CMTE_ID'):
+                                record['_key'] = record['CMTE_ID']
+                            
                             # Add timestamp
-                            record['updated_at'] = datetime.now()
+                            record['updated_at'] = datetime.now().isoformat()
                             
                             # Track leadership PACs
                             if record.get('CMTE_TP') == 'O':
@@ -99,29 +111,37 @@ def cm_asset(
                             batch.append(record)
                 
                 if batch:
-                    collection.insert_many(batch, ordered=False)
+                    # Bulk import with upsert behavior
+                    result = arango.bulk_import(collection, batch, on_duplicate="replace")
                     context.log.info(f"   ✅ {cycle}: {len(batch):,} committees ({leadership_count} Leadership PACs)")
                     stats['by_cycle'][cycle] = {'total': len(batch), 'leadership_pacs': leadership_count}
                     stats['total_committees'] += len(batch)
                     stats['leadership_pacs'] += leadership_count
                     
-                    # Create indexes BEFORE dump
-                    collection.create_index([("CMTE_TP", 1)])
-                    collection.create_index([("CONNECTED_ORG_NM", 1)])
-                    collection.create_index([("CMTE_NM", 1)])
+                    # Create indexes
+                    collection.add_persistent_index(fields=["CMTE_ID"], unique=True)
+                    collection.add_persistent_index(fields=["CMTE_TP"])
+                    collection.add_persistent_index(fields=["CONNECTED_ORG_NM"])
+                    collection.add_persistent_index(fields=["CMTE_NM"])
                     
-                    # Create dump for next time (includes indexes)
+                    # Apply JSON schema for documentation
+                    from src.utils.arango_schema import apply_fec_schemas
+                    apply_fec_schemas(db, collections=["cm"], level="none")
+                    
+                    # Create dump for next time
                     create_collection_dump(
-                        cycle=cycle,
-                        collection="cm",
-                        mongo_uri=mongo.connection_string,
+                        db=db,
+                        collection_name="cm",
                         source_file=zip_path,
-                        record_count=len(batch),
+                        dump_type="fec",
+                        cycle=cycle,
                         context=context
                     )
                 
             except Exception as e:
                 context.log.error(f"   ❌ Error processing {cycle}: {e}")
+                import traceback
+                context.log.error(traceback.format_exc())
     
     return Output(
         value=stats,
@@ -129,7 +149,7 @@ def cm_asset(
             "total_committees": stats['total_committees'],
             "leadership_pacs": stats['leadership_pacs'],
             "cycles_processed": MetadataValue.json(config.cycles),
-            "mongodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
-            "mongodb_collection": "cm",
+            "arangodb_databases": MetadataValue.json([f"fec_{c}" for c in config.cycles]),
+            "arangodb_collection": "cm",
         }
     )

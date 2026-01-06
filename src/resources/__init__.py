@@ -1,4 +1,4 @@
 """Dagster resources for Legal Tender."""
-from src.resources.mongo import mongo_resource
+from src.resources.arango import arango_resource
 
-__all__ = ["mongo_resource"]
+__all__ = ["arango_resource"]

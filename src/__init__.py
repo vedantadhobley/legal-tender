@@ -6,17 +6,16 @@ that track political donations, congressional voting, and lobbying activity.
 Architecture:
 - Assets: 
   * sync/ → Data synchronization (downloads all FEC files)
-  * fec/ → Raw FEC bulk data parsers (→ fec_YYYY databases)
-  * mapping/ → ID mapping assets (→ aggregation database)
-  * enrichment/ → Per-cycle enriched assets (→ enriched_YYYY databases)
-  * aggregation/ → Cross-cycle aggregated assets (→ aggregation database)
+  * fec/ → Raw FEC bulk data parsers (→ fec_YYYY databases) - ALL CONVERTED TO ARANGODB
+  * mapping/ → ID mapping assets (→ aggregation database) - CONVERTED TO ARANGODB
+  * graph/ → Graph vertices and edges (→ aggregation database) - NEW GRAPH LAYER
 - Jobs: One main pipeline job (fec_pipeline_job)
-- Resources: MongoDB for data storage
+- Resources: ArangoDB for graph data storage
 - Schedules: Weekly automated refresh
 
 Data Flow:
-  FEC.gov bulk files → fec_2024 (raw) → enriched_2024 (filtered) → aggregation (rolled up)
-                    → fec_2026 (raw) → enriched_2026 (filtered) ↗
+  FEC.gov bulk files → fec_2024 (raw) → aggregation.donors (normalized) → aggregation.contributed_to (edges)
+                    → fec_2026 (raw) → aggregation.employers (normalized) → political_money_flow (graph)
 """
 
 from dagster import Definitions
@@ -24,7 +23,7 @@ from src.assets import (
     # Data sync
     data_sync_asset,
     
-    # FEC parsers (raw data → fec_YYYY databases) - 6 core files
+    # FEC parsers (raw data → fec_YYYY databases) - ALL Converted to ArangoDB
     cn_asset,
     cm_asset,
     ccl_asset,
@@ -32,24 +31,23 @@ from src.assets import (
     oth_asset,
     indiv_asset,
     
-    # Mapping assets (ID mapping → aggregation database)
+    # Mapping assets (ID mapping → aggregation database) - Converted to ArangoDB
     member_fec_mapping_asset,
     
-    # Enrichment assets (per-cycle enriched data → enriched_{cycle} databases)
-    enriched_pas2_asset,
-    enriched_candidate_financials_asset,
-    enriched_donor_financials_asset,
-    enriched_committee_funding_asset,
-    
-    # Aggregation assets (cross-cycle rollups → aggregation database)
-    candidate_financials_asset,
-    donor_financials_asset,
+    # Graph assets (vertices + edges → aggregation database)
+    donors_asset,
+    employers_asset,
+    contributed_to_asset,
+    transferred_to_asset,
+    affiliated_with_asset,
+    employed_by_asset,
+    political_money_graph_asset,
 )
-from src.jobs import fec_pipeline_job
+from src.jobs import fec_pipeline_job, graph_rebuild_job, raw_data_job
 from src.schedules import (
     weekly_pipeline_schedule,
 )
-from src.resources import mongo_resource
+from src.resources import arango_resource
 
 # ============================================================================
 # DEFINITIONS
@@ -60,7 +58,7 @@ defs = Definitions(
         # Data sync (downloads all files)
         data_sync_asset,
         
-        # FEC raw data parsers (→ fec_YYYY databases) - 6 core files
+        # FEC raw data parsers (→ fec_YYYY databases) - ALL Converted to ArangoDB
         cn_asset,
         cm_asset,
         ccl_asset,
@@ -68,24 +66,25 @@ defs = Definitions(
         oth_asset,
         indiv_asset,
         
-        # Mapping assets (ID mapping → aggregation database)
+        # Mapping assets (ID mapping → aggregation database) - Converted to ArangoDB
         member_fec_mapping_asset,
         
-        # Enrichment assets (per-cycle enriched data → enriched_{cycle} databases)
-        enriched_pas2_asset,
-        enriched_candidate_financials_asset,
-        enriched_donor_financials_asset,
-        enriched_committee_funding_asset,
-        
-        # Aggregation assets (cross-cycle rollups → aggregation database)
-        candidate_financials_asset,
-        donor_financials_asset,
+        # Graph assets (vertices + edges → aggregation database)
+        donors_asset,
+        employers_asset,
+        contributed_to_asset,
+        transferred_to_asset,
+        affiliated_with_asset,
+        employed_by_asset,
+        political_money_graph_asset,
     ],
     resources={
-        "mongo": mongo_resource,
+        "arango": arango_resource,
     },
     jobs=[
-        fec_pipeline_job,  # One job to rule them all
+        fec_pipeline_job,    # Complete pipeline: download → parse → graph
+        graph_rebuild_job,   # Rebuild graph only (assumes raw data exists)
+        raw_data_job,        # Download and parse only (no graph)
     ],
     schedules=[
         weekly_pipeline_schedule,   # Full pipeline (download + mapping + aggregation) every Sunday 2 AM

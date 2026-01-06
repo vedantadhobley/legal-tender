@@ -1,4 +1,4 @@
-pymongo
+python-arango>=7.5.0
 # Python dependencies
 requests
 python-dotenv

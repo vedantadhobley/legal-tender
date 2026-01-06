@@ -183,7 +183,6 @@ def get_processing_config() -> dict:
         - batch_size: Recommended batch size
         - in_memory: Whether to use in-memory processing
         - parallel_cycles: How many cycles to process in parallel
-        - mongo_bulk_write: Whether to use unordered bulk writes
     """
     tier = get_memory_tier()
     available_gb = get_available_memory_gb()
@@ -206,5 +205,4 @@ def get_processing_config() -> dict:
         'batch_size': batch_size,
         'in_memory': in_memory,
         'parallel_cycles': parallel_cycles,
-        'mongo_bulk_write': True,  # Always use unordered for speed
     }

@@ -16,7 +16,6 @@ from dagster import (
     MetadataValue,
     Output,
     Config,
-    AssetIn,
 )
 
 from src.data import get_repository
@@ -26,7 +25,7 @@ from src.api.congress_legislators import (
     get_current_term,
 )
 from src.api.congress_api import get_member  # For photo URLs and enhanced data
-from src.resources.mongo import MongoDBResource
+from src.resources.arango import ArangoDBResource
 
 
 class MemberMappingConfig(Config):
@@ -42,7 +41,7 @@ class MemberMappingConfig(Config):
     description="Complete mapping of Congress members to FEC IDs, committees, and external identifiers",
     group_name="mapping",
     compute_kind="mapping",
-    ins={"data_sync": AssetIn("data_sync")},
+    deps=["cn", "ccl"],
     metadata={
         "source": "GitHub legislators + FEC bulk data (cn, cm, ccl)",
         "cycles": "2024, 2026",
@@ -52,22 +51,21 @@ class MemberMappingConfig(Config):
 def member_fec_mapping_asset(
     context: AssetExecutionContext,
     config: MemberMappingConfig,
-    mongo: MongoDBResource,
-    data_sync: Dict[str, Any],
+    arango: ArangoDBResource,
 ) -> Output[Dict[str, Dict[str, Any]]]:
     """Build complete member mapping from multiple data sources.
     
     Data Flow:
     1. Download legislators-current.yaml (1MB, <1 sec) - has FEC IDs pre-mapped
-    2. Download FEC bulk data for specified cycles (cn, ccl files - ~4MB total)
+    2. Read FEC bulk data for specified cycles from cn, ccl collections
     3. Validate FEC IDs against bulk data
     4. Extract committee IDs from linkage files
     5. Optionally enhance with ProPublica API (photos, social media)
-    6. Store complete profiles in MongoDB
+    6. Store complete profiles in ArangoDB
     
     Args:
         config: Configuration object
-        mongo: MongoDB resource
+        arango: ArangoDB resource
         
     Returns:
         Dictionary mapping bioguide_id -> complete member profile
@@ -75,16 +73,6 @@ def member_fec_mapping_asset(
     context.log.info("=" * 80)
     context.log.info("🏛️  BUILDING MEMBER FEC MAPPING")
     context.log.info("=" * 80)
-    
-    # Log data sync results
-    if data_sync:
-        sync_time = data_sync.get('sync_time', 'unknown')
-        files_downloaded = len(data_sync.get('files_downloaded', []))
-        files_skipped = len(data_sync.get('files_skipped', []))
-        context.log.info(f"✓ Data sync completed at {sync_time}")
-        context.log.info(f"  - Files downloaded: {files_downloaded}")
-        context.log.info(f"  - Files skipped: {files_skipped}")
-        context.log.info("")
     
     context.log.info("Configuration:")
     context.log.info(f"  - Force Refresh: {config.force_refresh}")
@@ -111,51 +99,61 @@ def member_fec_mapping_asset(
     context.log.info("")
     
     # ==========================================================================
-    # PHASE 2: Load FEC Bulk Data from MongoDB (populated by cn/ccl assets)
+    # PHASE 2: Load FEC Bulk Data from ArangoDB (populated by cn/ccl assets)
     # ==========================================================================
-    context.log.info("📥 PHASE 2: Loading FEC Bulk Data from MongoDB")
+    context.log.info("📥 PHASE 2: Loading FEC Bulk Data from ArangoDB")
     context.log.info("-" * 80)
     
-    # Load candidate and linkage data for all cycles from MongoDB
+    # Load candidate and linkage data for all cycles from ArangoDB
     all_candidates = {}
     all_linkages = {}
     
-    with mongo.get_client() as client:
+    with arango.get_client() as client:
         for cycle in config.cycles:
-            context.log.info(f"Loading {cycle} cycle from MongoDB...")
+            context.log.info(f"Loading {cycle} cycle from ArangoDB...")
+            
+            db = arango.get_database(client, f"fec_{cycle}")
             
             # Query cn collection (candidate master)
-            cn_collection = mongo.get_collection(client, "cn", database_name=f"fec_{cycle}")
             candidates = {}
-            for doc in cn_collection.find({}, {
-                'CAND_ID': 1,
-                'CAND_NAME': 1,
-                'CAND_PTY_AFFILIATION': 1,
-                'CAND_OFFICE_ST': 1,
-                'CAND_OFFICE': 1,
-                'CAND_OFFICE_DISTRICT': 1,
-            }):
-                cand_id = doc.get('CAND_ID')
-                if cand_id:
-                    candidates[cand_id] = {
-                        'id': cand_id,
-                        'name': doc.get('CAND_NAME', ''),
-                        'party': doc.get('CAND_PTY_AFFILIATION', ''),
-                        'state': doc.get('CAND_OFFICE_ST', ''),
-                        'office': doc.get('CAND_OFFICE', ''),
-                        'district': doc.get('CAND_OFFICE_DISTRICT', ''),
+            if db.has_collection("cn"):
+                cursor = db.aql.execute('''
+                    FOR doc IN cn
+                    RETURN {
+                        CAND_ID: doc.CAND_ID,
+                        CAND_NAME: doc.CAND_NAME,
+                        CAND_PTY_AFFILIATION: doc.CAND_PTY_AFFILIATION,
+                        CAND_OFFICE_ST: doc.CAND_OFFICE_ST,
+                        CAND_OFFICE: doc.CAND_OFFICE,
+                        CAND_OFFICE_DISTRICT: doc.CAND_OFFICE_DISTRICT
                     }
+                ''')
+                for doc in cursor:
+                    cand_id = doc.get('CAND_ID')
+                    if cand_id:
+                        candidates[cand_id] = {
+                            'id': cand_id,
+                            'name': doc.get('CAND_NAME', ''),
+                            'party': doc.get('CAND_PTY_AFFILIATION', ''),
+                            'state': doc.get('CAND_OFFICE_ST', ''),
+                            'office': doc.get('CAND_OFFICE', ''),
+                            'district': doc.get('CAND_OFFICE_DISTRICT', ''),
+                        }
             
             # Query ccl collection (candidate-committee linkages)
-            ccl_collection = mongo.get_collection(client, "ccl", database_name=f"fec_{cycle}")
             linkages = {}
-            for doc in ccl_collection.find({}, {'CAND_ID': 1, 'CMTE_ID': 1}):
-                cand_id = doc.get('CAND_ID')
-                committee_id = doc.get('CMTE_ID')
-                if cand_id and committee_id:
-                    if cand_id not in linkages:
-                        linkages[cand_id] = []
-                    linkages[cand_id].append(committee_id)
+            if db.has_collection("ccl"):
+                cursor = db.aql.execute('''
+                    FOR doc IN ccl
+                    RETURN { CAND_ID: doc.CAND_ID, CMTE_ID: doc.CMTE_ID }
+                ''')
+                for doc in cursor:
+                    cand_id = doc.get('CAND_ID')
+                    committee_id = doc.get('CMTE_ID')
+                    if cand_id and committee_id:
+                        if cand_id not in linkages:
+                            linkages[cand_id] = []
+                        linkages[cand_id].append(committee_id)
             
             all_candidates[cycle] = candidates
             all_linkages[cycle] = linkages
@@ -292,31 +290,33 @@ def member_fec_mapping_asset(
         context.log.info("⏭️  PHASE 4: Skipped (skip_propublica=True)")
     
     # ==========================================================================
-    # PHASE 5: Store in MongoDB
+    # PHASE 5: Store in ArangoDB
     # ==========================================================================
     context.log.info("")
-    context.log.info("💾 PHASE 5: Storing in MongoDB")
+    context.log.info("💾 PHASE 5: Storing in ArangoDB")
     context.log.info("-" * 80)
     
-    with mongo.get_client() as client:
-        collection = mongo.get_collection(client, "member_fec_mapping", database_name="aggregation")
+    with arango.get_client() as client:
+        db = arango.get_database(client, "aggregation")
+        collection = arango.get_collection(db, "member_fec_mapping")
         
         # Clear existing data
-        collection.delete_many({})
+        collection.truncate()
         context.log.info("🗑️  Cleared existing mapping data")
         
-        # Insert new mapping
+        # Prepare documents with _key
         docs = [
             {
-                '_id': bioguide_id,
+                '_key': bioguide_id,
                 **member_data,
-                'updated_at': datetime.now(),
+                'updated_at': datetime.now().isoformat(),
             }
             for bioguide_id, member_data in mapping.items()
         ]
         
-        collection.insert_many(docs)
-        context.log.info(f"✅ Stored {len(docs)} member profiles")
+        # Bulk import
+        result = arango.bulk_import(collection, docs, on_duplicate="replace")
+        context.log.info(f"✅ Stored {len(docs)} member profiles (created: {result['created']})")
     
     # ==========================================================================
     # Summary
@@ -354,6 +354,6 @@ def member_fec_mapping_asset(
             "cycles_loaded": MetadataValue.json(config.cycles),
             "sample_member": MetadataValue.json(sample_member),
             "cache_directory": "data/fec_cache",
-            "mongodb_collection": "member_fec_mapping",
+            "arangodb_collection": "member_fec_mapping",
         }
     )

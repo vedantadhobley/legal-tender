@@ -1,6 +1,6 @@
 """FEC Bulk Data Assets - Raw FEC file parsers using original FEC field names
 
-CORE 6 FILES (focusing on raw transactional data):
+CORE 6 FILES (focusing on raw transactional data) - ALL CONVERTED TO ARANGODB:
 - cn.zip → cn collection (candidate master)
 - cm.zip → cm collection (committee master)
 - ccl.zip → ccl collection (candidate-committee linkages)

@@ -2,12 +2,12 @@
 #
 # Port allocation: legal-tender uses 3200-3209 (production)
 #   3200: Dagster UI
-#   3201: Mongoku (MongoDB web GUI)
+#   3201: ArangoDB Web UI
 #   3202: (reserved)
 #
 # Internal ports (not exposed to host):
 #   - postgres:5432 (Dagster metadata)
-#   - mongo:27017 (Application data)
+#   - arangodb:8529 (Graph database)
 #
 # External services (on luv-prod network):
 #   - llama-chat:8080 (LLM API)
@@ -16,7 +16,7 @@
 # Storage:
 #   All persistent data lives at ~/workspace/.legal-tender/ with subdirs:
 #   - data/       Raw FEC downloads
-#   - bson/       MongoDB BSON dumps (fec/enriched/aggregation)
+#   - arango/     ArangoDB JSONL dumps (graphs + collections)
 
 name: legal-tender-prod
 
@@ -39,8 +39,13 @@ services:
       # Storage paths
       LEGAL_TENDER_STORAGE: /storage
       LEGAL_TENDER_DATA_DIR: /storage/data
-      LEGAL_TENDER_BSON_DIR: /storage/bson
-      MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-prod-mongo:27017
+      LEGAL_TENDER_ARANGO_DIR: /storage/arango
+      # ArangoDB connection
+      ARANGO_HOST: legal-tender-prod-arango
+      ARANGO_PORT: "8529"
+      ARANGO_USER: root
+      ARANGO_PASSWORD: ltpass
+      ARANGO_DB: legal_tender
       # Dagster Postgres connection
       DAGSTER_PG_USER: ltuser
       DAGSTER_PG_PASSWORD: ltpass
@@ -48,11 +53,11 @@ services:
       DAGSTER_PG_DB: dagster
       DAGSTER_COMPUTE_LOGS_DIR: /app/compute_logs
     volumes:
-      - ~/workspace/.legal-tender:/storage  # Persistent storage (data + bson)
+      - ~/workspace/.legal-tender:/storage  # Persistent storage (data + arango dumps)
     depends_on:
       postgres:
         condition: service_healthy
-      mongo:
+      arangodb:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -78,8 +83,13 @@ services:
       # Storage paths
       LEGAL_TENDER_STORAGE: /storage
       LEGAL_TENDER_DATA_DIR: /storage/data
-      LEGAL_TENDER_BSON_DIR: /storage/bson
-      MONGODB_URI: mongodb://ltuser:ltpass@legal-tender-prod-mongo:27017
+      LEGAL_TENDER_ARANGO_DIR: /storage/arango
+      # ArangoDB connection
+      ARANGO_HOST: legal-tender-prod-arango
+      ARANGO_PORT: "8529"
+      ARANGO_USER: root
+      ARANGO_PASSWORD: ltpass
+      ARANGO_DB: legal_tender
       # Dagster Postgres connection
       DAGSTER_PG_USER: ltuser
       DAGSTER_PG_PASSWORD: ltpass
@@ -117,57 +127,39 @@ services:
     networks:
       - legal-tender-prod
 
-  # MONGODB - Application data storage
-  mongo:
-    image: mongo:7-jammy
-    container_name: legal-tender-prod-mongo
-    # Limit WiredTiger cache to 16GB to prevent system freeze
-    command: ["mongod", "--wiredTigerCacheSizeGB", "16"]
+  # ARANGODB - Graph database for money flow tracking
+  arangodb:
+    image: arangodb:3.11
+    container_name: legal-tender-prod-arango
+    ports:
+      - "3201:8529"  # ArangoDB Web UI
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ltuser
-      MONGO_INITDB_ROOT_PASSWORD: ltpass
+      ARANGO_ROOT_PASSWORD: ltpass
     volumes:
-      - legal-tender-prod-mongo-data:/data/db
-      - legal-tender-prod-mongo-config:/data/configdb
+      - legal-tender-prod-arango-data:/var/lib/arangodb3
+      - legal-tender-prod-arango-apps:/var/lib/arangodb3-apps
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      test: ["CMD", "arangosh", "--server.password", "ltpass", "--javascript.execute-string", "db._version()"]
       interval: 10s
-      timeout: 5s
+      timeout: 10s
       retries: 5
-      start_period: 10s
+      start_period: 30s
     restart: unless-stopped
     networks:
       - legal-tender-prod
       - luv-prod
 
-  # MONGOKU - MongoDB web GUI
-  mongoku:
-    image: huggingface/mongoku:latest
-    container_name: legal-tender-prod-mongoku
-    ports:
-      - "3201:3100"  # Mongoku Web UI
-    environment:
-      MONGOKU_DEFAULT_HOST: mongodb://ltuser:ltpass@legal-tender-prod-mongo:27017
-      MONGOKU_SERVER_ORIGIN: http://localhost:3201
-      MONGOKU_ALLOW_DELETE: "false"  # No delete in production!
-    depends_on:
-      mongo:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - legal-tender-prod
-
 volumes:
   legal-tender-prod-postgres-data:
     name: legal-tender-prod-postgres-data
     driver: local
-  legal-tender-prod-mongo-data:
-    name: legal-tender-prod-mongo-data
+  legal-tender-prod-arango-data:
+    name: legal-tender-prod-arango-data
     driver: local
-  legal-tender-prod-mongo-config:
-    name: legal-tender-prod-mongo-config
+  legal-tender-prod-arango-apps:
+    name: legal-tender-prod-arango-apps
     driver: local
-  # NOTE: FEC data and BSON dumps now stored at ~/workspace/.legal-tender/
+  # NOTE: FEC data and Arango dumps now stored at ~/workspace/.legal-tender/
   # mounted as bind volume, not Docker volume
 
 networks:
