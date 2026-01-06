@@ -73,6 +73,7 @@ def transferred_to_asset(
             cycle_edges = 0
             
             # Process pas2 - committee contributions
+            # PAS2 is Schedule B (disbursements): CMTE_ID = giver, OTHER_ID = recipient
             if cycle_db.has_collection("pas2"):
                 context.log.info(f"📊 Processing {cycle} pas2...")
                 
@@ -83,8 +84,8 @@ def transferred_to_asset(
                     FILTER doc.ENTITY_TP IN ["COM", "PAC", "PTY", "CCM", "ORG"]
                     
                     COLLECT 
-                        source_cmte = doc.OTHER_ID,
-                        dest_cmte = doc.CMTE_ID
+                        source_cmte = doc.CMTE_ID,
+                        dest_cmte = doc.OTHER_ID
                     AGGREGATE 
                         total_amount = SUM(TO_NUMBER(doc.TRANSACTION_AMT)),
                         transaction_count = COUNT(1)
@@ -140,6 +141,7 @@ def transferred_to_asset(
                 gc.collect()
             
             # Process oth - other receipts
+            # OTH is Schedule A (receipts): CMTE_ID = receiver, OTHER_ID = giver
             if cycle_db.has_collection("oth"):
                 context.log.info(f"📊 Processing {cycle} oth...")
                 

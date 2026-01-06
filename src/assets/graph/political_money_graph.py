@@ -5,7 +5,7 @@ together, enabling powerful graph traversal queries.
 
 Named Graph: political_money_flow
 Vertex Collections: donors, employers, committees, candidates
-Edge Collections: contributed_to, transferred_to, affiliated_with, employed_by
+Edge Collections: contributed_to, transferred_to, affiliated_with, employed_by, spent_on
 """
 
 from typing import Dict, Any
@@ -20,7 +20,7 @@ from src.resources.arango import ArangoDBResource
     description="Creates the named graph for political money flow traversal.",
     group_name="graph",
     compute_kind="graph_definition",
-    deps=["donors", "employers", "contributed_to", "transferred_to", "affiliated_with", "employed_by"],
+    deps=["donors", "employers", "contributed_to", "transferred_to", "affiliated_with", "employed_by", "spent_on"],
 )
 def political_money_graph_asset(
     context: AssetExecutionContext,
@@ -33,6 +33,7 @@ def political_money_graph_asset(
     - donors --[employed_by]--> employers  
     - committees --[transferred_to]--> committees
     - committees --[affiliated_with]--> candidates
+    - committees --[spent_on]--> candidates (independent expenditures FOR/AGAINST)
     
     This enables queries like:
     - "Trace all money from employer X to any candidate"
@@ -72,6 +73,11 @@ def political_money_graph_asset(
                 "edge_collection": "employed_by",
                 "from_vertex_collections": ["donors"],
                 "to_vertex_collections": ["employers"]
+            },
+            {
+                "edge_collection": "spent_on",
+                "from_vertex_collections": ["committees"],
+                "to_vertex_collections": ["candidates"]
             }
         ]
         
@@ -101,7 +107,7 @@ def political_money_graph_asset(
                 context.log.info(f"  📊 {coll_name}: {count:,} vertices")
         
         # Gather edge collection counts
-        for coll_name in ["contributed_to", "transferred_to", "affiliated_with", "employed_by"]:
+        for coll_name in ["contributed_to", "transferred_to", "affiliated_with", "employed_by", "spent_on"]:
             if agg_db.has_collection(coll_name):
                 count = agg_db.collection(coll_name).count()
                 stats["edge_collections"].append({"name": coll_name, "count": count})

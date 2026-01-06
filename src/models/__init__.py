@@ -32,6 +32,7 @@ from .edges import (
     TransferredTo,
     AffiliatedWith,
     EmployedBy,
+    SpentOn,
 )
 
 __all__ = [
@@ -46,4 +47,5 @@ __all__ = [
     "TransferredTo",
     "AffiliatedWith",
     "EmployedBy",
+    "SpentOn",
 ]
