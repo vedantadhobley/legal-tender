@@ -346,3 +346,106 @@ class EmployedBy(BaseModel):
             "donation_amount": self.donation_amount,
             "updated_at": self.updated_at.isoformat(),
         }
+
+
+# =============================================================================
+# SPENT_ON EDGE (Committee → Candidate) - Independent Expenditures
+# =============================================================================
+
+class SpentOn(BaseModel):
+    """Independent expenditure by a committee FOR or AGAINST a candidate.
+    
+    This is DIFFERENT from affiliated_with:
+    - affiliated_with = official FEC linkage (principal campaign committee)
+    - spent_on = Super PAC spending ads FOR or AGAINST candidates
+    
+    Independent Expenditures (IE) are spending by PACs/Super PACs that is NOT
+    coordinated with the candidate's campaign. This is the "dark money" path
+    that Citizens United enabled.
+    
+    Transaction Types (from FEC pas2):
+    - 24E: Independent expenditure advocating election (SUPPORT)
+    - 24A: Independent expenditure against candidate (OPPOSE)
+    
+    Data Source: FEC pas2.txt filtered to TRANSACTION_TP IN ['24E', '24A']
+    
+    Edge Direction: committees/{CMTE_ID} → candidates/{CAND_ID}
+    
+    Example (Support):
+        {
+            "_from": "committees/C00873398",  # America PAC
+            "_to": "candidates/P80001571",     # Trump
+            "support_oppose": "S",
+            "total_amount": 95000000.0,
+            "transaction_count": 1500
+        }
+    
+    Example (Oppose):
+        {
+            "_from": "committees/C00492785",  # Priorities USA
+            "_to": "candidates/P80001571",     # Trump
+            "support_oppose": "O",
+            "total_amount": 45000000.0,
+            "transaction_count": 800
+        }
+    
+    Query Example (AQL):
+        // Find all IE spending FOR a candidate
+        FOR edge IN spent_on
+            FILTER edge._to == "candidates/P80001571"
+            FILTER edge.support_oppose == "S"
+            RETURN edge
+        
+        // Find all IE spending AGAINST a candidate
+        FOR edge IN spent_on
+            FILTER edge._to == "candidates/P80001571"
+            FILTER edge.support_oppose == "O"
+            RETURN edge
+    """
+    
+    # Edge endpoints
+    from_committee: str = Field(..., description="Source: committees/{CMTE_ID}")
+    to_candidate: str = Field(..., description="Target: candidates/{CAND_ID}")
+    
+    # Independent expenditure classification
+    support_oppose: str = Field(..., description="'S' = Support, 'O' = Oppose")
+    
+    # Aggregated spending data
+    total_amount: float = Field(..., description="Sum of all IE spending ($)")
+    transaction_count: int = Field(default=1, description="Number of expenditure records")
+    
+    # Temporal information
+    cycle: str = Field(..., description="Election cycle (e.g., '2024')")
+    
+    # Metadata
+    updated_at: datetime = Field(default_factory=datetime.now)
+    
+    @computed_field
+    @property
+    def _from(self) -> str:
+        return self.from_committee
+    
+    @computed_field
+    @property
+    def _to(self) -> str:
+        return self.to_candidate
+    
+    @computed_field
+    @property
+    def _key(self) -> str:
+        # Unique by committee + candidate + support/oppose + cycle
+        cmte_id = self.from_committee.split("/")[-1]
+        cand_id = self.to_candidate.split("/")[-1]
+        return f"{cmte_id}_{cand_id}_{self.support_oppose}_{self.cycle}"
+    
+    def to_arango_doc(self) -> Dict[str, Any]:
+        return {
+            "_key": self._key,
+            "_from": self.from_committee,
+            "_to": self.to_candidate,
+            "support_oppose": self.support_oppose,
+            "total_amount": self.total_amount,
+            "transaction_count": self.transaction_count,
+            "cycle": self.cycle,
+            "updated_at": self.updated_at.isoformat(),
+        }

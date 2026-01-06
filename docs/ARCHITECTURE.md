@@ -199,7 +199,8 @@ We use **ArangoDB**, which has some unique features:
 │   ├── donors (287K vertices)      ├── contributed_to (3.3M edges)   │
 │   ├── employers (82K vertices)    ├── transferred_to (654K edges)   │
 │   ├── committees (30K vertices)   ├── affiliated_with (22K edges)   │
-│   ├── candidates (15K vertices)   └── employed_by (147K edges)      │
+│   ├── candidates (15K vertices)   ├── employed_by (147K edges)      │
+│   └── member_fec_mapping (540)    └── spent_on (20K edges - IE)     │
 │   └── political_money_flow (named graph)                            │
 └─────────────────────────────────────────────────────────────────────┘
                                     │
@@ -208,6 +209,7 @@ We use **ArangoDB**, which has some unique features:
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Your Application                             │
 │   "Click on a politician → See who's funding them"                  │
+│   "Show me the 5 pies of influence for Ted Cruz"                    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -241,15 +243,20 @@ ArangoDB Instance (port 4201)
 ├── fec_2024/            # Raw 2024 cycle data  
 │   └── (same collections)
 │
+├── fec_2026/            # Raw 2026 cycle data (when available)
+│   └── (same collections)
+│
 └── aggregation/         # GRAPH LAYER
     ├── donors           # Vertex: 287K donors ($10K+ threshold)
     ├── employers        # Vertex: 82K unique employers
     ├── committees       # Vertex: 30K PACs/Super PACs
     ├── candidates       # Vertex: 15K federal candidates
-    ├── contributed_to   # Edge: donor → committee
-    ├── transferred_to   # Edge: committee → committee
-    ├── affiliated_with  # Edge: committee → candidate
+    ├── member_fec_mapping # 540 current Congress members with FEC IDs
+    ├── contributed_to   # Edge: donor → committee (direct donations)
+    ├── transferred_to   # Edge: committee → committee (PAC transfers)
+    ├── affiliated_with  # Edge: committee → candidate (linkage)
     ├── employed_by      # Edge: donor → employer
+    ├── spent_on         # Edge: committee → candidate (independent expenditures)
     └── political_money_flow  # Named graph definition
 ```
 
@@ -431,6 +438,26 @@ DATA SYNC (downloads FEC files)
 }
 ```
 
+#### spent_on (20,373 edges) - Independent Expenditures
+
+```python
+{
+    "_key": "g5h6i7j8k9l0m1n2",
+    "_from": "committees/C00873398",
+    "_to": "candidates/P00009423",
+    "total_amount": 150000000.0,
+    "transaction_count": 450,
+    "support_oppose": "S",           # S = Support, O = Oppose
+    "cycle": "2024",
+    "source": "pas2",
+    "updated_at": "2026-01-05T00:00:00"
+}
+```
+
+**Independent Expenditures (IE)** are money spent by PACs to support or oppose candidates **without coordinating with the campaign**. This is the "Super PAC" spending you hear about. Transaction types:
+- **24E**: Independent expenditure FOR a candidate
+- **24A**: Independent expenditure AGAINST a candidate
+
 ### Named Graph Definition
 
 ```javascript
@@ -456,9 +483,105 @@ DATA SYNC (downloads FEC files)
       "collection": "employed_by",
       "from": ["donors"],
       "to": ["employers"]
+    },
+    {
+      "collection": "spent_on",
+      "from": ["committees"],
+      "to": ["candidates"]
     }
   ]
 }
+```
+
+---
+
+## The Five Pies of Political Influence
+
+> **Core Concept**: Every politician's funding can be broken into five distinct "pies" that show where money comes from and how it's spent.
+
+This is the key analysis that Legal Tender provides:
+
+### 1. Direct Donations (contributed_to → affiliated_with)
+**Path**: Donor → PAC → Candidate's Principal Campaign
+```
+Individual donors giving directly to the candidate's campaign committee.
+- Contribution limits apply ($3,300/election in 2024)
+- Aggregated via principal campaign committees (linkage type "P")
+```
+
+### 2. PAC Transfers (transferred_to → affiliated_with)
+**Path**: Donor → PAC → Other PACs → Candidate Committees
+```
+Money flowing through multiple committees before reaching the candidate.
+- "Dark money" paths - harder to trace back to original donor
+- Joint fundraising committees (JFCs) are common intermediaries
+```
+
+### 3. Independent Expenditure Support (spent_on, S)
+**Path**: Committee → Candidate (no coordination)
+```
+Super PAC spending TO HELP a candidate (24E transactions).
+- No contribution limits
+- Cannot coordinate with campaign
+- Examples: TV ads, get-out-the-vote efforts
+```
+
+### 4. Independent Expenditure Opposition (spent_on, O)  
+**Path**: Committee → Candidate (no coordination)
+```
+Super PAC spending TO ATTACK a candidate (24A transactions).
+- Same rules as IE support, but targeting the opponent
+- "Negative ads" funding
+```
+
+### 5. Lobbying (future)
+**Path**: Corporation → Lobbyist → Legislation
+```
+Coming in a future phase - connecting money to actual legislative outcomes.
+- Will require LD-1/LD-2 lobbying disclosure data
+- RAG (Retrieval-Augmented Generation) for legislation analysis
+```
+
+### Example: Ted Cruz Five Pies (2024)
+
+```
+PRO-Cruz Funding ($36.9M total):
+├── Pie 1 - Direct Donations: $17.6M (47.8%)
+│   └── Top: NOT EMPLOYED, RETIRED, HENRY RESOURCES
+├── Pie 2 - PAC Transfers: $10.5M (28.4%)
+│   └── Top: Ted Cruz Victory Fund, Cornyn Victory Committee
+├── Pie 3 - IE Support: $8.7M (23.8%)
+│   └── Top: NRA, Restoration PAC, American Liberty PAC
+└── Pie 4 - IE Opposition against opponents
+
+ANTI-Cruz Spending ($2.9M):
+└── Pie 5 - IE Against Cruz: $2.9M
+    └── Top: American Bridges, Texas Majority PAC
+```
+
+### Generating the Five Pies (AQL Queries)
+
+```aql
+// Pie 1: Direct Donations
+FOR cmte_id IN candidate_committees
+  FOR c IN contributed_to
+    FILTER c._to == CONCAT("committees/", cmte_id)
+    FOR d IN donors FILTER d._id == c._from
+    RETURN {source: d.canonical_name, amount: c.total_amount}
+
+// Pie 2: PAC Transfers
+FOR cmte_id IN candidate_committees  
+  FOR t IN transferred_to
+    FILTER t._to == CONCAT("committees/", cmte_id)
+    FOR src IN committees FILTER src._id == t._from
+    RETURN {source: src.CMTE_NM, amount: t.total_amount}
+
+// Pies 3 & 4: Independent Expenditures
+FOR e IN spent_on
+  FILTER e._to == CONCAT("candidates/", candidate_id)
+  LET pie = e.support_oppose == "S" ? "IE_support" : "IE_oppose"
+  FOR src IN committees FILTER src._id == e._from
+  RETURN {pie: pie, source: src.CMTE_NM, amount: e.total_amount}
 ```
 
 ---
@@ -734,10 +857,21 @@ db._query(`
 | employers | Vertex | 82,046 |
 | committees | Vertex | 30,840 |
 | candidates | Vertex | 15,635 |
+| member_fec_mapping | Reference | 540 |
 | contributed_to | Edge | 3,340,147 |
 | transferred_to | Edge | 654,530 |
 | affiliated_with | Edge | 22,808 |
 | employed_by | Edge | 147,810 |
+| spent_on | Edge | 20,373 |
+
+### Raw Data Volumes
+
+| Cycle | indiv records | pas2 records | oth records |
+|-------|---------------|--------------|-------------|
+| 2020 | 69M | 1.4M | 828K |
+| 2022 | 52M | 900K | 540K |
+| 2024 | 70M | 1.0M | 377K |
+| **Total** | **191M** | **3.3M** | **1.7M** |
 
 ### Key Files
 
@@ -748,3 +882,72 @@ db._query(`
 | `src/models/*.py` | Pydantic models for graph entities |
 | `src/resources/arango.py` | ArangoDB connection |
 | `docs/ARCHITECTURE.md` | This file |
+
+---
+
+## Next Steps & Roadmap
+
+### Phase 1 (Complete ✅)
+- [x] FEC raw data ingestion (cn, cm, ccl, indiv, pas2, oth)
+- [x] Graph layer with vertices (donors, employers, committees, candidates)
+- [x] Edge collections (contributed_to, transferred_to, affiliated_with, employed_by)
+- [x] Independent expenditure tracking (spent_on edges)
+- [x] Member FEC mapping for Congress members
+- [x] Five pies analysis capability
+
+### Phase 2 (In Progress)
+- [ ] **Lobbying data integration**: LD-1/LD-2 lobbying disclosure filings
+- [ ] **Legislation linking**: Connect money flows to specific bills
+- [ ] **Corporate parent resolution**: Trace subsidiaries to parent corporations
+- [ ] **WinRed/ActBlue conduit tracing**: Follow OTHER_ID to resolve final recipients
+
+### Phase 3 (Future)
+- [ ] **Vector database**: Embeddings for legislation text (RAG)
+- [ ] **Natural language queries**: "Which oil companies funded anti-climate bills?"
+- [ ] **Time-series analysis**: Track donation patterns before/after key votes
+- [ ] **Network analysis**: Community detection, centrality measures
+
+### End Goal
+
+> **"Relate corporations to politicians to legislation"**
+
+The ultimate goal is answering questions like:
+- "Which corporations funded Senator X before they voted on Bill Y?"
+- "Show me all money paths from the pharmaceutical industry to healthcare legislation"
+- "What companies lobbied for this specific provision in the tax bill?"
+
+This requires:
+1. **Graph database** (current): Money flow tracing ✅
+2. **Lobbying data**: Who is lobbying whom
+3. **Legislation database**: Bills, votes, provisions
+4. **Vector embeddings**: Semantic search over legislation text
+5. **RAG pipeline**: LLM-powered queries connecting it all
+
+### Known Data Gaps
+
+1. **Individual donations in OTH**: We filter to committee-only records. Individual donations from oth.zip (~17M records) are not loaded. Use `indiv` for individual donations.
+
+2. **Conduit committees**: WinRed and ActBlue act as conduits. The true recipient is in `OTHER_ID`, which we don't fully trace yet.
+
+3. **Name fragmentation**: Donors appear with variations ("RICHARD UIHLEIN" vs "RICHARD E. UIHLEIN"). These need to be summed, not deduplicated.
+
+4. **24C transactions**: Coordinated expenditures (24C) are party committee spending. Currently not fully integrated into the 5 pies.
+
+---
+
+## CLI Query Tool
+
+A command-line tool is available to query candidate funding:
+
+```bash
+# Query by name (uses member_fec_mapping for Congress members)
+./query.sh --candidate "Ted Cruz" --pies
+
+# Query by bioguide ID
+./query.sh --bioguide C001098 --pies
+
+# Query by FEC candidate ID
+./query.sh --fec S2TX00312 --pies
+```
+
+See `query.sh` for implementation details.
