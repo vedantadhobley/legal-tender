@@ -5,6 +5,7 @@ Asset Organization (matches ArangoDB structure):
 - fec/ → Raw FEC bulk data parsers (→ fec_YYYY databases) - ALL CONVERTED TO ARANGODB
 - mapping/ → ID mapping assets (member bioguide → FEC IDs, etc.) - CONVERTED TO ARANGODB
 - graph/ → Graph vertices and edges (→ aggregation database) - NEW GRAPH LAYER
+- enrichment/ → Derived fields and classifications
 """
 
 # Data sync (downloads all FEC files)
@@ -33,6 +34,10 @@ from .graph.affiliated_with import affiliated_with_asset
 from .graph.employed_by import employed_by_asset
 from .graph.political_money_graph import political_money_graph_asset
 
+# Enrichment Assets (→ aggregation database)
+# Derived fields and classifications:
+from .enrichment.committee_classification import committee_classification_asset
+
 __all__ = [
     # Data sync
     "data_sync_asset",
@@ -56,4 +61,7 @@ __all__ = [
     "affiliated_with_asset",
     "employed_by_asset",
     "political_money_graph_asset",
+    
+    # Enrichment assets
+    "committee_classification_asset",
 ]
