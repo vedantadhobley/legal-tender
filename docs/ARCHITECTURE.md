@@ -879,7 +879,6 @@ db._query(`
 |------|---------|
 | `src/assets/graph/*.py` | Graph vertex/edge builders |
 | `src/assets/fec/*.py` | Raw FEC file parsers |
-| `src/models/*.py` | Pydantic models for graph entities |
 | `src/resources/arango.py` | ArangoDB connection |
 | `docs/ARCHITECTURE.md` | This file |
 
@@ -897,26 +896,70 @@ db._query(`
 - [x] Per-cycle edge tracking (cycle field on all edges)
 - [x] Fix transferred_to direction bug (pas2: CMTE_ID=giver, OTHER_ID=recipient)
 
-### Phase 2 (In Progress)
-- [ ] **PAC classification/taxonomy**: Classify PACs to control upstream traversal behavior
-  - **Ideological PACs** (AIPAC, NRA): STOP here - the PAC is the identity, donors serve the cause
-  - **Corporate PACs** (Goldman Sachs PAC): TRACE through - the corporation is the true identity
-  - **Industry/Trade PACs** (Realtors PAC): TRACE to industry - aggregate interest matters
-  - **Leadership PACs** (McConnell PAC): TRACE to politician sponsor
-  - **Party PACs** (NRSC, DCCC): Configurable - party aggregator
-  - Use `ORG_TP` field + name patterns + manual overrides for classification
-  - Add `pac_category` field to committees for traversal control and embedding context
-- [ ] **Per-cycle traversal filtering**: Graph queries should filter by cycle to avoid cross-cycle "time travel"
-- [ ] **Lobbying data integration**: LD-1/LD-2 lobbying disclosure filings
-- [ ] **Legislation linking**: Connect money flows to specific bills
-- [ ] **Corporate parent resolution**: Trace subsidiaries to parent corporations
-- [ ] **WinRed/ActBlue conduit tracing**: Follow OTHER_ID to resolve final recipients
+### Phase 2: Upstream Resolution (In Progress)
 
-### Phase 3 (Future)
-- [ ] **Vector database**: Embeddings for legislation text (RAG)
-- [ ] **Natural language queries**: "Which oil companies funded anti-climate bills?"
-- [ ] **Time-series analysis**: Track donation patterns before/after key votes
-- [ ] **Network analysis**: Community detection, centrality measures
+The current "5 pies" analysis shows pass-through committees (JFCs, party committees, conduits) as funding sources. We need to trace upstream to find **terminal entities** - the actual interests funding politicians.
+
+#### 2.1 Committee Classification
+Add `terminal_type` field to committees using FEC's own type codes:
+
+| ORG_TP | Meaning | Terminal Type | Traversal |
+|--------|---------|---------------|-----------|
+| `C` | Corporation | `corporation` | STOP |
+| `T` | Trade association | `trade_association` | STOP |
+| `L` | Labor union | `labor_union` | STOP |
+| `M` | Membership org | `ideological` | STOP |
+| (empty) + CMTE_TP=X/Y | Party committee | `passthrough` | TRACE UPSTREAM |
+| (empty) + CMTE_TP=V | Conduit (WinRed/ActBlue) | `passthrough` | TRACE UPSTREAM |
+| (empty) + CMTE_TP=N/Q | JFC/Leadership PAC | `passthrough` | TRACE UPSTREAM |
+| (empty) + CMTE_TP=O | Super PAC | `needs_classification` | LLM classify |
+
+Location: `src/assets/enrichment/committee_classification.py`
+
+#### 2.2 Upstream Traversal Query
+Recursive graph traversal that stops at terminal entities:
+
+```
+Candidate ← Committee ← Committee ← ... ← TERMINAL (corp/union/ideological/donor)
+```
+
+Location: `src/utils/upstream.py` (utility module, not asset)
+
+#### 2.3 Master Donor List
+Aggregate all terminal entities across candidates into a registry:
+
+```python
+master_donors = {
+    "corporations": ["EXXON MOBIL", "FEDEX", ...],
+    "trade_associations": ["NAT'L REALTORS", ...],
+    "labor_unions": ["AFSCME", "SEIU", ...],
+    "ideological": ["AIPAC", "NRA", "SIERRA CLUB", ...],
+    "wealthy_individuals": ["UIHLEIN", "SOROS", ...]
+}
+```
+
+Location: `src/assets/enrichment/master_donors.py`
+
+#### 2.4 Other Phase 2 Items
+- [ ] Per-cycle traversal filtering
+- [ ] Lobbying data integration (LD-1/LD-2)
+- [ ] Corporate parent resolution
+- [ ] WinRed/ActBlue conduit tracing
+
+### Phase 3: RAG & Legislation Linking (Future)
+
+For each entity in master_donors:
+1. Generate position profile via LLM ("EXXON supports X, opposes Y")
+2. Create embedding from profile
+3. Store in vector DB
+4. Match against legislation text
+
+Query: "Which Cruz donors would care about HR 1234 (climate bill)?"
+
+- [ ] Vector database for legislation embeddings
+- [ ] Natural language queries
+- [ ] Time-series analysis (donations vs votes)
+- [ ] Network analysis (community detection)
 
 ### End Goal
 

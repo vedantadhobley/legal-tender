@@ -211,124 +211,15 @@ fi
 
 # Add the analysis logic based on action
 if [ "$ACTION" = "pies" ]; then
-    QUERY_SCRIPT+='
-
-// Get ALL affiliated committees
-var affiliatedCmtes = db._query(`
-  FOR cand_id IN @cands 
-  FOR a IN affiliated_with 
-  FILTER a._to == CONCAT("candidates/", cand_id) 
-  RETURN DISTINCT PARSE_IDENTIFIER(a._from).key
-`, {cands: candIds}).toArray();
-
-// Merge with known committee IDs
-cmteIds.forEach(function(c) { if (affiliatedCmtes.indexOf(c) < 0) affiliatedCmtes.push(c); });
-
-print("\nCandidate IDs: " + candIds.join(", "));
-print("Affiliated committees: " + affiliatedCmtes.length);
-
-print("\n======================================================================");
-print("                    FIVE PIES ANALYSIS: " + candName);
-print("======================================================================\n");
-
-// PIE 1: Direct Donations
-print("PIE 1: DIRECT DONATIONS (donor → campaign committee)");
-print("----------------------------------------------------------------------");
-var directDonations = db._query(`
-  FOR cmte_id IN @cmtes
-    FOR c IN contributed_to
-      FILTER c._to == CONCAT("committees/", cmte_id)
-      FOR d IN donors FILTER d._id == c._from
-      COLLECT donor_name = d.canonical_name, employer = d.canonical_employer
-      AGGREGATE total = SUM(c.total_amount)
-      SORT total DESC
-      RETURN {name: donor_name, employer: employer, amount: total}
-`, {cmtes: affiliatedCmtes}).toArray();
-
-var directTotal = directDonations.reduce(function(s, d) { return s + d.amount; }, 0);
-print("Total: " + formatMoney(directTotal) + " from " + directDonations.length + " donors\n");
-print("Top 15 donors:");
-directDonations.slice(0, 15).forEach(function(d, i) {
-  print("  " + (i+1) + ". " + d.name + " (" + (d.employer || "N/A") + "): " + formatMoney(d.amount));
-});
-
-// PIE 2: PAC Transfers
-print("\n\nPIE 2: PAC TRANSFERS (committee → campaign)");
-print("----------------------------------------------------------------------");
-var pacTransfers = db._query(`
-  FOR cmte_id IN @cmtes
-    FOR t IN transferred_to
-      FILTER t._to == CONCAT("committees/", cmte_id)
-      FOR src IN committees FILTER src._id == t._from
-      COLLECT source_name = src.CMTE_NM, source_id = src.CMTE_ID
-      AGGREGATE total = SUM(t.total_amount)
-      SORT total DESC
-      RETURN {name: source_name, id: source_id, amount: total}
-`, {cmtes: affiliatedCmtes}).toArray();
-
-var pacTotal = pacTransfers.reduce(function(s, t) { return s + t.amount; }, 0);
-print("Total: " + formatMoney(pacTotal) + " from " + pacTransfers.length + " committees\n");
-print("Top 15 PAC sources:");
-pacTransfers.slice(0, 15).forEach(function(t, i) {
-  print("  " + (i+1) + ". " + t.name + ": " + formatMoney(t.amount));
-});
-
-// PIE 3: IE Support
-print("\n\nPIE 3: INDEPENDENT EXPENDITURE SUPPORT (Super PACs FOR candidate)");
-print("----------------------------------------------------------------------");
-var ieSupport = db._query(`
-  FOR cand_id IN @cands
-    FOR e IN spent_on
-      FILTER e._to == CONCAT("candidates/", cand_id)
-      FILTER e.support_oppose == "S"
-      FOR src IN committees FILTER src._id == e._from
-      COLLECT source_name = src.CMTE_NM
-      AGGREGATE total = SUM(e.total_amount)
-      SORT total DESC
-      RETURN {name: source_name, amount: total}
-`, {cands: candIds}).toArray();
-
-var ieSupportTotal = ieSupport.reduce(function(s, e) { return s + e.amount; }, 0);
-print("Total: " + formatMoney(ieSupportTotal) + " from " + ieSupport.length + " committees\n");
-print("Top 15 IE supporters:");
-ieSupport.slice(0, 15).forEach(function(e, i) {
-  print("  " + (i+1) + ". " + e.name + ": " + formatMoney(e.amount));
-});
-
-// PIE 4: IE Opposition
-print("\n\nPIE 4: INDEPENDENT EXPENDITURE OPPOSITION (Super PACs AGAINST candidate)");
-print("----------------------------------------------------------------------");
-var ieOppose = db._query(`
-  FOR cand_id IN @cands
-    FOR e IN spent_on
-      FILTER e._to == CONCAT("candidates/", cand_id)
-      FILTER e.support_oppose == "O"
-      FOR src IN committees FILTER src._id == e._from
-      COLLECT source_name = src.CMTE_NM
-      AGGREGATE total = SUM(e.total_amount)
-      SORT total DESC
-      RETURN {name: source_name, amount: total}
-`, {cands: candIds}).toArray();
-
-var ieOpposeTotal = ieOppose.reduce(function(s, e) { return s + e.amount; }, 0);
-print("Total: " + formatMoney(ieOpposeTotal) + " from " + ieOppose.length + " committees\n");
-print("Top 15 IE opposition:");
-ieOppose.slice(0, 15).forEach(function(e, i) {
-  print("  " + (i+1) + ". " + e.name + ": " + formatMoney(e.amount));
-});
-
-// Summary
-print("\n\n======================================================================");
-print("                           SUMMARY");
-print("======================================================================\n");
-var proTotal = directTotal + pacTotal + ieSupportTotal;
-print("PRO-" + candName.split(",")[0].split(" ").pop() + " Total: " + formatMoney(proTotal));
-print("  ├── Pie 1 (Direct):     " + formatMoney(directTotal) + " (" + (directTotal/proTotal*100).toFixed(1) + "%)");
-print("  ├── Pie 2 (PAC):        " + formatMoney(pacTotal) + " (" + (pacTotal/proTotal*100).toFixed(1) + "%)");
-print("  └── Pie 3 (IE Support): " + formatMoney(ieSupportTotal) + " (" + (ieSupportTotal/proTotal*100).toFixed(1) + "%)\n");
-print("ANTI-" + candName.split(",")[0].split(" ").pop() + " Total: " + formatMoney(ieOpposeTotal));
-print("  └── Pie 4 (IE Oppose):  " + formatMoney(ieOpposeTotal));
-'
+    # Use Python script with graph-based cycle detection for accurate upstream attribution
+    if [ -n "$CANDIDATE" ]; then
+        docker exec legal-tender-dev-webserver python -m src.cli.pies_v3 --candidate "$CANDIDATE"
+    elif [ -n "$BIOGUIDE" ]; then
+        docker exec legal-tender-dev-webserver python -m src.cli.pies_v3 --bioguide "$BIOGUIDE"
+    else
+        docker exec legal-tender-dev-webserver python -m src.cli.pies_v3 --fec "$FEC_ID"
+    fi
+    exit 0
 elif [ "$ACTION" = "summary" ]; then
     QUERY_SCRIPT+='
 

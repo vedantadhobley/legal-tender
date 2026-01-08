@@ -9,6 +9,7 @@ Architecture:
   * fec/ → Raw FEC bulk data parsers (→ fec_YYYY databases) - ALL CONVERTED TO ARANGODB
   * mapping/ → ID mapping assets (→ aggregation database) - CONVERTED TO ARANGODB
   * graph/ → Graph vertices and edges (→ aggregation database) - NEW GRAPH LAYER
+  * enrichment/ → Derived fields and classifications
 - Jobs: One main pipeline job (fec_pipeline_job)
 - Resources: ArangoDB for graph data storage
 - Schedules: Weekly automated refresh
@@ -42,6 +43,9 @@ from src.assets import (
     affiliated_with_asset,
     employed_by_asset,
     political_money_graph_asset,
+    
+    # Enrichment assets (classifications + derived fields)
+    committee_classification_asset,
 )
 from src.jobs import fec_pipeline_job, graph_rebuild_job, raw_data_job
 from src.schedules import (
@@ -77,6 +81,9 @@ defs = Definitions(
         affiliated_with_asset,
         employed_by_asset,
         political_money_graph_asset,
+        
+        # Enrichment assets
+        committee_classification_asset,
     ],
     resources={
         "arango": arango_resource,
