@@ -46,6 +46,13 @@ from src.assets import (
     
     # Enrichment assets (classifications + derived fields)
     committee_classification_asset,
+    donor_classification_asset,
+    committee_financials_asset,
+    
+    # Aggregation assets (pre-computed summaries for UI/RAG)
+    candidate_summaries_asset,
+    committee_summaries_asset,
+    donor_summaries_asset,
 )
 from src.jobs import fec_pipeline_job, graph_rebuild_job, raw_data_job
 from src.schedules import (
@@ -84,6 +91,13 @@ defs = Definitions(
         
         # Enrichment assets
         committee_classification_asset,
+        donor_classification_asset,
+        committee_financials_asset,
+        
+        # Aggregation assets (pre-computed summaries)
+        candidate_summaries_asset,
+        committee_summaries_asset,
+        donor_summaries_asset,
     ],
     resources={
         "arango": arango_resource,

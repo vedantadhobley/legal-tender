@@ -37,6 +37,14 @@ from .graph.political_money_graph import political_money_graph_asset
 # Enrichment Assets (→ aggregation database)
 # Derived fields and classifications:
 from .enrichment.committee_classification import committee_classification_asset
+from .enrichment.donor_classification import donor_classification_asset
+from .enrichment.committee_financials import committee_financials_asset
+
+# Aggregation Assets (→ aggregation database)
+# Pre-computed summaries for UI/RAG:
+from .aggregation.candidate_summaries import candidate_summaries_asset
+from .aggregation.committee_summaries import committee_summaries_asset
+from .aggregation.donor_summaries import donor_summaries_asset
 
 __all__ = [
     # Data sync
@@ -64,4 +72,11 @@ __all__ = [
     
     # Enrichment assets
     "committee_classification_asset",
+    "donor_classification_asset",
+    "committee_financials_asset",
+    
+    # Aggregation assets (pre-computed summaries)
+    "candidate_summaries_asset",
+    "committee_summaries_asset",
+    "donor_summaries_asset",
 ]
