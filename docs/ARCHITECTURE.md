@@ -334,14 +334,21 @@ DATA SYNC (downloads FEC files)
 ```python
 {
     "_key": "a1b2c3d4e5f6g7h8",      # SHA256(name|employer)[:16]
-    "canonical_name": "MUSK, ELON",
-    "canonical_employer": "TESLA INC",
-    "total_amount": 55000.0,         # Sum across all cycles
+    "name": "MUSK, ELON",             # Normalized donor name
+    "employer": "TESLA INC",          # Normalized employer
+    "occupation": "CEO",              # Occupation (may be None)
+    "total_amount": 55000.0,          # Sum across all cycles
     "transaction_count": 5,
     "cycles": ["2024"],
+    "donor_type": "individual",       # individual | organization | likely_individual | unclear
+    "whale_tier": "notable",          # ultra ($1M+) | mega ($500K+) | whale ($100K+) | notable ($50K+) | null
     "updated_at": "2026-01-05T00:00:00"
 }
 ```
+
+**Enrichment fields:**
+- `donor_type`: Classification based on name patterns, employer, occupation (added by `donor_classification` asset)
+- `whale_tier`: High-value donor flagging for RAG enrichment targeting (added by `donor_classification` asset)
 
 #### employers (82,046 vertices)
 
@@ -363,12 +370,24 @@ DATA SYNC (downloads FEC files)
     "CMTE_ID": "C00873398",
     "CMTE_NM": "AMERICA PAC",
     "CMTE_TP": "O",                  # O = Super PAC
+    "ORG_TP": null,                  # Organization type (C=Corp, L=Labor, T=Trade, etc.)
     "CMTE_PTY_AFFILIATION": "REP",
-    "total_receipts": 150000000.0,
-    "total_disbursements": 148000000.0,
+    "terminal_type": "super_pac_unclassified",  # Enrichment field - see below
+    "total_receipts": 150000000.0,   # Pre-computed from edges (not FEC's lifetime total)
+    "total_disbursed": 148000000.0,  # Pre-computed from edges (not FEC's lifetime total)
     "cycles": ["2024"]
 }
 ```
+
+**Enrichment fields:**
+- `terminal_type`: Determines upstream traversal behavior (added by `committee_classification` asset):
+  - **TERMINAL types** (stop tracing): `campaign`, `corporation`, `trade_association`, `labor_union`, `ideological`, `cooperative`
+  - **PASSTHROUGH types** (trace upstream): `passthrough` (party committees, leadership PACs, JFCs)
+  - **UNCLASSIFIED**: `super_pac_unclassified`, `unknown`
+- `total_receipts`: Sum of `contributed_to._to` + `transferred_to._to` edges (added by `committee_financials` asset)
+- `total_disbursed`: Sum of `transferred_to._from` edges (added by `committee_financials` asset)
+
+**Why pre-compute totals?** FEC's `cm.zip` contains lifetime TOTAL_RECEIPTS/TOTAL_DISBURSEMENTS across ALL cycles, but our edges only cover specific cycles (2020, 2022, 2024). Pre-computing from edges ensures accuracy.
 
 #### candidates (15,635 vertices)
 
@@ -378,7 +397,7 @@ DATA SYNC (downloads FEC files)
     "CAND_ID": "P00009423",
     "CAND_NAME": "TRUMP, DONALD J.",
     "CAND_PTY_AFFILIATION": "REP",
-    "CAND_OFFICE": "P",              # P = President
+    "CAND_OFFICE": "P",              # P = President, S = Senate, H = House
     "CAND_OFFICE_ST": "US",
     "cycles": ["2024"]
 }

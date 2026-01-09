@@ -169,23 +169,16 @@ def get_upstream_funding_graph(db, start_committees: List[str], cycle: Optional[
     for cmte_id in start_committees:
         queue.append((cmte_id, 1.0, [cmte_id]))
     
-    # Cache for committee total receipts
+    # Cache for committee total receipts (now pre-computed by committee_financials enrichment)
     receipt_cache = {}
     
     def get_total_receipts(cmte_id: str) -> float:
+        """Get pre-computed total_receipts from committee record."""
         if cmte_id not in receipt_cache:
             result = list(db.aql.execute('''
-                LET donations = (
-                    FOR e IN contributed_to 
-                        FILTER e._to == CONCAT("committees/", @cmte) 
-                        RETURN e.total_amount
-                )
-                LET transfers = (
-                    FOR e IN transferred_to 
-                        FILTER e._to == CONCAT("committees/", @cmte) 
-                        RETURN e.total_amount
-                )
-                RETURN SUM(APPEND(donations, transfers))
+                FOR c IN committees
+                    FILTER c.CMTE_ID == @cmte
+                    RETURN c.total_receipts
             ''', bind_vars={"cmte": cmte_id}))
             receipt_cache[cmte_id] = result[0] if result and result[0] else 0
         return receipt_cache[cmte_id]

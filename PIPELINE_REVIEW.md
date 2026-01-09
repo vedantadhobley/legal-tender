@@ -48,39 +48,42 @@ Analysis (CLI tools)
 
 ### 3. Current Enrichments
 
-**Only One Enrichment Asset:**
-- `committee_classification.py` - Adds `terminal_type` field to committees
-  - Classifies as: campaign, passthrough, corporation, trade_association, labor_union, ideological, cooperative, super_pac_unclassified, unknown
-  - Based on CMTE_TP and ORG_TP fields
+**Three Enrichment Assets (all tracked in Dagster pipeline):**
 
-**Manual Enrichments (not in Dagster assets):**
-- `donor_type` - Added via manual AQL UPDATE query (not tracked in pipeline!)
-  - Classifies donors as: organization, individual, likely_individual, unclear
-  - Uses pattern matching on donor names
+1. **`committee_classification.py`** - Adds `terminal_type` field to committees
+   - Classifies as: campaign, passthrough, corporation, trade_association, labor_union, ideological, cooperative, super_pac_unclassified, unknown
+   - Based on CMTE_TP and ORG_TP fields
+   - Controls upstream traversal behavior (stop vs trace further)
 
-### 4. Missing Enrichments
+2. **`donor_classification.py`** ✅ **NEW** - Adds `donor_type` and `whale_tier` fields to donors
+   - donor_type: individual, organization, likely_individual, unclear
+   - whale_tier: ultra ($1M+), mega ($500K+), whale ($100K+), notable ($50K+), null
+   - Pattern matching on name, employer, occupation
+   - Creates indices for fast filtering
+   - Prepares for RAG enrichment targeting
 
-**Should be Dagster assets:**
+3. **`committee_financials.py`** ✅ **NEW** - Pre-computes `total_receipts` and `total_disbursed`
+   - Calculates from actual edges (contributed_to + transferred_to)
+   - Replaces stale FEC cm.zip lifetime totals
+   - Critical for proportional attribution accuracy
+   - Creates indices for fast lookups
 
-1. **`donor_type` classification** - Currently manual!
-   - Should be in `enrichment/donor_classification.py`
-   - Needs to run after `donors` asset
+### 4. Remaining Missing Enrichments (future work)
 
-2. **`total_receipts` / `total_disbursed`** - Currently None on many committees
-   - Should aggregate from transferred_to edges
-   - Critical for proportional attribution math
+**Should be added later:**
 
-3. **Employer normalization** - Currently basic
-   - Need better canonicalization (e.g., "GOOGLE INC" vs "GOOGLE LLC")
-   - Should dedupe similar employer names
+1. **Employer normalization** - Better canonicalization
+   - Need to dedupe similar employer names (e.g., "GOOGLE INC" vs "GOOGLE LLC")
+   - Could use fuzzy matching or LLM
 
-4. **Mega-donor flags** - For "whale" detection
-   - Mark donors >$50K, >$100K, >$1M
-   - Helps identify enrichment candidates for RAG
+2. **Geographic data** - ZIP, STATE from raw indiv records
+   - Currently not carried to donors vertex
+   - Would enable wealthy area analysis
 
-5. **Geographic data** - Completely missing
-   - ZIP, STATE from raw indiv records not carried to donors
-   - Would help with wealthy area analysis
+3. **Donor RAG enrichment** - LLM-powered donor profiling
+   - Target mega/ultra whales (whale_tier filter)
+   - Enrich with: net worth, company role, political history
+   - Will be implemented this weekend
 
 ### 5. Math Verification
 
@@ -98,56 +101,56 @@ If AIPAC gave Committee A $20:
 1. `multiplier = amount_to_target / total_receipts`
 2. `attributed = source_amount × multiplier`
 
-**Issue Found:**
-- Many committees have `total_disbursed = None` because we don't calculate it
-- We calculate it dynamically in queries, but it should be pre-computed
-- This forces us to recalculate on every query (inefficient)
+**✅ FIXED: committee_financials.py enrichment**
+- Now pre-computes total_receipts and total_disbursed from actual edges
+- Replaces stale FEC cm.zip lifetime totals with cycle-specific calculations
+- Eliminates dynamic recalculation on every query
 
 **Bernie Sanders Verification:**
 - Bernie gets $120K from party committees
 - Those party committees get millions from corporate PACs
-- Our proportional attribution would give Bernie a tiny fraction
-- BUT: Vermont Dem Party shows $0 in our data (data quality issue?)
-- CONCLUSION: Math is correct, but we may have incomplete transfer data
+- Our proportional attribution gives Bernie a tiny fraction (correct!)
+- Vermont Dem Party $0 issue explained: FEC cm.zip has lifetime totals, our edges are cycle-specific (2020,2022,2024)
+- CONCLUSION: Math is correct AND we now calculate from edges instead of relying on FEC totals
 
 ### 6. Data Quality Issues
 
-1. **Missing total_disbursed** - Forces dynamic calculation
-2. **Incomplete transfers** - VT Dem Party shows $0 disbursed
-3. **No donor geography** - Can't analyze by wealthy zip codes
-4. **Manual enrichments** - donor_type not in pipeline
-5. **No employer deduplication** - "GOOGLE" vs "GOOGLE INC" vs "GOOGLE LLC"
+1. ✅ **FIXED: Missing total_disbursed** - Now pre-computed by committee_financials enrichment
+2. ✅ **FIXED: Incomplete transfers** - VT Dem Party $0 explained: FEC lifetime totals vs our cycle-specific edges
+3. ⚠️ **No donor geography** - Can't analyze by wealthy zip codes (future work)
+4. ✅ **FIXED: Manual enrichments** - donor_type now in donor_classification.py pipeline asset
+5. ⚠️ **No employer deduplication** - "GOOGLE" vs "GOOGLE INC" vs "GOOGLE LLC" (future work)
 
 ### 7. Recommendations
 
-**Priority 1: Move manual enrichments to Dagster**
-- Create `enrichment/donor_classification.py` asset
-- Add donor_type classification to pipeline
-- Ensure it runs after donors asset
+**✅ Priority 1 COMPLETE: Move manual enrichments to Dagster**
+- Created `enrichment/donor_classification.py` asset
+- Added donor_type AND whale_tier classification to pipeline
+- Runs after donors asset
 
-**Priority 2: Add calculated fields**
-- `enrichment/committee_financials.py` asset
-- Calculate total_receipts, total_disbursed from edges
+**✅ Priority 2 COMPLETE: Add calculated fields**
+- Created `enrichment/committee_financials.py` asset
+- Calculates total_receipts, total_disbursed from edges
 - Critical for proportional attribution performance
 
-**Priority 3: Geographic enrichment**
+**Priority 3: Geographic enrichment** (future work)
 - Carry ZIP/STATE from raw indiv to donors
 - Add `enrichment/donor_geography.py` asset
 - Enables wealthy area analysis
 
-**Priority 4: Employer normalization**
+**Priority 4: Employer normalization** (future work)
 - `enrichment/employer_normalization.py` asset
 - Dedupe similar employer names
 - Improves corporate influence tracking
 
-**Priority 5: Mega-donor flags**
-- Add tier fields: whale_tier (bronze/silver/gold/platinum)
-- Mark candidates for RAG enrichment
+**✅ Priority 5 COMPLETE: Mega-donor flags**
+- Added whale_tier field: ultra ($1M+), mega ($500K+), whale ($100K+), notable ($50K+)
+- Enables RAG enrichment targeting
 - Helps identify billionaires hiding as "RETIRED"
 
-**Priority 6: RAG enrichment pipeline**
+**Priority 6: RAG enrichment pipeline** (this weekend)
 - New asset: `enrichment/donor_rag_enrichment.py`
-- For mega-donors ($50K+), query Wikipedia/Forbes
+- For mega/ultra whales, query Wikipedia/Forbes
 - Extract: former_employers, net_worth, company_affiliations
 - Store in new fields on donor documents
 
@@ -156,23 +159,24 @@ If AIPAC gave Committee A $20:
 **What we have:**
 - ✅ Complete FEC data ingestion
 - ✅ Graph structure with proper edges
-- ✅ Committee classification
+- ✅ Committee classification (terminal_type)
+- ✅ Donor classification (donor_type + whale_tier)
+- ✅ Committee financials (pre-computed totals)
 - ✅ Proportional attribution math (correct!)
 - ✅ $10K threshold filtering
 
-**What's missing:**
-- ❌ donor_type in pipeline (manual only)
-- ❌ Pre-computed financial totals
-- ❌ Geographic data on donors
-- ❌ Employer normalization
-- ❌ Mega-donor detection
-- ❌ RAG enrichment for billionaires
+**What's missing (future work):**
+- ⏳ Geographic data on donors (ZIP/STATE)
+- ⏳ Employer normalization
+- ⏳ RAG enrichment for mega/ultra whales (this weekend)
 
 **Data quality:**
-- ⚠️ Some party committee transfers showing $0 (incomplete?)
-- ⚠️ No historical employer tracking for "RETIRED" donors
-- ⚠️ Employer names need normalization
+- ✅ Party committee $0 transfers explained (FEC lifetime vs our cycle-specific)
+- ✅ Pre-computed totals eliminate stale FEC data issues
+- ⚠️ No historical employer tracking for "RETIRED" donors (will be addressed by RAG)
+- ⚠️ Employer names need normalization (future work)
 
 **Performance:**
-- ⚠️ Dynamic total_disbursed calculation is inefficient
-- ⚠️ Should pre-compute and cache in committee documents
+- ✅ Pre-computed total_receipts/total_disbursed (no more dynamic calculation)
+- ✅ Indices on donor_type, whale_tier, terminal_type for fast filtering
+- ✅ pies_v3.py now uses pre-computed fields
