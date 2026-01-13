@@ -48,6 +48,7 @@ from src.assets import (
     committee_classification_asset,
     donor_classification_asset,
     committee_financials_asset,
+    canonical_employers_asset,
     
     # Aggregation assets (pre-computed summaries for UI/RAG)
     candidate_summaries_asset,
@@ -93,6 +94,7 @@ defs = Definitions(
         committee_classification_asset,
         donor_classification_asset,
         committee_financials_asset,
+        canonical_employers_asset,
         
         # Aggregation assets (pre-computed summaries)
         candidate_summaries_asset,
