@@ -39,6 +39,7 @@ from .graph.political_money_graph import political_money_graph_asset
 from .enrichment.committee_classification import committee_classification_asset
 from .enrichment.donor_classification import donor_classification_asset
 from .enrichment.committee_financials import committee_financials_asset
+from .enrichment.canonical_employers import canonical_employers_asset
 
 # Aggregation Assets (→ aggregation database)
 # Pre-computed summaries for UI/RAG:
@@ -74,6 +75,7 @@ __all__ = [
     "committee_classification_asset",
     "donor_classification_asset",
     "committee_financials_asset",
+    "canonical_employers_asset",
     
     # Aggregation assets (pre-computed summaries)
     "candidate_summaries_asset",
