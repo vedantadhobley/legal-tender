@@ -416,11 +416,11 @@ def candidate_upstream_asset(
         cruz = list(db.aql.execute("""
             FOR c IN candidates
                 FILTER CONTAINS(UPPER(c.CAND_NAME), 'CRUZ') AND CONTAINS(UPPER(c.CAND_NAME), 'TED')
+                LIMIT 1
                 RETURN {
                     name: c.CAND_NAME,
                     upstream: c.upstream_funding
                 }
-            LIMIT 1
         """))
         
         if cruz and cruz[0].get('upstream'):
