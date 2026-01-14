@@ -5,6 +5,8 @@ from src.jobs.asset_jobs import (
     graph_rebuild_job,
     raw_data_job,
     enrichment_job,
+    aggregation_job,
+    upstream_job,
     employer_unification_job,
 )
 
@@ -13,5 +15,7 @@ __all__ = [
     "graph_rebuild_job",
     "raw_data_job",
     "enrichment_job",
+    "aggregation_job",
+    "upstream_job",
     "employer_unification_job",
 ]

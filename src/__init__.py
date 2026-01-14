@@ -42,12 +42,14 @@ from src.assets import (
     transferred_to_asset,
     affiliated_with_asset,
     employed_by_asset,
+    spent_on_asset,
     political_money_graph_asset,
     
     # Enrichment assets (classifications + derived fields)
     committee_classification_asset,
     donor_classification_asset,
     committee_financials_asset,
+    committee_receipts_asset,
     canonical_employers_asset,
     employer_clusters_asset,
     employer_cluster_integration_asset,
@@ -58,8 +60,17 @@ from src.assets import (
     candidate_summaries_asset,
     committee_summaries_asset,
     donor_summaries_asset,
+    candidate_upstream_asset,
 )
-from src.jobs import fec_pipeline_job, graph_rebuild_job, raw_data_job, enrichment_job, employer_unification_job
+from src.jobs import (
+    fec_pipeline_job, 
+    graph_rebuild_job, 
+    raw_data_job, 
+    enrichment_job, 
+    aggregation_job,
+    upstream_job,
+    employer_unification_job,
+)
 from src.schedules import (
     weekly_pipeline_schedule,
 )
@@ -92,12 +103,14 @@ defs = Definitions(
         transferred_to_asset,
         affiliated_with_asset,
         employed_by_asset,
+        spent_on_asset,
         political_money_graph_asset,
         
         # Enrichment assets
         committee_classification_asset,
         donor_classification_asset,
         committee_financials_asset,
+        committee_receipts_asset,
         canonical_employers_asset,
         employer_clusters_asset,
         employer_cluster_integration_asset,
@@ -108,6 +121,7 @@ defs = Definitions(
         candidate_summaries_asset,
         committee_summaries_asset,
         donor_summaries_asset,
+        candidate_upstream_asset,
     ],
     resources={
         "arango": arango_resource,
@@ -117,7 +131,9 @@ defs = Definitions(
         fec_pipeline_job,    # Complete pipeline: download → parse → graph
         graph_rebuild_job,   # Rebuild graph only (assumes raw data exists)
         raw_data_job,        # Download and parse only (no graph)
-        enrichment_job,      # Employer unification + Wikidata resolution
+        enrichment_job,      # Enrichments (classification, receipts, wikidata)
+        aggregation_job,     # Pre-computed summaries (upstream funding, etc)
+        upstream_job,        # Just upstream funding refresh
         employer_unification_job,  # Just employer clustering
     ],
     schedules=[
