@@ -254,6 +254,6 @@ def committee_receipts_asset(
             metadata={
                 "cycles_processed": MetadataValue.int(stats['cycles_processed']),
                 "committees_updated": MetadataValue.int(stats['committees_updated']),
-                "total_individual_amount": MetadataValue.float(stats['total_individual_amount']),
+                "total_individual_amount": MetadataValue.float(float(stats['total_individual_amount'])),
             }
         )
