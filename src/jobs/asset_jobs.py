@@ -93,3 +93,47 @@ raw_data_job = define_asset_job(
         "priority": "medium",
     },
 )
+
+# ============================================================================
+# ENRICHMENT JOB - Employer unification and whale resolution
+# ============================================================================
+
+enrichment_job = define_asset_job(
+    name="enrichment_job",
+    description="""
+    Enrich graph data with:
+    - Embedding-based employer clustering (typo/variation detection)
+    - Wikidata corporate resolution (subsidiary → parent)
+    - Whale donor → corporate origin links
+    
+    Run after graph_rebuild_job when graph data is fresh.
+    """,
+    selection=AssetSelection.keys(
+        "employer_clusters",
+        "canonical_employers",
+        "wikidata_corporate_resolution",
+    ),
+    tags={
+        "team": "data-engineering",
+        "pipeline": "enrichment",
+        "priority": "medium",
+    },
+)
+
+# ============================================================================
+# EMPLOYER UNIFICATION JOB - Just employer clustering
+# ============================================================================
+
+employer_unification_job = define_asset_job(
+    name="employer_unification_job",
+    description="Unify employer names using embeddings and Wikidata (no hardcoding)",
+    selection=AssetSelection.keys(
+        "employer_clusters",
+        "canonical_employers",
+    ),
+    tags={
+        "team": "data-engineering",
+        "pipeline": "employer-unification",
+        "priority": "medium",
+    },
+)

@@ -49,17 +49,21 @@ from src.assets import (
     donor_classification_asset,
     committee_financials_asset,
     canonical_employers_asset,
+    employer_clusters_asset,
+    employer_cluster_integration_asset,
+    corporate_hierarchy_asset,
+    wikidata_corporate_resolution,
     
     # Aggregation assets (pre-computed summaries for UI/RAG)
     candidate_summaries_asset,
     committee_summaries_asset,
     donor_summaries_asset,
 )
-from src.jobs import fec_pipeline_job, graph_rebuild_job, raw_data_job
+from src.jobs import fec_pipeline_job, graph_rebuild_job, raw_data_job, enrichment_job, employer_unification_job
 from src.schedules import (
     weekly_pipeline_schedule,
 )
-from src.resources import arango_resource
+from src.resources import arango_resource, EmbeddingResource
 
 # ============================================================================
 # DEFINITIONS
@@ -95,6 +99,10 @@ defs = Definitions(
         donor_classification_asset,
         committee_financials_asset,
         canonical_employers_asset,
+        employer_clusters_asset,
+        employer_cluster_integration_asset,
+        corporate_hierarchy_asset,
+        wikidata_corporate_resolution,
         
         # Aggregation assets (pre-computed summaries)
         candidate_summaries_asset,
@@ -103,11 +111,14 @@ defs = Definitions(
     ],
     resources={
         "arango": arango_resource,
+        "embedding": EmbeddingResource(),
     },
     jobs=[
         fec_pipeline_job,    # Complete pipeline: download → parse → graph
         graph_rebuild_job,   # Rebuild graph only (assumes raw data exists)
         raw_data_job,        # Download and parse only (no graph)
+        enrichment_job,      # Employer unification + Wikidata resolution
+        employer_unification_job,  # Just employer clustering
     ],
     schedules=[
         weekly_pipeline_schedule,   # Full pipeline (download + mapping + aggregation) every Sunday 2 AM

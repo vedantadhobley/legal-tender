@@ -1,0 +1,481 @@
+{
+  "employer_resolutions": {
+    "ULINE": {
+      "name": "ULINE",
+      "canonical": "ULINE",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "SOROS FUND MANAGEMENT LLC": {
+      "name": "SOROS FUND MANAGEMENT",
+      "canonical": "SOROS FUND MANAGEMENT",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "HOMEMAKER": {
+      "name": "HOMEMAKER",
+      "canonical": "HOMEMAKER",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "SIG": {
+      "name": "SIG",
+      "canonical": "SIG",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "ADELSON DRUG CLINIC": {
+      "name": "ADELSON DRUG CLINIC",
+      "canonical": "ADELSON DRUG CLINIC",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "CITADEL INVESTMENT GROUP": {
+      "name": "CITADEL INVESTMENT GROUP",
+      "canonical": "CITADEL INVESTMENT GROUP",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "ADELSON CLINIC": {
+      "name": "ADELSON CLINIC",
+      "canonical": "ADELSON CLINIC",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "BLACKSTONE": {
+      "name": "BLACKSTONE",
+      "canonical": "BLACKSTONE",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "NEA": {
+      "name": "NEA",
+      "canonical": "NEA",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "CITADEL ASSET MANAGEMENT": {
+      "name": "CITADEL ASSET MANAGEMENT",
+      "canonical": "CITADEL ASSET MANAGEMENT",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "AH CAPITAL MANAGEMENT": {
+      "name": "AH CAPITAL MANAGEMENT",
+      "canonical": "AH CAPITAL MANAGEMENT",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "EMC": {
+      "name": "EMC",
+      "canonical": "EMC",
+      "relationship": "parent",
+      "wikidata_id": "Q13575015",
+      "source": "wikidata"
+    },
+    "CORPORATION": {
+      "name": "CORPORATION",
+      "canonical": "CORPORATION",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "ASANA": {
+      "name": "ASANA",
+      "canonical": "ASANA",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "FAHR, LLC": {
+      "name": "FAHR,",
+      "canonical": "FAHR,",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "BLOOMBERG INC.": {
+      "name": "BLOOMBERG",
+      "canonical": "BLOOMBERG",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "ASANA INC": {
+      "name": "ASANA",
+      "canonical": "ASANA",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "FTX": {
+      "name": "FTX",
+      "canonical": "FTX",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "THE VENETIAN": {
+      "name": "THE VENETIAN",
+      "canonical": "THE VENETIAN",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "LONE PINE CAPITAL": {
+      "name": "LONE PINE CAPITAL",
+      "canonical": "LONE PINE CAPITAL",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "ORACLE CORPORATION": {
+      "name": "ORACLE",
+      "canonical": "ORACLE",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "RENAISSANCE TECHNOLOGIES": {
+      "name": "RENAISSANCE TECHNOLOGIES",
+      "canonical": "RENAISSANCE TECHNOLOGIES",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "RYAN SPECIALTY GROUP": {
+      "name": "RYAN SPECIALTY GROUP",
+      "canonical": "RYAN SPECIALTY GROUP",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "LAS VEGAS SANDS CORPORATION": {
+      "name": "LAS VEGAS SANDS",
+      "canonical": "LAS VEGAS SANDS",
+      "relationship": "self",
+      "source": "not_found"
+    },
+    "THE BLACKSTONE GROUP": {
+      "name": "THE BLACKSTONE GROUP",
+      "canonical": "THE BLACKSTONE GROUP",
+      "relationship": "self",
+      "source": "not_found"
+    }
+  },
+  "whale_resolutions": {
+    "MELLON, TIMOTHY": {
+      "search_name": "Timothy Mellon",
+      "companies": [
+        {
+          "name": "Pan Am Systems",
+          "relationship": "founded",
+          "wikidata_id": "Q7129582"
+        },
+        {
+          "name": "Pan Am Systems",
+          "relationship": "employed_by",
+          "wikidata_id": "Q7129582"
+        },
+        {
+          "name": "Pan Am Railways",
+          "relationship": "founded",
+          "wikidata_id": "Q2048811"
+        }
+      ],
+      "total": 43230200
+    },
+    "STEYER, TOM": {
+      "search_name": "Tom Steyer",
+      "companies": [
+        {
+          "name": "Farallon Capital",
+          "relationship": "founded",
+          "wikidata_id": "Q3066773"
+        },
+        {
+          "name": "Farallon Capital",
+          "relationship": "employed_by",
+          "wikidata_id": "Q3066773"
+        },
+        {
+          "name": "Morgan Stanley",
+          "relationship": "employed_by",
+          "wikidata_id": "Q334204"
+        },
+        {
+          "name": "NextGen America",
+          "relationship": "founded",
+          "wikidata_id": "Q30324899"
+        },
+        {
+          "name": "Goldman Sachs",
+          "relationship": "employed_by",
+          "wikidata_id": "Q193326"
+        },
+        {
+          "name": "Advanced Energy Economy",
+          "relationship": "founded",
+          "wikidata_id": "Q4686341"
+        }
+      ],
+      "total": 58692314
+    },
+    "EYCHANER, FRED": {
+      "search_name": "Fred Eychaner",
+      "companies": [
+        {
+          "name": "Newsweb",
+          "relationship": "founded",
+          "wikidata_id": "Q7019888"
+        }
+      ],
+      "total": 41008500
+    },
+    "KOUM, JAN": {
+      "search_name": "Jan Koum",
+      "companies": [
+        {
+          "name": "WhatsApp LLC",
+          "relationship": "founded",
+          "wikidata_id": "Q52410688"
+        }
+      ],
+      "total": 27604644
+    },
+    "RAMASWAMY, VIVEK": {
+      "search_name": "Vivek Ramaswamy",
+      "companies": [
+        {
+          "name": "Axovant Sciences",
+          "relationship": "founded",
+          "wikidata_id": "Q20311716"
+        },
+        {
+          "name": "Roivant",
+          "relationship": "founded",
+          "wikidata_id": "Q53308720"
+        },
+        {
+          "name": "Roivant",
+          "relationship": "employed_by",
+          "wikidata_id": "Q53308720"
+        }
+      ],
+      "total": 25875255
+    },
+    "BIGELOW, ROBERT T.": {
+      "search_name": "Robert Bigelow",
+      "companies": [
+        {
+          "name": "Skinwalker Ranch",
+          "relationship": "owns",
+          "wikidata_id": "Q7535626"
+        },
+        {
+          "name": "Bigelow Aerospace",
+          "relationship": "founded",
+          "wikidata_id": "Q859635"
+        },
+        {
+          "name": "Bigelow Aerospace",
+          "relationship": "employed_by",
+          "wikidata_id": "Q859635"
+        },
+        {
+          "name": "Budget Suites of America",
+          "relationship": "founded",
+          "wikidata_id": "Q2927546"
+        }
+      ],
+      "total": 20000500
+    },
+    "SHANAHAN, NICOLE": {
+      "search_name": "Nicole Shanahan",
+      "companies": [
+        {
+          "name": "Bia-Echo Foundation",
+          "relationship": "founded",
+          "wikidata_id": "Q131935263"
+        }
+      ],
+      "total": 16855358
+    },
+    "SIMON, DEBORAH": {
+      "search_name": "Deborah Simon",
+      "companies": [
+        {
+          "name": "Simon Youth Foundation",
+          "relationship": "founded",
+          "wikidata_id": "Q7520092"
+        }
+      ],
+      "total": 15049685
+    },
+    "BIGELOW, ROBERT T": {
+      "search_name": "Robert Bigelow",
+      "companies": [
+        {
+          "name": "Skinwalker Ranch",
+          "relationship": "owns",
+          "wikidata_id": "Q7535626"
+        },
+        {
+          "name": "Bigelow Aerospace",
+          "relationship": "founded",
+          "wikidata_id": "Q859635"
+        },
+        {
+          "name": "Bigelow Aerospace",
+          "relationship": "employed_by",
+          "wikidata_id": "Q859635"
+        },
+        {
+          "name": "Budget Suites of America",
+          "relationship": "founded",
+          "wikidata_id": "Q2927546"
+        }
+      ],
+      "total": 15000000
+    },
+    "PERLMUTTER, ISAAC (IKE)": {
+      "search_name": "Isaac Perlmutter",
+      "companies": [
+        {
+          "name": "Marvel Entertainment",
+          "relationship": "employed_by",
+          "wikidata_id": "Q1200552"
+        }
+      ],
+      "total": 12551540
+    },
+    "SIMON, DEBORAH J.": {
+      "search_name": "Deborah Simon",
+      "companies": [
+        {
+          "name": "Simon Youth Foundation",
+          "relationship": "founded",
+          "wikidata_id": "Q7520092"
+        }
+      ],
+      "total": 10298500
+    },
+    "LIVINGSTON, JESSICA": {
+      "search_name": "Jessica Livingston",
+      "companies": [
+        {
+          "name": "Y Combinator",
+          "relationship": "founded",
+          "wikidata_id": "Q2616400"
+        },
+        {
+          "name": "Y Combinator",
+          "relationship": "employed_by",
+          "wikidata_id": "Q2616400"
+        }
+      ],
+      "total": 10003300
+    },
+    "BUNTROCK, DEAN L.": {
+      "search_name": "Dean Buntrock",
+      "companies": [
+        {
+          "name": "Waste Management, Inc",
+          "relationship": "founded",
+          "wikidata_id": "Q2552219"
+        }
+      ],
+      "total": 5623300
+    },
+    "BLOOMBERG, MICHAEL": {
+      "search_name": "Michael Bloomberg",
+      "companies": [
+        {
+          "name": "Salomon Brothers",
+          "relationship": "employed_by",
+          "wikidata_id": "Q2034767"
+        },
+        {
+          "name": "Willett Advisors",
+          "relationship": "founded",
+          "wikidata_id": "Q42393368"
+        },
+        {
+          "name": "Bloomberg IP Holdings LLC",
+          "relationship": "founded",
+          "wikidata_id": "Q31122925"
+        },
+        {
+          "name": "Bloomberg Philanthropies",
+          "relationship": "founded",
+          "wikidata_id": "Q16987920"
+        },
+        {
+          "name": "Bloomberg Television",
+          "relationship": "owns",
+          "wikidata_id": "Q13975"
+        },
+        {
+          "name": "Bloomberg L.P.",
+          "relationship": "owns",
+          "wikidata_id": "Q13977"
+        },
+        {
+          "name": "Bloomberg L.P.",
+          "relationship": "founded",
+          "wikidata_id": "Q13977"
+        }
+      ],
+      "total": 5500000
+    },
+    "MARCUS, BERNARD": {
+      "search_name": "Bernard Marcus",
+      "companies": [
+        {
+          "name": "Israel Democracy Institute",
+          "relationship": "founded",
+          "wikidata_id": "Q12406716"
+        },
+        {
+          "name": "The Home Depot",
+          "relationship": "founded",
+          "wikidata_id": "Q864407"
+        }
+      ],
+      "total": 5347450
+    },
+    "LAUFER, HENRY": {
+      "search_name": "Henry Laufer",
+      "companies": [
+        {
+          "name": "Renaissance Technologies",
+          "relationship": "employed_by",
+          "wikidata_id": "Q3424738"
+        }
+      ],
+      "total": 5284500
+    },
+    "SINQUEFIELD, REX A": {
+      "search_name": "Rex Sinquefield",
+      "companies": [
+        {
+          "name": "Saint Louis Chess Club",
+          "relationship": "founded",
+          "wikidata_id": "Q17084738"
+        },
+        {
+          "name": "Show-Me Institute",
+          "relationship": "founded",
+          "wikidata_id": "Q7502890"
+        },
+        {
+          "name": "Dimensional Fund Advisors",
+          "relationship": "founded",
+          "wikidata_id": "Q3028075"
+        }
+      ],
+      "total": 4862200
+    },
+    "SCHUSTERMAN, LYNN": {
+      "search_name": "Lynn Schusterman",
+      "companies": [
+        {
+          "name": "Charles and Lynn Schusterman Family Philanthropies",
+          "relationship": "founded",
+          "wikidata_id": "Q110287206"
+        }
+      ],
+      "total": 4428600
+    }
+  },
+  "generated_at": "2026-01-13 13:01:18"
+}
