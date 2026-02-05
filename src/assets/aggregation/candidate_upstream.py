@@ -18,10 +18,15 @@ For individuals, we further break down:
 The key insight: Money flows through passthrough committees (JFCs, conduits).
 We trace BACKWARDS from candidate to find the ORIGINAL source.
 
+OUTPUT STRUCTURE:
+- funding_by_cycle: {cycle: {Five Pies data}} - Per-election cycle breakdown
+- funding_aggregate: {Five Pies data} - Combined across all cycles
+- by_organization: [{org data}] - Aggregated view by organization
+
 Output: candidates collection updated with 'funding_sources' field.
 """
 
-from typing import Dict, Any, List, Set
+from typing import Dict, Any, List, Set, Optional
 from datetime import datetime
 from collections import defaultdict
 
@@ -38,6 +43,9 @@ PASSTHROUGH_TYPES = {"passthrough", "unknown", "super_pac_unclassified"}
 
 # Conduit patterns to filter from individual donors
 CONDUIT_PATTERNS = ["WINRED", "ACTBLUE", "EARMARK", "CONDUIT", "UNITEMIZED"]
+
+# Election cycles to process
+CYCLES = ["2020", "2022", "2024"]
 
 
 class CandidateUpstreamConfig(Config):
@@ -145,41 +153,62 @@ def candidate_upstream_asset(
             donor_info[d['_key']] = d
         context.log.info(f"   Loaded {len(donor_info):,} whale donors ($10K+)")
         
-        # Transfer edges: to_cmte -> [(from_cmte, amount), ...]
-        transfer_edges = defaultdict(list)
+        # Transfer edges BY CYCLE: cycle -> to_cmte -> [(from_cmte, amount), ...]
+        transfer_edges_by_cycle = {cycle: defaultdict(list) for cycle in CYCLES}
+        transfer_edges_all = defaultdict(list)  # Aggregate
         for e in db.aql.execute("FOR e IN transferred_to RETURN e"):
             to_cmte = e['_to'].split('/')[1]
             from_cmte = e['_from'].split('/')[1]
-            transfer_edges[to_cmte].append((from_cmte, e.get('total_amount', 0) or 0))
-        context.log.info(f"   Loaded {sum(len(v) for v in transfer_edges.values()):,} transfer edges")
+            amount = e.get('total_amount', 0) or 0
+            cycle = e.get('cycle', '2024')
+            if cycle in CYCLES:
+                transfer_edges_by_cycle[cycle][to_cmte].append((from_cmte, amount))
+            transfer_edges_all[to_cmte].append((from_cmte, amount))
+        context.log.info(f"   Loaded transfer edges by cycle: " + 
+                        ", ".join(f"{c}={sum(len(v) for v in transfer_edges_by_cycle[c].values()):,}" for c in CYCLES))
         
-        # Contribution edges: cmte -> [(donor_key, amount), ...]
-        contrib_edges = defaultdict(list)
+        # Contribution edges BY CYCLE: cycle -> cmte -> [(donor_key, amount), ...]
+        contrib_edges_by_cycle = {cycle: defaultdict(list) for cycle in CYCLES}
+        contrib_edges_all = defaultdict(list)  # Aggregate
         for e in db.aql.execute("FOR e IN contributed_to RETURN e"):
             to_cmte = e['_to'].split('/')[1]
             donor_key = e['_from'].split('/')[1]
-            contrib_edges[to_cmte].append((donor_key, e.get('total_amount', 0) or 0))
-        context.log.info(f"   Loaded {sum(len(v) for v in contrib_edges.values()):,} contribution edges")
+            amount = e.get('total_amount', 0) or 0
+            cycle = e.get('cycle', '2024')
+            if cycle in CYCLES:
+                contrib_edges_by_cycle[cycle][to_cmte].append((donor_key, amount))
+            contrib_edges_all[to_cmte].append((donor_key, amount))
+        context.log.info(f"   Loaded contribution edges by cycle: " +
+                        ", ".join(f"{c}={sum(len(v) for v in contrib_edges_by_cycle[c].values()):,}" for c in CYCLES))
         
-        # IE spending: candidate -> {support: [(cmte, amount)], oppose: [(cmte, amount)]}
-        ie_by_candidate = defaultdict(lambda: {'support': [], 'oppose': []})
+        # IE spending BY CYCLE: cycle -> candidate -> {support: [(cmte, amount)], oppose: [(cmte, amount)]}
+        ie_by_cycle = {cycle: defaultdict(lambda: {'support': [], 'oppose': []}) for cycle in CYCLES}
+        ie_all = defaultdict(lambda: {'support': [], 'oppose': []})  # Aggregate
         for e in db.aql.execute("""
             FOR e IN spent_on
             RETURN {
                 cand_id: SPLIT(e._to, '/')[1],
                 cmte_id: SPLIT(e._from, '/')[1],
                 amount: e.total_amount,
-                support_oppose: e.support_oppose
+                support_oppose: e.support_oppose,
+                cycle: e.cycle
             }
         """):
             cand_id = e['cand_id']
             cmte_id = e['cmte_id']
             amount = e['amount'] or 0
+            cycle = e.get('cycle', '2024')
+            
             if e['support_oppose'] == 'S':
-                ie_by_candidate[cand_id]['support'].append((cmte_id, amount))
+                if cycle in CYCLES:
+                    ie_by_cycle[cycle][cand_id]['support'].append((cmte_id, amount))
+                ie_all[cand_id]['support'].append((cmte_id, amount))
             else:
-                ie_by_candidate[cand_id]['oppose'].append((cmte_id, amount))
-        context.log.info(f"   Loaded IEs for {len(ie_by_candidate):,} candidates")
+                if cycle in CYCLES:
+                    ie_by_cycle[cycle][cand_id]['oppose'].append((cmte_id, amount))
+                ie_all[cand_id]['oppose'].append((cmte_id, amount))
+        context.log.info(f"   Loaded IE data by cycle: " +
+                        ", ".join(f"{c}={len(ie_by_cycle[c]):,} cands" for c in CYCLES))
         
         # ================================================================
         # PHASE 2: Helper function - trace upstream from a committee
@@ -194,10 +223,18 @@ def candidate_upstream_asset(
         
         def trace_committee_sources(
             start_cmte_ids: List[str],
+            contrib_edges: Dict,
+            transfer_edges: Dict,
             multiplier: float = 1.0
         ) -> Dict[str, Any]:
             """
             Trace backwards from committees to find terminal sources.
+            
+            Args:
+                start_cmte_ids: List of committee IDs to trace from
+                contrib_edges: Dict of cmte_id -> [(donor_key, amount), ...]
+                transfer_edges: Dict of cmte_id -> [(from_cmte_id, amount), ...]
+                multiplier: Attribution multiplier
             
             Returns:
             {
@@ -297,7 +334,11 @@ def candidate_upstream_asset(
             
             return results
         
-        def trace_ie_corporate_sources(ie_data: List[tuple]) -> Dict[str, Any]:
+        def trace_ie_corporate_sources(
+            ie_data: List[tuple],
+            contrib_edges: Dict,
+            transfer_edges: Dict
+        ) -> Dict[str, Any]:
             """
             Trace IE spending back to corporate sources.
             
@@ -306,6 +347,8 @@ def candidate_upstream_asset(
             
             Args:
                 ie_data: List of (cmte_id, ie_amount) tuples
+                contrib_edges: Dict of cmte_id -> [(donor_key, amount), ...]
+                transfer_edges: Dict of cmte_id -> [(from_cmte_id, amount), ...]
                 
             Returns:
             {
@@ -380,41 +423,23 @@ def candidate_upstream_asset(
             return results
 
         # ================================================================
-        # PHASE 3: Process each candidate
+        # PHASE 3: Five Pies computation function
         # ================================================================
-        context.log.info("👤 Phase 3: Processing candidates...")
         
-        candidates = list(db.aql.execute("""
-            FOR c IN candidates
-                LET affiliated_cmtes = (
-                    FOR v, e IN INBOUND c affiliated_with
-                    RETURN v._key
-                )
-                FILTER LENGTH(affiliated_cmtes) > 0
-                RETURN {
-                    _key: c._key,
-                    name: c.CAND_NAME,
-                    party: c.CAND_PTY_AFFILIATION,
-                    office: c.CAND_OFFICE,
-                    state: c.CAND_OFFICE_ST,
-                    cmte_ids: affiliated_cmtes
-                }
-        """))
-        context.log.info(f"   Found {len(candidates):,} candidates with committees")
-        
-        stats = {
-            'candidates_processed': 0,
-            'candidates_with_funding': 0,
-        }
-        
-        batch_updates = []
-        
-        for cand in candidates:
-            cand_key = cand['_key']
-            cmte_ids = cand['cmte_ids']
+        def compute_five_pies(
+            cmte_ids: List[str],
+            cand_key: str,
+            contrib_edges: Dict,
+            transfer_edges: Dict,
+            ie_data: Dict,  # {'support': [(cmte, amt)], 'oppose': [(cmte, amt)]}
+        ) -> Optional[Dict[str, Any]]:
+            """
+            Compute Five Pies for a candidate given cycle-specific edges.
             
+            Returns the funding_sources dict or None if no funding.
+            """
             # Trace direct funding
-            sources = trace_committee_sources(cmte_ids, multiplier=1.0)
+            sources = trace_committee_sources(cmte_ids, contrib_edges, transfer_edges, multiplier=1.0)
             
             # Compute totals
             corp_total = sum(sources['corporations'].values())
@@ -446,57 +471,41 @@ def candidate_upstream_asset(
             independent_total = indiv_total - corp_connected_total
             
             # Get IE data
-            ie_support_data = ie_by_candidate.get(cand_key, {}).get('support', [])
-            ie_oppose_data = ie_by_candidate.get(cand_key, {}).get('oppose', [])
+            ie_support_data = ie_data.get('support', [])
+            ie_oppose_data = ie_data.get('oppose', [])
             ie_support_total = sum(amt for _, amt in ie_support_data)
             ie_oppose_total = sum(amt for _, amt in ie_oppose_data)
             
             # Trace IE funding to corporate sources
-            ie_support_sources = trace_ie_corporate_sources(ie_support_data) if ie_support_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
-            ie_oppose_sources = trace_ie_corporate_sources(ie_oppose_data) if ie_oppose_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
+            ie_support_sources = trace_ie_corporate_sources(ie_support_data, contrib_edges, transfer_edges) if ie_support_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
+            ie_oppose_sources = trace_ie_corporate_sources(ie_oppose_data, contrib_edges, transfer_edges) if ie_oppose_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
             
-            # ================================================================
-            # BUILD BY-ORGANIZATION VIEW (The True Five Pies)
-            # Aggregate all funding methods per organization
-            # ================================================================
+            # Build by-organization view
             by_org = defaultdict(lambda: {
-                'direct_pac': 0,        # Corporate PAC donations
-                'direct_employees': 0,  # Employee donations
-                'ie_support': 0,        # IE spending FOR the candidate
-                'ie_oppose': 0,         # IE spending AGAINST the candidate
-                # 'lobbying': 0,        # Future: lobbying spend
+                'direct_pac': 0,
+                'direct_employees': 0,
+                'ie_support': 0,
+                'ie_oppose': 0,
                 'total': 0,
             })
             
-            # 1. Corporate PAC direct donations
             for corp_name, amount in sources['corporations'].items():
                 by_org[corp_name]['direct_pac'] += amount
                 by_org[corp_name]['total'] += amount
-            
-            # 2. Trade association PAC donations (treat as their own org)
             for assoc_name, amount in sources['trade_associations'].items():
                 by_org[assoc_name]['direct_pac'] += amount
                 by_org[assoc_name]['total'] += amount
-            
-            # 3. Labor union PAC donations
             for union_name, amount in sources['labor_unions'].items():
                 by_org[union_name]['direct_pac'] += amount
                 by_org[union_name]['total'] += amount
-            
-            # 4. Employee donations (corporate-connected individuals)
             for company, data in corp_connected.items():
                 by_org[company]['direct_employees'] += data['amount']
                 by_org[company]['total'] += data['amount']
-            
-            # 5. IE Support corporate attribution
             for corp_name, amount in ie_support_sources['by_corporation'].items():
                 by_org[corp_name]['ie_support'] += amount
                 by_org[corp_name]['total'] += amount
-            
-            # 6. IE Oppose corporate attribution
             for corp_name, amount in ie_oppose_sources['by_corporation'].items():
                 by_org[corp_name]['ie_oppose'] += amount
-                # Note: IE oppose is NOT added to total (it's against the candidate)
             
             # Direct funding total (excludes IEs)
             direct_total = corp_total + trade_total + labor_total + ideological_total + coop_total + indiv_total
@@ -505,12 +514,9 @@ def candidate_upstream_asset(
             total_funding = direct_total + ie_support_total
             
             if total_funding <= 0:
-                stats['candidates_processed'] += 1
-                continue
+                return None
             
-            stats['candidates_with_funding'] += 1
-            
-            # Build funding sources object
+            # Helper functions
             def top_sources(d: Dict[str, float], n: int) -> List[Dict]:
                 sorted_items = sorted(d.items(), key=lambda x: -x[1])[:n]
                 return [{'name': k, 'amount': v} for k, v in sorted_items if v >= config.min_amount]
@@ -523,13 +529,12 @@ def candidate_upstream_asset(
                     'top_donors': sorted(v['donors'], key=lambda x: -x['amount'])[:5]
                 } for k, v in sorted_items if v['amount'] >= config.min_amount]
             
-            funding_sources = {
+            return {
                 'total_funding': total_funding,
                 'direct_funding': direct_total,
                 'ie_support': ie_support_total,
                 'ie_oppose': ie_oppose_total,
                 
-                # The Five Pies
                 'corporations': {
                     'total': corp_total,
                     'pct': (corp_total / total_funding * 100) if total_funding > 0 else 0,
@@ -551,7 +556,6 @@ def candidate_upstream_asset(
                     'top': top_sources(sources['ideological'], config.top_n_sources),
                 },
                 
-                # Individuals with corporate breakdown
                 'individuals': {
                     'total': indiv_total,
                     'pct': (indiv_total / total_funding * 100) if total_funding > 0 else 0,
@@ -567,7 +571,6 @@ def candidate_upstream_asset(
                     },
                 },
                 
-                # IE breakdown with corporate attribution
                 'ie': {
                     'support': {
                         'total': ie_support_total,
@@ -576,7 +579,6 @@ def candidate_upstream_asset(
                             for c, amt in sorted(ie_support_data, key=lambda x: -x[1])[:10]
                             if amt >= config.min_amount
                         ],
-                        # WHO funded those PACs (traced to corporations)
                         'by_corporation': top_sources(ie_support_sources['by_corporation'], config.top_n_sources),
                         'by_pac': top_sources(ie_support_sources['by_pac'], 10),
                     },
@@ -587,16 +589,11 @@ def candidate_upstream_asset(
                             for c, amt in sorted(ie_oppose_data, key=lambda x: -x[1])[:10]
                             if amt >= config.min_amount
                         ],
-                        # WHO funded those PACs (traced to corporations)
                         'by_corporation': top_sources(ie_oppose_sources['by_corporation'], config.top_n_sources),
                         'by_pac': top_sources(ie_oppose_sources['by_pac'], 10),
                     },
                 },
                 
-                # ========================================================
-                # BY ORGANIZATION - The True Five Pies
-                # Each organization with breakdown by funding method
-                # ========================================================
                 'by_organization': sorted(
                     [
                         {
@@ -605,16 +602,105 @@ def candidate_upstream_asset(
                             'direct_employees': data['direct_employees'],
                             'ie_support': data['ie_support'],
                             'ie_oppose': data['ie_oppose'],
-                            'total_pro': data['total'],  # Total supporting the candidate
+                            'total_pro': data['total'],
                             'total_against': data['ie_oppose'],
                         }
                         for org_name, data in by_org.items()
                         if data['total'] >= config.min_amount or data['ie_oppose'] >= config.min_amount
                     ],
                     key=lambda x: -x['total_pro'],
-                )[:50],  # Top 50 organizations by total pro-candidate funding
+                )[:50],
+            }
+
+        # ================================================================
+        # PHASE 4: Process each candidate
+        # ================================================================
+        context.log.info("👤 Phase 4: Processing candidates...")
+        
+        candidates = list(db.aql.execute("""
+            FOR c IN candidates
+                LET affiliated_cmtes = (
+                    FOR v, e IN INBOUND c affiliated_with
+                    RETURN v._key
+                )
+                FILTER LENGTH(affiliated_cmtes) > 0
+                RETURN {
+                    _key: c._key,
+                    name: c.CAND_NAME,
+                    party: c.CAND_PTY_AFFILIATION,
+                    office: c.CAND_OFFICE,
+                    state: c.CAND_OFFICE_ST,
+                    cmte_ids: affiliated_cmtes
+                }
+        """))
+        context.log.info(f"   Found {len(candidates):,} candidates with committees")
+        
+        stats = {
+            'candidates_processed': 0,
+            'candidates_with_funding': 0,
+        }
+        
+        batch_updates = []
+        
+        for cand in candidates:
+            cand_key = cand['_key']
+            cmte_ids = cand['cmte_ids']
+            
+            # ============================================================
+            # Compute Five Pies PER CYCLE
+            # ============================================================
+            funding_by_cycle = {}
+            
+            for cycle in CYCLES:
+                cycle_ie = ie_by_cycle[cycle].get(cand_key, {'support': [], 'oppose': []})
+                cycle_pies = compute_five_pies(
+                    cmte_ids=cmte_ids,
+                    cand_key=cand_key,
+                    contrib_edges=contrib_edges_by_cycle[cycle],
+                    transfer_edges=transfer_edges_by_cycle[cycle],
+                    ie_data=cycle_ie,
+                )
+                if cycle_pies:
+                    funding_by_cycle[cycle] = cycle_pies
+            
+            # ============================================================
+            # Compute AGGREGATE Five Pies (all cycles combined)
+            # ============================================================
+            aggregate_ie = ie_all.get(cand_key, {'support': [], 'oppose': []})
+            funding_aggregate = compute_five_pies(
+                cmte_ids=cmte_ids,
+                cand_key=cand_key,
+                contrib_edges=contrib_edges_all,
+                transfer_edges=transfer_edges_all,
+                ie_data=aggregate_ie,
+            )
+            
+            # Skip if no funding at all
+            if not funding_aggregate and not funding_by_cycle:
+                stats['candidates_processed'] += 1
+                continue
+            
+            stats['candidates_with_funding'] += 1
+            
+            # Build the full funding_sources document
+            funding_sources = {
+                # Per-cycle breakdown
+                'by_cycle': funding_by_cycle,
+                
+                # Aggregate across all cycles
+                'aggregate': funding_aggregate,
+                
+                # Convenience fields from aggregate
+                'total_funding': funding_aggregate['total_funding'] if funding_aggregate else 0,
+                'direct_funding': funding_aggregate['direct_funding'] if funding_aggregate else 0,
+                'ie_support': funding_aggregate['ie_support'] if funding_aggregate else 0,
+                'ie_oppose': funding_aggregate['ie_oppose'] if funding_aggregate else 0,
+                
+                # Top-level by_organization (from aggregate)
+                'by_organization': funding_aggregate['by_organization'] if funding_aggregate else [],
                 
                 'computed_at': datetime.now().isoformat(),
+                'cycles_available': list(funding_by_cycle.keys()),
             }
             
             batch_updates.append({
@@ -640,9 +726,9 @@ def candidate_upstream_asset(
             """, bind_vars={"batch": batch_updates})
         
         # ================================================================
-        # PHASE 4: Validation
+        # PHASE 5: Validation
         # ================================================================
-        context.log.info("✅ Phase 4: Validation...")
+        context.log.info("✅ Phase 5: Validation...")
         
         # Check Ted Cruz
         cruz = list(db.aql.execute("""
@@ -658,22 +744,26 @@ def candidate_upstream_asset(
         if cruz and cruz[0].get('fs'):
             fs = cruz[0]['fs']
             context.log.info(f"\n🎯 Validation - {cruz[0]['name']}:")
-            context.log.info(f"   Total funding: ${fs['total_funding']:,.0f}")
-            context.log.info(f"\n   FIVE PIES:")
-            context.log.info(f"   - Corporations: ${fs['corporations']['total']:,.0f} ({fs['corporations']['pct']:.1f}%)")
-            context.log.info(f"   - Trade Assocs: ${fs['trade_associations']['total']:,.0f} ({fs['trade_associations']['pct']:.1f}%)")
-            context.log.info(f"   - Labor Unions: ${fs['labor_unions']['total']:,.0f} ({fs['labor_unions']['pct']:.1f}%)")
-            context.log.info(f"   - Ideological:  ${fs['ideological']['total']:,.0f} ({fs['ideological']['pct']:.1f}%)")
-            context.log.info(f"   - Individuals:  ${fs['individuals']['total']:,.0f} ({fs['individuals']['pct']:.1f}%)")
-            context.log.info(f"     - Corp-connected: ${fs['individuals']['corporate_connected']['total']:,.0f}")
-            context.log.info(f"     - Independent:    ${fs['individuals']['independent']['total']:,.0f}")
-            context.log.info(f"   - IE Support:   ${fs['ie']['support']['total']:,.0f}")
-            context.log.info(f"   - IE Oppose:    ${fs['ie']['oppose']['total']:,.0f}")
+            context.log.info(f"   Cycles available: {fs.get('cycles_available', [])}")
+            context.log.info(f"   Total funding (aggregate): ${fs['total_funding']:,.0f}")
             
-            if fs['corporations']['top']:
-                context.log.info(f"\n   Top Corporate PACs:")
-                for c in fs['corporations']['top'][:5]:
-                    context.log.info(f"     - {c['name']}: ${c['amount']:,.0f}")
+            # Show aggregate data
+            if fs.get('aggregate'):
+                agg = fs['aggregate']
+                context.log.info(f"\n   AGGREGATE FIVE PIES:")
+                context.log.info(f"   - Corporations: ${agg['corporations']['total']:,.0f} ({agg['corporations']['pct']:.1f}%)")
+                context.log.info(f"   - Trade Assocs: ${agg['trade_associations']['total']:,.0f} ({agg['trade_associations']['pct']:.1f}%)")
+                context.log.info(f"   - Labor Unions: ${agg['labor_unions']['total']:,.0f} ({agg['labor_unions']['pct']:.1f}%)")
+                context.log.info(f"   - Ideological:  ${agg['ideological']['total']:,.0f} ({agg['ideological']['pct']:.1f}%)")
+                context.log.info(f"   - Individuals:  ${agg['individuals']['total']:,.0f} ({agg['individuals']['pct']:.1f}%)")
+                context.log.info(f"   - IE Support:   ${agg['ie']['support']['total']:,.0f}")
+                context.log.info(f"   - IE Oppose:    ${agg['ie']['oppose']['total']:,.0f}")
+            
+            # Show per-cycle totals
+            if fs.get('by_cycle'):
+                context.log.info(f"\n   BY CYCLE:")
+                for cycle, data in sorted(fs['by_cycle'].items()):
+                    context.log.info(f"   - {cycle}: ${data['total_funding']:,.0f} total")
         
         context.log.info(f"\n📊 Summary:")
         context.log.info(f"   Candidates processed: {stats['candidates_processed']:,}")
