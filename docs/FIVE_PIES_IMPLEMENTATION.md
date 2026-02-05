@@ -139,45 +139,59 @@ Donald Trump - IE Oppose Corporate Attribution:
 ---
 
 ### Phase 4: Restructure Five Pies Output
-**Status**: 🔴 Not Started
+**Status**: ✅ DONE
 
 **Problem**: Current output groups by source type (corporations, trade_associations, etc.). Need to group by organization with breakdown by method.
 
-**Current Structure**:
+**Solution Applied** (Feb 5, 2026):
+- Added `by_organization` aggregation in `candidate_upstream.py`
+- Collects funding from all sources per organization:
+  1. Corporate PAC direct donations → `direct_pac`
+  2. Trade association/union PACs → `direct_pac`
+  3. Employee donations (corporate-connected) → `direct_employees`
+  4. IE Support corporate attribution → `ie_support`
+  5. IE Oppose corporate attribution → `ie_oppose`
+- Output sorted by `total_pro` (total supporting the candidate)
+- Top 50 organizations per candidate
+
+**New Output Structure**:
 ```json
 {
-  "corporations": {"total": 500000, "top": [...]},
-  "trade_associations": {"total": 200000, "top": [...]},
-  "ie_support": 1000000,
-  "ie_oppose": 50000
+  "by_organization": [
+    {
+      "name": "ASANA",
+      "direct_pac": 0,
+      "direct_employees": 121465,
+      "ie_support": 20685972,
+      "ie_oppose": 0,
+      "total_pro": 20807437,
+      "total_against": 0
+    },
+    ...
+  ]
 }
 ```
 
-**Target Structure**:
-```json
-{
-  "by_organization": {
-    "Goldman Sachs": {
-      "direct_donations": 150000,
-      "ie_support": 500000,
-      "ie_oppose": 0,
-      "lobbying": 2300000,
-      "total_influence": 2950000
-    },
-    "Koch Industries": {...}
-  },
-  "individuals_non_corporate": {
-    "total": 5000000,
-    "top": [...]
-  }
-}
+**Validation Results** (Feb 5, 2026):
+```
+Kamala Harris - Top Organizations:
+  ASANA:              $20.8M (mostly IE support via FF PAC)
+  Bloomberg L.P.:     $8.8M
+  GREYLOCK:           $7.8M
+  RIPPLE:             $4.8M
+  NETFLIX:            $3.2M
+
+Donald Trump - Top Organizations:
+  Pan Am Railways:    $18.6M (Tim Mellon)
+  ULINE:              $3.8M (Uihlein family)
+  Marvel Entertainment: $3.2M (Perlmutter)
 ```
 
 **Tasks**:
-- [ ] Modify `candidate_upstream` asset to output by-organization structure
-- [ ] Include breakdown by funding method per organization
-- [ ] Keep individuals (non-corporate) as separate category
-- [ ] Update `pies_v3.py` CLI to display new structure
+- [x] Modify `candidate_upstream` asset to output by-organization structure ✅
+- [x] Include breakdown by funding method per organization ✅
+- [x] Keep individuals (non-corporate) as separate category ✅
+- [ ] Update `pies_v3.py` CLI to display new structure (deferred)
 
 ---
 

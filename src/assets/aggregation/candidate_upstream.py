@@ -455,6 +455,49 @@ def candidate_upstream_asset(
             ie_support_sources = trace_ie_corporate_sources(ie_support_data) if ie_support_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
             ie_oppose_sources = trace_ie_corporate_sources(ie_oppose_data) if ie_oppose_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
             
+            # ================================================================
+            # BUILD BY-ORGANIZATION VIEW (The True Five Pies)
+            # Aggregate all funding methods per organization
+            # ================================================================
+            by_org = defaultdict(lambda: {
+                'direct_pac': 0,        # Corporate PAC donations
+                'direct_employees': 0,  # Employee donations
+                'ie_support': 0,        # IE spending FOR the candidate
+                'ie_oppose': 0,         # IE spending AGAINST the candidate
+                # 'lobbying': 0,        # Future: lobbying spend
+                'total': 0,
+            })
+            
+            # 1. Corporate PAC direct donations
+            for corp_name, amount in sources['corporations'].items():
+                by_org[corp_name]['direct_pac'] += amount
+                by_org[corp_name]['total'] += amount
+            
+            # 2. Trade association PAC donations (treat as their own org)
+            for assoc_name, amount in sources['trade_associations'].items():
+                by_org[assoc_name]['direct_pac'] += amount
+                by_org[assoc_name]['total'] += amount
+            
+            # 3. Labor union PAC donations
+            for union_name, amount in sources['labor_unions'].items():
+                by_org[union_name]['direct_pac'] += amount
+                by_org[union_name]['total'] += amount
+            
+            # 4. Employee donations (corporate-connected individuals)
+            for company, data in corp_connected.items():
+                by_org[company]['direct_employees'] += data['amount']
+                by_org[company]['total'] += data['amount']
+            
+            # 5. IE Support corporate attribution
+            for corp_name, amount in ie_support_sources['by_corporation'].items():
+                by_org[corp_name]['ie_support'] += amount
+                by_org[corp_name]['total'] += amount
+            
+            # 6. IE Oppose corporate attribution
+            for corp_name, amount in ie_oppose_sources['by_corporation'].items():
+                by_org[corp_name]['ie_oppose'] += amount
+                # Note: IE oppose is NOT added to total (it's against the candidate)
+            
             # Direct funding total (excludes IEs)
             direct_total = corp_total + trade_total + labor_total + ideological_total + coop_total + indiv_total
             
@@ -549,6 +592,27 @@ def candidate_upstream_asset(
                         'by_pac': top_sources(ie_oppose_sources['by_pac'], 10),
                     },
                 },
+                
+                # ========================================================
+                # BY ORGANIZATION - The True Five Pies
+                # Each organization with breakdown by funding method
+                # ========================================================
+                'by_organization': sorted(
+                    [
+                        {
+                            'name': org_name,
+                            'direct_pac': data['direct_pac'],
+                            'direct_employees': data['direct_employees'],
+                            'ie_support': data['ie_support'],
+                            'ie_oppose': data['ie_oppose'],
+                            'total_pro': data['total'],  # Total supporting the candidate
+                            'total_against': data['ie_oppose'],
+                        }
+                        for org_name, data in by_org.items()
+                        if data['total'] >= config.min_amount or data['ie_oppose'] >= config.min_amount
+                    ],
+                    key=lambda x: -x['total_pro'],
+                )[:50],  # Top 50 organizations by total pro-candidate funding
                 
                 'computed_at': datetime.now().isoformat(),
             }
