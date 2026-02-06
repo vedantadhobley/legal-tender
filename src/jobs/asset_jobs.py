@@ -93,3 +93,108 @@ raw_data_job = define_asset_job(
         "priority": "medium",
     },
 )
+
+# ============================================================================
+# ENRICHMENT JOB - Committee classification and financials
+# ============================================================================
+
+enrichment_job = define_asset_job(
+    name="enrichment_job",
+    description="""
+    Enrich graph data with:
+    - Committee classification (terminal types)
+    - Donor classification (whale tiers)
+    - Committee receipt totals from raw FEC (fixes small donor gap)
+    - Canonical employer grouping (name normalization)
+    - Embedding-based employer clustering
+    - Cluster integration (merge typo variations)
+    - Wikidata corporate resolution (parent companies, whale-corporate links)
+    - Corporate hierarchy (subsidiary relationships)
+    
+    Run after graph_rebuild_job when graph data is fresh.
+    
+    Dependency order for employer enrichment:
+      canonical_employers -> employer_clusters -> employer_cluster_integration 
+                                                           -> wikidata_corporate_resolution -> corporate_hierarchy
+    """,
+    selection=AssetSelection.keys(
+        "committee_classification",
+        "donor_classification",
+        "committee_receipts",
+        "committee_financials",
+        "canonical_employers",
+        "employer_clusters",
+        "employer_cluster_integration",
+        "wikidata_corporate_resolution",
+        "corporate_hierarchy",
+    ),
+    tags={
+        "team": "data-engineering",
+        "pipeline": "enrichment",
+        "priority": "medium",
+    },
+)
+
+# ============================================================================
+# AGGREGATION JOB - Pre-computed summaries for UI/RAG
+# ============================================================================
+
+aggregation_job = define_asset_job(
+    name="aggregation_job",
+    description="""
+    Compute pre-aggregated summaries:
+    - Candidate upstream funding ("pie chart" - where money comes from)
+    - Candidate summaries (top donors, funding breakdown)
+    - Committee summaries
+    - Donor summaries
+    
+    Run after enrichment_job for accurate data.
+    """,
+    selection=AssetSelection.keys(
+        "candidate_upstream",
+        "candidate_summaries",
+        "committee_summaries",
+        "donor_summaries",
+    ),
+    tags={
+        "team": "data-engineering",
+        "pipeline": "aggregation",
+        "priority": "medium",
+    },
+)
+
+# ============================================================================
+# UPSTREAM JOB - Just rebuild upstream funding (fast refresh)
+# ============================================================================
+
+upstream_job = define_asset_job(
+    name="upstream_job",
+    description="Rebuild candidate upstream funding only (requires committee_receipts)",
+    selection=AssetSelection.keys(
+        "committee_receipts",
+        "candidate_upstream",
+    ),
+    tags={
+        "team": "data-engineering",
+        "pipeline": "upstream-only",
+        "priority": "high",
+    },
+)
+
+# ============================================================================
+# EMPLOYER UNIFICATION JOB - Just employer clustering
+# ============================================================================
+
+employer_unification_job = define_asset_job(
+    name="employer_unification_job",
+    description="Unify employer names using embeddings and Wikidata (no hardcoding)",
+    selection=AssetSelection.keys(
+        "employer_clusters",
+        "canonical_employers",
+    ),
+    tags={
+        "team": "data-engineering",
+        "pipeline": "employer-unification",
+        "priority": "medium",
+    },
+)

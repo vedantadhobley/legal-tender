@@ -1,30 +1,27 @@
-"""Legal Tender - Congressional influence tracking and analysis.
+"""Legal Tender - FEC political money flow analysis via Dagster + ArangoDB.
 
-This package contains the Dagster definitions for orchestrating data pipelines
-that track political donations, congressional voting, and lobbying activity.
+Pipeline Layers:
+  1. Sync     → Download FEC bulk files
+  2. FEC      → Parse into fec_YYYY databases  
+  3. Graph    → Build vertices & edges in aggregation DB
+  4. Enrich   → Classify committees, resolve employers via Wikidata
+  5. Aggregate → Compute "Five Pies" funding summaries
 
-Architecture:
-- Assets: 
-  * sync/ → Data synchronization (downloads all FEC files)
-  * fec/ → Raw FEC bulk data parsers (→ fec_YYYY databases) - ALL CONVERTED TO ARANGODB
-  * mapping/ → ID mapping assets (→ aggregation database) - CONVERTED TO ARANGODB
-  * graph/ → Graph vertices and edges (→ aggregation database) - NEW GRAPH LAYER
-  * enrichment/ → Derived fields and classifications
-- Jobs: One main pipeline job (fec_pipeline_job)
-- Resources: ArangoDB for graph data storage
-- Schedules: Weekly automated refresh
+Jobs:
+  - fec_pipeline_job    → Full refresh (sync → fec → graph)
+  - enrichment_job      → Classification + Wikidata resolution
+  - aggregation_job     → Five Pies funding summaries
+  - upstream_job        → Quick Five Pies refresh only
 
-Data Flow:
-  FEC.gov bulk files → fec_2024 (raw) → aggregation.donors (normalized) → aggregation.contributed_to (edges)
-                    → fec_2026 (raw) → aggregation.employers (normalized) → political_money_flow (graph)
+See docs/PIPELINE.md for full architecture documentation.
 """
 
 from dagster import Definitions
 from src.assets import (
-    # Data sync
+    # Layer 1: Sync (downloads FEC bulk files)
     data_sync_asset,
     
-    # FEC parsers (raw data → fec_YYYY databases) - ALL Converted to ArangoDB
+    # Layer 2: FEC parsers (raw → fec_YYYY databases)
     cn_asset,
     cm_asset,
     ccl_asset,
@@ -32,44 +29,57 @@ from src.assets import (
     oth_asset,
     indiv_asset,
     
-    # Mapping assets (ID mapping → aggregation database) - Converted to ArangoDB
+    # Layer 2.5: Mapping (congress API → aggregation)
     member_fec_mapping_asset,
     
-    # Graph assets (vertices + edges → aggregation database)
+    # Layer 3: Graph (vertices + edges → aggregation)
     donors_asset,
     employers_asset,
     contributed_to_asset,
     transferred_to_asset,
     affiliated_with_asset,
     employed_by_asset,
+    spent_on_asset,
     political_money_graph_asset,
     
-    # Enrichment assets (classifications + derived fields)
+    # Layer 4: Enrichment (classification + Wikidata)
     committee_classification_asset,
     donor_classification_asset,
     committee_financials_asset,
+    committee_receipts_asset,
+    canonical_employers_asset,
+    employer_clusters_asset,
+    employer_cluster_integration_asset,
+    corporate_hierarchy_asset,
+    wikidata_corporate_resolution,
     
-    # Aggregation assets (pre-computed summaries for UI/RAG)
+    # Layer 5: Aggregation (Five Pies summaries)
     candidate_summaries_asset,
     committee_summaries_asset,
     donor_summaries_asset,
+    candidate_upstream_asset,
 )
-from src.jobs import fec_pipeline_job, graph_rebuild_job, raw_data_job
+from src.jobs import (
+    fec_pipeline_job,        # Full refresh: sync → fec → graph
+    graph_rebuild_job,       # Rebuild graph only (no download)
+    raw_data_job,            # Download + parse only
+    enrichment_job,          # Classification + Wikidata
+    aggregation_job,         # Five Pies summaries
+    upstream_job,            # Quick Five Pies refresh
+    employer_unification_job,  # Just employer clustering
+)
 from src.schedules import (
     weekly_pipeline_schedule,
 )
-from src.resources import arango_resource
+from src.resources import arango_resource, EmbeddingResource
 
-# ============================================================================
-# DEFINITIONS
-# ============================================================================
-
+# Dagster Definitions
 defs = Definitions(
     assets=[
-        # Data sync (downloads all files)
+        # Layer 1: Sync
         data_sync_asset,
         
-        # FEC raw data parsers (→ fec_YYYY databases) - ALL Converted to ArangoDB
+        # Layer 2: FEC parsers
         cn_asset,
         cm_asset,
         ccl_asset,
@@ -77,37 +87,50 @@ defs = Definitions(
         oth_asset,
         indiv_asset,
         
-        # Mapping assets (ID mapping → aggregation database) - Converted to ArangoDB
+        # Layer 2.5: Mapping
         member_fec_mapping_asset,
         
-        # Graph assets (vertices + edges → aggregation database)
+        # Layer 3: Graph
         donors_asset,
         employers_asset,
         contributed_to_asset,
         transferred_to_asset,
         affiliated_with_asset,
         employed_by_asset,
+        spent_on_asset,
         political_money_graph_asset,
         
-        # Enrichment assets
+        # Layer 4: Enrichment
         committee_classification_asset,
         donor_classification_asset,
         committee_financials_asset,
+        committee_receipts_asset,
+        canonical_employers_asset,
+        employer_clusters_asset,
+        employer_cluster_integration_asset,
+        corporate_hierarchy_asset,
+        wikidata_corporate_resolution,
         
-        # Aggregation assets (pre-computed summaries)
+        # Layer 5: Aggregation
         candidate_summaries_asset,
         committee_summaries_asset,
         donor_summaries_asset,
+        candidate_upstream_asset,
     ],
     resources={
         "arango": arango_resource,
+        "embedding": EmbeddingResource(),
     },
     jobs=[
-        fec_pipeline_job,    # Complete pipeline: download → parse → graph
-        graph_rebuild_job,   # Rebuild graph only (assumes raw data exists)
-        raw_data_job,        # Download and parse only (no graph)
+        fec_pipeline_job,
+        graph_rebuild_job,
+        raw_data_job,
+        enrichment_job,
+        aggregation_job,
+        upstream_job,
+        employer_unification_job,
     ],
     schedules=[
-        weekly_pipeline_schedule,   # Full pipeline (download + mapping + aggregation) every Sunday 2 AM
+        weekly_pipeline_schedule,
     ],
 )

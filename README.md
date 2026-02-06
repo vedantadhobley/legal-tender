@@ -1,179 +1,176 @@
-# Legal Tender: Political Money Flow Analysis
+# Legal Tender
 
-**Follow the money. Map the influence. Expose the connections.**
+**Track political money from source to candidate.**
 
-Legal Tender builds a graph database of political money flows, enabling queries like:
+Legal Tender builds a graph database of political campaign finance, enabling queries like:
 
-> "Show me where Elon Musk's donations went, through how many PACs, and to which candidates."
+> *"Where did Elon Musk's money go, through how many PACs, to which candidates?"*
 
----
+```
+DONOR → PAC → PAC → PAC → CANDIDATE
+  └─────────── trace the full path ───────────┘
+```
 
 ## Quick Start
 
 ```bash
-# Start services
+# Start all services
 docker compose -f docker-compose.dev.yml up -d
 
 # Access UIs
-# Dagster Pipeline: http://localhost:4200
-# ArangoDB (graph DB): http://localhost:4201 (root/ltpass)
+open http://localhost:4300    # Dagster (pipeline orchestration)
+open http://localhost:4301    # ArangoDB (graph database) - root/ltpass
 ```
 
-**First Run**: Materialize assets in Dagster UI (takes ~30-45 minutes for full pipeline)
+## The Five Pies
 
-**Subsequent Runs**: Graph rebuilds in ~5 minutes from cached raw data
+Every candidate's funding breaks down into **five sources**:
 
----
-
-## What's In The Database?
-
-| Collection | Type | Count | Description |
-|------------|------|-------|-------------|
-| **donors** | Vertex | 287,744 | Individuals who gave $10K+ |
-| **employers** | Vertex | 82,046 | Companies with donating employees |
-| **committees** | Vertex | 30,840 | PACs, Super PACs, campaigns |
-| **candidates** | Vertex | 15,635 | Federal election candidates |
-| **contributed_to** | Edge | 3,340,147 | Donor → Committee donations |
-| **transferred_to** | Edge | 654,530 | Committee → Committee transfers |
-| **affiliated_with** | Edge | 22,808 | Committee → Candidate links |
-| **employed_by** | Edge | 147,810 | Donor → Employer relationships |
-
-**Raw Data**: ~191 million individual contribution records across 2020-2024 cycles.
-
----
-
-## Example Queries
-
-### Trace money from a donor to candidates
-
-```aql
-FOR v, e, p IN 1..5 OUTBOUND "donors/MUSK_ELON_TESLA"
-  GRAPH "political_money_flow"
-  FILTER IS_SAME_COLLECTION("candidates", v)
-  RETURN {
-    candidate: v.CAND_NAME,
-    hops: LENGTH(p.edges),
-    path: p.vertices[*].CMTE_NM
-  }
+```mermaid
+pie title "Funding Sources"
+    "Corporations" : 35
+    "Trade Associations" : 20
+    "Labor Unions" : 15
+    "Ideological PACs" : 10
+    "Individuals" : 20
 ```
 
-### Find who funds a politician
-
-```aql
-FOR v, e, p IN 1..5 INBOUND "candidates/P00009423"  -- Trump
-  GRAPH "political_money_flow"
-  LET source = FIRST(p.vertices)
-  COLLECT type = PARSE_IDENTIFIER(source._id).collection
-  AGGREGATE total = SUM(e.total_amount)
-  RETURN { type, total }
-```
-
-### Corporate influence analysis
-
-```aql
-FOR donor IN 1..1 INBOUND "employers/GOOGLE_LLC" employed_by
-  FOR v, e, p IN 1..5 OUTBOUND donor GRAPH "political_money_flow"
-    FILTER IS_SAME_COLLECTION("candidates", v)
-    COLLECT candidate = v.CAND_NAME INTO donations
-    RETURN { candidate, total: SUM(donations[*].e.total_amount) }
-```
-
----
+The system traces money **backwards** through any number of PAC transfers to find the **terminal source** - the entity that originally provided the funds.
 
 ## Architecture
 
-```
-FEC Website (fec.gov)
-       │
-       ▼ Download
-┌─────────────────────────────────────────┐
-│     Raw FEC Files (ZIP)                 │
-│     cn, cm, ccl, indiv, pas2, oth       │
-└─────────────────────────────────────────┘
-       │
-       ▼ Parse (Dagster assets)
-┌─────────────────────────────────────────┐
-│     ArangoDB: fec_2020, fec_2022, ...   │
-│     ~191M records (raw data)            │
-└─────────────────────────────────────────┘
-       │
-       ▼ Build Graph
-┌─────────────────────────────────────────┐
-│     ArangoDB: aggregation               │
-│     Vertices + Edges + Named Graph      │
-│     "political_money_flow"              │
-└─────────────────────────────────────────┘
-       │
-       ▼ Query (AQL traversals)
-┌─────────────────────────────────────────┐
-│     Your Application                     │
-│     "Click politician → See funders"    │
-└─────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Sources
+        FEC[FEC.gov Bulk Data]
+        WIKI[Wikidata API]
+    end
+
+    subgraph Dagster Pipeline
+        SYNC[data_sync] --> RAW[Raw Parsers<br/>cn, cm, ccl, pas2, oth, indiv]
+        RAW --> GRAPH[Graph Builder<br/>donors, employers, edges]
+        GRAPH --> ENRICH[Enrichment<br/>classification, wikidata]
+        ENRICH --> AGG[Aggregation<br/>Five Pies, summaries]
+    end
+
+    subgraph ArangoDB
+        FEC_DB[(fec_2020<br/>fec_2022<br/>fec_2024)]
+        AGG_DB[(aggregation<br/>graph + enriched)]
+    end
+
+    FEC --> SYNC
+    WIKI --> ENRICH
+    RAW --> FEC_DB
+    GRAPH --> AGG_DB
+    ENRICH --> AGG_DB
+    AGG --> AGG_DB
 ```
 
----
+## Data Pipeline
+
+### Jobs
+
+| Job | Purpose | When to Use |
+|-----|---------|-------------|
+| `fec_pipeline_job` | Full refresh: download → parse → graph → enrich → aggregate | Weekly (scheduled) |
+| `enrichment_job` | Run all enrichments (classification, Wikidata, clustering) | After graph changes |
+| `aggregation_job` | Compute Five Pies and summaries | After enrichment |
+| `upstream_job` | Just refresh Five Pies funding sources | Quick update |
+
+### Run a Job
+
+```bash
+# Via Dagster UI
+open http://localhost:4300
+# Navigate to Jobs → Select job → Launch Run
+
+# Via CLI
+docker compose -f docker-compose.dev.yml exec dagster-webserver \
+  dagster job execute -m src -j enrichment_job
+```
+
+## Database Schema
+
+### ArangoDB Collections
+
+**Vertices (Entities)**
+| Collection | Count | Description |
+|------------|-------|-------------|
+| `candidates` | ~15K | Federal candidates |
+| `committees` | ~30K | PACs, Super PACs, campaigns |
+| `donors` | ~5M | Individual/organization donors |
+| `employers` | ~500K | Employer names |
+| `canonical_employers` | ~75K | Normalized employer groups |
+| `corporate_families` | ~1K | Corporate hierarchies |
+
+**Edges (Relationships)**
+| Collection | Count | Description |
+|------------|-------|-------------|
+| `contributed_to` | ~5M | Donor → Committee |
+| `transferred_to` | ~2M | Committee → Committee |
+| `affiliated_with` | ~30K | Committee → Candidate |
+| `employed_by` | ~5M | Donor → Employer |
+| `spent_on` | ~200K | Independent expenditures |
+| `subsidiary_of` | ~500 | Company → Parent |
+
+### Graph Traversal
+
+```aql
+-- Trace money from donor to all candidates
+FOR v, e, p IN 1..5 OUTBOUND "donors/MUSK_ELON"
+    GRAPH "political_money_flow"
+    FILTER IS_SAME_COLLECTION("candidates", v)
+    RETURN {
+        candidate: v.CAND_NAME,
+        path_length: LENGTH(p.edges),
+        via: p.vertices[1].CMTE_NM
+    }
+```
+
+## Employer Resolution
+
+The pipeline normalizes employer names and links them to corporate families:
+
+```mermaid
+flowchart LR
+    RAW[GOOGLE LLC<br/>GOOGLE INC<br/>ALPHABET] --> NORM[canonical_employers]
+    NORM --> WIKI[Wikidata Resolution]
+    WIKI --> FAM[corporate_families<br/>ALPHABET]
+    WIKI --> SUB[subsidiary_of<br/>GOOGLE → ALPHABET]
+```
+
+This enables queries like:
+> "How much did **all Alphabet employees** give to Democrats?"
+
+## Query CLI
+
+```bash
+# Show Five Pies for a candidate
+./query.sh --candidate "Ted Cruz" --pies
+
+# By FEC ID
+./query.sh --fec S2TX00312 --pies
+```
 
 ## Documentation
 
-📖 **[Full Architecture Guide](docs/ARCHITECTURE.md)** - Comprehensive documentation including:
-- Graph database concepts (for SQL/MongoDB users)
-- Complete schema with examples
-- Query patterns for UI integration
-- Development workflow
+- [Pipeline Details](docs/PIPELINE.md) - Full asset dependency graph and data flow
+- [FEC Data Reference](docs/FEC.md) - FEC bulk file schemas
 
-📖 **[FEC Data Reference](docs/FEC.md)** - FEC file formats and field definitions
+## Development
 
----
+```bash
+# View logs
+docker compose -f docker-compose.dev.yml logs -f dagster-webserver
 
-## Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Graph Database | ArangoDB 3.11 |
-| Pipeline Orchestration | Dagster |
-| Runtime | Python 3.11 |
-| Containers | Docker Compose |
-
----
-
-## Project Structure
-
+# Check job status
+docker compose -f docker-compose.dev.yml exec dagster-webserver python3 -c "
+from dagster import DagsterInstance
+instance = DagsterInstance.get()
+for r in list(instance.get_runs(limit=5)):
+    print(f'{r.run_id[:8]} | {r.job_name:20} | {r.status.name}')
+"
 ```
-src/
-├── assets/
-│   ├── sync/           # data_sync - downloads FEC files
-│   ├── fec/            # cn, cm, ccl, indiv, pas2, oth parsers
-│   ├── graph/          # Vertex & edge builders
-│   └── mapping/        # Congress member → FEC ID mapping
-├── models/             # Pydantic models for graph entities
-├── resources/          # ArangoDB connection
-└── utils/              # Helpers (memory, schema, storage)
-```
-
----
-
-## Why Graph Database?
-
-**SQL/MongoDB**: Tracing 5 hops of money requires 5+ queries with manual joins.
-
-**Graph DB**: One query traverses all paths regardless of depth:
-
-```aql
-FOR v, e, p IN 1..UNLIMITED OUTBOUND "donors/X" GRAPH "political_money_flow"
-  RETURN p
-```
-
-The database handles traversal internally - that's what it's optimized for.
-
----
-
-## Data Sources
-
-- **FEC Bulk Data**: Campaign finance records (fec.gov)
-- **Congress API**: Legislator information
-- **Election cycles**: 2020, 2022, 2024
-
----
 
 ## License
 

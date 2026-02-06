@@ -15,7 +15,7 @@ set -e
 
 # ArangoDB connection settings
 ARANGO_HOST="${ARANGO_HOST:-localhost}"
-ARANGO_PORT="${ARANGO_PORT:-4201}"
+ARANGO_PORT="${ARANGO_PORT:-4301}"
 ARANGO_USER="${ARANGO_USER:-root}"
 ARANGO_PASS="${ARANGO_PASS:-ltpass}"
 
@@ -79,7 +79,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Environment variables:"
             echo "  ARANGO_HOST        ArangoDB host (default: localhost)"
-            echo "  ARANGO_PORT        ArangoDB port (default: 4201)"
+            echo "  ARANGO_PORT        ArangoDB port (default: 4301)"
             echo "  ARANGO_USER        ArangoDB user (default: root)"
             echo "  ARANGO_PASS        ArangoDB password (default: ltpass)"
             exit 0

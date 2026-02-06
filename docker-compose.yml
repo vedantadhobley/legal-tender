@@ -1,9 +1,9 @@
 # Production Docker Compose for Legal Tender
 #
-# Port allocation: legal-tender uses 3200-3209 (production)
-#   3200: Dagster UI
-#   3201: ArangoDB Web UI
-#   3202: (reserved)
+# Port allocation: legal-tender uses 3300-3309 (production)
+#   3300: Dagster UI
+#   3301: ArangoDB Web UI
+#   3302: (reserved)
 #
 # Internal ports (not exposed to host):
 #   - postgres:5432 (Dagster metadata)
@@ -30,7 +30,7 @@ services:
     container_name: legal-tender-prod-webserver
     command: dagster-webserver -h 0.0.0.0 -p 3000 -w /app/workspace.yaml
     ports:
-      - "3200:3000"  # Dagster UI
+      - "3300:3000"  # Dagster UI
     env_file:
       - .env
     environment:
@@ -132,7 +132,7 @@ services:
     image: arangodb:3.11
     container_name: legal-tender-prod-arango
     ports:
-      - "3201:8529"  # ArangoDB Web UI
+      - "3301:8529"  # ArangoDB Web UI
     environment:
       ARANGO_ROOT_PASSWORD: ltpass
     volumes:
