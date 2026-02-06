@@ -1,8 +1,8 @@
 # Development Docker Compose for Legal Tender
 #
-# Port allocation: legal-tender uses 4200-4209 (dev)
-#   4200: Dagster UI
-#   4201: ArangoDB Web UI
+# Port allocation: legal-tender uses 4300-4309 (dev)
+#   4300: Dagster UI
+#   4301: ArangoDB Web UI
 #
 # Internal ports (not exposed to host):
 #   - postgres:5432 (Dagster metadata)
@@ -28,7 +28,7 @@ services:
     container_name: legal-tender-dev-webserver
     command: dagster dev -h 0.0.0.0 -p 3000 -w /workspace/workspace.yaml
     ports:
-      - "4200:3000"  # Dagster UI
+      - "4300:3000"  # Dagster UI
     env_file:
       - .env
     environment:
@@ -101,7 +101,7 @@ services:
     image: arangodb:3.11
     container_name: legal-tender-dev-arango
     ports:
-      - "4201:8529"  # ArangoDB Web UI
+      - "4301:8529"  # ArangoDB Web UI
     environment:
       ARANGO_ROOT_PASSWORD: ltpass
       # Limit memory usage - ArangoDB will use disk-based storage

@@ -30,7 +30,7 @@ from src.resources.arango import ArangoDBResource
     description="Pre-compute total_receipts and total_disbursed from edges for each committee.",
     group_name="enrichment",
     compute_kind="enrichment",
-    deps=["contributed_to", "transferred_to"],
+    deps=["contributed_to", "transferred_to", "committee_classification"],  # Must run after classification
 )
 def committee_financials_asset(
     context: AssetExecutionContext,

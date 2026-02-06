@@ -32,6 +32,7 @@ from .graph.contributed_to import contributed_to_asset
 from .graph.transferred_to import transferred_to_asset
 from .graph.affiliated_with import affiliated_with_asset
 from .graph.employed_by import employed_by_asset
+from .graph.spent_on import spent_on_asset
 from .graph.political_money_graph import political_money_graph_asset
 
 # Enrichment Assets (→ aggregation database)
@@ -39,12 +40,19 @@ from .graph.political_money_graph import political_money_graph_asset
 from .enrichment.committee_classification import committee_classification_asset
 from .enrichment.donor_classification import donor_classification_asset
 from .enrichment.committee_financials import committee_financials_asset
+from .enrichment.committee_receipts import committee_receipts_asset
+from .enrichment.canonical_employers import canonical_employers_asset
+from .enrichment.employer_clustering import employer_clusters_asset
+from .enrichment.employer_cluster_integration import employer_cluster_integration_asset
+from .enrichment.corporate_hierarchy import corporate_hierarchy_asset
+from .enrichment.wikidata_resolution import wikidata_corporate_resolution
 
 # Aggregation Assets (→ aggregation database)
 # Pre-computed summaries for UI/RAG:
 from .aggregation.candidate_summaries import candidate_summaries_asset
 from .aggregation.committee_summaries import committee_summaries_asset
 from .aggregation.donor_summaries import donor_summaries_asset
+from .aggregation.candidate_upstream import candidate_upstream_asset
 
 __all__ = [
     # Data sync
@@ -68,15 +76,23 @@ __all__ = [
     "transferred_to_asset",
     "affiliated_with_asset",
     "employed_by_asset",
+    "spent_on_asset",
     "political_money_graph_asset",
     
     # Enrichment assets
     "committee_classification_asset",
     "donor_classification_asset",
     "committee_financials_asset",
+    "committee_receipts_asset",
+    "canonical_employers_asset",
+    "employer_clusters_asset",
+    "employer_cluster_integration_asset",
+    "corporate_hierarchy_asset",
+    "wikidata_corporate_resolution",
     
     # Aggregation assets (pre-computed summaries)
     "candidate_summaries_asset",
     "committee_summaries_asset",
     "donor_summaries_asset",
+    "candidate_upstream_asset",
 ]
