@@ -34,7 +34,7 @@ class CommitteeReceiptsConfig(Config):
     description="Pre-compute ACTUAL committee receipt totals from raw FEC data (not just whale edges).",
     group_name="enrichment",
     compute_kind="enrichment",
-    deps=["indiv", "pas2", "oth", "contributed_to", "committee_financials"],  # Must run after committee_financials
+    deps=["indiv", "pas2", "oth", "contributed_to"],
 )
 def committee_receipts_asset(
     context: AssetExecutionContext,

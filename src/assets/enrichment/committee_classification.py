@@ -37,58 +37,6 @@ from dagster import asset, AssetExecutionContext, MetadataValue, Output
 from src.resources.arango import ArangoDBResource
 
 
-def classify_committee(cmte_tp: str, org_tp: str) -> str:
-    """Classify a committee based on FEC type codes.
-    
-    Returns the terminal_type for the committee.
-    """
-    # Normalize inputs
-    cmte_tp = (cmte_tp or "").upper().strip()
-    org_tp = (org_tp or "").upper().strip()
-    
-    # FIRST: Check CMTE_TP for committee types that are ALWAYS passthrough
-    # regardless of ORG_TP (party committees can have incorrect ORG_TP values)
-    if cmte_tp:
-        # Party committees - ALWAYS passthrough (even if ORG_TP says otherwise)
-        if cmte_tp in ["X", "Y", "Z"]:
-            return "passthrough"
-        
-        # Conduits (WinRed, ActBlue, etc.) - always passthrough
-        if cmte_tp == "V":
-            return "passthrough"
-        
-        # Campaign committees - terminal but represent the candidate, not a funding source
-        if cmte_tp in ["H", "S", "P"]:
-            return "campaign"
-    
-    # SECOND: Check ORG_TP - if present, this tells us the sponsoring organization type
-    if org_tp:
-        if org_tp == "C":
-            return "corporation"
-        elif org_tp == "T":
-            return "trade_association"
-        elif org_tp == "L":
-            return "labor_union"
-        elif org_tp == "M":
-            return "ideological"
-        elif org_tp == "W":
-            return "corporation"  # Corp without stock
-        elif org_tp == "V":
-            return "cooperative"
-    
-    # THIRD: Remaining CMTE_TP classifications (no ORG_TP)
-    if cmte_tp:
-        # Super PACs without ORG_TP - need further classification (LLM in future)
-        if cmte_tp in ["O", "U"]:
-            return "super_pac_unclassified"
-        
-        # Regular PACs without ORG_TP - likely JFCs, victory funds, leadership PACs
-        if cmte_tp in ["N", "Q", "W"]:
-            return "passthrough"
-    
-    return "unknown"
-
-
 @asset(
     name="committee_classification",
     description="Enriches committees with terminal_type for upstream traversal control.",
@@ -121,11 +69,35 @@ def committee_classification_asset(
         type_counts = list(agg_db.aql.execute(count_query))
         context.log.info(f"📊 Found {len(type_counts)} unique type combinations")
         
-        # Build classification mapping
+        # Build classification mapping for logging
         classifications = {}
         for tc in type_counts:
-            key = (tc['cmte_tp'] or '', tc['org_tp'] or '')
-            terminal_type = classify_committee(tc['cmte_tp'], tc['org_tp'])
+            cmte_tp = (tc['cmte_tp'] or '').upper().strip()
+            org_tp = (tc['org_tp'] or '').upper().strip()
+            key = (cmte_tp, org_tp)
+            # Mirror the AQL classification logic for logging
+            if cmte_tp in ('X', 'Y', 'Z', 'V'):
+                terminal_type = 'passthrough'
+            elif cmte_tp in ('H', 'S', 'P'):
+                terminal_type = 'campaign'
+            elif org_tp == 'C':
+                terminal_type = 'corporation'
+            elif org_tp == 'T':
+                terminal_type = 'trade_association'
+            elif org_tp == 'L':
+                terminal_type = 'labor_union'
+            elif org_tp == 'M':
+                terminal_type = 'ideological'
+            elif org_tp == 'W':
+                terminal_type = 'corporation'
+            elif org_tp == 'V':
+                terminal_type = 'cooperative'
+            elif cmte_tp in ('O', 'U'):
+                terminal_type = 'super_pac_unclassified'
+            elif cmte_tp in ('N', 'Q', 'W'):
+                terminal_type = 'passthrough'
+            else:
+                terminal_type = 'unknown'
             classifications[key] = terminal_type
             context.log.info(f"  CMTE_TP={tc['cmte_tp'] or '(empty)'}, ORG_TP={tc['org_tp'] or '(empty)'} → {terminal_type} ({tc['cnt']:,} committees)")
         

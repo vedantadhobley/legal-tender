@@ -24,81 +24,10 @@ Target: aggregation.donors (adds donor_type and whale_tier fields)
 """
 
 from typing import Dict, Any
-import re
 
 from dagster import asset, AssetExecutionContext, MetadataValue, Output
 
 from src.resources.arango import ArangoDBResource
-
-
-def classify_donor(name: str, employer: str, occupation: str) -> str:
-    """Classify a donor as individual or organization.
-    
-    Args:
-        name: Donor name (may be None)
-        employer: Employer name (may be None)
-        occupation: Occupation (may be None)
-        
-    Returns:
-        One of: "individual", "organization", "likely_individual", "unclear"
-    """
-    # Normalize inputs
-    name = (name or "").upper().strip()
-    employer = (employer or "").upper().strip()
-    occupation = (occupation or "").upper().strip()
-    
-    if not name:
-        return "unclear"
-    
-    # Strong organization indicators in name
-    org_patterns = [
-        r'\b(INC|LLC|LLP|CORP|CORPORATION|CO\.?|COMPANY|LIMITED|LTD)\b',
-        r'\b(PAC|COMMITTEE|FUND|FOUNDATION|TRUST|ASSOCIATION|SOCIETY)\b',
-        r'\b(PARTNERS|GROUP|HOLDINGS|CAPITAL|VENTURES|MANAGEMENT)\b',
-        r'\b(UNION|COUNCIL|FEDERATION|COALITION|ALLIANCE)\b',
-    ]
-    for pattern in org_patterns:
-        if re.search(pattern, name):
-            return "organization"
-    
-    # Strong individual indicators
-    individual_patterns = [
-        r'\b(MR|MRS|MS|DR|MD|PHD|JR|SR|III|IV)\b',  # Titles and suffixes
-        r'^[A-Z]+\s+[A-Z]+$',  # FIRSTNAME LASTNAME pattern
-        r',\s*[A-Z]+$',  # LASTNAME, FIRSTNAME pattern
-    ]
-    for pattern in individual_patterns:
-        if re.search(pattern, name):
-            return "individual"
-    
-    # Check occupation field - strong individual indicator
-    individual_occupations = [
-        r'\b(RETIRED|HOMEMAKER|ATTORNEY|LAWYER|PHYSICIAN|DOCTOR|PROFESSOR)\b',
-        r'\b(ENGINEER|CONSULTANT|EXECUTIVE|PRESIDENT|CEO|CFO|VP)\b',
-        r'\b(TEACHER|EDUCATOR|NURSE|ACCOUNTANT|DENTIST|PHARMACIST)\b',
-        r'\b(NOT EMPLOYED|UNEMPLOYED|STUDENT|SELF[\s-]EMPLOYED)\b',
-    ]
-    for pattern in individual_occupations:
-        if re.search(pattern, occupation):
-            return "individual"
-    
-    # If employer is "SELF-EMPLOYED", "RETIRED", or "NOT EMPLOYED" → individual
-    self_employer_patterns = [
-        r'\b(SELF[\s-]EMPLOYED|RETIRED|NOT EMPLOYED|UNEMPLOYED|N/A|NONE)\b'
-    ]
-    for pattern in self_employer_patterns:
-        if re.search(pattern, employer):
-            return "individual"
-    
-    # Has comma in name (likely LASTNAME, FIRSTNAME) → probably individual
-    if ',' in name:
-        return "likely_individual"
-    
-    # Has multiple words but no org indicators → likely individual
-    if len(name.split()) >= 2:
-        return "likely_individual"
-    
-    return "unclear"
 
 
 @asset(

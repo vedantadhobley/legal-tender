@@ -104,29 +104,21 @@ enrichment_job = define_asset_job(
     Enrich graph data with:
     - Committee classification (terminal types)
     - Donor classification (whale tiers)
-    - Committee receipt totals from raw FEC (fixes small donor gap)
+    - Committee receipt totals from raw FEC
     - Canonical employer grouping (name normalization)
-    - Embedding-based employer clustering
-    - Cluster integration (merge typo variations)
     - Wikidata corporate resolution (parent companies, whale-corporate links)
-    - Corporate hierarchy (subsidiary relationships)
     
     Run after graph_rebuild_job when graph data is fresh.
     
     Dependency order for employer enrichment:
-      canonical_employers -> employer_clusters -> employer_cluster_integration 
-                                                           -> wikidata_corporate_resolution -> corporate_hierarchy
+      canonical_employers -> wikidata_corporate_resolution
     """,
     selection=AssetSelection.keys(
         "committee_classification",
         "donor_classification",
         "committee_receipts",
-        "committee_financials",
         "canonical_employers",
-        "employer_clusters",
-        "employer_cluster_integration",
         "wikidata_corporate_resolution",
-        "corporate_hierarchy",
     ),
     tags={
         "team": "data-engineering",
@@ -143,7 +135,7 @@ aggregation_job = define_asset_job(
     name="aggregation_job",
     description="""
     Compute pre-aggregated summaries:
-    - Candidate upstream funding ("pie chart" - where money comes from)
+    - Candidate funding channels (where money comes from, by channel)
     - Candidate summaries (top donors, funding breakdown)
     - Committee summaries
     - Donor summaries
@@ -151,7 +143,7 @@ aggregation_job = define_asset_job(
     Run after enrichment_job for accurate data.
     """,
     selection=AssetSelection.keys(
-        "candidate_upstream",
+        "candidate_funding",
         "candidate_summaries",
         "committee_summaries",
         "donor_summaries",
@@ -169,10 +161,10 @@ aggregation_job = define_asset_job(
 
 upstream_job = define_asset_job(
     name="upstream_job",
-    description="Rebuild candidate upstream funding only (requires committee_receipts)",
+    description="Rebuild candidate funding channels only (requires committee_receipts)",
     selection=AssetSelection.keys(
         "committee_receipts",
-        "candidate_upstream",
+        "candidate_funding",
     ),
     tags={
         "team": "data-engineering",
@@ -181,20 +173,3 @@ upstream_job = define_asset_job(
     },
 )
 
-# ============================================================================
-# EMPLOYER UNIFICATION JOB - Just employer clustering
-# ============================================================================
-
-employer_unification_job = define_asset_job(
-    name="employer_unification_job",
-    description="Unify employer names using embeddings and Wikidata (no hardcoding)",
-    selection=AssetSelection.keys(
-        "employer_clusters",
-        "canonical_employers",
-    ),
-    tags={
-        "team": "data-engineering",
-        "pipeline": "employer-unification",
-        "priority": "medium",
-    },
-)

@@ -201,11 +201,16 @@ def contributed_to_asset(
             context.log.info(f"📊 Processing {cycle} contributions...")
             
             # Aggregate by donor-committee on server
+            # Filter to individuals + candidate self-funding only.
+            # ORG/PAC/COM/CCM/PTY belong in transferred_to (via oth).
+            # CAN = candidate self-funding — still an individual contribution.
             aql = """
             FOR doc IN indiv
+                FILTER doc.ENTITY_TP IN ['IND', 'CAN']
                 FILTER doc.NAME != null AND doc.NAME != ""
                 FILTER doc.CMTE_ID != null
                 FILTER doc.TRANSACTION_AMT != null
+                FILTER NOT REGEX_TEST(doc.NAME, '(ACTBLUE|WINRED|EARMARK|CONDUIT)', true)
                 
                 COLLECT 
                     name = doc.NAME,

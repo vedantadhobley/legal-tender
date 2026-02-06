@@ -134,10 +134,16 @@ def donors_asset(
             context.log.info(f"📊 Processing {cycle} - server-side aggregation...")
             
             # Server-side aggregation - minimal memory footprint
+            # Filter to individuals + candidate self-funding only.
+            # ORG/PAC/COM/CCM/PTY belong in transferred_to (via oth), not donors.
+            # CAN = candidate self-funding — still an individual contribution.
+            # Also exclude conduits (ActBlue, WinRed) which are earmark aggregators.
             aql = """
             FOR doc IN indiv
+                FILTER doc.ENTITY_TP IN ['IND', 'CAN']
                 FILTER doc.NAME != null AND doc.NAME != ""
                 FILTER doc.TRANSACTION_AMT != null
+                FILTER NOT REGEX_TEST(doc.NAME, '(ACTBLUE|WINRED|EARMARK|CONDUIT)', true)
                 COLLECT 
                     name = doc.NAME,
                     employer = (doc.EMPLOYER == null OR doc.EMPLOYER == "") ? "NOT EMPLOYED" : doc.EMPLOYER

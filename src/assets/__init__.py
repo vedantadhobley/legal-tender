@@ -39,12 +39,8 @@ from .graph.political_money_graph import political_money_graph_asset
 # Derived fields and classifications:
 from .enrichment.committee_classification import committee_classification_asset
 from .enrichment.donor_classification import donor_classification_asset
-from .enrichment.committee_financials import committee_financials_asset
 from .enrichment.committee_receipts import committee_receipts_asset
 from .enrichment.canonical_employers import canonical_employers_asset
-from .enrichment.employer_clustering import employer_clusters_asset
-from .enrichment.employer_cluster_integration import employer_cluster_integration_asset
-from .enrichment.corporate_hierarchy import corporate_hierarchy_asset
 from .enrichment.wikidata_resolution import wikidata_corporate_resolution
 
 # Aggregation Assets (→ aggregation database)
@@ -52,7 +48,7 @@ from .enrichment.wikidata_resolution import wikidata_corporate_resolution
 from .aggregation.candidate_summaries import candidate_summaries_asset
 from .aggregation.committee_summaries import committee_summaries_asset
 from .aggregation.donor_summaries import donor_summaries_asset
-from .aggregation.candidate_upstream import candidate_upstream_asset
+from .aggregation.candidate_upstream import candidate_funding_asset
 
 __all__ = [
     # Data sync
@@ -82,17 +78,13 @@ __all__ = [
     # Enrichment assets
     "committee_classification_asset",
     "donor_classification_asset",
-    "committee_financials_asset",
     "committee_receipts_asset",
     "canonical_employers_asset",
-    "employer_clusters_asset",
-    "employer_cluster_integration_asset",
-    "corporate_hierarchy_asset",
     "wikidata_corporate_resolution",
     
     # Aggregation assets (pre-computed summaries)
     "candidate_summaries_asset",
     "committee_summaries_asset",
     "donor_summaries_asset",
-    "candidate_upstream_asset",
+    "candidate_funding_asset",
 ]
