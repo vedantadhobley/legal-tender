@@ -96,17 +96,22 @@ Located at: `src/assets/aggregation/candidate_upstream.py`
 
 ---
 
-## Dead Code Assessment
+## Dead Code Cleanup (Feb 6, 2026)
 
-### 🗑️ Can Be Deleted
+### 🗑️ Deleted
 
 | Path | Reason |
 |------|--------|
-| `src/cli/pies.py` | Superseded by `candidate_upstream` asset. Was CLI-only, not Dagster. |
-| `src/cli/pies_v2.py` | Same - intermediate version, no longer needed. |
-| `src/cli/pies_v3.py` | Useful for debugging but duplicates asset logic. **Keep for now as debug tool.** |
-| `src/utils/upstream.py` | Standalone tracer, logic moved into `candidate_upstream.py`. Only self-references. |
-| `scripts/_deprecated/*` | Already marked deprecated. Contains old fix scripts. |
+| `src/cli/pies.py` | Superseded by `candidate_upstream` asset. |
+| `src/cli/pies_v2.py` | Intermediate version, superseded. |
+| `src/utils/upstream.py` | Logic moved into `candidate_upstream.py`. |
+| `scripts/_deprecated/*` | Old fix scripts, no longer needed. |
+
+### ✅ Kept
+
+| Path | Reason |
+|------|--------|
+| `src/cli/pies_v3.py` | Debug tool for ad-hoc queries. |
 
 ### ⚠️ Review Before Deleting
 
@@ -144,11 +149,11 @@ Located at: `src/assets/aggregation/candidate_upstream.py`
 
 ## Next Steps
 
-1. **Run the asset** - `dagster asset materialize --select candidate_upstream -m src`
-2. **Validate output** - Check Cruz, Harris, McConnell data makes sense
-3. **Clean up dead code** - Delete `pies.py`, `pies_v2.py`, `upstream.py`
-4. **Document API** - How frontend should query `candidate_funding` collection
-5. **Lobbying integration** - Phase 3 when ready
+1. ~~**Run the asset**~~ ✅ Done - 11,796 candidates, 4,879 with funding
+2. ~~**Validate output**~~ ✅ Done - Harris, Trump, Cruz, McConnell all verified
+3. ~~**Clean up dead code**~~ ✅ Done - Deleted pies.py, pies_v2.py, upstream.py, deprecated scripts
+4. **Document API** - How frontend should query `candidates.funding_sources`
+5. **Lobbying integration** - Create asset for Senate LDA API
 
 ---
 
