@@ -105,19 +105,28 @@ enrichment_job = define_asset_job(
     - Committee classification (terminal types)
     - Donor classification (whale tiers)
     - Committee receipt totals from raw FEC (fixes small donor gap)
+    - Canonical employer grouping (name normalization)
     - Embedding-based employer clustering
-    - Wikidata corporate resolution
+    - Cluster integration (merge typo variations)
+    - Wikidata corporate resolution (parent companies, whale-corporate links)
+    - Corporate hierarchy (subsidiary relationships)
     
     Run after graph_rebuild_job when graph data is fresh.
+    
+    Dependency order for employer enrichment:
+      canonical_employers -> employer_clusters -> employer_cluster_integration 
+                                                           -> wikidata_corporate_resolution -> corporate_hierarchy
     """,
     selection=AssetSelection.keys(
         "committee_classification",
         "donor_classification",
         "committee_receipts",
         "committee_financials",
-        "employer_clusters",
         "canonical_employers",
+        "employer_clusters",
+        "employer_cluster_integration",
         "wikidata_corporate_resolution",
+        "corporate_hierarchy",
     ),
     tags={
         "team": "data-engineering",

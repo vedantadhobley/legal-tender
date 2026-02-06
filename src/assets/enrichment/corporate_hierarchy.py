@@ -144,7 +144,7 @@ def _find_parent_via_name_similarity(
 
 @asset(
     name="corporate_hierarchy",
-    deps=["employer_cluster_integration"],
+    deps=["employer_cluster_integration", "wikidata_corporate_resolution"],
     description="Build corporate parent/subsidiary relationships for upstream tracing",
     group_name="enrichment",
     compute_kind="graph",

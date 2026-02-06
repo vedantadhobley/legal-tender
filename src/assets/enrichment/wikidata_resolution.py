@@ -65,8 +65,8 @@ class WikidataResolutionConfig(Config):
         description="Whether to use cached Wikidata resolutions"
     )
     live_queries: bool = Field(
-        default=False,
-        description="Whether to make live Wikidata queries for cache misses (slow, rate-limited)"
+        default=True,
+        description="Whether to make live Wikidata queries for cache misses (rate-limited at 1 req/sec)"
     )
 
 
@@ -96,7 +96,7 @@ def _save_cache(cache: Dict[str, Any]) -> None:
 
 
 @asset(
-    deps=["employers", "donors"],
+    deps=["canonical_employers", "donors"],
     description="Resolve employers and whales to canonical corporate entities using Wikidata",
     group_name="enrichment",
     compute_kind="external_api",
@@ -120,6 +120,10 @@ def wikidata_corporate_resolution(
     - First checks wikidata_cache.json for pre-fetched resolutions
     - Only makes live Wikidata queries if live_queries=True
     - Updates cache with any new resolutions
+    
+    NOTE: This asset depends on canonical_employers (not raw employers) to:
+    - Reduce Wikidata queries by using pre-grouped employer names
+    - Get accurate totals from the canonical employer aggregation
     """
     from src.rag.employer_normalization import normalize_employer_name, NON_EMPLOYERS
     
@@ -158,25 +162,28 @@ def wikidata_corporate_resolution(
         # =====================================================================
         # PHASE 1: Resolve employers to parent companies
         # =====================================================================
-        context.log.info("Phase 1: Resolving employers to parent companies...")
+        context.log.info("Phase 1: Resolving canonical employers to parent companies...")
         
+        # Query canonical_employers (pre-grouped by canonical_employers asset)
+        # This gives us ~75K canonical employers instead of millions of raw records
         employers = list(db.aql.execute("""
-            FOR e IN employers
-            FILTER e.total_from_employees >= @min_amount
-            SORT e.total_from_employees DESC
+            FOR ce IN canonical_employers
+            FILTER ce.total_from_employees >= @min_amount
+            SORT ce.total_from_employees DESC
             LIMIT @max_employers
             RETURN {
-                _key: e._key,
-                name: e.name,
-                total: e.total_from_employees,
-                donor_count: e.employee_donor_count
+                _key: ce._key,
+                name: ce.canonical_name,
+                total: ce.total_from_employees,
+                donor_count: ce.employee_count,
+                aliases: ce.aliases
             }
         """, bind_vars={
             "min_amount": config.min_employer_amount,
             "max_employers": config.max_employers
         }))
         
-        context.log.info(f"  Found {len(employers)} employers with ${config.min_employer_amount:,}+ donations")
+        context.log.info(f"  Found {len(employers)} canonical employers with ${config.min_employer_amount:,}+ donations")
         
         for emp in employers:
             name = emp['name']
@@ -327,6 +334,7 @@ def wikidata_corporate_resolution(
                             'donor_key': whale['_key'],
                             'donor_name': name,
                             'company_name': company['name'],
+                            'canonical_name': company['name'],  # For consistency with employer_canonical_mapping
                             'relationship': company.get('relationship', 'unknown'),
                             'wikidata_id': company.get('wikidata_id'),
                             'amount': whale['total'],
@@ -420,6 +428,6 @@ def wikidata_corporate_resolution(
                 "whales_processed": MetadataValue.int(stats['whales_processed']),
                 "whales_from_cache": MetadataValue.int(stats['whales_from_cache']),
                 "corporate_families": MetadataValue.int(stats['corporate_families_created']),
-                "whale_money_attributed": MetadataValue.float(stats['total_whale_money_attributed']),
+                "whale_money_attributed": MetadataValue.float(float(stats['total_whale_money_attributed'])),
             }
         )

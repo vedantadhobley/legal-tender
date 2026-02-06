@@ -98,6 +98,10 @@ def contributed_to_asset(
         # Copy committees and candidates from FEC data
         context.log.info("📋 Copying committees & candidates...")
         
+        # Build committees dictionary with cycles array (handles multi-cycle committees)
+        committees_dict = {}
+        candidates_dict = {}
+        
         for cycle in config.cycles:
             db_name = f"fec_{cycle}"
             if not sys_db.has_database(db_name):
@@ -105,41 +109,74 @@ def contributed_to_asset(
             
             cycle_db = client.db(db_name, username=arango.username, password=arango.password)
             
-            # Copy committees
+            # Collect committees - merge cycles for same committee
             if cycle_db.has_collection("cm"):
                 cursor = cycle_db.aql.execute(
                     "FOR doc IN cm RETURN doc",
                     ttl=3600, batch_size=5000, stream=True
                 )
-                batch = []
                 for doc in cursor:
-                    doc['_key'] = doc['CMTE_ID']
-                    batch.append(doc)
-                    if len(batch) >= 5000:
-                        agg_db.collection("committees").import_bulk(batch, on_duplicate="update")
-                        batch = []
-                if batch:
-                    agg_db.collection("committees").import_bulk(batch, on_duplicate="update")
+                    cmte_id = doc['CMTE_ID']
+                    if cmte_id in committees_dict:
+                        # Add this cycle to existing committee
+                        if cycle not in committees_dict[cmte_id]['cycles']:
+                            committees_dict[cmte_id]['cycles'].append(cycle)
+                        # Update with latest data (later cycles take precedence for name changes etc)
+                        for key in doc:
+                            if key not in ('CMTE_ID', '_key', 'cycles'):
+                                committees_dict[cmte_id][key] = doc[key]
+                    else:
+                        doc['_key'] = cmte_id
+                        doc['cycles'] = [cycle]
+                        committees_dict[cmte_id] = doc
                 gc.collect()
             
-            # Copy candidates
+            # Collect candidates - merge cycles for same candidate
             if cycle_db.has_collection("cn"):
                 cursor = cycle_db.aql.execute(
                     "FOR doc IN cn RETURN doc",
                     ttl=3600, batch_size=5000, stream=True
                 )
-                batch = []
                 for doc in cursor:
-                    doc['_key'] = doc['CAND_ID']
-                    batch.append(doc)
-                    if len(batch) >= 5000:
-                        agg_db.collection("candidates").import_bulk(batch, on_duplicate="update")
-                        batch = []
-                if batch:
-                    agg_db.collection("candidates").import_bulk(batch, on_duplicate="update")
+                    cand_id = doc['CAND_ID']
+                    if cand_id in candidates_dict:
+                        if cycle not in candidates_dict[cand_id]['cycles']:
+                            candidates_dict[cand_id]['cycles'].append(cycle)
+                        for key in doc:
+                            if key not in ('CAND_ID', '_key', 'cycles'):
+                                candidates_dict[cand_id][key] = doc[key]
+                    else:
+                        doc['_key'] = cand_id
+                        doc['cycles'] = [cycle]
+                        candidates_dict[cand_id] = doc
                 gc.collect()
             
-            context.log.info(f"  Copied from {cycle}")
+            context.log.info(f"  Collected from {cycle}")
+        
+        # Write committees in batches
+        context.log.info(f"📋 Writing {len(committees_dict):,} committees...")
+        batch = []
+        for doc in committees_dict.values():
+            batch.append(doc)
+            if len(batch) >= 5000:
+                agg_db.collection("committees").import_bulk(batch, on_duplicate="replace")
+                batch = []
+        if batch:
+            agg_db.collection("committees").import_bulk(batch, on_duplicate="replace")
+        gc.collect()
+        
+        # Write candidates in batches
+        context.log.info(f"📋 Writing {len(candidates_dict):,} candidates...")
+        batch = []
+        for doc in candidates_dict.values():
+            batch.append(doc)
+            if len(batch) >= 5000:
+                agg_db.collection("candidates").import_bulk(batch, on_duplicate="replace")
+                batch = []
+        if batch:
+            agg_db.collection("candidates").import_bulk(batch, on_duplicate="replace")
+        gc.collect()
+
         
         # Load donor keys into memory (this should be small - only $10K+ donors)
         context.log.info("📋 Loading donor keys...")

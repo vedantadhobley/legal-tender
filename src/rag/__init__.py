@@ -1,7 +1,15 @@
-"""RAG utilities for entity resolution and enrichment.
+"""External API utilities for entity resolution and enrichment.
 
-Uses Wikidata as the primary source for corporate relationships.
-No hardcoding - all corporate knowledge comes from external sources.
+⚠️ NOTE: Despite the directory name "rag", this is NOT Retrieval-Augmented Generation.
+This is a library of utility functions for external API calls:
+
+- employer_normalization.py - Rule-based employer name cleaning (LLC removal, etc.)
+- wikidata_client.py - SPARQL queries to Wikidata for corporate relationships
+
+These utilities are USED BY Dagster assets (not standalone scripts).
+Example: wikidata_resolution.py imports from here to query Wikidata.
+
+The "rag" name is historical and should be read as "Resolution And Grouping" utilities.
 """
 
 from src.rag.employer_normalization import (

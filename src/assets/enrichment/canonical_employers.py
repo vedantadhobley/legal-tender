@@ -27,7 +27,6 @@ from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config
 from src.resources.arango import ArangoDBResource
 from src.rag.employer_normalization import (
     normalize_employer_name,
-    get_canonical_mapping,
     NON_EMPLOYERS,
 )
 
@@ -109,18 +108,12 @@ def canonical_employers_asset(
                 })
                 continue
             
-            # Check for pre-defined canonical mapping
-            canonical_info = get_canonical_mapping(name)
-            
-            if canonical_info:
-                canonical_key = canonical_info['canonical']
-            else:
-                # Use normalized name as canonical key
-                canonical_key = normalized
+            # Use normalized name as canonical key
+            # (Parent company resolution happens in wikidata_corporate_resolution)
+            canonical_key = normalized
             
             emp['normalized'] = normalized
             emp['canonical_key'] = canonical_key
-            emp['canonical_info'] = canonical_info
             
             canonical_groups[canonical_key].append(emp)
         

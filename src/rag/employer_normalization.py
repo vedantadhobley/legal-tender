@@ -1,11 +1,14 @@
 """Employer name normalization utilities.
 
-Tier 1: Rule-based preprocessing for employer name normalization.
-Handles common patterns like LLC/Inc/Corp removal, case normalization,
-and punctuation cleanup. This catches ~70% of variations.
+Rule-based preprocessing for employer name normalization:
+- LLC/Inc/Corp suffix removal
+- Case normalization  
+- Punctuation cleanup
+- Non-employer detection (retired, self-employed, etc.)
 
-Tier 2: Similarity clustering for typos and near-matches.
-Tier 3: LLM verification for subsidiaries and ambiguous cases.
+This catches ~70% of variations. Remaining corporate hierarchy
+(subsidiaries, parent companies) is resolved via Wikidata in
+the wikidata_corporate_resolution Dagster asset.
 """
 
 import re
@@ -191,97 +194,8 @@ def find_potential_matches(name: str, candidates: List[str], threshold: float = 
     return sorted(matches, key=lambda x: -x[1])
 
 
-# Pre-defined canonical mappings for major companies
-# These are high-confidence mappings that don't need LLM verification
-CANONICAL_MAPPINGS = {
-    # Tech giants
-    'GOOGLE': {'canonical': 'ALPHABET INC', 'subsidiaries': ['YOUTUBE', 'WAYMO', 'DEEPMIND', 'FITBIT', 'GOOGLE FIBER', 'GOOGLE VENTURES', 'CAPITALG']},
-    'ALPHABET': {'canonical': 'ALPHABET INC', 'parent': True},
-    'YOUTUBE': {'canonical': 'ALPHABET INC', 'subsidiary_of': 'ALPHABET INC'},
-    
-    'MICROSOFT': {'canonical': 'MICROSOFT CORPORATION', 'subsidiaries': ['LINKEDIN', 'GITHUB', 'ACTIVISION', 'BLIZZARD']},
-    'LINKEDIN': {'canonical': 'MICROSOFT CORPORATION', 'subsidiary_of': 'MICROSOFT CORPORATION'},
-    'GITHUB': {'canonical': 'MICROSOFT CORPORATION', 'subsidiary_of': 'MICROSOFT CORPORATION'},
-    
-    'AMAZON': {'canonical': 'AMAZON.COM INC', 'subsidiaries': ['AWS', 'WHOLE FOODS', 'TWITCH', 'MGM']},
-    'AWS': {'canonical': 'AMAZON.COM INC', 'subsidiary_of': 'AMAZON.COM INC'},
-    
-    'META': {'canonical': 'META PLATFORMS INC', 'subsidiaries': ['FACEBOOK', 'INSTAGRAM', 'WHATSAPP', 'OCULUS']},
-    'FACEBOOK': {'canonical': 'META PLATFORMS INC', 'subsidiary_of': 'META PLATFORMS INC'},
-    
-    'APPLE': {'canonical': 'APPLE INC'},
-    
-    # Finance
-    'CITADEL': {'canonical': 'CITADEL LLC', 'subsidiaries': ['CITADEL SECURITIES', 'CITADEL INVESTMENT GROUP', 'CITADEL ASSET MANAGEMENT']},
-    'GOLDMAN SACHS': {'canonical': 'GOLDMAN SACHS GROUP INC'},
-    'GOLDMAN': {'canonical': 'GOLDMAN SACHS GROUP INC'},
-    'JP MORGAN': {'canonical': 'JPMORGAN CHASE & CO'},
-    'JPMORGAN': {'canonical': 'JPMORGAN CHASE & CO'},
-    'MORGAN STANLEY': {'canonical': 'MORGAN STANLEY'},
-    'BLACKSTONE': {'canonical': 'BLACKSTONE INC'},
-    'BLACKROCK': {'canonical': 'BLACKROCK INC'},
-    
-    # Healthcare/Pharma
-    'PFIZER': {'canonical': 'PFIZER INC'},
-    'JOHNSON & JOHNSON': {'canonical': 'JOHNSON & JOHNSON'},
-    'J&J': {'canonical': 'JOHNSON & JOHNSON'},
-    
-    # Major donors with known variations
-    'ADELSON': {'canonical': 'ADELSON ENTERPRISES', 'subsidiaries': ['ADELSON CLINIC', 'ADELSON DRUG CLINIC', 'LAS VEGAS SANDS', 'THE VENETIAN']},
-    'ADELSON CLINIC': {'canonical': 'ADELSON ENTERPRISES', 'subsidiary_of': 'ADELSON ENTERPRISES'},
-    'ADELSON DRUG CLINIC': {'canonical': 'ADELSON ENTERPRISES', 'subsidiary_of': 'ADELSON ENTERPRISES'},
-    'LAS VEGAS SANDS': {'canonical': 'ADELSON ENTERPRISES', 'subsidiary_of': 'ADELSON ENTERPRISES'},
-    'VENETIAN': {'canonical': 'ADELSON ENTERPRISES', 'subsidiary_of': 'ADELSON ENTERPRISES'},
-    
-    'SOROS': {'canonical': 'SOROS FUND MANAGEMENT LLC'},
-    'SOROS FUND': {'canonical': 'SOROS FUND MANAGEMENT LLC'},
-    'SOROS FUND MANAGEMENT': {'canonical': 'SOROS FUND MANAGEMENT LLC'},
-    
-    'BLOOMBERG': {'canonical': 'BLOOMBERG LP'},
-    
-    'RENAISSANCE': {'canonical': 'RENAISSANCE TECHNOLOGIES LLC'},
-    'RENAISSANCE TECHNOLOGIES': {'canonical': 'RENAISSANCE TECHNOLOGIES LLC'},
-    
-    'LONE PINE': {'canonical': 'LONE PINE CAPITAL LLC'},
-    'LONE PINE CAPITAL': {'canonical': 'LONE PINE CAPITAL LLC'},
-    
-    'SUSQUEHANNA': {'canonical': 'SUSQUEHANNA INTERNATIONAL GROUP'},
-    'SIG': {'canonical': 'SUSQUEHANNA INTERNATIONAL GROUP'},  # SIG = Susquehanna International Group
-    
-    # Retail
-    'WALMART': {'canonical': 'WALMART INC'},
-    'WAL-MART': {'canonical': 'WALMART INC'},
-    'WAL MART': {'canonical': 'WALMART INC'},
-    
-    # Energy
-    'EXXON': {'canonical': 'EXXON MOBIL CORPORATION'},
-    'EXXONMOBIL': {'canonical': 'EXXON MOBIL CORPORATION'},
-    'CHEVRON': {'canonical': 'CHEVRON CORPORATION'},
-    
-    # Telecom
-    'AT&T': {'canonical': 'AT&T INC'},
-    'ATT': {'canonical': 'AT&T INC'},
-    'VERIZON': {'canonical': 'VERIZON COMMUNICATIONS INC'},
-}
-
-
-def get_canonical_mapping(name: str) -> Optional[dict]:
-    """
-    Check if a normalized name has a pre-defined canonical mapping.
-    Returns the mapping dict if found, None otherwise.
-    """
-    normalized, _ = normalize_employer_name(name)
-    
-    # Direct match
-    if normalized in CANONICAL_MAPPINGS:
-        return CANONICAL_MAPPINGS[normalized]
-    
-    # Check if name starts with a known company
-    for key, mapping in CANONICAL_MAPPINGS.items():
-        if normalized.startswith(key + ' ') or normalized == key:
-            return mapping
-    
-    return None
+# NOTE: Corporate hierarchy (subsidiaries, parent companies) is resolved via Wikidata
+# in the wikidata_corporate_resolution asset. No hardcoded mappings needed here.
 
 
 if __name__ == '__main__':
@@ -311,7 +225,6 @@ if __name__ == '__main__':
     
     for name in test_names:
         normalized, meta = normalize_employer_name(name)
-        canonical = get_canonical_mapping(name)
         
         print(f"\nInput: {name}")
         print(f"  Normalized: {normalized}")
@@ -319,5 +232,3 @@ if __name__ == '__main__':
             print(f"  Non-employer: {meta.get('category')}")
         if meta.get('transformations'):
             print(f"  Transforms: {meta.get('transformations')}")
-        if canonical:
-            print(f"  Canonical: {canonical.get('canonical')}")

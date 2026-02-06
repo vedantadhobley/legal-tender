@@ -150,6 +150,22 @@
       "canonical": "THE BLACKSTONE GROUP",
       "relationship": "self",
       "source": "not_found"
+    },
+    "SEQUOIA CAPITAL": {
+      "canonical": "SEQUOIA CAPITAL",
+      "original": "SEQUOIA CAPITAL",
+      "relationship": "parent",
+      "family": [],
+      "wikidata_id": "Q130555103",
+      "source": "wikidata"
+    },
+    "ARISTA": {
+      "canonical": "ARISTA",
+      "original": "ARISTA",
+      "relationship": "parent",
+      "family": [],
+      "wikidata_id": "Q127598857",
+      "source": "wikidata"
     }
   },
   "whale_resolutions": {
@@ -475,7 +491,42 @@
         }
       ],
       "total": 4428600
+    },
+    "SINQUEFIELD, REX A.": {
+      "person": "Rex Sinquefield",
+      "companies": [
+        {
+          "name": "Saint Louis Chess Club",
+          "relationship": "founded",
+          "wikidata_id": "Q17084738"
+        },
+        {
+          "name": "Show-Me Institute",
+          "relationship": "founded",
+          "wikidata_id": "Q7502890"
+        },
+        {
+          "name": "Dimensional Fund Advisors",
+          "relationship": "founded",
+          "wikidata_id": "Q3028075"
+        }
+      ],
+      "primary_company": "Saint Louis Chess Club",
+      "source": "wikidata"
+    },
+    "KELLNER, PETER": {
+      "person": "Peter Kellner",
+      "companies": [
+        {
+          "name": "YouGov",
+          "relationship": "employed_by",
+          "wikidata_id": "Q1470929"
+        }
+      ],
+      "primary_company": "YouGov",
+      "source": "wikidata"
     }
   },
-  "generated_at": "2026-01-13 13:01:18"
+  "generated_at": "2026-01-13 13:01:18",
+  "updated_at": "2026-01-17T06:54:12.581496"
 }
