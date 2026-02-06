@@ -41,19 +41,19 @@ WIKIDATA_CACHE_PATH = os.environ.get("WIKIDATA_CACHE_PATH", "/workspace/wikidata
 class WikidataResolutionConfig(Config):
     """Configuration for Wikidata resolution."""
     min_whale_amount: int = Field(
-        default=1_000_000,
+        default=250_000,
         description="Minimum donation amount to consider for whale resolution"
     )
     min_employer_amount: int = Field(
-        default=100_000,
+        default=50_000,
         description="Minimum total from employees to resolve employer"
     )
     max_employers: int = Field(
-        default=500,
+        default=5_000,
         description="Maximum employers to process (top by amount)"
     )
     max_whales: int = Field(
-        default=200,
+        default=2_000,
         description="Maximum whales to process (top by amount)"
     )
     resolve_whales: bool = Field(
@@ -175,7 +175,7 @@ def wikidata_corporate_resolution(
                 _key: ce._key,
                 name: ce.canonical_name,
                 total: ce.total_from_employees,
-                donor_count: ce.employee_count,
+                donor_count: ce.employee_donor_count,
                 aliases: ce.aliases
             }
         """, bind_vars={

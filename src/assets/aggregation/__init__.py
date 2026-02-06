@@ -8,17 +8,17 @@ Assets:
 - candidate_summaries: Pre-computed funding totals, top donors, breakdowns by cycle
 - committee_summaries: Committee profiles with funding sources and recipients
 - donor_summaries: Whale-tier donor profiles with political lean and recipients
-- candidate_upstream: Complete upstream funding attribution ("pie chart")
+- candidate_funding: Complete upstream funding attribution by channel
 """
 
 from src.assets.aggregation.candidate_summaries import candidate_summaries_asset
 from src.assets.aggregation.committee_summaries import committee_summaries_asset
 from src.assets.aggregation.donor_summaries import donor_summaries_asset
-from src.assets.aggregation.candidate_upstream import candidate_upstream_asset
+from src.assets.aggregation.candidate_upstream import candidate_funding_asset
 
 __all__ = [
     "candidate_summaries_asset",
     "committee_summaries_asset",
     "donor_summaries_asset",
-    "candidate_upstream_asset",
+    "candidate_funding_asset",
 ]

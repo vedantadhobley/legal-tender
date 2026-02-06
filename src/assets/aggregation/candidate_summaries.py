@@ -65,7 +65,7 @@ class CandidateSummariesConfig(Config):
     description="Pre-computed candidate funding summaries with RECURSIVE upstream tracing to original sources.",
     group_name="aggregation",
     compute_kind="aggregation",
-    deps=["committee_classification", "donor_classification", "committee_financials", "affiliated_with", "contributed_to", "transferred_to"],
+    deps=["committee_classification", "donor_classification", "committee_receipts", "affiliated_with", "contributed_to", "transferred_to"],
 )
 def candidate_summaries_asset(
     context: AssetExecutionContext,

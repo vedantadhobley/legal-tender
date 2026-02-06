@@ -35,7 +35,7 @@ class CommitteeSummariesConfig(Config):
     description="Pre-computed committee summaries for UI and RAG queries.",
     group_name="aggregation",
     compute_kind="aggregation",
-    deps=["committee_classification", "committee_financials", "donor_classification", "contributed_to", "transferred_to"],
+    deps=["committee_classification", "committee_receipts", "donor_classification", "contributed_to", "transferred_to"],
 )
 def committee_summaries_asset(
     context: AssetExecutionContext,

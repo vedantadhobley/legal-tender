@@ -5,13 +5,13 @@ Pipeline Layers:
   2. FEC      → Parse into fec_YYYY databases  
   3. Graph    → Build vertices & edges in aggregation DB
   4. Enrich   → Classify committees, resolve employers via Wikidata
-  5. Aggregate → Compute "Five Pies" funding summaries
+  5. Aggregate → Compute funding channel summaries
 
 Jobs:
   - fec_pipeline_job    → Full refresh (sync → fec → graph)
   - enrichment_job      → Classification + Wikidata resolution
-  - aggregation_job     → Five Pies funding summaries
-  - upstream_job        → Quick Five Pies refresh only
+  - aggregation_job     → Funding channel summaries
+  - upstream_job        → Quick funding refresh only
 
 See docs/PIPELINE.md for full architecture documentation.
 """
@@ -45,28 +45,23 @@ from src.assets import (
     # Layer 4: Enrichment (classification + Wikidata)
     committee_classification_asset,
     donor_classification_asset,
-    committee_financials_asset,
     committee_receipts_asset,
     canonical_employers_asset,
-    employer_clusters_asset,
-    employer_cluster_integration_asset,
-    corporate_hierarchy_asset,
     wikidata_corporate_resolution,
     
-    # Layer 5: Aggregation (Five Pies summaries)
+    # Layer 5: Aggregation (funding channel summaries)
     candidate_summaries_asset,
     committee_summaries_asset,
     donor_summaries_asset,
-    candidate_upstream_asset,
+    candidate_funding_asset,
 )
 from src.jobs import (
     fec_pipeline_job,        # Full refresh: sync → fec → graph
     graph_rebuild_job,       # Rebuild graph only (no download)
     raw_data_job,            # Download + parse only
     enrichment_job,          # Classification + Wikidata
-    aggregation_job,         # Five Pies summaries
-    upstream_job,            # Quick Five Pies refresh
-    employer_unification_job,  # Just employer clustering
+    aggregation_job,         # Funding channel summaries
+    upstream_job,            # Quick funding refresh
 )
 from src.schedules import (
     weekly_pipeline_schedule,
@@ -103,19 +98,15 @@ defs = Definitions(
         # Layer 4: Enrichment
         committee_classification_asset,
         donor_classification_asset,
-        committee_financials_asset,
         committee_receipts_asset,
         canonical_employers_asset,
-        employer_clusters_asset,
-        employer_cluster_integration_asset,
-        corporate_hierarchy_asset,
         wikidata_corporate_resolution,
         
         # Layer 5: Aggregation
         candidate_summaries_asset,
         committee_summaries_asset,
         donor_summaries_asset,
-        candidate_upstream_asset,
+        candidate_funding_asset,
     ],
     resources={
         "arango": arango_resource,
@@ -128,7 +119,6 @@ defs = Definitions(
         enrichment_job,
         aggregation_job,
         upstream_job,
-        employer_unification_job,
     ],
     schedules=[
         weekly_pipeline_schedule,
