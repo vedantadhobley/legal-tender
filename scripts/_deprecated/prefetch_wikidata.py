@@ -173,7 +173,7 @@ def main():
     
     # Connect to ArangoDB
     print("\n📊 Connecting to ArangoDB...")
-    client = ArangoClient(hosts='http://localhost:4201')
+    client = ArangoClient(hosts='http://localhost:4301')
     db = client.db('aggregation', username='root', password='ltpass')
     
     cache = {

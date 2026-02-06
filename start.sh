@@ -38,20 +38,20 @@ fi
 # Start containers based on mode
 if [[ "$DEV_MODE" == true ]]; then
   echo "🚀 Starting in DEVELOPMENT mode (hot-reload enabled)..."
-  docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+  docker compose -f docker-compose.dev.yml up --build -d
 else
   echo "🚀 Starting in PRODUCTION mode..."
-  docker compose up --build -d
+  docker compose -f docker-compose.yml up --build -d
 fi
 
 echo ""
 echo "✅ Services started!"
-echo "   Dagster UI: http://localhost:3000"
-echo "   Mongo Express: http://localhost:8081"
 if [[ "$DEV_MODE" == true ]]; then
+  echo "   Dagster UI: http://localhost:4300"
+  echo "   ArangoDB:   http://localhost:4301 (root/ltpass)"
   echo "   Mode: DEVELOPMENT (code changes auto-reload)"
-  echo "   MongoDB: localhost:27017 (exposed)"
-  echo "   PostgreSQL: localhost:5432 (exposed)"
 else
+  echo "   Dagster UI: http://localhost:3300"
+  echo "   ArangoDB:   http://localhost:3301 (root/ltpass)"
   echo "   Mode: PRODUCTION (rebuild required for changes)"
 fi
