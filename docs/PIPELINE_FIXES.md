@@ -135,7 +135,7 @@ funding_channels: {
 |---|---|---|
 | `contributed_to` | 3,327,970 | Individual/candidate donor → committee (ENTITY_TP IN ['IND','CAN']) |
 | `transferred_to` | 654,530 | Committee → committee (PAC-to-PAC, party, JFC transfers) |
-| `affiliated_with` | 22,808 | Committee → candidate |
+| `affiliated_with` | 22,808 | Committee → candidate (one edge per cycle — deduplicate with UNIQUE) |
 | `spent_on` | 20,373 | Committee → candidate (IE spending, support or oppose) |
 | `employed_by` | 147,810 | Donor → employer |
 | **donors** | 280,513 | Unique individual donors in graph |
@@ -256,13 +256,33 @@ Removed dead `classify_committee()` and `classify_donor()` Python functions — 
 
 Changed `ce.employee_count` → `ce.employee_donor_count` (the actual field name set by `canonical_employers`).
 
+### FIX 11 — Deduplicate affiliated committee IDs + unaccounted breakdown ✅
+
+**Date**: Feb 7, 2026  
+**Files**: `src/assets/aggregation/candidate_upstream.py`
+
+**Root cause**: The `affiliated_with` edge collection has one edge per (committee, candidate, cycle). The AQL query `FOR v IN INBOUND c affiliated_with RETURN v._key` returned duplicate committee IDs — Cruz's senate committee appeared 3× (once per cycle), tripling its receipts in the unaccounted calculation.
+
+**Fix**: Added `UNIQUE()` to the AQL query: `UNIQUE(FOR v IN INBOUND c affiliated_with RETURN v._key)`.
+
+Also enriched the unaccounted channel with receipt breakdown data already available from `committee_receipts`:
+- `breakdown.small_donor_estimate` — individual contributions not in our graph (mostly unitemized <$200)
+- `breakdown.from_individuals` — total individual receipts for candidate's committees
+- `breakdown.from_committees` — total committee transfer receipts
+
+| Candidate | Old Receipts (duped) | New Receipts (deduped) | Inflation | Old Unaccounted | New Unaccounted |
+|---|---|---|---|---|---|
+| Cruz | $215.7M | $71.9M | 3.0× | 91.9% | 75.6% |
+| Trump | $2.51B | $984.7M | 2.6× | 93.8% | 84.1% |
+| Harris | $1.85B | $1.80B | 1.03× | 86.2% | 85.8% |
+
 ---
 
-## Validation Results (Feb 6, 2026)
+## Validation Results (Feb 7, 2026)
 
 Pipeline run: `donors` → `contributed_to` → `committee_classification` → `committee_receipts` → `candidate_funding`
 
-**candidate_funding**: 11,796 candidates processed, 4,901 with funding data, completed in 6m1s.
+**candidate_funding**: 11,796 candidates processed, 4,901 with funding data, completed in 5m51s.
 
 | | **Harris (Pres)** | **Trump** | **Cruz (Senate)** |
 |---|---|---|---|
@@ -278,13 +298,17 @@ Pipeline run: `donors` → `contributed_to` → `committee_classification` → `
 | **Ch4 Individuals** | $254M (31.6%) | $155M (34.0%) | $16.3M (62.0%) |
 | — Corp-connected | $11.9M | $5.9M | $597K |
 | — Independent | $242M | $149M | $15.7M |
-| **Ch5 Unaccounted** | $1.59B (86%) | $2.36B (94%) | $198M (92%) |
+| **Ch5 Unaccounted** | $1.54B (85.8%) | $828M (84.1%) | $54M (75.6%) |
+| — Small donors est. | $729M | $205M | $43.5M |
+| — Receipts | $1.80B | $985M | $71.9M |
+| — Traced | $256M | $156M | $17.6M |
 
 **Observations**:
 - IE spending dominates presidential races (~66% of traced funding for both Harris and Trump)
 - Senate races (Cruz) are more individual-heavy (62%) with meaningful org direct (4.8%)
 - Labor flows to Harris ($1.03M vs $31K for Trump). Corp flows to Trump ($503K vs $207K for Harris)
-- Ch5 Unaccounted is very large because `cmte_total_receipts` sums across ALL committees in the BFS tree, including Super PACs that raised billions but spent only a fraction on any single candidate. This needs refinement — should scope to principal campaign committee receipts only.
+- Unaccounted is structurally inevitable — unitemized small donors (<$200) alone are $729M for Harris, $205M for Trump, $43.5M for Cruz. These are real contributors we simply have no name-level data for.
+- The remaining gap beyond small donors is proportional trace loss: when a passthrough JFC raised $100M but sent $1M to this candidate, we only trace 1% of the JFC's upstream sources.
 
 ---
 
@@ -297,12 +321,6 @@ Pipeline run: `donors` → `contributed_to` → `committee_classification` → `
 
 Three different normalization functions across the codebase → silent key mismatches. Consolidate to one.
 
-### Unaccounted gap refinement
-
-**Priority**: HIGH
-
-The current unaccounted calculation sums `total_receipts` across ALL committees in the BFS tree. A Super PAC that raised $500M but gave $5K to a candidate inflates receipts by the full $500M. The gap should be scoped to the candidate's principal campaign committee: `principal_committee_receipts - traced_inflows_to_principal_committee`. This captures the real question: "of the money this candidate actually received, how much can we trace?"
-
 ---
 
 ## Execution Plan
@@ -311,4 +329,5 @@ The current unaccounted calculation sums `total_receipts` across ALL committees 
 |---|---|---|
 | ✅ Done | 1, 2, 8 | Clean donor data, committee classifications, basic tracing |
 | ✅ Done | 9, 10, 3, 4, 6, 7 | Self-funding, funding channels rewrite, dead code removal |
-| Next | 5, unaccounted refinement | Normalize functions, fix receipts scope |
+| ✅ Done | 11 (unaccounted dedup) | Deduplicated affiliated_with cmte_ids, added small-donor breakdown |
+| Next | 5 | Normalize functions |

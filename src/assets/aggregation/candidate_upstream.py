@@ -123,7 +123,10 @@ def candidate_funding_asset(
                 _key: c._key,
                 name: c.CMTE_NM,
                 terminal_type: c.terminal_type,
-                total_receipts: c.total_receipts || 0
+                total_receipts: c.total_receipts || 0,
+                total_from_individuals: c.total_from_individuals || 0,
+                total_from_committees: c.total_from_committees || 0,
+                small_donor_total: c.small_donor_total || 0
             }
         """):
             cmte_info[c['_key']] = c
@@ -494,9 +497,18 @@ def candidate_funding_asset(
             direct_total = org_direct_total + indiv_total
             
             # --- CHANNEL 5: Unaccounted ---
-            # Sum total_receipts for all candidate committees
+            # Sum total_receipts for candidate committees (already deduplicated via UNIQUE)
             cmte_total_receipts = sum(
                 (cmte_info.get(cid, {}).get('total_receipts', 0) or 0) for cid in cmte_ids
+            )
+            cmte_total_from_individuals = sum(
+                (cmte_info.get(cid, {}).get('total_from_individuals', 0) or 0) for cid in cmte_ids
+            )
+            cmte_total_from_committees = sum(
+                (cmte_info.get(cid, {}).get('total_from_committees', 0) or 0) for cid in cmte_ids
+            )
+            cmte_small_donor_total = sum(
+                (cmte_info.get(cid, {}).get('small_donor_total', 0) or 0) for cid in cmte_ids
             )
             traced_direct = sources['traced_total']
             unaccounted = max(0, cmte_total_receipts - traced_direct)
@@ -636,11 +648,16 @@ def candidate_funding_asset(
                     'pct': safe_pct(unaccounted, cmte_total_receipts) if cmte_total_receipts > 0 else 0,
                     'cmte_total_receipts': cmte_total_receipts,
                     'traced_total': traced_direct,
+                    'breakdown': {
+                        'from_individuals': cmte_total_from_individuals,
+                        'from_committees': cmte_total_from_committees,
+                        'small_donor_estimate': cmte_small_donor_total,
+                    },
                     'explanation': (
                         "Gap between committee total receipts and traced inflows. "
-                        "Includes: unitemized individual contributions (<$200), "
-                        "candidate self-funding not yet in donor graph, "
-                        "and other untraceable transfers."
+                        "Largest component is typically unitemized individual "
+                        "contributions (<$200 aggregate), shown in small_donor_estimate. "
+                        "Remainder is proportional trace loss through passthrough committees."
                     ),
                 },
                 
@@ -670,7 +687,7 @@ def candidate_funding_asset(
         
         candidates = list(db.aql.execute("""
             FOR c IN candidates
-                LET affiliated_cmtes = (
+                LET affiliated_cmtes = UNIQUE(
                     FOR v, e IN INBOUND c affiliated_with
                     RETURN v._key
                 )
@@ -805,6 +822,11 @@ def candidate_funding_asset(
                 context.log.info(f"         Independent:     ${agg['individuals']['independent']['total']:,.0f}")
                 context.log.info(f"   Ch5 - Unaccounted:          ${agg['unaccounted']['total']:,.0f} ({agg['unaccounted']['pct']:.1f}% of receipts)")
                 context.log.info(f"         (receipts: ${agg['unaccounted']['cmte_total_receipts']:,.0f}, traced: ${agg['unaccounted']['traced_total']:,.0f})")
+                bd = agg['unaccounted'].get('breakdown', {})
+                if bd:
+                    context.log.info(f"         Small donors est:  ${bd.get('small_donor_estimate', 0):,.0f}")
+                    context.log.info(f"         From individuals:  ${bd.get('from_individuals', 0):,.0f}")
+                    context.log.info(f"         From committees:   ${bd.get('from_committees', 0):,.0f}")
             
             if fc.get('by_cycle'):
                 context.log.info(f"\n   BY CYCLE:")
