@@ -42,25 +42,27 @@ Outside money spent FOR the candidate by Super PACs and other committees. This m
 
 Same as Channel 2, but `support_oppose = 'O'` — money spent AGAINST the candidate. This is important context: a candidate might have $10M in IE support but $50M in IE opposition.
 
-### Channel 4: Individual Contributions (Itemized)
+### Channel 4: Individual Contributions
 
-People donating directly to the candidate's affiliated committees. These are itemized in FEC filings because they exceed the $200 reporting threshold.
+All money from individual people to the candidate's affiliated committees, or proportionally attributed from upstream passthrough committees.
 
-**How it works**: Look at `contributed_to` edges going into the candidate's affiliated committees. These are already terminal — the individual IS the source. No upstream tracing needed.
+**Two tiers**:
+- **Whale donors** ($10K+ aggregate): Fully traced through graph with per-donor detail — name, employer, corporate connection. Split into corporate-connected (employees of known corps) and independent.
+- **Grassroots donors** (sub-$10K aggregate): Known total from raw FEC `indiv` data but no per-donor detail in the graph (the $10K threshold is a graph optimization for employer analysis). Split into:
+  - **Direct**: grassroots to candidate's own affiliated committees (from `committee_receipts.small_donor_total`)
+  - **Upstream**: grassroots at passthrough committees (JFCs, conduits, party committees) attributed proportionally through the transfer chain
 
-**Metadata per individual**: Name, employer, total amount. For whale donors ($10K+), we also track corporate connections (via employer mapping or Wikidata resolution) — not because the individual is acting on behalf of that corporation, but because it's useful context. A Bank of America teller donating $500 isn't corporate influence. A billionaire CEO whose net worth IS the company — that's a different signal. The corporate connection is metadata, not a reclassification.
+**Graph edges used**: `contributed_to` (donor → committee) for whale tier, `committee_receipts` raw FEC aggregation for grassroots tier.
 
-**Candidate self-funding**: Candidates who fund their own campaigns (ENTITY_TP='CAN') show up here as individual donors. Bloomberg writing a $1B check to his own committee is an individual contribution from a person who happens to also be the candidate. His corporate connection (Bloomberg LP) is metadata. This is correct — corporations can't donate directly to campaigns. All self-funding is personal funds.
+### Channel 5: Unaccounted (True Residual)
 
-**Graph edges used**: `contributed_to` (donor → committee), `affiliated_with` (committee → candidate)
+The gap between committee total_receipts and all accounted money (traced whale + org + grassroots). Should be **3-5%** for well-traced candidates.
 
-### Channel 5: Unitemized Individual Contributions
-
-Donations under $200 that don't get itemized in FEC filings. We have NO graph edges for these — they exist only as a lump sum total in committee summary filings (`weball`/`webk` data, field: `INDIV_UNITEM`).
-
-**How it works**: Pull the unitemized total from the committee's summary filing data. No tracing possible — we know the total but not who these donors are.
-
-**Why this matters**: For populist candidates (Sanders, Trump small-dollar operations), this can be the majority of their direct funding. Without this, the "unaccounted" gap would be misleadingly large.
+**What's in here**:
+- Unitemized individual contributions (<$200 aggregate, not in FEC indiv file at all)
+- Deep proportional trace loss (multiplier falls below 0.0001 threshold)
+- Committees with no receipt data (no `total_receipts` set)
+- Data gaps and edge cases
 
 ### Future: Lobbying
 
@@ -282,33 +284,56 @@ Also enriched the unaccounted channel with receipt breakdown data already availa
 
 Pipeline run: `donors` → `contributed_to` → `committee_classification` → `committee_receipts` → `candidate_funding`
 
-**candidate_funding**: 11,796 candidates processed, 4,901 with funding data, completed in 5m51s.
+**candidate_funding**: 11,796 candidates processed, 6,305 with funding data, completed in 6m11s.
 
 | | **Harris (Pres)** | **Trump** | **Cruz (Senate)** |
 |---|---|---|---|
-| **Total Traced** | $804M | $457M | $26.3M |
-| **Ch1 Org Direct** | $2.0M (0.2%) | $834K (0.2%) | $1.26M (4.8%) |
-| — Corp | $207K | $503K | $445K |
-| — Trade | $40K | $188K | $498K |
-| — Labor | $1.03M | $31K | $88K |
-| — Ideological | $717K | $101K | $227K |
-| — Cooperative | $767 | $10K | $6K |
-| **Ch2 IE Support** | $548M (68.2%) | $300M (65.8%) | $8.7M (33.2%) |
+| **Total Funding** | $2.27B | $1.24B | $78.1M |
+| **Ch1 Org Direct** | $13.7M (0.6%) | $3.3M (0.3%) | $2.1M (2.6%) |
+| — Corp | $1.7M | $1.5M | $806K |
+| — Trade | $2.5M | $816K | $777K |
+| — Labor | $7.5M | $144K | $174K |
+| — Ideological | $1.8M | $760K | $289K |
+| — Cooperative | $139K | $66K | $9K |
+| **Ch2 IE Support** | $548M (24.1%) | $300M (24.2%) | $8.7M (11.2%) |
 | **Ch3 IE Oppose** | $561M | $492M | $2.9M |
-| **Ch4 Individuals** | $254M (31.6%) | $155M (34.0%) | $16.3M (62.0%) |
-| — Corp-connected | $11.9M | $5.9M | $597K |
-| — Independent | $242M | $149M | $15.7M |
-| **Ch5 Unaccounted** | $1.54B (85.8%) | $828M (84.1%) | $54M (75.6%) |
-| — Small donors est. | $729M | $205M | $43.5M |
-| — Receipts | $1.80B | $985M | $71.9M |
-| — Traced | $256M | $156M | $17.6M |
+| **Ch4 Individuals** | $1.71B (75.3%) | $937M (75.5%) | $67.4M (86.2%) |
+| — Whale ($10K+) | $719M (31.6%) | $280M (22.6%) | $22.6M (28.9%) |
+|   — Corp-connected | $52.8M | $20.1M | $877K |
+|   — Independent | $666M | $260M | $21.7M |
+| — Grassroots (<$10K) | $991M (43.6%) | $656M (52.9%) | $44.8M (57.3%) |
+|   — Direct | $729M | $205M | $43.5M |
+|   — Upstream | $262M | $451M | $1.3M |
+| **Ch5 Unaccounted** | $73.7M (4.1%) | $44.8M (4.6%) | $2.5M (3.5%) |
+| **Receipts** | $1.80B | $985M | $71.9M |
+| **Accounted** | $1.72B | $940M | $69.4M |
 
 **Observations**:
-- IE spending dominates presidential races (~66% of traced funding for both Harris and Trump)
-- Senate races (Cruz) are more individual-heavy (62%) with meaningful org direct (4.8%)
-- Labor flows to Harris ($1.03M vs $31K for Trump). Corp flows to Trump ($503K vs $207K for Harris)
-- Unaccounted is structurally inevitable — unitemized small donors (<$200) alone are $729M for Harris, $205M for Trump, $43.5M for Cruz. These are real contributors we simply have no name-level data for.
-- The remaining gap beyond small donors is proportional trace loss: when a passthrough JFC raised $100M but sent $1M to this candidate, we only trace 1% of the JFC's upstream sources.
+- Unaccounted now 3-5% across all candidates (down from 75-86%)! Residual is unitemized <$200 donors + deep trace loss.
+- Grassroots individuals (sub-$10K aggregate) are the dominant funding channel: 43-57% of total funding.
+- Trump's upstream grassroots ($451M) is massive — reflects the WinRed/JFC small-dollar fundraising machine.
+- Harris's whale donors ($719M, 31.6%) exceed Trump's ($280M, 22.6%) in both absolute and relative terms.
+- IE spending is roughly equal for both presidential candidates (~$300M support, ~$500M+ oppose).
+- Org direct is small for presidential races (<1%) but meaningful for Senate (Cruz at 2.6%).
+- Labor strongly favors Harris ($7.5M vs $144K). Corp/trade more balanced but still tilt slightly Harris.
+
+---
+
+### FIX 12 — Grassroots channel + two-phase proportional trace
+
+**Problem**: Unaccounted was 75-86% — absurdly high. Two distinct bugs:
+
+**Bug A — Missing grassroots channel**: The `donors` graph has a $10K aggregate threshold. Only whale donors ($10K+) get graph vertices/edges. But `committee_receipts` correctly sums ALL raw FEC `indiv` transactions. The difference (sub-$10K itemized donors) was dumped into "unaccounted" even though it's a known, quantified amount.
+
+**Bug B — visited_edges BFS bug**: When a committee transfers money via multiple edges (one per cycle), the BFS enqueued the source committee multiple times but `visited_edges` meant only the FIRST dequeue processed any edges. Harris Victory Fund→Harris: 3 edges ($586M, $237M, $6M) but only the $586M edge's mult was used for whale/org tracing. Lost $244M from HVF alone, cascading through DNC ($138M more).
+
+**Fix A**: Fold sub-$10K individuals into the individuals channel as "grassroots". Direct (to candidate's committees) comes from committee_receipts. Upstream (at passthrough committees) is attributed proportionally during trace.
+
+**Fix B**: Replaced BFS with two-phase proportional trace:
+- Phase 1: Propagate multipliers level-by-level through passthrough graph, accumulating total mult per committee. Terminal org attributions happen here. Multiple transfer edges between same committees → correctly accumulated.
+- Phase 2: Process each committee ONCE with its total mult. Attribute whale individuals and upstream grassroots.
+
+**Result**: Unaccounted dropped from 75-86% to 3-5%. The $10K threshold stays as a graph optimization (we only need per-donor employer detail for whales), but the accounting now properly classifies ALL traceable money.
 
 ---
 
@@ -329,5 +354,5 @@ Three different normalization functions across the codebase → silent key misma
 |---|---|---|
 | ✅ Done | 1, 2, 8 | Clean donor data, committee classifications, basic tracing |
 | ✅ Done | 9, 10, 3, 4, 6, 7 | Self-funding, funding channels rewrite, dead code removal |
-| ✅ Done | 11 (unaccounted dedup) | Deduplicated affiliated_with cmte_ids, added small-donor breakdown |
+| ✅ Done | 11, 12 | Dedup affiliated committees, grassroots channel, two-phase trace |
 | Next | 5 | Normalize functions |
