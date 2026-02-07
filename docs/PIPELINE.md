@@ -6,39 +6,34 @@ Complete technical documentation for the Dagster data pipeline.
 
 ## Mission Statement
 
-**Legal Tender traces every dollar to its corporate origin.**
+**Legal Tender traces every dollar to its origin.**
 
 For any federal candidate, we answer: **Who is really funding them?**
 
-The answer isn't just "they got $5M from PACs" - we trace through Joint Fundraising Committees, passthrough vehicles, and individual donors to find the **terminal sources**:
+The answer isn't just "they got $5M from PACs" — we trace backwards through Joint Fundraising Committees, passthrough vehicles, and individual donors to find the **terminal sources**, then organize everything into funding channels.
 
-| Source Type | What We Track |
-|-------------|---------------|
-| **Corporations** | PAC donations traced to parent company (Goldman Sachs PAC → Goldman Sachs) |
-| **Individuals** | Employee donations rolled up to employer (John Smith @ Google → Google) |
-| **IE Spending** | Super PAC money traced back to corporate funders (FF PAC → Moskovitz → Asana) |
-| **Lobbying** | *(Not yet implemented)* Direct lobbying spend per congressperson |
-
-### The Five Pies
+### Funding Channels
 
 For each candidate, per election cycle:
 
-1. **Direct PAC** - Corporate/Trade/Union PAC contributions
-2. **Employee Donations** - Individual donations rolled up by employer
-3. **IE Support** - Independent expenditures FOR the candidate, traced to funders
-4. **IE Oppose** - Independent expenditures AGAINST, traced to funders  
-5. **Lobbying** - *(Future)* Lobbying spend on that congressperson
+| Channel | What It Captures |
+|---------|-----------------|
+| **Ch1: Organizational Direct** | PAC money traced through passthrough committees to terminal orgs (corp, trade, labor, ideological, cooperative) |
+| **Ch2: IE Support** | Independent expenditures FOR the candidate by Super PACs, traced to who funded those PACs |
+| **Ch3: IE Oppose** | Independent expenditures AGAINST the candidate (same trace methodology) |
+| **Ch4: Individuals** | People giving directly to candidate's committees ($200+ itemized), split by corporate connection |
+| **Ch5: Unaccounted** | Gap between committee receipts and traced inflows — mostly unitemized small donors (<$200) |
 
-Each pie is broken down **by organization** - so you can see:
-- "Asana gave Harris $20.8M total: $0 direct, $121K employees, $20.7M IE support"
+Each channel is broken down **by organization** — so you can see:
+- "Goldman Sachs: $50K direct PAC, $120K from employees, $2M IE support"
 
 ### Data Quality
 
 We handle the messy reality of FEC data:
-- **Employer typos**: "GOOGL INC" → "GOOGLE" via embedding clustering
-- **Corporate hierarchy**: YouTube employees → Google → Alphabet
-- **Whale donors**: Billionaires linked to their companies via Wikidata
+- **Employer normalization**: "GOOGL INC" → "GOOGLE" via canonical mapping
+- **Whale donors**: Billionaires linked to their companies via Wikidata SPARQL
 - **Passthrough tracing**: JFC money traced proportionally to original sources
+- **Conduit filtering**: ActBlue/WinRed stripped to avoid double-counting earmarked donations
 
 ---
 
@@ -70,17 +65,15 @@ flowchart TB
     end
 
     subgraph "Layer 4: Enrichment"
-        CC[committee_classification] --> CF[committee_financials] --> CR[committee_receipts]
-        CE[canonical_employers] --> EC[employer_clusters] --> ECI[employer_cluster_integration]
-        ECI --> WCR[wikidata_corporate_resolution] --> CH[corporate_hierarchy]
+        CC[committee_classification] --> CR[committee_receipts]
+        CE[canonical_employers] --> WCR[wikidata_corporate_resolution]
         DC[donor_classification]
     end
 
     subgraph "Layer 5: Aggregation"
-        CR & WCR --> CU[candidate_upstream<br/>Five Pies]
-        CU --> CS[candidate_summaries]
-        CU --> CMS[committee_summaries]
-        CU --> DS[donor_summaries]
+        CR & WCR --> CF[candidate_funding<br/>Funding Channels]
+        CF --> CS[candidate_summaries]
+        CF --> CMS[committee_summaries]
     end
 ```
 
@@ -102,169 +95,175 @@ flowchart TB
 
 | Asset | Source | Target | Description |
 |-------|--------|--------|-------------|
-| `donors` | `fec_YYYY.indiv` | `aggregation.donors` | Aggregated donors (by name+employer+zip) |
+| `donors` | `fec_YYYY.indiv` | `aggregation.donors` | Aggregated donors (ENTITY_TP IN ['IND','CAN'], by name+employer+zip) |
 | `employers` | `fec_YYYY.indiv` | `aggregation.employers` | Unique employer names |
 
 ### Layer 3: Graph Edges
 
 | Asset | Source | Target | Description |
 |-------|--------|--------|-------------|
-| `contributed_to` | indiv + cm | `aggregation.contributed_to` | Donor → Committee donations |
+| `contributed_to` | indiv + cm | `aggregation.contributed_to` | Donor → Committee donations (IND+CAN only) |
 | `transferred_to` | pas2 + oth + cm | `aggregation.transferred_to` | Committee → Committee transfers |
 | `affiliated_with` | ccl | `aggregation.affiliated_with` | Committee → Candidate links |
 | `employed_by` | donors + employers | `aggregation.employed_by` | Donor → Employer |
-| `spent_on` | pas2 | `aggregation.spent_on` | Independent expenditures |
+| `spent_on` | pas2 | `aggregation.spent_on` | Independent expenditures (support/oppose) |
 | `political_money_graph` | all edges | `aggregation.political_money_flow` | Named graph definition |
 
 ### Layer 4: Enrichment
 
 | Asset | Dependencies | Target | Description |
 |-------|--------------|--------|-------------|
-| `committee_classification` | contributed_to | committees.terminal_type | Classifies committees (corporation, labor_union, etc.) |
-| `committee_financials` | contributed_to, transferred_to, committee_classification | committees.total_receipts | Computes receipt totals from edges |
-| `committee_receipts` | indiv, pas2, oth, committee_financials | committees.* | Full receipt breakdown from raw FEC |
-| `donor_classification` | donors | donors.whale_tier | Classifies donors (ultra, mega, whale, notable) |
-| `canonical_employers` | employers | canonical_employers | Groups employer name variations |
-| `employer_clusters` | canonical_employers | employer_clusters | Embedding-based typo detection |
-| `employer_cluster_integration` | employer_clusters | employer_alias_of | Merges clusters into canonical |
-| `wikidata_corporate_resolution` | canonical_employers, donors | corporate_families, whale_corporate_links | Resolves parent companies via Wikidata |
-| `corporate_hierarchy` | employer_cluster_integration, wikidata_corporate_resolution | subsidiary_of | Builds parent-child edges |
+| `committee_classification` | contributed_to | committees.terminal_type | Classifies committees (corporation, labor_union, trade, ideological, cooperative, passthrough, campaign, etc.) |
+| `committee_receipts` | indiv, pas2, oth, contributed_to | committees.total_receipts | Computes receipt totals from raw FEC data (individuals + transfers) |
+| `donor_classification` | donors | donors.whale_tier | Classifies donors by giving level (ultra, mega, whale, notable) |
+| `canonical_employers` | employers | canonical_employers | Groups employer name variations via rule-based normalization |
+| `wikidata_corporate_resolution` | canonical_employers, donors | corporate_families, whale_corporate_links | Resolves parent companies and billionaire-company links via Wikidata SPARQL |
 
 ### Layer 5: Aggregation
 
 | Asset | Dependencies | Target | Description |
 |-------|--------------|--------|-------------|
-| `candidate_upstream` | committee_receipts, wikidata_corporate_resolution | candidates.funding_sources | The "Five Pies" - traces all funding to terminal sources |
-| `candidate_summaries` | candidate_upstream | candidates.summary | Pre-computed stats for UI |
-| `committee_summaries` | candidate_upstream | committees.summary | Pre-computed stats for UI |
-| `donor_summaries` | candidate_upstream | donors.summary | Pre-computed stats for UI |
+| `candidate_funding` | committee_receipts, wikidata_corporate_resolution, committee_classification, all edges | candidates.funding_channels | Traces all funding to terminal sources, organized by funding channel |
+| `candidate_summaries` | candidate_funding, committee_receipts | candidates.summary | Pre-computed stats for UI |
+| `committee_summaries` | candidate_funding, committee_receipts | committees.summary | Pre-computed stats for UI |
 
 ---
 
 ## Jobs
 
-### fec_pipeline_job
-**Full refresh** - Downloads FEC data and rebuilds everything.
-```bash
-dagster job execute -m src -j fec_pipeline_job
-```
-
 ### enrichment_job
-**Enrichment only** - Classification, Wikidata resolution, clustering.
+**Enrichment only** — Classification, Wikidata resolution, receipt computation.
 ```bash
 dagster job execute -m src -j enrichment_job
 ```
 
-Assets included:
-- committee_classification
-- committee_financials
-- committee_receipts
-- donor_classification
-- canonical_employers
-- employer_clusters
-- employer_cluster_integration
-- wikidata_corporate_resolution
-- corporate_hierarchy
+Assets: committee_classification, committee_receipts, donor_classification, canonical_employers, wikidata_corporate_resolution
 
 ### aggregation_job
-**Summaries only** - Computes Five Pies and pre-aggregated stats.
+**Summaries only** — Computes funding channels and pre-aggregated stats.
 ```bash
 dagster job execute -m src -j aggregation_job
 ```
 
-Assets included:
-- candidate_upstream
-- candidate_summaries
-- committee_summaries
-- donor_summaries
+Assets: candidate_funding, candidate_summaries, committee_summaries
 
 ### upstream_job
-**Quick Five Pies refresh** - Just candidate funding sources.
+**Quick funding refresh** — Just candidate funding channels.
 ```bash
 dagster job execute -m src -j upstream_job
 ```
 
+Assets: candidate_funding
+
 ---
 
-## The Five Pies Algorithm
+## The Funding Channels Algorithm
 
-The `candidate_upstream` asset computes where a candidate's money **actually** comes from by tracing backwards through the graph.
+The `candidate_funding` asset computes where a candidate's money **actually** comes from by tracing backwards through the committee graph.
 
 ### Terminal Types
 
 Money flow stops at these committee types (they are the **origin**):
 
-| Terminal Type | Description | Example |
-|---------------|-------------|---------|
-| `corporation` | Corporate PAC | "GOLDMAN SACHS GROUP INC PAC" |
-| `trade_association` | Industry group | "AMERICAN BANKERS ASSOCIATION PAC" |
-| `labor_union` | Union PAC | "UNITED AUTO WORKERS" |
-| `ideological` | Issue-based PAC | "EMILY'S LIST" |
-| `cooperative` | Member cooperative | "LAND O'LAKES INC PAC" |
+| Terminal Type | Count | Description | Example |
+|---------------|-------|-------------|---------|
+| `corporation` | 2,048 | Corporate PAC | "GOLDMAN SACHS GROUP INC PAC" |
+| `trade_association` | 786 | Industry group | "AMERICAN BANKERS ASSOCIATION PAC" |
+| `labor_union` | 387 | Union PAC | "UNITED AUTO WORKERS" |
+| `ideological` | 399 | Issue-based PAC | "EMILY'S LIST" |
+| `cooperative` | 54 | Member cooperative | "LAND O'LAKES INC PAC" |
 
 ### Passthrough Types
 
 Money flow continues through these (they are **conduits**):
 
-| Passthrough Type | Description | Example |
-|------------------|-------------|---------|
-| `passthrough` | Joint fundraising committees | "TRUMP VICTORY" |
-| `super_pac_unclassified` | IE-only committees | Various Super PACs |
-| `campaign` | Candidate committees | "CRUZ FOR SENATE" |
+| Passthrough Type | Count | Description | Example |
+|------------------|-------|-------------|---------|
+| `passthrough` | 8,139 | Joint fundraising committees, party committees | "TRUMP VICTORY" |
+| `super_pac_unclassified` | 4,533 | IE-only committees with no ORG_TP | Various Super PACs |
+| `campaign` | 13,493 | Candidate committees | "CRUZ FOR SENATE" |
+| `unknown` | 994 | No classification data | — |
 
-### Algorithm
+### BFS Tracing Algorithm
 
-```python
-def trace_upstream(candidate):
-    # Start with committees affiliated with candidate
-    committees = get_affiliated_committees(candidate)
-    
-    while committees:
-        for cmte in committees:
-            if cmte.terminal_type in TERMINAL_TYPES:
-                # Found origin - attribute money
-                attribute_to_source(cmte)
-            else:
-                # Passthrough - trace further upstream
-                upstream = get_transfers_to(cmte)
-                committees.extend(upstream)
-    
-    # Also attribute direct individual contributions
-    for donor in get_donors_to_candidate_committees(candidate):
-        if donor.employer in corporate_families:
-            attribute_to_corporation(donor)
-        else:
-            attribute_to_individuals(donor)
+```
+For each candidate:
+  1. Get UNIQUE affiliated committee IDs (deduplicated across cycles)
+  2. BFS backwards from those committees:
+     - Individual contributions → Channel 4 (Individuals)
+     - Transfers from terminal orgs → Channel 1 (Org Direct)
+     - Transfers from passthroughs → keep tracing with proportional multiplier
+       multiplier = parent_mult × (transfer_amount / from_committee_receipts)
+  3. IE spending on candidate → Channels 2/3 (Support/Oppose)
+     - For each Super PAC, trace its funding upstream similarly
+  4. Unaccounted = committee_total_receipts - traced_total
 ```
 
-### Output
+The proportional multiplier ensures that if a JFC raised $100M and sent $1M to this candidate, we only attribute 1% of each upstream source to this candidate.
 
-Each candidate gets a `funding_sources` field:
+### Output Structure
+
+Each candidate gets a `funding_channels` field:
 
 ```json
 {
-  "funding_sources": {
-    "total": 5000000,
-    "corporations": {
-      "total": 1750000,
-      "pct": 35.0,
-      "top_sources": [
-        {"name": "GOLDMAN SACHS", "amount": 250000},
-        {"name": "JPMORGAN CHASE", "amount": 180000}
+  "funding_channels": {
+    "by_cycle": { "2020": {...}, "2022": {...}, "2024": {...} },
+    "aggregate": {
+      "total_funding": 26290182,
+      "direct_funding": 17556160,
+      "ie_support": 8734022,
+      "ie_oppose": 2884844,
+      "organizational_direct": {
+        "total": 1263419, "pct": 4.8,
+        "by_type": {
+          "corporation": { "total": 445037, "top": [...] },
+          "trade_association": { "total": 497658, "top": [...] },
+          "labor_union": { "total": 87705, "top": [...] },
+          "ideological": { "total": 227051, "top": [...] },
+          "cooperative": { "total": 5968, "top": [...] }
+        }
+      },
+      "ie": {
+        "support": { "total": 8734022, "top_pacs": [...], "by_corporation": [...] },
+        "oppose": { "total": 2884844, "top_pacs": [...], "by_corporation": [...] }
+      },
+      "individuals": {
+        "total": 16292742, "pct": 62.0,
+        "corporate_connected": { "total": 596644, "by_company": [...] },
+        "independent": { "total": 15696098, "top": [...] }
+      },
+      "unaccounted": {
+        "total": 54337073, "pct": 75.6,
+        "cmte_total_receipts": 71893233,
+        "traced_total": 17556160,
+        "breakdown": {
+          "small_donor_estimate": 43472575,
+          "from_individuals": 59575814,
+          "from_committees": 12317419
+        }
+      },
+      "by_organization": [
+        { "name": "...", "direct_pac": 0, "direct_employees": 0, "ie_support": 0, "ie_oppose": 0, "total_pro": 0 }
       ]
     },
-    "trade_associations": {"total": 1000000, "pct": 20.0, ...},
-    "labor_unions": {"total": 750000, "pct": 15.0, ...},
-    "ideological": {"total": 500000, "pct": 10.0, ...},
-    "individuals": {
-      "total": 1000000,
-      "pct": 20.0,
-      "corporate_connected": 600000,
-      "independent": 400000
-    }
+    "cycles_available": ["2020", "2022", "2024"],
+    "computed_at": "2026-02-07T..."
   }
 }
 ```
+
+### Validation Results (Feb 7, 2026)
+
+| | **Harris (Pres)** | **Trump** | **Cruz (Senate)** |
+|---|---|---|---|
+| **Total Traced** | $804M | $457M | $26.3M |
+| **Ch1 Org Direct** | $2.0M (0.2%) | $834K (0.2%) | $1.26M (4.8%) |
+| **Ch2 IE Support** | $548M (68.2%) | $300M (65.8%) | $8.7M (33.2%) |
+| **Ch3 IE Oppose** | $561M | $492M | $2.9M |
+| **Ch4 Individuals** | $254M (31.6%) | $155M (34.0%) | $16.3M (62.0%) |
+| **Ch5 Unaccounted** | $1.54B (85.8%) | $828M (84.1%) | $54M (75.6%) |
+| — Small donors est. | $729M | $205M | $43.5M |
 
 ---
 
@@ -272,14 +271,13 @@ Each candidate gets a `funding_sources` field:
 
 ### Why It Matters
 
-FEC data has employer names entered by donors - full of variations:
+FEC data has employer names entered by donors — full of variations:
 
 ```
 GOOGLE LLC
 GOOGLE INC
 GOOGLE, INC.
 ALPHABET INC
-YOUTUBE LLC
 ```
 
 Without normalization, we can't answer: "How much did Google employees give?"
@@ -289,15 +287,11 @@ Without normalization, we can't answer: "How much did Google employees give?"
 ```mermaid
 flowchart TD
     RAW[Raw Employers<br/>500K+ unique names] --> CE[canonical_employers<br/>Rule-based normalization]
-    CE --> EC[employer_clusters<br/>Embedding similarity]
-    EC --> ECI[employer_cluster_integration<br/>Merge typos]
-    ECI --> WCR[wikidata_corporate_resolution<br/>Parent company lookup]
-    WCR --> CH[corporate_hierarchy<br/>subsidiary_of edges]
-    
+    CE --> WCR[wikidata_corporate_resolution<br/>Parent company lookup]
+
     CE --> EA[(employer_alias_of<br/>81K edges)]
     WCR --> CF[(corporate_families<br/>1K+ families)]
     WCR --> WL[(whale_corporate_links<br/>500+ links)]
-    CH --> SO[(subsidiary_of<br/>500+ edges)]
 ```
 
 ### 1. canonical_employers
@@ -309,34 +303,15 @@ Groups name variations using rule-based normalization:
 
 **Output**: 75K canonical employers from 500K raw names
 
-### 2. employer_clusters
-
-Uses embedding similarity to find typos:
-- Computes embeddings for employer names
-- Clusters by cosine similarity (>0.97 = typo)
-
-**Output**: Typo clusters for manual review
-
-### 3. wikidata_corporate_resolution
+### 2. wikidata_corporate_resolution
 
 Queries Wikidata SPARQL for:
 - Company → Parent company (Google → Alphabet)
 - Person → Companies founded/led (Elon Musk → Tesla, SpaceX)
 
 **Output**: 
-- `corporate_families` - Canonical companies with total influence
-- `whale_corporate_links` - Billionaire → Company associations
-
-### 4. corporate_hierarchy
-
-Builds graph edges for subsidiary relationships:
-
-```aql
-FOR v IN 1..3 INBOUND "corporate_parents/ALPHABET"
-    GRAPH "corporate_ownership"
-    RETURN v.name
--- Returns: GOOGLE, YOUTUBE, WAYMO, DEEPMIND, etc.
-```
+- `corporate_families` — Canonical companies with total influence
+- `whale_corporate_links` — Billionaire → Company associations
 
 ---
 
@@ -355,24 +330,22 @@ FOR v IN 1..3 INBOUND "corporate_parents/ALPHABET"
 
 **Vertex Collections**
 ```
-candidates          - Federal candidates
-committees          - PACs, Super PACs, campaigns
-donors              - Individual/org donors
+candidates          - Federal candidates (11,796)
+committees          - PACs, Super PACs, campaigns (30,840 classified)
+donors              - Individual donors, ENTITY_TP IN ['IND','CAN'] (280,513)
 employers           - Raw employer names
 canonical_employers - Normalized employer groups
 corporate_families  - Company groups with totals
-corporate_parents   - Parent company records
 ```
 
 **Edge Collections**
 ```
-contributed_to      - Donor → Committee
-transferred_to      - Committee → Committee  
-affiliated_with     - Committee → Candidate
-employed_by         - Donor → Employer
-spent_on            - Committee → Candidate (IEs)
+contributed_to      - Donor → Committee (3,327,970 edges)
+transferred_to      - Committee → Committee (654,530 edges)
+affiliated_with     - Committee → Candidate (22,808 edges, per-cycle)
+employed_by         - Donor → Employer (147,810 edges)
+spent_on            - Committee → Candidate IEs (20,373 edges)
 employer_alias_of   - Employer → Canonical
-subsidiary_of       - Company → Parent
 whale_corporate_links - Person → Company
 ```
 
@@ -392,28 +365,24 @@ src/
 │   ├── sync/               # data_sync
 │   ├── fec/                # cn, cm, ccl, pas2, oth, indiv
 │   ├── graph/              # donors, employers, edges
-│   ├── enrichment/         # classification, wikidata, clustering
-│   └── aggregation/        # Five Pies, summaries
+│   ├── enrichment/         # classification, wikidata, receipts
+│   └── aggregation/        # candidate_funding, summaries
 ├── jobs/                   # Job definitions
-├── resources/              # ArangoDB, Embedding service
-├── schedules/              # Weekly schedule
-├── rag/                    # Utility libraries (NOT RAG AI)
-│   ├── employer_normalization.py
-│   └── wikidata_client.py
-└── cli/                    # Query tools
+├── resources/              # ArangoDB resource
+├── utils/                  # Memory tracking, preflight checks
+└── api/                    # Congress API, election API, lobbying API
 ```
-
-### Note on `src/rag/`
-
-Despite the name, this is **not** Retrieval-Augmented Generation. It's utility code:
-- `employer_normalization.py` - Rule-based name cleaning
-- `wikidata_client.py` - SPARQL queries to Wikidata
-
-The name is historical ("Resolution And Grouping").
 
 ---
 
 ## Operations
+
+### Materialize a Single Asset
+
+```bash
+docker compose -f docker-compose.dev.yml exec dagster-webserver \
+  dagster asset materialize --select <asset_name> -m src
+```
 
 ### Check Job Status
 
@@ -430,32 +399,21 @@ for r in list(instance.get_runs(limit=5)):
 
 Open Dagster UI at http://localhost:4300 → Assets → Global Asset Lineage
 
-### Cancel a Run
-
-```bash
-docker compose -f docker-compose.dev.yml exec dagster-webserver python3 -c "
-from dagster import DagsterInstance
-instance = DagsterInstance.get()
-run = list(instance.get_runs(limit=1))[0]
-instance.report_run_canceled(run)
-print(f'Cancelled {run.run_id[:8]}')
-"
-```
-
 ### Query ArangoDB
 
 ```bash
-# Via arangosh
-docker compose -f docker-compose.dev.yml exec arangodb arangosh \
-  --server.username root --server.password ltpass
+docker compose -f docker-compose.dev.yml exec dagster-webserver python3 << 'EOF'
+from arango import ArangoClient
+client = ArangoClient(hosts='http://legal-tender-dev-arango:8529')
+db = client.db('aggregation', username='root', password='ltpass')
 
-# Example query
-db._useDatabase("aggregation")
-db._query(`
-  FOR c IN candidates
-  FILTER c.funding_sources.total > 1000000
-  SORT c.funding_sources.total DESC
-  LIMIT 10
-  RETURN {name: c.CAND_NAME, total: c.funding_sources.total}
-`).toArray()
+for doc in db.aql.execute("""
+    FOR c IN candidates
+        FILTER c.funding_channels.total_funding > 1000000
+        SORT c.funding_channels.total_funding DESC
+        LIMIT 10
+        RETURN { name: c.CAND_NAME, total: c.funding_channels.total_funding }
+"""):
+    print(f"{doc['name']:40} ${doc['total']:>15,.0f}")
+EOF
 ```
