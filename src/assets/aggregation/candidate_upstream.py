@@ -9,23 +9,27 @@ FUNDING CHANNELS (how money reaches candidates):
 2. IE SUPPORT - Independent expenditures FOR the candidate by Super PACs, traced
    upstream to see who funded those Super PACs.
 3. IE OPPOSE - Independent expenditures AGAINST the candidate (traced similarly).
-4. INDIVIDUALS - People giving directly to candidate committees ($200+ itemized).
-5. UNACCOUNTED - Gap between total receipts and what we can trace. Dark money,
-   unitemized small donors (<$200), and other untraceable flows live here.
+4. INDIVIDUALS - All individual contributions to candidate committees, split into:
+   a. Whale donors ($10K+ aggregate) - fully traced through graph with employer/corporate detail
+      - Corporate-connected: employees of known corps (via canonical_employers/wikidata)
+      - Independent: everyone else
+   b. Grassroots donors (sub-$10K aggregate) - known total from raw FEC data, no per-donor detail
+5. UNACCOUNTED - TRUE residual gap: committee trace loss through passthroughs, data gaps,
+   unitemized contributions (<$200), and actual dark money. Should be small (< 15%).
 
 For organizational money, we trace BACKWARDS through passthrough committees (JFCs,
 conduits, party committees) to the TERMINAL SOURCE -- the org PAC whose terminal_type
 tells us what kind of organization it is (corporation, trade, labor, ideological, cooperative).
 
-For individuals, we further track corporate connections:
-- Corporate-connected: Employees of known corporations (via canonical_employers/wikidata)
-- Whale donors: $10K+ donors linked to corporations via employer
-- Independent: Everyone else
+KEY INSIGHT: The donors graph only contains $10K+ aggregate donors (for employer/corporate
+analysis). But committee_receipts computes actual totals from ALL raw FEC transactions.
+The difference (sub-threshold individuals) is a KNOWN quantity folded into the individuals
+channel as 'grassroots', NOT dumped into unaccounted.
 
-UNACCOUNTED captures:
-- Unitemized individual contributions (<$200, not in indiv file)
-- Transfers we can't trace (missing edges, data gaps)
-- The gap between committee total_receipts and sum of traced inflows
+UNACCOUNTED captures only true unknowns:
+- Committee trace loss (proportional loss through passthrough hops)
+- Unitemized individual contributions (<$200 aggregate, not in FEC indiv file)
+- Data gaps and edge cases
 
 OUTPUT STRUCTURE:
 candidates.funding_channels = {
@@ -40,8 +44,8 @@ Each channel block:
 - organizational_direct: { total, pct, by_type: { corporation: {total, top}, trade: {...}, ... } }
 - ie_support: { total, pct, top_pacs, by_corporation, by_pac }
 - ie_oppose: { total, pct, top_pacs, by_corporation, by_pac }
-- individuals: { total, pct, corporate_connected: {...}, independent: {...} }
-- unaccounted: { total, pct, explanation }
+- individuals: { total, pct, whale: {corporate_connected, independent}, grassroots: {total, pct} }
+- unaccounted: { total, pct, explanation }  (TRUE residual only)
 
 Source: aggregation graph (committees, donors, edges)
 Target: candidates collection updated with 'funding_channels' field.
@@ -257,7 +261,15 @@ def candidate_funding_asset(
             multiplier: float = 1.0
         ) -> Dict[str, Any]:
             """
-            BFS trace backwards from committees to find terminal sources.
+            Two-phase proportional trace backwards from committees to terminal sources.
+            
+            Phase 1: Propagate multipliers level-by-level through passthrough committees.
+                     Each committee accumulates the TOTAL proportion of its money that
+                     flows to this candidate. Handles multiple transfer edges correctly
+                     (e.g. JFC→candidate across 3 cycles = 3 edges, combined into one mult).
+            
+            Phase 2: Process each committee ONCE with its accumulated mult.
+                     Attribute whale individuals, terminal org PACs, and upstream grassroots.
             
             Returns:
             {
@@ -269,7 +281,8 @@ def candidate_funding_asset(
                     'cooperative': {name: amount, ...},
                 },
                 'individuals': {name: {'amount': X, 'employer': Y, 'company': Z}, ...},
-                'traced_total': float,  # Total we could attribute
+                'traced_total': float,  # Total we could attribute (whale + org)
+                'grassroots_upstream': float,  # Sub-$10K individuals at upstream passthroughs
             }
             """
             org_results = {
@@ -281,28 +294,71 @@ def candidate_funding_asset(
             }
             individual_results = {}  # name -> {amount, employer, company}
             traced_total = 0.0
+            grassroots_upstream = 0.0
             
-            # BFS queue: (cmte_id, multiplier, depth)
-            queue = [(cmte_id, multiplier, 0) for cmte_id in start_cmte_ids]
-            visited_edges = set()
+            start_set = set(start_cmte_ids)
             
-            while queue:
-                cmte_id, mult, depth = queue.pop(0)
+            # ============================================================
+            # PHASE 1: Propagate multipliers level-by-level
+            # ============================================================
+            # Each committee gets a total mult = fraction of its receipts
+            # that ultimately flows to this candidate's committees.
+            # Also collect terminal org attributions during propagation.
+            
+            # Initialize: starting committees get full multiplier
+            all_mults = defaultdict(float)  # cmte_id -> accumulated mult
+            for cmte_id in start_cmte_ids:
+                all_mults[cmte_id] += multiplier
+            
+            # Level-by-level propagation through passthrough graph
+            current_level = defaultdict(float)
+            for cmte_id in start_cmte_ids:
+                current_level[cmte_id] += multiplier
+            
+            for depth in range(config.max_trace_depth):
+                next_level = defaultdict(float)
                 
-                if depth > config.max_trace_depth:
-                    continue
+                for cmte_id, mult in current_level.items():
+                    if mult < 0.0001:
+                        continue
+                    
+                    # Follow transfer edges INTO this committee
+                    for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
+                        from_cmte = cmte_info.get(from_cmte_id, {})
+                        term_type = from_cmte.get('terminal_type', 'unknown')
+                        attr_amount = amount * mult
+                        from_name = from_cmte.get('name', from_cmte_id)
+                        
+                        # Terminal sources: attribute directly (org PACs)
+                        bucket = TERMINAL_TYPE_BUCKET.get(term_type)
+                        if bucket:
+                            org_results[bucket][from_name] += attr_amount
+                            traced_total += attr_amount
+                        elif term_type in PASSTHROUGH_TYPES or term_type == 'campaign':
+                            # Passthrough: propagate mult to next level
+                            from_receipts = from_cmte.get('total_receipts', 0) or 0
+                            if from_receipts > 0:
+                                new_mult = mult * (amount / from_receipts)
+                                if new_mult >= 0.0001:
+                                    next_level[from_cmte_id] += new_mult
+                                    all_mults[from_cmte_id] += new_mult
+                
+                if not next_level:
+                    break
+                current_level = next_level
+            
+            # ============================================================
+            # PHASE 2: Attribute individuals and grassroots at each committee
+            # ============================================================
+            # Process each committee ONCE with its total accumulated mult.
+            # No visited_edges needed — each committee appears once.
+            
+            for cmte_id, mult in all_mults.items():
                 if mult < 0.0001:
                     continue
                 
-                cmte = cmte_info.get(cmte_id, {})
-                
-                # Get individual contributions to this committee
+                # Whale individual contributions to this committee
                 for donor_key, amount in contrib_edges.get(cmte_id, []):
-                    edge_key = ('contrib', donor_key, cmte_id)
-                    if edge_key in visited_edges:
-                        continue
-                    visited_edges.add(edge_key)
-                    
                     donor = donor_info.get(donor_key, {})
                     name = donor.get('name', donor_key)
                     
@@ -328,34 +384,18 @@ def candidate_funding_asset(
                         }
                     individual_results[name]['amount'] += attr_amount
                 
-                # Get committee transfers to this committee
-                for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
-                    edge_key = ('transfer', from_cmte_id, cmte_id)
-                    if edge_key in visited_edges:
-                        continue
-                    visited_edges.add(edge_key)
-                    
-                    from_cmte = cmte_info.get(from_cmte_id, {})
-                    term_type = from_cmte.get('terminal_type', 'unknown')
-                    attr_amount = amount * mult
-                    from_name = from_cmte.get('name', from_cmte_id)
-                    
-                    bucket = TERMINAL_TYPE_BUCKET.get(term_type)
-                    if bucket:
-                        org_results[bucket][from_name] += attr_amount
-                        traced_total += attr_amount
-                    elif term_type in PASSTHROUGH_TYPES or term_type == 'campaign':
-                        # Trace further upstream
-                        from_receipts = from_cmte.get('total_receipts', 0) or 0
-                        if from_receipts > 0:
-                            new_mult = mult * (amount / from_receipts)
-                            if new_mult >= 0.0001:
-                                queue.append((from_cmte_id, new_mult, depth + 1))
+                # Upstream grassroots: sub-$10K individuals at non-starting committees
+                # (Starting committees' grassroots is handled separately via committee_receipts)
+                if cmte_id not in start_set:
+                    from_grassroots = cmte_info.get(cmte_id, {}).get('small_donor_total', 0) or 0
+                    if from_grassroots > 0:
+                        grassroots_upstream += from_grassroots * mult
             
             return {
                 'organizational': org_results,
                 'individuals': individual_results,
                 'traced_total': traced_total,
+                'grassroots_upstream': grassroots_upstream,
             }
         
         def trace_ie_sources(
@@ -462,9 +502,10 @@ def candidate_funding_asset(
             org_direct_total = corp_total + trade_total + labor_total + ideological_total + coop_total
             
             # --- CHANNEL 4: Individuals ---
-            indiv_total = sum(d['amount'] for d in sources['individuals'].values())
+            # Whale donors: $10K+ aggregate, traced through graph with employer detail
+            whale_indiv_total = sum(d['amount'] for d in sources['individuals'].values())
             
-            # Split individuals by corporate connection
+            # Split whale individuals by corporate connection
             corp_connected = {}
             independent = {}
             for name, data in sources['individuals'].items():
@@ -481,7 +522,28 @@ def candidate_funding_asset(
                     independent[name] = data['amount']
             
             corp_connected_total = sum(c['amount'] for c in corp_connected.values())
-            independent_total = indiv_total - corp_connected_total
+            independent_total = whale_indiv_total - corp_connected_total
+            
+            # Grassroots donors: sub-$10K aggregate, known total from raw FEC but no per-donor detail
+            # committee_receipts computes this as: total_from_individuals - whale_donor_total
+            cmte_total_receipts = sum(
+                (cmte_info.get(cid, {}).get('total_receipts', 0) or 0) for cid in cmte_ids
+            )
+            cmte_total_from_individuals = sum(
+                (cmte_info.get(cid, {}).get('total_from_individuals', 0) or 0) for cid in cmte_ids
+            )
+            cmte_total_from_committees = sum(
+                (cmte_info.get(cid, {}).get('total_from_committees', 0) or 0) for cid in cmte_ids
+            )
+            grassroots_direct = sum(
+                (cmte_info.get(cid, {}).get('small_donor_total', 0) or 0) for cid in cmte_ids
+            )
+            # Grassroots at upstream passthroughs (BFS-traced proportionally)
+            grassroots_upstream = sources.get('grassroots_upstream', 0)
+            grassroots_total = grassroots_direct + grassroots_upstream
+            
+            # All individuals = whale (graph-traced) + grassroots (direct + upstream)
+            all_indiv_total = whale_indiv_total + grassroots_total
             
             # --- CHANNELS 2 & 3: IE Support / Oppose ---
             ie_support_data = ie_data.get('support', [])
@@ -494,24 +556,14 @@ def candidate_funding_asset(
             ie_oppose_sources = trace_ie_sources(ie_oppose_data, contrib_edges, transfer_edges) if ie_oppose_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
             
             # --- Direct funding total (what candidate committees received) ---
-            direct_total = org_direct_total + indiv_total
+            direct_total = org_direct_total + all_indiv_total
             
-            # --- CHANNEL 5: Unaccounted ---
-            # Sum total_receipts for candidate committees (already deduplicated via UNIQUE)
-            cmte_total_receipts = sum(
-                (cmte_info.get(cid, {}).get('total_receipts', 0) or 0) for cid in cmte_ids
-            )
-            cmte_total_from_individuals = sum(
-                (cmte_info.get(cid, {}).get('total_from_individuals', 0) or 0) for cid in cmte_ids
-            )
-            cmte_total_from_committees = sum(
-                (cmte_info.get(cid, {}).get('total_from_committees', 0) or 0) for cid in cmte_ids
-            )
-            cmte_small_donor_total = sum(
-                (cmte_info.get(cid, {}).get('small_donor_total', 0) or 0) for cid in cmte_ids
-            )
+            # --- CHANNEL 5: Unaccounted (TRUE residual only) ---
+            # BFS traced: whale individuals + terminal org transfers (proportional through passthroughs)
             traced_direct = sources['traced_total']
-            unaccounted = max(0, cmte_total_receipts - traced_direct)
+            # Total accounted = BFS-traced + grassroots (known from raw FEC)
+            total_accounted = traced_direct + grassroots_total
+            unaccounted = max(0, cmte_total_receipts - total_accounted)
             
             # Total pro-candidate money (direct + IE support)
             total_funding = direct_total + ie_support_total
@@ -626,38 +678,55 @@ def candidate_funding_asset(
                     },
                 },
                 
-                # CHANNEL 4: Individuals
+                # CHANNEL 4: Individuals (whale + grassroots)
                 'individuals': {
-                    'total': indiv_total,
-                    'pct': safe_pct(indiv_total, total_funding),
-                    'corporate_connected': {
-                        'total': corp_connected_total,
-                        'pct': safe_pct(corp_connected_total, total_funding),
-                        'by_company': top_companies(corp_connected, config.top_n_sources),
+                    'total': all_indiv_total,
+                    'pct': safe_pct(all_indiv_total, total_funding),
+                    # Whale donors: $10K+ aggregate, graph-traced with employer detail
+                    'whale': {
+                        'total': whale_indiv_total,
+                        'pct': safe_pct(whale_indiv_total, total_funding),
+                        'corporate_connected': {
+                            'total': corp_connected_total,
+                            'pct': safe_pct(corp_connected_total, total_funding),
+                            'by_company': top_companies(corp_connected, config.top_n_sources),
+                        },
+                        'independent': {
+                            'total': independent_total,
+                            'pct': safe_pct(independent_total, total_funding),
+                            'top': top_sources(independent, config.top_n_individuals),
+                        },
                     },
-                    'independent': {
-                        'total': independent_total,
-                        'pct': safe_pct(independent_total, total_funding),
-                        'top': top_sources(independent, config.top_n_individuals),
+                    # Grassroots: sub-$10K aggregate, known total from raw FEC, no per-donor detail
+                    'grassroots': {
+                        'total': grassroots_total,
+                        'pct': safe_pct(grassroots_total, total_funding),
+                        'direct': grassroots_direct,
+                        'upstream': grassroots_upstream,
+                        'explanation': (
+                            "Individual donors below $10K aggregate threshold. "
+                            "'direct' = grassroots giving to candidate's own committees. "
+                            "'upstream' = grassroots at feeder committees (JFCs, conduits, "
+                            "party committees) attributed proportionally through transfer chain."
+                        ),
                     },
                 },
                 
-                # CHANNEL 5: Unaccounted
+                # CHANNEL 5: Unaccounted (TRUE residual only)
                 'unaccounted': {
                     'total': unaccounted,
                     'pct': safe_pct(unaccounted, cmte_total_receipts) if cmte_total_receipts > 0 else 0,
                     'cmte_total_receipts': cmte_total_receipts,
-                    'traced_total': traced_direct,
+                    'total_accounted': total_accounted,
                     'breakdown': {
-                        'from_individuals': cmte_total_from_individuals,
-                        'from_committees': cmte_total_from_committees,
-                        'small_donor_estimate': cmte_small_donor_total,
+                        'from_individuals_raw': cmte_total_from_individuals,
+                        'from_committees_raw': cmte_total_from_committees,
                     },
                     'explanation': (
-                        "Gap between committee total receipts and traced inflows. "
-                        "Largest component is typically unitemized individual "
-                        "contributions (<$200 aggregate), shown in small_donor_estimate. "
-                        "Remainder is proportional trace loss through passthrough committees."
+                        "True residual: committee trace loss through passthrough hops, "
+                        "unitemized contributions (<$200 aggregate not in FEC indiv file), "
+                        "and data gaps. Sub-$10K individual donors are accounted for "
+                        "in the individuals.grassroots channel."
                     ),
                 },
                 
@@ -818,15 +887,16 @@ def candidate_funding_asset(
                 context.log.info(f"   Ch2 - IE Support:           ${agg['ie']['support']['total']:,.0f} ({agg['ie']['support']['pct']:.1f}%)")
                 context.log.info(f"   Ch3 - IE Oppose:            ${agg['ie']['oppose']['total']:,.0f}")
                 context.log.info(f"   Ch4 - Individuals:          ${agg['individuals']['total']:,.0f} ({agg['individuals']['pct']:.1f}%)")
-                context.log.info(f"         Corp-connected:  ${agg['individuals']['corporate_connected']['total']:,.0f}")
-                context.log.info(f"         Independent:     ${agg['individuals']['independent']['total']:,.0f}")
+                whale = agg['individuals'].get('whale', {})
+                context.log.info(f"         Whale ($10K+):   ${whale.get('total', 0):,.0f}")
+                context.log.info(f"           Corp-connected:  ${whale.get('corporate_connected', {}).get('total', 0):,.0f}")
+                context.log.info(f"           Independent:     ${whale.get('independent', {}).get('total', 0):,.0f}")
+                context.log.info(f"         Grassroots (<$10K): ${agg['individuals'].get('grassroots', {}).get('total', 0):,.0f}")
+                grass = agg['individuals'].get('grassroots', {})
+                context.log.info(f"           Direct:         ${grass.get('direct', 0):,.0f}")
+                context.log.info(f"           Upstream:       ${grass.get('upstream', 0):,.0f}")
                 context.log.info(f"   Ch5 - Unaccounted:          ${agg['unaccounted']['total']:,.0f} ({agg['unaccounted']['pct']:.1f}% of receipts)")
-                context.log.info(f"         (receipts: ${agg['unaccounted']['cmte_total_receipts']:,.0f}, traced: ${agg['unaccounted']['traced_total']:,.0f})")
-                bd = agg['unaccounted'].get('breakdown', {})
-                if bd:
-                    context.log.info(f"         Small donors est:  ${bd.get('small_donor_estimate', 0):,.0f}")
-                    context.log.info(f"         From individuals:  ${bd.get('from_individuals', 0):,.0f}")
-                    context.log.info(f"         From committees:   ${bd.get('from_committees', 0):,.0f}")
+                context.log.info(f"         (receipts: ${agg['unaccounted']['cmte_total_receipts']:,.0f}, accounted: ${agg['unaccounted']['total_accounted']:,.0f})")
             
             if fc.get('by_cycle'):
                 context.log.info(f"\n   BY CYCLE:")

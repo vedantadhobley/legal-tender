@@ -21,8 +21,8 @@ For each candidate, per election cycle:
 | **Ch1: Organizational Direct** | PAC money traced through passthrough committees to terminal orgs (corp, trade, labor, ideological, cooperative) |
 | **Ch2: IE Support** | Independent expenditures FOR the candidate by Super PACs, traced to who funded those PACs |
 | **Ch3: IE Oppose** | Independent expenditures AGAINST the candidate (same trace methodology) |
-| **Ch4: Individuals** | People giving directly to candidate's committees ($200+ itemized), split by corporate connection |
-| **Ch5: Unaccounted** | Gap between committee receipts and traced inflows — mostly unitemized small donors (<$200) |
+| **Ch4: Individuals** | All individual donations — split into whale ($10K+ aggregate, with employer/corporate detail) and grassroots (sub-$10K, known totals from raw FEC) |
+| **Ch5: Unaccounted** | True residual gap — unitemized <$200 donors, deep trace loss, data gaps. Typically 3-5% |
 
 Each channel is broken down **by organization** — so you can see:
 - "Goldman Sachs: $50K direct PAC, $120K from employees, $2M IE support"
@@ -184,22 +184,32 @@ Money flow continues through these (they are **conduits**):
 | `campaign` | 13,493 | Candidate committees | "CRUZ FOR SENATE" |
 | `unknown` | 994 | No classification data | — |
 
-### BFS Tracing Algorithm
+### Two-Phase Proportional Trace Algorithm
 
 ```
 For each candidate:
   1. Get UNIQUE affiliated committee IDs (deduplicated across cycles)
-  2. BFS backwards from those committees:
-     - Individual contributions → Channel 4 (Individuals)
-     - Transfers from terminal orgs → Channel 1 (Org Direct)
-     - Transfers from passthroughs → keep tracing with proportional multiplier
-       multiplier = parent_mult × (transfer_amount / from_committee_receipts)
+  
+  Phase 1: Propagate multipliers through passthrough graph
+     - Start with mult=1.0 at each affiliated committee
+     - For each committee at current level, follow transfer edges:
+       - Terminal orgs (corp, trade, labor, etc.) → attribute directly
+       - Passthroughs → compute new_mult = mult × (amount / from_receipts)
+                         accumulate into next level's mults
+     - Multiple edges between same committees → correctly combined
+     - Process level by level up to max_trace_depth (8)
+  
+  Phase 2: Attribute individuals at each committee (once, with total mult)
+     - Whale individuals ($10K+): contributed_to edges × mult
+     - Upstream grassroots (<$10K): committee's small_donor_total × mult
+     - Starting committees' grassroots handled separately from committee_receipts
+  
   3. IE spending on candidate → Channels 2/3 (Support/Oppose)
-     - For each Super PAC, trace its funding upstream similarly
-  4. Unaccounted = committee_total_receipts - traced_total
+  4. Unaccounted = total_receipts - (traced_total + total_grassroots)
+     Should be 3-5% (unitemized <$200 + deep trace loss)
 ```
 
-The proportional multiplier ensures that if a JFC raised $100M and sent $1M to this candidate, we only attribute 1% of each upstream source to this candidate.
+The two-phase approach fixes a critical bug where multiple transfer edges (one per cycle) between the same committees caused only the first to be traced.
 
 ### Output Structure
 
@@ -210,18 +220,18 @@ Each candidate gets a `funding_channels` field:
   "funding_channels": {
     "by_cycle": { "2020": {...}, "2022": {...}, "2024": {...} },
     "aggregate": {
-      "total_funding": 26290182,
-      "direct_funding": 17556160,
+      "total_funding": 78141170,
+      "direct_funding": 69407148,
       "ie_support": 8734022,
       "ie_oppose": 2884844,
       "organizational_direct": {
-        "total": 1263419, "pct": 4.8,
+        "total": 2055563, "pct": 2.6,
         "by_type": {
-          "corporation": { "total": 445037, "top": [...] },
-          "trade_association": { "total": 497658, "top": [...] },
-          "labor_union": { "total": 87705, "top": [...] },
-          "ideological": { "total": 227051, "top": [...] },
-          "cooperative": { "total": 5968, "top": [...] }
+          "corporation": { "total": 805761, "top": [...] },
+          "trade_association": { "total": 777257, "top": [...] },
+          "labor_union": { "total": 174279, "top": [...] },
+          "ideological": { "total": 289394, "top": [...] },
+          "cooperative": { "total": 8873, "top": [...] }
         }
       },
       "ie": {
@@ -229,19 +239,22 @@ Each candidate gets a `funding_channels` field:
         "oppose": { "total": 2884844, "top_pacs": [...], "by_corporation": [...] }
       },
       "individuals": {
-        "total": 16292742, "pct": 62.0,
-        "corporate_connected": { "total": 596644, "by_company": [...] },
-        "independent": { "total": 15696098, "top": [...] }
+        "total": 67351585, "pct": 86.2,
+        "whale": {
+          "total": 22550382, "pct": 28.9,
+          "corporate_connected": { "total": 876851, "by_company": [...] },
+          "independent": { "total": 21673531, "top": [...] }
+        },
+        "grassroots": {
+          "total": 44801203, "pct": 57.3,
+          "direct": 43472575,
+          "upstream": 1328628
+        }
       },
       "unaccounted": {
-        "total": 54337073, "pct": 75.6,
+        "total": 2486085, "pct": 3.5,
         "cmte_total_receipts": 71893233,
-        "traced_total": 17556160,
-        "breakdown": {
-          "small_donor_estimate": 43472575,
-          "from_individuals": 59575814,
-          "from_committees": 12317419
-        }
+        "total_accounted": 69407148
       },
       "by_organization": [
         { "name": "...", "direct_pac": 0, "direct_employees": 0, "ie_support": 0, "ie_oppose": 0, "total_pro": 0 }
@@ -257,13 +270,14 @@ Each candidate gets a `funding_channels` field:
 
 | | **Harris (Pres)** | **Trump** | **Cruz (Senate)** |
 |---|---|---|---|
-| **Total Traced** | $804M | $457M | $26.3M |
-| **Ch1 Org Direct** | $2.0M (0.2%) | $834K (0.2%) | $1.26M (4.8%) |
-| **Ch2 IE Support** | $548M (68.2%) | $300M (65.8%) | $8.7M (33.2%) |
+| **Total Funding** | $2.27B | $1.24B | $78.1M |
+| **Ch1 Org Direct** | $13.7M (0.6%) | $3.3M (0.3%) | $2.1M (2.6%) |
+| **Ch2 IE Support** | $548M (24.1%) | $300M (24.2%) | $8.7M (11.2%) |
 | **Ch3 IE Oppose** | $561M | $492M | $2.9M |
-| **Ch4 Individuals** | $254M (31.6%) | $155M (34.0%) | $16.3M (62.0%) |
-| **Ch5 Unaccounted** | $1.54B (85.8%) | $828M (84.1%) | $54M (75.6%) |
-| — Small donors est. | $729M | $205M | $43.5M |
+| **Ch4 Individuals** | $1.71B (75.3%) | $937M (75.5%) | $67.4M (86.2%) |
+| — Whale ($10K+) | $719M | $280M | $22.6M |
+| — Grassroots (<$10K) | $991M | $656M | $44.8M |
+| **Ch5 Unaccounted** | $73.7M (4.1%) | $44.8M (4.6%) | $2.5M (3.5%) |
 
 ---
 
