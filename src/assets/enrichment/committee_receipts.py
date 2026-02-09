@@ -1,14 +1,17 @@
 """Committee Receipts - Pre-compute ACTUAL receipt totals from raw FEC data.
 
 CRITICAL FIX: The previous committee_financials only summed contributed_to edges,
-which only includes $10K+ whale donors. This misses 90-95% of individual contributions!
+which only includes max-out whale donors. This misses the bulk of individual contributions!
 
 STRATEGY:
 1. Get total individual contributions per committee from raw FEC (simple aggregation)
-2. Use existing contributed_to edges for whale donor totals (already filtered $10K+)
+2. Use existing contributed_to edges for whale donor totals (donors who maxed out at
+   the FEC per-election limit to at least one committee)
 3. Small donor total = total - whale total
 
-This avoids expensive per-donor aggregation while still giving us accurate breakdowns.
+"Whale" = gave >= FEC per-election limit ($2,800-$3,500 depending on cycle) to any
+single committee. These donors have graph vertices with employer/corporate detail.
+"Small donor" = everyone below that threshold. Known total but no per-donor detail.
 
 Source: fec_{cycle}.indiv, fec_{cycle}.pas2, fec_{cycle}.oth, aggregation.contributed_to
 Target: aggregation.committees (updates financial fields)
@@ -61,7 +64,7 @@ def committee_receipts_asset(
         context.log.info("💰 Computing ACTUAL committee receipts from raw FEC data...")
         
         # Get whale totals from existing contributed_to edges
-        # These are already filtered to $10K+ donors
+        # These are from donors who maxed out at the FEC per-election limit
         context.log.info("📊 Phase 1: Getting whale totals from contributed_to edges...")
         whale_totals = {}
         whale_counts = {}

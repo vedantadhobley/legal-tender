@@ -10,10 +10,11 @@ FUNDING CHANNELS (how money reaches candidates):
    upstream to see who funded those Super PACs.
 3. IE OPPOSE - Independent expenditures AGAINST the candidate (traced similarly).
 4. INDIVIDUALS - All individual contributions to candidate committees, split into:
-   a. Whale donors ($10K+ aggregate) - fully traced through graph with employer/corporate detail
+   a. Whale donors (maxed out at FEC per-election limit to any committee) - fully traced
+      through graph with employer/corporate detail
       - Corporate-connected: employees of known corps (via canonical_employers/wikidata)
       - Independent: everyone else
-   b. Grassroots donors (sub-$10K aggregate) - known total from raw FEC data, no per-donor detail
+   b. Grassroots donors (below per-election limit) - known total from raw FEC data, no per-donor detail
 5. UNACCOUNTED - TRUE residual gap: committee trace loss through passthroughs, data gaps,
    unitemized contributions (<$200), and actual dark money. Should be small (< 15%).
 
@@ -21,10 +22,12 @@ For organizational money, we trace BACKWARDS through passthrough committees (JFC
 conduits, party committees) to the TERMINAL SOURCE -- the org PAC whose terminal_type
 tells us what kind of organization it is (corporation, trade, labor, ideological, cooperative).
 
-KEY INSIGHT: The donors graph only contains $10K+ aggregate donors (for employer/corporate
-analysis). But committee_receipts computes actual totals from ALL raw FEC transactions.
-The difference (sub-threshold individuals) is a KNOWN quantity folded into the individuals
-channel as 'grassroots', NOT dumped into unaccounted.
+KEY INSIGHT: The donors graph contains individuals who maxed out at the FEC per-election
+contribution limit ($2,800-$3,500 depending on cycle) to at least one committee. These are
+people who deliberately hit the legal ceiling for a specific candidate — not casual donors.
+committee_receipts computes actual totals from ALL raw FEC transactions. The difference
+(sub-threshold individuals) is a KNOWN quantity folded into the individuals channel as
+'grassroots', NOT dumped into unaccounted.
 
 UNACCOUNTED captures only true unknowns:
 - Committee trace loss (proportional loss through passthrough hops)
@@ -45,6 +48,7 @@ Each channel block:
 - ie_support: { total, pct, top_pacs, by_corporation, by_pac }
 - ie_oppose: { total, pct, top_pacs, by_corporation, by_pac }
 - individuals: { total, pct, whale: {corporate_connected, independent}, grassroots: {total, pct} }
+  whale = maxed out at FEC per-election limit; grassroots = below that limit
 - unaccounted: { total, pct, explanation }  (TRUE residual only)
 
 Source: aggregation graph (committees, donors, edges)
