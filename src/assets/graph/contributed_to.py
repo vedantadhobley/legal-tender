@@ -1,7 +1,11 @@
 """Contributed To Edge Collection - Individual donations to committees.
 
 Creates edges from donors to committees representing individual contributions.
-Only includes donations from donors above the $10K threshold.
+Only includes donations from donors who qualified for a graph vertex (maxed out
+to at least one committee at the FEC per-election limit).
+
+Note: Once a donor qualifies, ALL of their contributions get edges — not just
+the maxed-out one. This gives full visibility into their giving pattern.
 
 MEMORY OPTIMIZATION: Streaming processing with immediate writes.
 

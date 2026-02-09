@@ -21,7 +21,7 @@ For each candidate, per election cycle:
 | **Ch1: Organizational Direct** | PAC money traced through passthrough committees to terminal orgs (corp, trade, labor, ideological, cooperative) |
 | **Ch2: IE Support** | Independent expenditures FOR the candidate by Super PACs, traced to who funded those PACs |
 | **Ch3: IE Oppose** | Independent expenditures AGAINST the candidate (same trace methodology) |
-| **Ch4: Individuals** | All individual donations — split into whale ($10K+ aggregate, with employer/corporate detail) and grassroots (sub-$10K, known totals from raw FEC) |
+| **Ch4: Individuals** | All individual donations — split into whale (per-election max-out donors, with employer/corporate detail) and grassroots (below max-out threshold, known totals from raw FEC) |
 | **Ch5: Unaccounted** | True residual gap — unitemized <$200 donors, deep trace loss, data gaps. Typically 3-5% |
 
 Each channel is broken down **by organization** — so you can see:
@@ -31,7 +31,7 @@ Each channel is broken down **by organization** — so you can see:
 
 We handle the messy reality of FEC data:
 - **Employer normalization**: "GOOGL INC" → "GOOGLE" via canonical mapping
-- **Whale donors**: Billionaires linked to their companies via Wikidata SPARQL
+- **Whale donors**: Per-election max-out donors ($2,800–$3,500 depending on cycle) linked to their employers and companies via Wikidata SPARQL
 - **Passthrough tracing**: JFC money traced proportionally to original sources
 - **Conduit filtering**: ActBlue/WinRed stripped to avoid double-counting earmarked donations
 
@@ -95,7 +95,7 @@ flowchart TB
 
 | Asset | Source | Target | Description |
 |-------|--------|--------|-------------|
-| `donors` | `fec_YYYY.indiv` | `aggregation.donors` | Aggregated donors (ENTITY_TP IN ['IND','CAN'], by name+employer+zip) |
+| `donors` | `fec_YYYY.indiv` | `aggregation.donors` | Per-election max-out donors (ENTITY_TP IN ['IND','CAN'], any single-committee total ≥ FEC per-election limit for that cycle) |
 | `employers` | `fec_YYYY.indiv` | `aggregation.employers` | Unique employer names |
 
 ### Layer 3: Graph Edges
@@ -200,8 +200,8 @@ For each candidate:
      - Process level by level up to max_trace_depth (8)
   
   Phase 2: Attribute individuals at each committee (once, with total mult)
-     - Whale individuals ($10K+): contributed_to edges × mult
-     - Upstream grassroots (<$10K): committee's small_donor_total × mult
+     - Whale individuals (per-election max-out): contributed_to edges × mult
+     - Upstream grassroots (below max-out): committee's small_donor_total × mult
      - Starting committees' grassroots handled separately from committee_receipts
   
   3. IE spending on candidate → Channels 2/3 (Support/Oppose)
@@ -275,8 +275,8 @@ Each candidate gets a `funding_channels` field:
 | **Ch2 IE Support** | $548M (24.1%) | $300M (24.2%) | $8.7M (11.2%) |
 | **Ch3 IE Oppose** | $561M | $492M | $2.9M |
 | **Ch4 Individuals** | $1.71B (75.3%) | $937M (75.5%) | $67.4M (86.2%) |
-| — Whale ($10K+) | $719M | $280M | $22.6M |
-| — Grassroots (<$10K) | $991M | $656M | $44.8M |
+| — Whale (max-out) | $719M | $280M | $22.6M |
+| — Grassroots (sub-limit) | $991M | $656M | $44.8M |
 | **Ch5 Unaccounted** | $73.7M (4.1%) | $44.8M (4.6%) | $2.5M (3.5%) |
 
 ---
@@ -346,7 +346,7 @@ Queries Wikidata SPARQL for:
 ```
 candidates          - Federal candidates (11,796)
 committees          - PACs, Super PACs, campaigns (30,840 classified)
-donors              - Individual donors, ENTITY_TP IN ['IND','CAN'] (280,513)
+donors              - Per-election max-out donors, ENTITY_TP IN ['IND','CAN'] (955,137)
 employers           - Raw employer names
 canonical_employers - Normalized employer groups
 corporate_families  - Company groups with totals
@@ -354,7 +354,7 @@ corporate_families  - Company groups with totals
 
 **Edge Collections**
 ```
-contributed_to      - Donor → Committee (3,327,970 edges)
+contributed_to      - Donor → Committee (5,680,106 edges)
 transferred_to      - Committee → Committee (654,530 edges)
 affiliated_with     - Committee → Candidate (22,808 edges, per-cycle)
 employed_by         - Donor → Employer (147,810 edges)

@@ -135,6 +135,26 @@ services:
       - "3301:8529"  # ArangoDB Web UI
     environment:
       ARANGO_ROOT_PASSWORD: ltpass
+      # Memory budget — auto-sizes block cache, write buffers, query memory.
+      # 16GB is conservative to coexist with AI models. Bump if they move off-box.
+      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "17179869184"  # 16GB
+    # Performance tuning for AMD Ryzen AI MAX+ 395 (16c/32t, 128GB)
+    command:
+      - arangod
+      - --server.authentication=true
+      - --config=/etc/arangodb3/arangod.conf
+      - --server.maximal-threads=64
+      - --server.minimal-threads=16
+      - --server.io-threads=16
+      - --query.memory-limit=4294967296
+      - --rocksdb.num-threads-priority-high=8
+      - --rocksdb.num-threads-priority-low=8
+      - --rocksdb.max-background-jobs=16
+      - --rocksdb.write-buffer-size=134217728
+      - --rocksdb.max-write-buffer-number=8
+      - --rocksdb.total-write-buffer-size=2147483648
+      - --rocksdb.max-total-wal-size=268435456
+      - --cache.size=3221225472
     volumes:
       - legal-tender-prod-arango-data:/var/lib/arangodb3
       - legal-tender-prod-arango-apps:/var/lib/arangodb3-apps

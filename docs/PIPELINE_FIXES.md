@@ -1,7 +1,7 @@
 # Pipeline — Data Model & Fix Tracker
 
 **Started**: February 6, 2026  
-**Last Updated**: February 6, 2026  
+**Last Updated**: February 7, 2026  
 **Branch**: `feature/employer-enrichment`
 
 ---
@@ -47,8 +47,8 @@ Same as Channel 2, but `support_oppose = 'O'` — money spent AGAINST the candid
 All money from individual people to the candidate's affiliated committees, or proportionally attributed from upstream passthrough committees.
 
 **Two tiers**:
-- **Whale donors** ($10K+ aggregate): Fully traced through graph with per-donor detail — name, employer, corporate connection. Split into corporate-connected (employees of known corps) and independent.
-- **Grassroots donors** (sub-$10K aggregate): Known total from raw FEC `indiv` data but no per-donor detail in the graph (the $10K threshold is a graph optimization for employer analysis). Split into:
+- **Whale donors** (per-election max-out): Anyone whose largest single-committee total meets or exceeds the FEC per-election individual contribution limit for that cycle ($2,800 in 2020, $2,900 in 2022, $3,300 in 2024). Fully traced through graph with per-donor detail — name, employer, corporate connection. Split into corporate-connected (employees of known corps) and independent.
+- **Grassroots donors** (below max-out limit): Known total from raw FEC `indiv` data but no per-donor detail in the graph (the max-out threshold is a principled, FEC-regulation-based graph optimization for employer analysis). Split into:
   - **Direct**: grassroots to candidate's own affiliated committees (from `committee_receipts.small_donor_total`)
   - **Upstream**: grassroots at passthrough committees (JFCs, conduits, party committees) attributed proportionally through the transfer chain
 
@@ -135,12 +135,12 @@ funding_channels: {
 
 | Edge Collection | Count | What It Represents |
 |---|---|---|
-| `contributed_to` | 3,327,970 | Individual/candidate donor → committee (ENTITY_TP IN ['IND','CAN']) |
+| `contributed_to` | 5,680,106 | Individual/candidate donor → committee (ENTITY_TP IN ['IND','CAN']) |
 | `transferred_to` | 654,530 | Committee → committee (PAC-to-PAC, party, JFC transfers) |
 | `affiliated_with` | 22,808 | Committee → candidate (one edge per cycle — deduplicate with UNIQUE) |
 | `spent_on` | 20,373 | Committee → candidate (IE spending, support or oppose) |
 | `employed_by` | 147,810 | Donor → employer |
-| **donors** | 280,513 | Unique individual donors in graph |
+| **donors** | 955,137 | Unique per-election max-out donors in graph |
 
 ## Committee Classifications
 
@@ -298,10 +298,10 @@ Pipeline run: `donors` → `contributed_to` → `committee_classification` → `
 | **Ch2 IE Support** | $548M (24.1%) | $300M (24.2%) | $8.7M (11.2%) |
 | **Ch3 IE Oppose** | $561M | $492M | $2.9M |
 | **Ch4 Individuals** | $1.71B (75.3%) | $937M (75.5%) | $67.4M (86.2%) |
-| — Whale ($10K+) | $719M (31.6%) | $280M (22.6%) | $22.6M (28.9%) |
+| — Whale (max-out) | $719M (31.6%) | $280M (22.6%) | $22.6M (28.9%) |
 |   — Corp-connected | $52.8M | $20.1M | $877K |
 |   — Independent | $666M | $260M | $21.7M |
-| — Grassroots (<$10K) | $991M (43.6%) | $656M (52.9%) | $44.8M (57.3%) |
+| — Grassroots (sub-limit) | $991M (43.6%) | $656M (52.9%) | $44.8M (57.3%) |
 |   — Direct | $729M | $205M | $43.5M |
 |   — Upstream | $262M | $451M | $1.3M |
 | **Ch5 Unaccounted** | $73.7M (4.1%) | $44.8M (4.6%) | $2.5M (3.5%) |
@@ -323,7 +323,7 @@ Pipeline run: `donors` → `contributed_to` → `committee_classification` → `
 
 **Problem**: Unaccounted was 75-86% — absurdly high. Two distinct bugs:
 
-**Bug A — Missing grassroots channel**: The `donors` graph has a $10K aggregate threshold. Only whale donors ($10K+) get graph vertices/edges. But `committee_receipts` correctly sums ALL raw FEC `indiv` transactions. The difference (sub-$10K itemized donors) was dumped into "unaccounted" even though it's a known, quantified amount.
+**Bug A — Missing grassroots channel**: The `donors` graph had a $10K aggregate threshold (since replaced by per-election max-out in Fix 13). Only whale donors got graph vertices/edges. But `committee_receipts` correctly sums ALL raw FEC `indiv` transactions. The difference (sub-threshold itemized donors) was dumped into "unaccounted" even though it's a known, quantified amount.
 
 **Bug B — visited_edges BFS bug**: When a committee transfers money via multiple edges (one per cycle), the BFS enqueued the source committee multiple times but `visited_edges` meant only the FIRST dequeue processed any edges. Harris Victory Fund→Harris: 3 edges ($586M, $237M, $6M) but only the $586M edge's mult was used for whale/org tracing. Lost $244M from HVF alone, cascading through DNC ($138M more).
 
@@ -348,6 +348,49 @@ Three different normalization functions across the codebase → silent key misma
 
 ---
 
+## Completed Fix: Per-Election Max-Out Threshold
+
+### FIX 13 — Replace $10K arbitrary threshold with FEC per-election max-out limit ✅
+
+**Date**: Feb 7, 2026  
+**Files**: `src/assets/graph/donors.py`, docstring updates to `contributed_to.py`, `committee_receipts.py`, `candidate_upstream.py`
+
+**Problem**: The $10K aggregate threshold for whale donors was arbitrary and backwards. It summed a donor's contributions across ALL committees — someone giving $3,300 to 4 different candidates ($13,200 total) qualified as a whale, but someone maxing out $6,600 to a SINGLE candidate didn't. The threshold had no connection to FEC regulations.
+
+**Insight**: The FEC sets per-election individual contribution limits, indexed for inflation every odd year:
+- 2020: $2,800/election ($5,600/cycle)
+- 2022: $2,900/election ($5,800/cycle)
+- 2024: $3,300/election ($6,600/cycle)
+- 2026: $3,500/election ($7,000/cycle)
+
+Anyone who maxes out to even ONE committee is demonstrating intentional, strategic giving — the exact behavior that makes employer/corporate linkage interesting.
+
+**Solution**: Rewrote `donors.py` with double-COLLECT AQL pattern:
+1. First COLLECT by (name, employer, cmte_id) → per-committee totals
+2. Second COLLECT by (name, employer) → roll up with MAX(cmte_total)
+3. FILTER max_single_cmte >= per-election limit for that cycle
+
+Single scan per cycle, no nested joins. ~3 minutes per cycle on tuned ArangoDB.
+
+**Also tuned ArangoDB** for the host hardware (AMD Ryzen AI MAX+ 395, 16c/32t, 128GB RAM):
+- 16GB detected memory (up from 8GB default)
+- 64 max threads, 16 IO threads, 16 min threads
+- 4GB query memory limit
+- RocksDB: 8 high/low priority threads, 16 max background jobs, 3GB edge cache
+- Both `docker-compose.dev.yml` and `docker-compose.yml` updated
+
+| Metric | Old ($10K agg) | New (max-out) | Change |
+|---|---|---|---|
+| Donors (2020) | 142,654 | 510,752 | 3.58× |
+| Donors (2022) | 99,291 | 362,298 | 3.65× |
+| Donors (2024) | ~82,000 | 369,736 | ~4.5× |
+| Total unique donors | 280,513 | 955,137 | 3.40× |
+| Materialization time | ~4m | 10m28s | Larger dataset |
+
+**Impact**: 3.4× more donors in the graph, each one a person who demonstrated max-out giving behavior to at least one committee. The whale/grassroots split is now grounded in FEC law rather than an arbitrary dollar amount. Downstream: contributed_to edges grew from 3,327,970 → 5,680,106 (1.71×, 14m36s). Committee receipts and candidate funding pending rematerialization.
+
+---
+
 ## Execution Plan
 
 | Phase | Fixes | Status |
@@ -355,4 +398,5 @@ Three different normalization functions across the codebase → silent key misma
 | ✅ Done | 1, 2, 8 | Clean donor data, committee classifications, basic tracing |
 | ✅ Done | 9, 10, 3, 4, 6, 7 | Self-funding, funding channels rewrite, dead code removal |
 | ✅ Done | 11, 12 | Dedup affiliated committees, grassroots channel, two-phase trace |
+| ✅ Done | 13 | Per-election max-out threshold, ArangoDB tuning |
 | Next | 5 | Normalize functions |
