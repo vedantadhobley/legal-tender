@@ -5,8 +5,8 @@ embedding API (llama.cpp, vLLM, etc.). Configuration via environment
 variables makes it easy to switch models, hosts, or servers.
 
 Environment Variables:
-    EMBEDDING_HOST: Host for embedding server (default: llama-embed)
-    EMBEDDING_PORT: Port for embedding server (default: 8080)
+    EMBEDDING_HOST: Host for embedding server (default: localhost)
+    EMBEDDING_PORT: Port for embedding server (default: 8081)
     EMBEDDING_MODEL: Model name to request (default: text-embedding)
     EMBEDDING_BATCH_SIZE: Max items per batch request (default: 32)
 """
@@ -22,9 +22,9 @@ from dagster import ConfigurableResource
 logger = logging.getLogger(__name__)
 
 
-# Default settings - override via environment variables
-DEFAULT_HOST = "llama-embed"
-DEFAULT_PORT = "8080"
+# Default settings - override via environment variables or .env
+DEFAULT_HOST = "localhost"
+DEFAULT_PORT = "8081"
 DEFAULT_MODEL = "text-embedding"
 DEFAULT_BATCH_SIZE = 32
 DEFAULT_TIMEOUT = 60
@@ -45,8 +45,8 @@ class EmbeddingResource(ConfigurableResource):
             
     Configuration:
         Set these environment variables to change the endpoint:
-        - EMBEDDING_HOST: Server hostname (default: llama-embed)
-        - EMBEDDING_PORT: Server port (default: 8080)
+        - EMBEDDING_HOST: Server hostname (default: localhost)
+        - EMBEDDING_PORT: Server port (default: 8081)
         - EMBEDDING_MODEL: Model name (default: text-embedding)
     """
     
