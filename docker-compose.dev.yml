@@ -8,9 +8,9 @@
 #   - postgres:5432 (Dagster metadata)
 #   - arangodb:8529 (Graph database)
 #
-# External services (on luv-dev network):
-#   - llama-chat:8080 (LLM API - if needed for AI features)
-#   - embedding:8081 (Embedding API - if needed for RAG)
+# External services (via Tailscale MagicDNS to joi):
+#   - joi:3100 (LLM chat API)
+#   - joi:3101 (Embedding API)
 #
 # Storage:
 #   All persistent data lives at ~/workspace/.legal-tender/ with subdirs:
@@ -163,6 +163,6 @@ networks:
     name: legal-tender-dev
     driver: bridge
   
-  # Shared network - cross-project communication (LLM, embedding, etc.)
+  # Shared network - cross-project communication
   luv-dev:
     external: true
