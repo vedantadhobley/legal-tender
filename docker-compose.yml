@@ -10,8 +10,8 @@
 #   - arangodb:8529 (Graph database)
 #
 # External services (via Tailscale MagicDNS to joi):
-#   - joi:3100 (LLM chat API)
-#   - joi:3101 (Embedding API)
+#   - joi:3101 (LLM chat API)
+#   - joi:3102 (Embedding API)
 #
 # Storage:
 #   All persistent data lives at ~/workspace/.legal-tender/ with subdirs:
