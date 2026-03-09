@@ -8,9 +8,9 @@
 #   - postgres:5432 (Dagster metadata)
 #   - arangodb:8529 (Graph database)
 #
-# External services (via Tailscale MagicDNS to joi):
-#   - joi:3101 (LLM chat API)
-#   - joi:3102 (Embedding API)
+# External services (via Tailscale FQDN — bare "joi" won't resolve in Docker):
+#   - joi.tailf424db.ts.net:3101 (LLM chat/thinking API — Qwen3.5-35B-A3B)
+#   - joi.tailf424db.ts.net:3103 (Embedding API — Qwen3-Embedding-8B)
 #
 # Storage:
 #   All persistent data lives at ~/workspace/.legal-tender/ with subdirs:
