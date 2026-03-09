@@ -218,12 +218,12 @@ Changed filter to `ENTITY_TP IN ['IND', 'CAN']`.
 **Date**: Feb 6, 2026  
 **Files**: `src/assets/aggregation/candidate_upstream.py` (824 lines, complete rewrite)
 
-Rewrote the core asset from the broken "five pies" terminal-source-type model to the funding channels model. Key changes:
+Rewrote the core asset from the broken terminal-source-type model to the funding channels model. Key changes:
 - Renamed asset from `candidate_upstream` to `candidate_funding`
 - Config class renamed `CandidateFundingConfig`
 - `trace_committee_sources()` returns `organizational` dict (all 5 org types) + `individuals` + `traced_total`
 - New `trace_ie_sources()` function (extracted from old `trace_ie_corporate_sources`)
-- New `compute_funding_channels()` replaces `compute_five_pies()`
+- New `compute_funding_channels()` replaces old computation
 - Added `TERMINAL_TYPE_BUCKET` mapping dict and `safe_pct()` helper
 - Output writes to `candidates.funding_channels` (was `candidates.funding_sources`)
 - Validation section prints all 5 channels with tree-style formatting
