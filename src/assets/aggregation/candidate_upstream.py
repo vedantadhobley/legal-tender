@@ -123,7 +123,7 @@ def candidate_funding_asset(
         # ================================================================
         context.log.info("Phase 1: Loading lookup data...")
         
-        # Committee info with terminal_type
+        # Committee info with terminal_type and per-cycle receipts
         cmte_info = {}
         for c in db.aql.execute("""
             FOR c IN committees
@@ -134,11 +134,30 @@ def candidate_funding_asset(
                 total_receipts: c.total_receipts || 0,
                 total_from_individuals: c.total_from_individuals || 0,
                 total_from_committees: c.total_from_committees || 0,
-                small_donor_total: c.small_donor_total || 0
+                small_donor_total: c.small_donor_total || 0,
+                receipts_by_cycle: c.receipts_by_cycle || {}
             }
         """):
             cmte_info[c['_key']] = c
         context.log.info(f"   Loaded {len(cmte_info):,} committees")
+
+        # Build per-cycle cmte_info dicts (per-cycle receipts for correct multipliers)
+        cmte_info_by_cycle = {}
+        for cycle in CYCLES:
+            cycle_info = {}
+            for cmte_id, info in cmte_info.items():
+                cycle_data = info.get('receipts_by_cycle', {}).get(cycle, {})
+                cycle_info[cmte_id] = {
+                    '_key': cmte_id,
+                    'name': info['name'],
+                    'terminal_type': info['terminal_type'],
+                    'total_receipts': cycle_data.get('total_receipts', 0) or 0,
+                    'total_from_individuals': cycle_data.get('total_from_individuals', 0) or 0,
+                    'total_from_committees': cycle_data.get('total_from_committees', 0) or 0,
+                    'small_donor_total': cycle_data.get('small_donor_total', 0) or 0,
+                }
+            cmte_info_by_cycle[cycle] = cycle_info
+        context.log.info(f"   Built per-cycle cmte_info dicts")
         
         # Corporate families for employer -> company mapping
         employer_to_company = {}
@@ -192,7 +211,6 @@ def candidate_funding_asset(
         
         # Transfer edges BY CYCLE: cycle -> to_cmte -> [(from_cmte, amount), ...]
         transfer_edges_by_cycle = {cycle: defaultdict(list) for cycle in CYCLES}
-        transfer_edges_all = defaultdict(list)
         for e in db.aql.execute("FOR e IN transferred_to RETURN e"):
             to_cmte = e['_to'].split('/')[1]
             from_cmte = e['_from'].split('/')[1]
@@ -200,13 +218,11 @@ def candidate_funding_asset(
             cycle = e.get('cycle', '2024')
             if cycle in CYCLES:
                 transfer_edges_by_cycle[cycle][to_cmte].append((from_cmte, amount))
-            transfer_edges_all[to_cmte].append((from_cmte, amount))
-        context.log.info(f"   Loaded transfer edges by cycle: " + 
+        context.log.info(f"   Loaded transfer edges by cycle: " +
                         ", ".join(f"{c}={sum(len(v) for v in transfer_edges_by_cycle[c].values()):,}" for c in CYCLES))
         
         # Contribution edges BY CYCLE: cycle -> cmte -> [(donor_key, amount), ...]
         contrib_edges_by_cycle = {cycle: defaultdict(list) for cycle in CYCLES}
-        contrib_edges_all = defaultdict(list)
         for e in db.aql.execute("FOR e IN contributed_to RETURN e"):
             to_cmte = e['_to'].split('/')[1]
             donor_key = e['_from'].split('/')[1]
@@ -214,13 +230,11 @@ def candidate_funding_asset(
             cycle = e.get('cycle', '2024')
             if cycle in CYCLES:
                 contrib_edges_by_cycle[cycle][to_cmte].append((donor_key, amount))
-            contrib_edges_all[to_cmte].append((donor_key, amount))
         context.log.info(f"   Loaded contribution edges by cycle: " +
                         ", ".join(f"{c}={sum(len(v) for v in contrib_edges_by_cycle[c].values()):,}" for c in CYCLES))
         
         # IE spending BY CYCLE: cycle -> candidate -> {support: [(cmte, amount)], oppose: [(cmte, amount)]}
         ie_by_cycle = {cycle: defaultdict(lambda: {'support': [], 'oppose': []}) for cycle in CYCLES}
-        ie_all = defaultdict(lambda: {'support': [], 'oppose': []})
         for e in db.aql.execute("""
             FOR e IN spent_on
             RETURN {
@@ -235,15 +249,13 @@ def candidate_funding_asset(
             cmte_id = e['cmte_id']
             amount = e['amount'] or 0
             cycle = e.get('cycle', '2024')
-            
+
             if e['support_oppose'] == 'S':
                 if cycle in CYCLES:
                     ie_by_cycle[cycle][cand_id]['support'].append((cmte_id, amount))
-                ie_all[cand_id]['support'].append((cmte_id, amount))
             else:
                 if cycle in CYCLES:
                     ie_by_cycle[cycle][cand_id]['oppose'].append((cmte_id, amount))
-                ie_all[cand_id]['oppose'].append((cmte_id, amount))
         context.log.info(f"   Loaded IE data by cycle: " +
                         ", ".join(f"{c}={len(ie_by_cycle[c]):,} cands" for c in CYCLES))
         
@@ -262,6 +274,7 @@ def candidate_funding_asset(
             start_cmte_ids: List[str],
             contrib_edges: Dict,
             transfer_edges: Dict,
+            cycle_cmte_info: Dict,
             multiplier: float = 1.0
         ) -> Dict[str, Any]:
             """
@@ -328,7 +341,7 @@ def candidate_funding_asset(
                     
                     # Follow transfer edges INTO this committee
                     for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
-                        from_cmte = cmte_info.get(from_cmte_id, {})
+                        from_cmte = cycle_cmte_info.get(from_cmte_id, {})
                         term_type = from_cmte.get('terminal_type', 'unknown')
                         attr_amount = amount * mult
                         from_name = from_cmte.get('name', from_cmte_id)
@@ -391,7 +404,7 @@ def candidate_funding_asset(
                 # Upstream grassroots: sub-$10K individuals at non-starting committees
                 # (Starting committees' grassroots is handled separately via committee_receipts)
                 if cmte_id not in start_set:
-                    from_grassroots = cmte_info.get(cmte_id, {}).get('small_donor_total', 0) or 0
+                    from_grassroots = cycle_cmte_info.get(cmte_id, {}).get('small_donor_total', 0) or 0
                     if from_grassroots > 0:
                         grassroots_upstream += from_grassroots * mult
             
@@ -405,7 +418,8 @@ def candidate_funding_asset(
         def trace_ie_sources(
             ie_data: List[tuple],
             contrib_edges: Dict,
-            transfer_edges: Dict
+            transfer_edges: Dict,
+            cycle_cmte_info: Dict,
         ) -> Dict[str, Any]:
             """
             Trace IE spending back to sources -- who funded the Super PACs?
@@ -424,7 +438,7 @@ def candidate_funding_asset(
             }
             
             for cmte_id, ie_amount in ie_data:
-                cmte = cmte_info.get(cmte_id, {})
+                cmte = cycle_cmte_info.get(cmte_id, {})
                 total_receipts = cmte.get('total_receipts', 0) or 0
                 
                 if total_receipts <= 0 or ie_amount <= 0:
@@ -462,7 +476,7 @@ def candidate_funding_asset(
                 
                 # Trace committee transfers to this PAC
                 for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
-                    from_cmte = cmte_info.get(from_cmte_id, {})
+                    from_cmte = cycle_cmte_info.get(from_cmte_id, {})
                     from_name = from_cmte.get('name', from_cmte_id)
                     term_type = from_cmte.get('terminal_type', 'unknown')
                     
@@ -487,6 +501,7 @@ def candidate_funding_asset(
             contrib_edges: Dict,
             transfer_edges: Dict,
             ie_data: Dict,
+            cycle_cmte_info: Dict,
         ) -> Optional[Dict[str, Any]]:
             """
             Compute funding channels for a candidate given cycle-specific edges.
@@ -494,7 +509,7 @@ def candidate_funding_asset(
             Returns the funding_channels dict or None if no funding.
             """
             # Trace direct funding through candidate's committees
-            sources = trace_committee_sources(cmte_ids, contrib_edges, transfer_edges, multiplier=1.0)
+            sources = trace_committee_sources(cmte_ids, contrib_edges, transfer_edges, cycle_cmte_info, multiplier=1.0)
             
             # --- CHANNEL 1: Organizational Direct ---
             org = sources['organizational']
@@ -531,16 +546,16 @@ def candidate_funding_asset(
             # Grassroots donors: sub-$10K aggregate, known total from raw FEC but no per-donor detail
             # committee_receipts computes this as: total_from_individuals - whale_donor_total
             cmte_total_receipts = sum(
-                (cmte_info.get(cid, {}).get('total_receipts', 0) or 0) for cid in cmte_ids
+                (cycle_cmte_info.get(cid, {}).get('total_receipts', 0) or 0) for cid in cmte_ids
             )
             cmte_total_from_individuals = sum(
-                (cmte_info.get(cid, {}).get('total_from_individuals', 0) or 0) for cid in cmte_ids
+                (cycle_cmte_info.get(cid, {}).get('total_from_individuals', 0) or 0) for cid in cmte_ids
             )
             cmte_total_from_committees = sum(
-                (cmte_info.get(cid, {}).get('total_from_committees', 0) or 0) for cid in cmte_ids
+                (cycle_cmte_info.get(cid, {}).get('total_from_committees', 0) or 0) for cid in cmte_ids
             )
             grassroots_direct = sum(
-                (cmte_info.get(cid, {}).get('small_donor_total', 0) or 0) for cid in cmte_ids
+                (cycle_cmte_info.get(cid, {}).get('small_donor_total', 0) or 0) for cid in cmte_ids
             )
             # Grassroots at upstream passthroughs (BFS-traced proportionally)
             grassroots_upstream = sources.get('grassroots_upstream', 0)
@@ -556,8 +571,8 @@ def candidate_funding_asset(
             ie_oppose_total = sum(amt for _, amt in ie_oppose_data)
             
             # Trace IE funding to find who bankrolls the Super PACs
-            ie_support_sources = trace_ie_sources(ie_support_data, contrib_edges, transfer_edges) if ie_support_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
-            ie_oppose_sources = trace_ie_sources(ie_oppose_data, contrib_edges, transfer_edges) if ie_oppose_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
+            ie_support_sources = trace_ie_sources(ie_support_data, contrib_edges, transfer_edges, cycle_cmte_info) if ie_support_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
+            ie_oppose_sources = trace_ie_sources(ie_oppose_data, contrib_edges, transfer_edges, cycle_cmte_info) if ie_oppose_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
             
             # --- Direct funding total (what candidate committees received) ---
             direct_total = org_direct_total + all_indiv_total
@@ -661,7 +676,7 @@ def candidate_funding_asset(
                         'total': ie_support_total,
                         'pct': safe_pct(ie_support_total, total_funding),
                         'top_pacs': [
-                            {'name': cmte_info.get(c, {}).get('name', c), 'amount': amt}
+                            {'name': cycle_cmte_info.get(c, {}).get('name', c), 'amount': amt}
                             for c, amt in sorted(ie_support_data, key=lambda x: -x[1])[:10]
                             if amt >= config.min_amount
                         ],
@@ -673,7 +688,7 @@ def candidate_funding_asset(
                         'total': ie_oppose_total,
                         'pct': safe_pct(ie_oppose_total, total_funding) if total_funding > 0 else 0,
                         'top_pacs': [
-                            {'name': cmte_info.get(c, {}).get('name', c), 'amount': amt}
+                            {'name': cycle_cmte_info.get(c, {}).get('name', c), 'amount': amt}
                             for c, amt in sorted(ie_oppose_data, key=lambda x: -x[1])[:10]
                             if amt >= config.min_amount
                         ],
@@ -754,94 +769,309 @@ def candidate_funding_asset(
             }
 
         # ================================================================
+        # merge_funding_channels: Aggregate = sum of per-cycle results
+        # ================================================================
+        def merge_funding_channels(cycle_results: Dict[str, Dict]) -> Optional[Dict[str, Any]]:
+            """Merge per-cycle funding channel results into aggregate.
+
+            Sums numeric values, merges top-source lists by name, recomputes percentages.
+            """
+            results = [v for v in cycle_results.values() if v is not None]
+            if not results:
+                return None
+
+            def safe_pct(num, denom):
+                return (num / denom * 100) if denom > 0 else 0
+
+            def merge_named_list(lists, n=None):
+                """Merge lists of {name, amount} dicts, summing by name."""
+                merged = defaultdict(float)
+                for lst in lists:
+                    for item in lst:
+                        merged[item['name']] += item['amount']
+                result = sorted(
+                    [{'name': k, 'amount': v} for k, v in merged.items() if v >= config.min_amount],
+                    key=lambda x: -x['amount']
+                )
+                return result[:n] if n else result
+
+            # Top-level sums
+            total_funding = sum(r['total_funding'] for r in results)
+            direct_funding = sum(r['direct_funding'] for r in results)
+            ie_support_total = sum(r['ie_support'] for r in results)
+            ie_oppose_total = sum(r['ie_oppose'] for r in results)
+
+            # Organizational direct by type
+            org_by_type = {}
+            for t in ['corporation', 'trade_association', 'labor_union', 'ideological', 'cooperative']:
+                total = sum(r['organizational_direct']['by_type'][t]['total'] for r in results)
+                top = merge_named_list(
+                    [r['organizational_direct']['by_type'][t]['top'] for r in results],
+                    n=config.top_n_sources
+                )
+                org_by_type[t] = {'total': total, 'pct': safe_pct(total, total_funding), 'top': top}
+            org_direct_total = sum(v['total'] for v in org_by_type.values())
+
+            # IE support/oppose
+            ie_support = {
+                'total': ie_support_total,
+                'pct': safe_pct(ie_support_total, total_funding),
+                'top_pacs': merge_named_list(
+                    [r['ie']['support'].get('top_pacs', []) for r in results], n=10
+                ),
+                'by_corporation': merge_named_list(
+                    [r['ie']['support'].get('by_corporation', []) for r in results],
+                    n=config.top_n_sources
+                ),
+                'by_pac': merge_named_list(
+                    [r['ie']['support'].get('by_pac', []) for r in results], n=10
+                ),
+            }
+            ie_oppose = {
+                'total': ie_oppose_total,
+                'pct': safe_pct(ie_oppose_total, total_funding) if total_funding > 0 else 0,
+                'top_pacs': merge_named_list(
+                    [r['ie']['oppose'].get('top_pacs', []) for r in results], n=10
+                ),
+                'by_corporation': merge_named_list(
+                    [r['ie']['oppose'].get('by_corporation', []) for r in results],
+                    n=config.top_n_sources
+                ),
+                'by_pac': merge_named_list(
+                    [r['ie']['oppose'].get('by_pac', []) for r in results], n=10
+                ),
+            }
+
+            # Individuals
+            whale_total = sum(r['individuals']['whale']['total'] for r in results)
+            corp_connected_total = sum(r['individuals']['whale']['corporate_connected']['total'] for r in results)
+            independent_total = sum(r['individuals']['whale']['independent']['total'] for r in results)
+            grassroots_direct = sum(r['individuals']['grassroots']['direct'] for r in results)
+            grassroots_upstream = sum(r['individuals']['grassroots']['upstream'] for r in results)
+            grassroots_total = grassroots_direct + grassroots_upstream
+            all_indiv_total = whale_total + grassroots_total
+
+            # Merge corporate connected by_company
+            corp_by_company = defaultdict(lambda: {'amount': 0, 'donors': defaultdict(float)})
+            for r in results:
+                for item in r['individuals']['whale']['corporate_connected'].get('by_company', []):
+                    corp_by_company[item['company']]['amount'] += item['amount']
+                    for donor in item.get('top_donors', []):
+                        corp_by_company[item['company']]['donors'][donor['name']] += donor['amount']
+
+            merged_by_company = sorted(
+                [{
+                    'company': k,
+                    'amount': v['amount'],
+                    'top_donors': sorted(
+                        [{'name': dk, 'amount': dv} for dk, dv in v['donors'].items()],
+                        key=lambda x: -x['amount']
+                    )[:5]
+                } for k, v in corp_by_company.items() if v['amount'] >= config.min_amount],
+                key=lambda x: -x['amount']
+            )[:config.top_n_sources]
+
+            # Independent top
+            indep_top = merge_named_list(
+                [r['individuals']['whale']['independent'].get('top', []) for r in results],
+                n=config.top_n_individuals
+            )
+
+            # Unaccounted
+            unaccounted_total = sum(r['unaccounted']['total'] for r in results)
+            cmte_total_receipts = sum(r['unaccounted']['cmte_total_receipts'] for r in results)
+            total_accounted = sum(r['unaccounted']['total_accounted'] for r in results)
+            from_individuals_raw = sum(r['unaccounted']['breakdown']['from_individuals_raw'] for r in results)
+            from_committees_raw = sum(r['unaccounted']['breakdown']['from_committees_raw'] for r in results)
+
+            # By organization
+            by_org_merged = defaultdict(lambda: {
+                'direct_pac': 0, 'direct_employees': 0,
+                'ie_support': 0, 'ie_oppose': 0,
+                'total': 0, 'total_against': 0,
+            })
+            for r in results:
+                for org in r.get('by_organization', []):
+                    by_org_merged[org['name']]['direct_pac'] += org.get('direct_pac', 0)
+                    by_org_merged[org['name']]['direct_employees'] += org.get('direct_employees', 0)
+                    by_org_merged[org['name']]['ie_support'] += org.get('ie_support', 0)
+                    by_org_merged[org['name']]['ie_oppose'] += org.get('ie_oppose', 0)
+                    by_org_merged[org['name']]['total'] += org.get('total_pro', 0)
+                    by_org_merged[org['name']]['total_against'] += org.get('total_against', 0)
+
+            return {
+                'total_funding': total_funding,
+                'direct_funding': direct_funding,
+                'ie_support': ie_support_total,
+                'ie_oppose': ie_oppose_total,
+                'organizational_direct': {
+                    'total': org_direct_total,
+                    'pct': safe_pct(org_direct_total, total_funding),
+                    'by_type': org_by_type,
+                },
+                'ie': {
+                    'support': ie_support,
+                    'oppose': ie_oppose,
+                },
+                'individuals': {
+                    'total': all_indiv_total,
+                    'pct': safe_pct(all_indiv_total, total_funding),
+                    'whale': {
+                        'total': whale_total,
+                        'pct': safe_pct(whale_total, total_funding),
+                        'corporate_connected': {
+                            'total': corp_connected_total,
+                            'pct': safe_pct(corp_connected_total, total_funding),
+                            'by_company': merged_by_company,
+                        },
+                        'independent': {
+                            'total': independent_total,
+                            'pct': safe_pct(independent_total, total_funding),
+                            'top': indep_top,
+                        },
+                    },
+                    'grassroots': {
+                        'total': grassroots_total,
+                        'pct': safe_pct(grassroots_total, total_funding),
+                        'direct': grassroots_direct,
+                        'upstream': grassroots_upstream,
+                        'explanation': (
+                            "Individual donors below $10K aggregate threshold. "
+                            "'direct' = grassroots giving to candidate's own committees. "
+                            "'upstream' = grassroots at feeder committees (JFCs, conduits, "
+                            "party committees) attributed proportionally through transfer chain."
+                        ),
+                    },
+                },
+                'unaccounted': {
+                    'total': unaccounted_total,
+                    'pct': safe_pct(unaccounted_total, cmte_total_receipts) if cmte_total_receipts > 0 else 0,
+                    'cmte_total_receipts': cmte_total_receipts,
+                    'total_accounted': total_accounted,
+                    'breakdown': {
+                        'from_individuals_raw': from_individuals_raw,
+                        'from_committees_raw': from_committees_raw,
+                    },
+                    'explanation': (
+                        "True residual: committee trace loss through passthrough hops, "
+                        "unitemized contributions (<$200 aggregate not in FEC indiv file), "
+                        "and data gaps. Sub-$10K individual donors are accounted for "
+                        "in the individuals.grassroots channel."
+                    ),
+                },
+                'by_organization': sorted(
+                    [
+                        {
+                            'name': org_name,
+                            'direct_pac': data['direct_pac'],
+                            'direct_employees': data['direct_employees'],
+                            'ie_support': data['ie_support'],
+                            'ie_oppose': data['ie_oppose'],
+                            'total_pro': data['total'],
+                            'total_against': data['total_against'],
+                        }
+                        for org_name, data in by_org_merged.items()
+                        if data['total'] >= config.min_amount or data['total_against'] >= config.min_amount
+                    ],
+                    key=lambda x: -x['total_pro'],
+                )[:50],
+            }
+
+        # ================================================================
         # PHASE 4: Process each candidate
         # ================================================================
         context.log.info("Phase 4: Processing candidates...")
-        
+
+        # Get campaign-only affiliated committees, grouped by cycle
+        # Only CMTE_TP in (H, S, P) = actual campaign committees
+        # Party committees, JFCs, leadership PACs only appear via upstream tracing
         candidates = list(db.aql.execute("""
             FOR c IN candidates
-                LET affiliated_cmtes = UNIQUE(
+                LET campaign_cmtes_by_cycle = (
                     FOR v, e IN INBOUND c affiliated_with
-                    RETURN v._key
+                    FILTER e.cmte_type IN ['H', 'S', 'P']
+                    COLLECT cycle = e.cycle INTO cmtes = v._key
+                    RETURN { cycle: cycle, cmte_ids: UNIQUE(cmtes) }
                 )
-                FILTER LENGTH(affiliated_cmtes) > 0
+                FILTER LENGTH(campaign_cmtes_by_cycle) > 0
                 RETURN {
                     _key: c._key,
                     name: c.CAND_NAME,
                     party: c.CAND_PTY_AFFILIATION,
                     office: c.CAND_OFFICE,
                     state: c.CAND_OFFICE_ST,
-                    cmte_ids: affiliated_cmtes
+                    cmtes_by_cycle: campaign_cmtes_by_cycle
                 }
         """))
-        context.log.info(f"   Found {len(candidates):,} candidates with committees")
-        
+        context.log.info(f"   Found {len(candidates):,} candidates with campaign committees")
+
         stats = {
             'candidates_processed': 0,
             'candidates_with_funding': 0,
         }
-        
+
         batch_updates = []
-        
+
         for cand in candidates:
             cand_key = cand['_key']
-            cmte_ids = cand['cmte_ids']
-            
-            # Compute per cycle
+            cmtes_by_cycle = {
+                item['cycle']: item['cmte_ids']
+                for item in cand['cmtes_by_cycle']
+            }
+
+            # Compute per cycle (with cycle-specific committees and receipts)
             funding_by_cycle = {}
-            
+
             for cycle in CYCLES:
+                cycle_cmte_ids = cmtes_by_cycle.get(cycle, [])
+                if not cycle_cmte_ids:
+                    continue
+
                 cycle_ie = ie_by_cycle[cycle].get(cand_key, {'support': [], 'oppose': []})
                 cycle_channels = compute_funding_channels(
-                    cmte_ids=cmte_ids,
+                    cmte_ids=cycle_cmte_ids,
                     cand_key=cand_key,
                     contrib_edges=contrib_edges_by_cycle[cycle],
                     transfer_edges=transfer_edges_by_cycle[cycle],
                     ie_data=cycle_ie,
+                    cycle_cmte_info=cmte_info_by_cycle[cycle],
                 )
                 if cycle_channels:
                     funding_by_cycle[cycle] = cycle_channels
-            
-            # Compute aggregate (all cycles combined)
-            aggregate_ie = ie_all.get(cand_key, {'support': [], 'oppose': []})
-            funding_aggregate = compute_funding_channels(
-                cmte_ids=cmte_ids,
-                cand_key=cand_key,
-                contrib_edges=contrib_edges_all,
-                transfer_edges=transfer_edges_all,
-                ie_data=aggregate_ie,
-            )
-            
-            if not funding_aggregate and not funding_by_cycle:
+
+            if not funding_by_cycle:
                 stats['candidates_processed'] += 1
                 continue
-            
+
+            # Aggregate = merge per-cycle results (not independent computation)
+            funding_aggregate = merge_funding_channels(funding_by_cycle)
+
             stats['candidates_with_funding'] += 1
-            
+
             funding_channels = {
                 'by_cycle': funding_by_cycle,
                 'aggregate': funding_aggregate,
-                
+
                 # Convenience top-level fields from aggregate
                 'total_funding': funding_aggregate['total_funding'] if funding_aggregate else 0,
                 'direct_funding': funding_aggregate['direct_funding'] if funding_aggregate else 0,
                 'ie_support': funding_aggregate['ie_support'] if funding_aggregate else 0,
                 'ie_oppose': funding_aggregate['ie_oppose'] if funding_aggregate else 0,
-                
+
                 # Top-level by_organization (from aggregate)
                 'by_organization': funding_aggregate['by_organization'] if funding_aggregate else [],
-                
+
                 'computed_at': datetime.now().isoformat(),
                 'cycles_available': list(funding_by_cycle.keys()),
             }
-            
+
             batch_updates.append({
                 '_key': cand_key,
                 'funding_channels': funding_channels,
             })
-            
+
             stats['candidates_processed'] += 1
-            
+
             if len(batch_updates) >= 500:
                 db.aql.execute("""
                     FOR doc IN @batch

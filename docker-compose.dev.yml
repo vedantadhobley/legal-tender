@@ -104,10 +104,9 @@ services:
       - "4301:8529"  # ArangoDB Web UI
     environment:
       ARANGO_ROOT_PASSWORD: ltpass
-      # Memory budget for ArangoDB — conservative to coexist with AI models.
-      # ArangoDB auto-sizes block cache, write buffers, query memory from this.
-      # 16GB is 2x the old 8GB cap; bump higher if AI models move off-box.
-      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "17179869184"  # 16GB
+      # Memory budget for ArangoDB. AI models are offloaded to joi,
+      # so this node has ~100GB free. 32GB is generous for our dataset.
+      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "34359738368"  # 32GB
     # Performance tuning for AMD Ryzen AI MAX+ 395 (16c/32t, 128GB)
     command:
       - arangod
@@ -117,19 +116,19 @@ services:
       - --server.maximal-threads=64
       - --server.minimal-threads=16
       - --server.io-threads=16
-      # Query engine: 4GB per query for big COLLECTs (double-COLLECT donors etc)
-      - --query.memory-limit=4294967296
+      # Query engine: 8GB per query for big COLLECTs (double-COLLECT donors etc)
+      - --query.memory-limit=8589934592
       # RocksDB: parallel flush/compaction for fast bulk writes
       - --rocksdb.num-threads-priority-high=8
       - --rocksdb.num-threads-priority-low=8
       - --rocksdb.max-background-jobs=16
-      # RocksDB: write buffers sized for 16GB budget
-      - --rocksdb.write-buffer-size=134217728
+      # RocksDB: write buffers sized for 32GB budget
+      - --rocksdb.write-buffer-size=268435456
       - --rocksdb.max-write-buffer-number=8
-      - --rocksdb.total-write-buffer-size=2147483648
-      - --rocksdb.max-total-wal-size=268435456
-      # Cache: 3GB edge/document cache for graph traversals
-      - --cache.size=3221225472
+      - --rocksdb.total-write-buffer-size=4294967296
+      - --rocksdb.max-total-wal-size=536870912
+      # Cache: 8GB edge/document cache for graph traversals
+      - --cache.size=8589934592
     volumes:
       - legal-tender-dev-arango-data:/var/lib/arangodb3
       - legal-tender-dev-arango-apps:/var/lib/arangodb3-apps
