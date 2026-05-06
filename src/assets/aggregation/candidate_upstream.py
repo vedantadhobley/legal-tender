@@ -74,7 +74,7 @@ PASSTHROUGH_TYPES = {"passthrough", "unknown", "super_pac_unclassified"}
 CONDUIT_PATTERNS = ["WINRED", "ACTBLUE", "EARMARK", "CONDUIT", "UNITEMIZED"]
 
 # Election cycles to process
-CYCLES = ["2020", "2022", "2024"]
+CYCLES = ["2020", "2022", "2024", "2026"]
 
 # Map terminal_type to channel bucket name
 TERMINAL_TYPE_BUCKET = {

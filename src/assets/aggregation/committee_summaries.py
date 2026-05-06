@@ -23,7 +23,7 @@ from src.resources.arango import ArangoDBResource
 
 class CommitteeSummariesConfig(Config):
     """Configuration for committee summaries aggregation."""
-    cycles: List[str] = ["2020", "2022", "2024"]
+    cycles: List[str] = ["2020", "2022", "2024", "2026"]
     top_n_donors: int = 10
     top_n_recipients: int = 10
     min_receipts: float = 100000.0  # Only summarize committees with $100K+ receipts
