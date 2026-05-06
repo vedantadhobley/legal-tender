@@ -24,7 +24,7 @@ from src.resources.arango import ArangoDBResource
 
 class DonorSummariesConfig(Config):
     """Configuration for donor summaries aggregation."""
-    cycles: List[str] = ["2020", "2022", "2024"]
+    cycles: List[str] = ["2020", "2022", "2024", "2026"]
     top_n_recipients: int = 10
     min_total: float = 50000.0  # Only summarize notable+ donors
     batch_size: int = 100

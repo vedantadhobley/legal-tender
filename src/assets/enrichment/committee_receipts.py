@@ -30,7 +30,7 @@ from src.resources.arango import ArangoDBResource
 
 class CommitteeReceiptsConfig(Config):
     """Configuration for committee receipts aggregation."""
-    cycles: List[str] = ["2020", "2022", "2024"]
+    cycles: List[str] = ["2020", "2022", "2024", "2026"]
     batch_size: int = 1000
 
 
