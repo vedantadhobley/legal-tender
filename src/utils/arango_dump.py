@@ -2,10 +2,10 @@
 ArangoDB Collection and Graph Caching Utilities
 
 Manages JSONL dumps for fast data loading with proper separation:
-- FEC raw data: ~/workspace/.legal-tender/arango/fec/{cycle}/
-- Enriched data: ~/workspace/.legal-tender/arango/enriched/{cycle}/
-- Aggregation data: ~/workspace/.legal-tender/arango/aggregation/
-- Graphs: ~/workspace/.legal-tender/arango/graphs/
+- FEC raw data: ~/workspace/data/legal-tender/dumps/fec/{cycle}/
+- Enriched data: ~/workspace/data/legal-tender/dumps/enriched/{cycle}/
+- Aggregation data: ~/workspace/data/legal-tender/dumps/aggregation/
+- Graphs: ~/workspace/data/legal-tender/dumps/graphs/
 
 Workflow:
 1. Parse FEC file → store in ArangoDB (varies by collection)
@@ -32,11 +32,11 @@ from arango.database import StandardDatabase
 from arango.collection import StandardCollection
 
 from src.utils.storage import (
-    get_arango_dump_dir, 
-    get_arango_fec_dump_dir, 
-    get_arango_enriched_dump_dir,
-    get_arango_aggregation_dump_dir,
-    get_arango_graph_dump_dir
+    get_dumps_dir,
+    get_fec_dumps_dir,
+    get_enriched_dumps_dir,
+    get_aggregation_dumps_dir,
+    get_graph_dumps_dir,
 )
 
 
@@ -60,15 +60,15 @@ class ArangoDumpManager:
         if self.dump_type == "fec":
             if not cycle:
                 raise ValueError("Cycle required for FEC dumps")
-            return get_arango_fec_dump_dir(cycle)
+            return get_fec_dumps_dir(cycle)
         elif self.dump_type == "enriched":
             if not cycle:
                 raise ValueError("Cycle required for enriched dumps")
-            return get_arango_enriched_dump_dir(cycle)
+            return get_enriched_dumps_dir(cycle)
         elif self.dump_type == "aggregation":
-            return get_arango_aggregation_dump_dir()
+            return get_aggregation_dumps_dir()
         elif self.dump_type == "graph":
-            return get_arango_graph_dump_dir()
+            return get_graph_dumps_dir()
         else:
             raise ValueError(f"Unknown dump type: {self.dump_type}")
     
@@ -432,7 +432,7 @@ class GraphDumpManager:
     """Manages ArangoDB graph structure dumps."""
     
     def __init__(self):
-        self.dump_dir = get_arango_graph_dump_dir()
+        self.dump_dir = get_graph_dumps_dir()
     
     def get_graph_dump_path(self, graph_name: str) -> Path:
         """Get path to graph definition file."""

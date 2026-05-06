@@ -8,14 +8,16 @@
 #   - postgres:5432 (Dagster metadata)
 #   - arangodb:8529 (Graph database)
 #
-# External services (via Tailscale FQDN — bare "joi" won't resolve in Docker):
-#   - joi.tailf424db.ts.net:3101 (LLM chat/thinking API — Qwen3.5-35B-A3B)
-#   - joi.tailf424db.ts.net:3103 (Embedding API — Qwen3-Embedding-8B)
+# External services (via Tailscale FQDN — bare hostname won't resolve in Docker):
+#   - <llm-host>:3101 (LLM chat/thinking API — Qwen3.5-35B-A3B)
+#   - <llm-host>:3103 (Embedding API — Qwen3-Embedding-8B)
+#   Set EMBEDDING_HOST in .env to your tailnet FQDN (see .env.example).
 #
 # Storage:
-#   All persistent data lives at ~/workspace/.legal-tender/ with subdirs:
-#   - data/       Raw FEC downloads
-#   - arango/     ArangoDB JSONL dumps (graphs + collections)
+#   All persistent data lives at ~/workspace/data/legal-tender/ with subdirs:
+#   - raw/        Raw FEC downloads + reference data (legislators, headers)
+#   - dumps/      ArangoDB JSONL dumps (fast reload, fec/enriched/aggregation/graphs)
+#   - cache/      Regeneratable API caches (congress_api, etc.)
 
 name: legal-tender-dev
 
@@ -35,10 +37,11 @@ services:
       DAGSTER_HOME: /workspace
       PYTHONPATH: /workspace
       PYTHONUNBUFFERED: "1"
-      # Storage paths (inside container, mapped to ~/workspace/.legal-tender/)
+      # Storage paths (inside container, mapped to ~/workspace/data/legal-tender/)
       LEGAL_TENDER_STORAGE: /storage
-      LEGAL_TENDER_DATA_DIR: /storage/data
-      LEGAL_TENDER_ARANGO_DIR: /storage/arango
+      LEGAL_TENDER_RAW_DIR: /storage/raw
+      LEGAL_TENDER_DUMPS_DIR: /storage/dumps
+      LEGAL_TENDER_CACHE_DIR: /storage/cache
       # ArangoDB connection (internal network)
       ARANGO_HOST: legal-tender-dev-arango
       ARANGO_PORT: "8529"
@@ -53,7 +56,7 @@ services:
       DAGSTER_COMPUTE_LOGS_DIR: /workspace/compute_logs
     volumes:
       - .:/workspace  # Mount entire project for live development
-      - ~/workspace/.legal-tender:/storage  # Persistent storage (data + arango dumps)
+      - ~/workspace/data/legal-tender:/storage  # Persistent storage (raw + dumps + cache)
     depends_on:
       postgres:
         condition: service_healthy
@@ -153,7 +156,7 @@ volumes:
   legal-tender-dev-arango-apps:
     name: legal-tender-dev-arango-apps
     driver: local
-  # NOTE: FEC data and Arango dumps now stored at ~/workspace/.legal-tender/
+  # NOTE: FEC data and Arango dumps stored at ~/workspace/data/legal-tender/ (bind mount)
   # mounted as bind volume, not Docker volume
 
 networks:

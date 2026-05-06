@@ -5,10 +5,10 @@ Manages the local data repository structure for legal-tender project.
 All downloaded data (FEC bulk files, legislators data, etc.) is organized
 in a clear, maintainable directory structure.
 
-Storage location: ~/workspace/.legal-tender/data/
+Storage location: ~/workspace/data/legal-tender/ (split: raw/ + dumps/ + cache/)
 This allows data to:
 - Survive container rebuilds
-- Be shared between dev/prod
+- Be shared between dev/prod compose stacks (same bind mount)
 - Be excluded from git
 
 This module is Dagster-agnostic - it can be used standalone or orchestrated by Dagster.
@@ -20,57 +20,57 @@ from datetime import datetime
 import json
 import shutil
 
-from src.utils.storage import get_data_dir, get_cycle_data_dir
+from src.utils.storage import get_raw_dir, get_cache_dir, get_cycle_raw_dir
 
 
 class DataRepository:
     """
     Manages the data repository structure and file organization.
-    
-    Directory Structure (at ~/workspace/.legal-tender/data/):
-    ├── legislators/
-    │   ├── current.yaml              # Current legislators
-    │   ├── historical.yaml           # Historical legislators
-    │   └── metadata.json             # Download timestamps, versions
-    ├── 2024/                         # FEC data by cycle (flat, no nesting)
-    │   ├── cn.zip                    # Candidate Master File
-    │   ├── cm.zip                    # Committee Master File
-    │   ├── ccl.zip                   # Candidate-Committee Linkages
-    │   ├── weball.zip                # Candidate Summary (All)
-    │   ├── webl.zip                  # Committee Summary
-    │   ├── webk.zip                  # PAC Summary
-    │   ├── indiv.zip                 # Individual Contributions (40M+ records!)
-    │   ├── pas2.zip                  # Itemized Transactions
-    │   ├── oth.zip                   # Other Receipts
-    │   └── metadata.json
-    ├── 2026/
-    │   └── ... (same structure)
-    ├── congress_api/
-    │   ├── members/
-    │   │   ├── {bioguide_id}.json   # Individual member details
-    │   │   └── metadata.json
-    │   └── bills/
-    │       └── ...
-    └── metadata.json                 # Repository-level metadata
+
+    Directory layout:
+      raw/                          ← self.base_path (FEC + reference data)
+      ├── legislators/
+      │   ├── current.yaml              # Current legislators
+      │   ├── historical.yaml           # Historical legislators
+      │   └── metadata.json             # Download timestamps, versions
+      ├── 2024/                         # FEC data by cycle (flat, no nesting)
+      │   ├── cn.zip                    # Candidate Master File
+      │   ├── cm.zip                    # Committee Master File
+      │   ├── ccl.zip                   # Candidate-Committee Linkages
+      │   ├── weball.zip                # Candidate Summary (All)
+      │   ├── webl.zip                  # Committee Summary
+      │   ├── webk.zip                  # PAC Summary
+      │   ├── indiv.zip                 # Individual Contributions (40M+ records!)
+      │   ├── pas2.zip                  # Itemized Transactions
+      │   ├── oth.zip                   # Other Receipts
+      │   └── metadata.json
+      ├── 2026/                         # ... (same structure)
+      └── headers/                      # FEC field-header CSVs
+
+      cache/                        ← regeneratable API caches
+      └── congress_api/
+          ├── members/
+          │   ├── {bioguide_id}.json
+          │   └── metadata.json
+          └── bills/
     """
-    
+
     def __init__(self, base_path: Optional[str] = None):
         """
         Initialize the data repository.
-        
+
         Args:
-            base_path: Base directory for all data storage.
-                       Defaults to ~/workspace/.legal-tender/data/
+            base_path: Base directory for raw FEC + reference data.
+                       Defaults to ~/workspace/data/legal-tender/raw/
         """
         if base_path is None:
-            self.base_path = get_data_dir()
+            self.base_path = get_raw_dir()
         else:
             self.base_path = Path(base_path)
         self._ensure_structure()
-    
+
     def _ensure_structure(self):
         """Create the directory structure if it doesn't exist."""
-        # Main directories
         directories = [
             self.base_path,
             self.legislators_dir,
@@ -79,32 +79,32 @@ class DataRepository:
             self.congress_api_dir / "members",
             self.congress_api_dir / "bills",
         ]
-        
+
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
-    
+
     # ==========================================================================
     # Directory Properties
     # ==========================================================================
-    
+
     @property
     def legislators_dir(self) -> Path:
         """Directory for legislators data."""
         return self.base_path / "legislators"
-    
+
     @property
     def fec_dir(self) -> Path:
-        """Base directory for FEC data (backward compat - same as base_path)."""
+        """Base directory for FEC data (same as base_path = raw/)."""
         return self.base_path
-    
+
     @property
     def congress_api_dir(self) -> Path:
-        """Directory for Congress API cached data."""
-        return self.base_path / "congress_api"
-    
+        """Directory for Congress API cached data (lives under cache/, not raw/)."""
+        return get_cache_dir() / "congress_api"
+
     def fec_cycle_dir(self, cycle: str) -> Path:
-        """Get FEC directory for a specific cycle (e.g., ~/workspace/.legal-tender/data/2024/)."""
-        cycle_dir = get_cycle_data_dir(cycle)
+        """Get FEC directory for a specific cycle (e.g., ~/workspace/data/legal-tender/raw/2024/)."""
+        cycle_dir = get_cycle_raw_dir(cycle)
         cycle_dir.mkdir(parents=True, exist_ok=True)
         return cycle_dir
     
