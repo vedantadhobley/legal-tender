@@ -54,17 +54,21 @@ class DataSyncConfig(Config):
 def get_remote_last_modified(url: str) -> Optional[datetime]:
     """
     Get Last-Modified timestamp from remote file without downloading.
-    
+
     Args:
         url: URL to check
-        
+
     Returns:
         datetime of last modification, or None if unavailable
+
+    Note: FEC bulk-download URLs respond with 302 → S3-Gov, and the actual
+    Last-Modified header lives on the S3 response. We must follow redirects
+    or we silently get a header-less 302 and fall back to age-based polling.
     """
     try:
-        response = requests.head(url, timeout=10)
+        response = requests.head(url, timeout=10, allow_redirects=True)
         response.raise_for_status()
-        
+
         last_modified = response.headers.get('Last-Modified')
         if last_modified:
             # Parse HTTP date format: "Tue, 15 Oct 2024 14:30:00 GMT"
