@@ -1,0 +1,16 @@
+{
+  "_comment": "Project-level Claude Code settings (committed to repo). Personal/local settings live in settings.local.json (gitignored). The Stop hook below enforces the discipline that code changes should ship with matching doc updates in the same session — see docs/plan.md Phase 1.",
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if git diff --name-only HEAD 2>/dev/null | grep -qE '^(src/|docker-compose|Dockerfile|requirements)' && ! git diff --name-only HEAD 2>/dev/null | grep -qE '^(AGENTS\\.md|docs/|todo)' ; then echo '⚠️  Code or infra files changed but no AGENTS.md / docs/ updates. Per the AGENTS.md convention, code changes should ship with matching doc updates. Update docs/<topic>.md, docs/todo.md, or AGENTS.md before stopping.' >&2 ; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
