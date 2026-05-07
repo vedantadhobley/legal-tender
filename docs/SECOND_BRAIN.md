@@ -47,6 +47,21 @@ Per [code.claude.com/docs/en/memory](https://code.claude.com/docs/en/memory), Cl
 
 ---
 
+## Architecture decision: brain stack ≠ monitor stack
+
+This is worth getting right early. You already have a `~/workspace/monitor/` stack (Prometheus, Grafana, Loki, cadvisor, Portainer) — coherent, single-purpose, observability. The brain stack is a different concern: knowledge management, read+write, slower-cadence, different security posture. Keep them separate:
+
+```
+~/workspace/
+  monitor/         ← observability (existing)
+  obsidian/        ← brain stack (vault + Khoj + Open WebUI + basic-memory)
+  homepage/        ← single dashboard linking to all webUIs (NEW, optional)
+  dev/<project>/   ← repo source-of-truth for AGENTS.md + docs/
+  data/<project>/  ← bind-mounted persistent data per project
+```
+
+**The "everything in one place" experience comes from a homepage dashboard, not co-location.** Tools like [Homepage](https://gethomepage.dev/) (current favorite), [Dashy](https://dashy.to/), or [Homer](https://github.com/bastienwirtz/homer) are 1-container Docker setups with YAML config that give you `https://<tailnet>/` showing tiles for Grafana, Khoj, Open WebUI, ArangoDB UI, Dagster UI, Portainer, anything else — clickable from any device on the tailnet. That gets you the unified entry point without forcing the brain into the monitoring stack.
+
 ## 2. Architecture target
 
 ```
@@ -75,20 +90,35 @@ Per [code.claude.com/docs/en/memory](https://code.claude.com/docs/en/memory), Cl
 │      spin-cycle/     → ~/workspace/dev/spin-cycle/docs/        │
 └─────────────────────────┬──────────────────────────────────────┘
                           │
-       ┌──────────────────┴──────────────────────┐
-       ▼                                         ▼
-┌─────────────────┐                ┌──────────────────────────────┐
-│  Khoj (Docker)  │                │  basic-memory (MCP server)   │
-│  RAG over vault │                │  Lets Claude Code write into │
-│  via joi LLMs   │                │  the vault during sessions   │
-└─────────────────┘                └──────────────────────────────┘
-       │                                         │
-       └─────────────────┬───────────────────────┘
-                         ▼
+       ┌──────────┬───────────────┬──────────────────┐
+       ▼          ▼               ▼                  ▼
+┌────────────┐ ┌──────────────┐ ┌────────────────┐ ┌──────────────────┐
+│  Khoj      │ │ Open WebUI   │ │ basic-memory   │ │  Quartz (opt'l)  │
+│  (Docker)  │ │ (Docker)     │ │ (MCP server)   │ │  static publish  │
+│  vault RAG │ │ general LLM  │ │ agent writes   │ │  of vault → web  │
+│  :42110    │ │ chat :3000   │ │ into vault     │ │                  │
+└────────────┘ └──────────────┘ └────────────────┘ └──────────────────┘
+       │              │                 │
+       └──────┬───────┘                 │
+              ▼                         ▼
+   ┌──────────────────────┐  ┌──────────────────────┐
+   │  Existing on joi:    │  │  Claude Code session │
+   │  :3101 chat (Qwen)   │  │  uses MCP to read+   │
+   │  :3103 embeddings    │  │  write notes during  │
+   └──────────────────────┘  │  development         │
+                             └──────────────────────┘
+
               ┌──────────────────────┐
-              │  Existing on joi:    │
-              │  :3101 chat (Qwen)   │
-              │  :3103 embeddings    │
+              │  Sync to laptop/phone│
+              │  via Syncthing over  │
+              │  tailnet             │
+              └──────────────────────┘
+
+              ┌──────────────────────┐
+              │  Homepage dashboard  │
+              │  (~/workspace/       │
+              │   homepage/)         │
+              │  links to all UIs    │
               └──────────────────────┘
 
               ┌──────────────────────┐
@@ -111,7 +141,7 @@ The phases are ordered by *value-per-effort*, so you can stop after any phase an
 | 1 | `AGENTS.md` + `CLAUDE.md` symlink, structured `docs/` | 30 min | You just want better agent context |
 | 2 | Brain vault with symlinked projects | 30 min | You want to *browse* across projects but not chat with the vault |
 | 3 | Syncthing over tailnet | 30 min | You only ever work from this machine |
-| 4 | Khoj container for RAG | 1-2 hours | You don't want LLM-driven chat over the vault |
+| 4 | Khoj + Open WebUI containers (web UI for tailnet) | 1-2 hours | You don't want browser-based chat at all |
 | 5 | basic-memory MCP for write-back | 1 hour | You don't want Claude writing notes back into the brain |
 | 6 | Quartz publishing (optional) | 1 hour | You don't need a web view |
 
@@ -222,11 +252,22 @@ For Linux + Tailscale, this is the lowest-drama option. The [Syncthing-for-Obsid
 
 ---
 
-## 7. Phase 4 — Khoj for chat-with-vault
+## 7. Phase 4 — Khoj + Open WebUI for chat (web UI from any device on tailnet)
 
-[Khoj](https://github.com/khoj-ai/khoj) is the closest match for our stack. It explicitly accepts an OpenAI-compatible base URL for both chat and embeddings, supports multiple content sources, has an Obsidian plugin and a web UI, and runs in Docker.
+Two complementary tools, both Docker, both plug into the joi LLM endpoints. They're not redundant — they serve different needs:
 
-### Compose stack
+| Tool | Purpose | Access pattern |
+|---|---|---|
+| **Khoj** | Vault-aware second brain. Indexes the markdown, builds embeddings, answers questions grounded in your project docs. Has an Obsidian plugin AND a standalone web UI. | "Tell me what we decided about X in the legal-tender pipeline" |
+| **Open WebUI** | General LLM frontend in a browser. Can also do RAG via its Knowledge feature, but its primary use is as a polished ChatGPT-style UI for chatting with joi's Qwen. Multi-user, very actively developed. | "Help me write a Python script" / "Explain this stack trace" — general assistant, not vault-grounded |
+
+Run both. They share a Docker network and the same upstream LLMs. Together they cover (a) "chat with my brain" and (b) "general-purpose LLM browser interface", giving you a tailnet-accessible web UI for both modes from any device.
+
+### Khoj
+
+[Khoj](https://github.com/khoj-ai/khoj) explicitly accepts an OpenAI-compatible base URL for both chat and embeddings, supports multiple content sources, has an Obsidian plugin and a web UI, and runs in Docker.
+
+### Compose stack — Khoj + Open WebUI together
 
 Create `~/workspace/obsidian/docker-compose.yml`:
 
@@ -234,23 +275,22 @@ Create `~/workspace/obsidian/docker-compose.yml`:
 name: obsidian-brain
 
 services:
+  # Khoj — vault-aware RAG (the "second brain" interface)
   khoj:
     image: ghcr.io/khoj-ai/khoj:latest
     container_name: brain-khoj
     ports:
-      - "42110:42110"
+      - "42110:42110"   # Khoj web UI + Obsidian plugin endpoint
     volumes:
       - khoj-config:/root/.khoj
       - khoj-models:/root/.cache/torch
-      # Mount the brain vault read-only — Khoj indexes it
-      - ~/workspace/obsidian/brain:/data/brain:ro
+      - ~/workspace/obsidian/brain:/data/brain:ro  # vault, read-only
     environment:
       KHOJ_ADMIN_EMAIL: vedanta1998@gmail.com
       KHOJ_ADMIN_PASSWORD: changeme
       KHOJ_DEBUG: "false"
     restart: unless-stopped
-    networks:
-      - brain
+    networks: [brain]
 
   brain-postgres:
     image: ankane/pgvector:latest
@@ -262,18 +302,42 @@ services:
     volumes:
       - khoj-pgdata:/var/lib/postgresql/data
     restart: unless-stopped
-    networks:
-      - brain
+    networks: [brain]
+
+  # Open WebUI — general-purpose LLM browser interface
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: brain-open-webui
+    ports:
+      - "3000:8080"   # Open WebUI
+    volumes:
+      - open-webui-data:/app/backend/data
+    environment:
+      # Point at joi llama.cpp's OpenAI-compatible endpoint
+      OPENAI_API_BASE_URLS: "http://joi.tailf424db.ts.net:3101/v1"
+      OPENAI_API_KEYS: "dummy"   # llama.cpp ignores
+      # Disable Ollama lookup
+      ENABLE_OLLAMA_API: "false"
+      # Allow signup for first user, then disable
+      ENABLE_SIGNUP: "true"
+      WEBUI_AUTH: "true"
+    restart: unless-stopped
+    networks: [brain]
 
 volumes:
   khoj-config:
   khoj-models:
   khoj-pgdata:
+  open-webui-data:
 
 networks:
   brain:
     driver: bridge
 ```
+
+After `docker compose up -d`, you'll have:
+- **Khoj at `http://<tailnet-name>:42110`** — vault chat + search (after admin config)
+- **Open WebUI at `http://<tailnet-name>:3000`** — general LLM chat (Qwen via joi). First visitor signs up as admin, then turn off signup.
 
 ### Configure Khoj for joi LLMs
 
@@ -332,7 +396,29 @@ Now during any Claude Code session you can ask "remember this for later" or "wri
 
 ---
 
-## 9. Phase 6 — Optional: publish via Quartz
+## 9. Phase 5.5 — Optional: Homepage dashboard at `~/workspace/homepage/`
+
+If you want one URL on tailnet that links to every webUI you run (Grafana, Khoj, Open WebUI, Dagster, ArangoDB, Portainer, etc.):
+
+```yaml
+# ~/workspace/homepage/docker-compose.yml
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    ports:
+      - "80:3000"   # the "front door" of your tailnet
+    volumes:
+      - ./config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # auto-discover containers
+    restart: unless-stopped
+```
+
+Configure tiles in `~/workspace/homepage/config/services.yaml`. Auto-discovery via labels on each docker-compose can populate tiles automatically — see [gethomepage.dev docs](https://gethomepage.dev/configs/docker/).
+
+This is the right "everything in one place" answer that does NOT require co-locating the brain with the monitor stack.
+
+## 10. Phase 6 — Optional: publish via Quartz
 
 If you want a web view of the brain (for sharing or reading on devices without Obsidian):
 
@@ -350,7 +436,7 @@ To publish behind your tailnet: `npx quartz build` and serve the output dir from
 
 ---
 
-## 10. What to skip (and why)
+## 11. What to skip (and why)
 
 | Tempting but not worth it | Why |
 |---|---|
@@ -364,7 +450,7 @@ To publish behind your tailnet: `npx quartz build` and serve the output dir from
 
 ---
 
-## 11. Concrete plan for legal-tender (proving ground)
+## 12. Concrete plan for legal-tender (proving ground)
 
 Practical sequence to follow this weekend, using `legal-tender` as the test:
 
@@ -389,7 +475,7 @@ Practical sequence to follow this weekend, using `legal-tender` as the test:
 
 4. **Syncthing**: install on both ends, share the brain folder over tailnet. Done in 15 minutes.
 
-5. **Khoj**: bring up the docker-compose above. Configure the joi endpoints. Index the vault. Try a query like *"what's the funding-channels model in legal-tender?"* — the answer should pull from `docs/PIPELINE.md`.
+5. **Khoj + Open WebUI**: bring up the docker-compose above. Configure Khoj's joi endpoints, index the vault. Sign up as the admin user in Open WebUI, then `ENABLE_SIGNUP=false`. Try a query in Khoj like *"what's the funding-channels model in legal-tender?"* — the answer should pull from `docs/PIPELINE.md`. Try Open WebUI for general chat with Qwen via joi.
 
 6. **basic-memory**: install, point at `~/workspace/obsidian/brain/personal/agent-notes/`, wire to Claude Code MCP. Test by asking Claude to "save a note about today's storage relocation work" — verify the file appears in the vault.
 
@@ -399,7 +485,7 @@ After step 5, you have a working personal RAG system over your legal-tender know
 
 ---
 
-## 12. Maintenance + housekeeping
+## 13. Maintenance + housekeeping
 
 - **Per-repo `docs/`** is the only source of truth. Edit there (or have Claude Code edit there). The vault reflects, doesn't store.
 - **Personal notes** live in `~/workspace/obsidian/brain/personal/`. These aren't in any repo. Backed up via Syncthing replication.
