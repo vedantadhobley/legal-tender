@@ -107,9 +107,10 @@ services:
       - "4301:8529"  # ArangoDB Web UI
     environment:
       ARANGO_ROOT_PASSWORD: ltpass
-      # Memory budget for ArangoDB. AI models are offloaded to joi,
-      # so this node has ~100GB free. 32GB is generous for our dataset.
-      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "34359738368"  # 32GB
+      # Memory budget for ArangoDB. LLMs run on joi, leaving this 128GB
+      # box with ~95GB available. Bumped 32→64GB so any auto-tuned knobs
+      # we don't explicitly override get the larger budget too.
+      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "68719476736"  # 64GB
     # Performance tuning for AMD Ryzen AI MAX+ 395 (16c/32t, 128GB)
     command:
       - arangod
@@ -119,19 +120,29 @@ services:
       - --server.maximal-threads=64
       - --server.minimal-threads=16
       - --server.io-threads=16
-      # Query engine: 8GB per query for big COLLECTs (double-COLLECT donors etc)
-      - --query.memory-limit=8589934592
+      # Query engine: 32GB per-query ceiling. Big traversals (multi-hop
+      # PAC chains, funding-channel computation) build large intermediate
+      # result sets; 8GB was getting close to limits.
+      - --query.memory-limit=34359738368
       # RocksDB: parallel flush/compaction for fast bulk writes
       - --rocksdb.num-threads-priority-high=8
       - --rocksdb.num-threads-priority-low=8
       - --rocksdb.max-background-jobs=16
-      # RocksDB: write buffers sized for 32GB budget
-      - --rocksdb.write-buffer-size=268435456
+      # RocksDB block cache: 32GB. THE primary read-perf lever. Hot
+      # SST index pages stay resident, eliminating disk hits during
+      # graph traversals. Auto-default would have been ~19GB at the
+      # 64GB total budget; we explicitly raise it for index-heavy reads.
+      - --rocksdb.block-cache-size=34359738368
+      # RocksDB write buffers: bigger memtables = bigger insert batches
+      # = fewer SST flushes = faster bulk loads. Sized for the indiv
+      # parse / graph-build workloads (millions of rows per asset).
+      - --rocksdb.write-buffer-size=1073741824        # 1GB per memtable
       - --rocksdb.max-write-buffer-number=8
-      - --rocksdb.total-write-buffer-size=4294967296
-      - --rocksdb.max-total-wal-size=536870912
-      # Cache: 8GB edge/document cache for graph traversals
-      - --cache.size=8589934592
+      - --rocksdb.total-write-buffer-size=17179869184 # 16GB total
+      - --rocksdb.max-total-wal-size=2147483648       # 2GB WAL
+      # ArangoDB's own cache (separate from RocksDB block cache). Edge
+      # metadata + frequently-accessed documents stay in memory.
+      - --cache.size=17179869184                      # 16GB
     volumes:
       - legal-tender-dev-arango-data:/var/lib/arangodb3
       - legal-tender-dev-arango-apps:/var/lib/arangodb3-apps

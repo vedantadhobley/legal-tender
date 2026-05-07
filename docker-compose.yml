@@ -139,9 +139,10 @@ services:
       - "3301:8529"  # ArangoDB Web UI
     environment:
       ARANGO_ROOT_PASSWORD: ltpass
-      # Memory budget — auto-sizes block cache, write buffers, query memory.
-      # 16GB is conservative to coexist with AI models. Bump if they move off-box.
-      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "17179869184"  # 16GB
+      # Memory budget for ArangoDB. LLMs run on joi, leaving this 128GB
+      # box with ~95GB available. Bumped to 64GB so any auto-tuned knobs
+      # we don't explicitly override get the larger budget too.
+      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "68719476736"  # 64GB
     # Performance tuning for AMD Ryzen AI MAX+ 395 (16c/32t, 128GB)
     command:
       - arangod
@@ -150,15 +151,23 @@ services:
       - --server.maximal-threads=64
       - --server.minimal-threads=16
       - --server.io-threads=16
-      - --query.memory-limit=4294967296
+      # Query engine: 32GB per-query ceiling for big traversals.
+      - --query.memory-limit=34359738368
+      # RocksDB: parallel flush/compaction
       - --rocksdb.num-threads-priority-high=8
       - --rocksdb.num-threads-priority-low=8
       - --rocksdb.max-background-jobs=16
-      - --rocksdb.write-buffer-size=134217728
+      # RocksDB block cache: 32GB. Hot index pages resident → no disk
+      # hits on graph traversals. Primary read-perf lever.
+      - --rocksdb.block-cache-size=34359738368
+      # RocksDB write buffers: 1GB per memtable, 16GB total ceiling.
+      # Fewer SST flushes during bulk loads.
+      - --rocksdb.write-buffer-size=1073741824
       - --rocksdb.max-write-buffer-number=8
-      - --rocksdb.total-write-buffer-size=2147483648
-      - --rocksdb.max-total-wal-size=268435456
-      - --cache.size=3221225472
+      - --rocksdb.total-write-buffer-size=17179869184
+      - --rocksdb.max-total-wal-size=2147483648
+      # ArangoDB's own edge/document cache (separate from block cache).
+      - --cache.size=17179869184
     volumes:
       - legal-tender-prod-arango-data:/var/lib/arangodb3
       - legal-tender-prod-arango-apps:/var/lib/arangodb3-apps
