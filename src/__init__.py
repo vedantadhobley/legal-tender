@@ -28,6 +28,9 @@ from src.assets import (
     pas2_asset,
     oth_asset,
     indiv_asset,
+    weball_asset,   # FEC's own per-candidate summary (validation source)
+    webl_asset,     # FEC's per-House/Senate summary
+    webk_asset,     # FEC's per-PAC summary
     
     # Layer 2.5: Mapping (congress API → aggregation)
     member_fec_mapping_asset,
@@ -81,7 +84,10 @@ defs = Definitions(
         pas2_asset,
         oth_asset,
         indiv_asset,
-        
+        weball_asset,
+        webl_asset,
+        webk_asset,
+
         # Layer 2.5: Mapping
         member_fec_mapping_asset,
         

@@ -20,6 +20,11 @@ HEADER_FILE_MAP = {
     'pas2': 'pas2.csv',
     'oth': 'oth.csv',
     'indiv': 'indiv.csv',
+    # FEC summary files (per-candidate / per-PAC aggregations from FEC).
+    # Used for validating our computed funding_channels totals.
+    'weball': 'weball.csv',  # 30 fields — all candidate summaries
+    'webl': 'webl.csv',      # 30 fields — House/Senate candidate summaries
+    'webk': 'webk.csv',      # 27 fields — PAC summaries
 }
 
 

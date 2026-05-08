@@ -19,6 +19,9 @@ from .fec.ccl import ccl_asset
 from .fec.pas2 import pas2_asset
 from .fec.oth import oth_asset
 from .fec.indiv import indiv_asset
+from .fec.weball import weball_asset
+from .fec.webl import webl_asset
+from .fec.webk import webk_asset
 
 # Mapping Assets (fec_{cycle} → aggregation database)
 # CONVERTED TO ARANGO:
@@ -61,7 +64,10 @@ __all__ = [
     "pas2_asset",          # pas2.zip - itemized transactions (ALL types)
     "oth_asset",           # oth.zip - other receipts (PAC-to-PAC transfers)
     "indiv_asset",         # indiv.zip - individual contributions
-    
+    "weball_asset",        # weball.zip - per-candidate FEC summary (validation source)
+    "webl_asset",          # webl.zip - per-House/Senate-candidate FEC summary
+    "webk_asset",          # webk.zip - per-PAC FEC summary
+
     # Mapping assets - Converted to ArangoDB
     "member_fec_mapping_asset",
     

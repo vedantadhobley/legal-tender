@@ -39,7 +39,12 @@ class CommitteeReceiptsConfig(Config):
     description="Pre-compute ACTUAL committee receipt totals from raw FEC data, per cycle.",
     group_name="enrichment",
     compute_kind="enrichment",
-    deps=["indiv", "pas2", "oth", "contributed_to"],
+    # NOTE: We read transferred_to in Phase 2 to compute per-cycle
+    # total_from_committees. Without declaring it as a dep, Dagster can
+    # start this asset before transferred_to is rebuilt — leading to stale
+    # divisor data in candidate_funding's trace and 8.8x over-attribution.
+    # Bug discovered during validation against FEC weball, 2026-05-08.
+    deps=["indiv", "pas2", "oth", "contributed_to", "transferred_to"],
 )
 def committee_receipts_asset(
     context: AssetExecutionContext,
