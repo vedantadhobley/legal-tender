@@ -99,8 +99,14 @@ class CandidateFundingConfig(Config):
     description="Trace ALL money to candidates by funding channel -- organizational direct, IE support/oppose, individuals, unaccounted.",
     group_name="aggregation",
     compute_kind="aggregation",
-    deps=["committee_classification", "committee_receipts", "affiliated_with", "transferred_to", "spent_on", 
-          "contributed_to", "wikidata_corporate_resolution"],
+    # NOTE: The asset code is graceful re: missing wikidata data (uses
+    # `db.has_collection('corporate_families')` defensively). We intentionally
+    # do NOT declare wikidata_corporate_resolution as a dep here — Dagster's
+    # enforcement would block running candidate_funding when wikidata is
+    # broken/incomplete (which it currently is — see docs/todo.md for the
+    # negative-cache + batched-VALUES refactor). Removed 2026-05-08.
+    deps=["committee_classification", "committee_receipts", "affiliated_with",
+          "transferred_to", "spent_on", "contributed_to"],
 )
 def candidate_funding_asset(
     context: AssetExecutionContext,
@@ -326,42 +332,67 @@ def candidate_funding_asset(
             all_mults = defaultdict(float)  # cmte_id -> accumulated mult
             for cmte_id in start_cmte_ids:
                 all_mults[cmte_id] += multiplier
-            
+
             # Level-by-level propagation through passthrough graph
             current_level = defaultdict(float)
             for cmte_id in start_cmte_ids:
                 current_level[cmte_id] += multiplier
-            
+
+            # Track committees we've already propagated FROM, to break graph cycles.
+            # Without this, A→B→A bidirectional transfers (which exist in the data,
+            # see audit 2026-05-08) cause unbounded multiplier accumulation.
+            propagated_from = set(start_cmte_ids)
+
             for depth in range(config.max_trace_depth):
                 next_level = defaultdict(float)
-                
+
                 for cmte_id, mult in current_level.items():
                     if mult < 0.0001:
                         continue
-                    
+
                     # Follow transfer edges INTO this committee
                     for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
                         from_cmte = cycle_cmte_info.get(from_cmte_id, {})
                         term_type = from_cmte.get('terminal_type', 'unknown')
                         attr_amount = amount * mult
                         from_name = from_cmte.get('name', from_cmte_id)
-                        
+
                         # Terminal sources: attribute directly (org PACs)
                         bucket = TERMINAL_TYPE_BUCKET.get(term_type)
                         if bucket:
                             org_results[bucket][from_name] += attr_amount
                             traced_total += attr_amount
                         elif term_type in PASSTHROUGH_TYPES or term_type == 'campaign':
+                            # Cycle break: don't re-propagate from a committee we
+                            # already propagated from at this or a previous level.
+                            # This prevents A→B→A loops from inflating multipliers.
+                            if from_cmte_id in propagated_from:
+                                continue
+
                             # Passthrough: propagate mult to next level
                             from_receipts = from_cmte.get('total_receipts', 0) or 0
-                            if from_receipts > 0:
-                                new_mult = mult * (amount / from_receipts)
-                                if new_mult >= 0.0001:
-                                    next_level[from_cmte_id] += new_mult
-                                    all_mults[from_cmte_id] += new_mult
-                
+                            if from_receipts <= 0:
+                                continue
+
+                            # Cap the per-edge fraction at 1.0. A committee can't
+                            # transfer out more than it received; values >1 indicate
+                            # a data-quality issue (committees with $1 receipts but
+                            # $10K outgoing transfers — see audit 2026-05-08).
+                            edge_fraction = min(1.0, amount / from_receipts)
+                            new_mult = mult * edge_fraction
+
+                            if new_mult >= 0.0001:
+                                next_level[from_cmte_id] += new_mult
+                                # Cap accumulated mult at 1.0 — no committee can be
+                                # responsible for >100% of a candidate's money.
+                                all_mults[from_cmte_id] = min(
+                                    1.0, all_mults[from_cmte_id] + new_mult
+                                )
+
                 if not next_level:
                     break
+                # Mark the committees we just propagated from before recursing
+                propagated_from.update(current_level.keys())
                 current_level = next_level
             
             # ============================================================

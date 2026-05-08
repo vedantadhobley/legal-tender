@@ -6,6 +6,35 @@ When a non-obvious choice gets made, append a dated entry here with: what we dec
 
 ---
 
+## 2026-05-08 — Trace algorithm bug: cycle-break + multiplier caps
+
+**Problem.** First successful aggregation run (after fixing the spent_on int/float crash and dropping the wikidata_corporate_resolution dep) produced wildly wrong totals: the top candidate at $118 quintillion, BWC's NJ-12 House race at $16 trillion (vs ~$1-3M raw indiv data suggests). Validation immediately surfaced the bug.
+
+**Root cause.** Two compounding issues in `trace_committee_sources` (the multi-hop trace in `src/assets/aggregation/candidate_upstream.py`):
+
+1. **No cycle detection.** The committee graph has bidirectional transfers — `A↔B` 2-cycles are common (sampled 10+ instances on first query). The trace propagates level-by-level for `max_trace_depth=8` levels without tracking visited committees, so cycles cause unbounded multiplier accumulation.
+
+2. **No upper bound on per-edge `amount / from_receipts`.** Some committees have `total_receipts = $1` (tiny technical filings) but outgoing transfers of $10K+. Dividing produces `amount/receipts = 10,000`, blowing up a single hop's multiplier by 10,000× before any compounding.
+
+The IE trace function (`trace_ie_sources`) already had the right guards (`min(1.0, ie_amount / total_receipts)`) and is single-level so doesn't have the cycle issue. The committee trace was the only buggy one.
+
+**Fix.** Three guards added to `trace_committee_sources`:
+
+1. **Track propagated-from committees.** A `propagated_from` set marks committees whose outgoing edges have already been processed. The trace skips re-processing them, breaking 2-cycles cleanly.
+2. **Cap per-edge fraction at 1.0.** `edge_fraction = min(1.0, amount / from_receipts)` enforces the physical constraint that a committee can't transfer out more than it received. Handles the $1-receipts data quirk.
+3. **Cap accumulated multiplier at 1.0.** `all_mults[cmte_id] = min(1.0, all_mults[cmte_id] + new_mult)` enforces the semantic constraint that no committee can be responsible for >100% of a candidate's money.
+
+**What this is NOT.** This isn't a full algorithmic refactor. It's a minimal-edit correction. A clean rewrite would do proper fixed-point iteration with convergence detection and could potentially recover legitimate compounded mults that the cap may slightly under-report. For now we accept the small under-report as the price of preventing the catastrophic over-report.
+
+**Side benefit.** The fix made `candidate_funding` ~3× faster (1h44m → ~50m). The previous run was wasting work iterating through pathological graph cycles to `max_depth=8`. The cycle break terminates much earlier.
+
+**Validation harness.** `scripts/validate_funding_channels.py` was added to surface obvious algorithm bugs in seconds (top-candidate magnitude check, BWC sanity check, distribution outliers, channel-sum consistency). Run after every aggregation: `docker exec legal-tender-dev-webserver python3 /workspace/scripts/validate_funding_channels.py`.
+
+**Open follow-ups (logged in `docs/todo.md`):**
+- Replace the cap-based fix with proper fixed-point iteration with convergence detection.
+- Investigate why some campaign committees have `total_receipts = $1`. Is this an FEC bulk-data quirk we should normalize at parse time, or do those committees genuinely have those records?
+- Re-run wikidata_corporate_resolution after the upstream client fixes (negative cache + batched VALUES + backoff) so corporate attribution is real.
+
 ## 2026-05-08 — Brain stack architecture (Phase 2 of professionalization)
 
 Built `~/workspace/obsidian/` as a self-hosted second-brain stack. Decisions made along the way:

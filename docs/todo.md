@@ -10,8 +10,15 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
 ### Critical bug fixes
 
-- [ ] **`spent_on.py:202-203` int/float type mismatch.** Wrap `stats['support_amount']` and `stats['oppose_amount']` with `float(...)`. One-line fix; crashed last aggregation run. Source: @audit/code-quality-findings.md §1a.
-- [ ] **Drop `wikidata_corporate_resolution` dep from `candidate_funding`.** `src/assets/aggregation/candidate_upstream.py:103` — the code is graceful (`db.has_collection('corporate_families')`), but Dagster's enforcement of the dep makes it impossible to skip wikidata. Single-line edit. Source: @audit/code-quality-findings.md §1c.
+- [x] **`spent_on.py:202-203` int/float type mismatch.** Wrap `stats['support_amount']` and `stats['oppose_amount']` with `float(...)`. FIXED 2026-05-08.
+- [x] **Drop `wikidata_corporate_resolution` dep from `candidate_funding`.** FIXED 2026-05-08 — see decisions.md.
+- [x] **Trace algorithm cycle blowup** — `trace_committee_sources` lacked cycle detection AND multiplier cap, producing $16T totals for House races. FIXED 2026-05-08 with `propagated_from` set, `min(1.0, amount/receipts)`, and `min(1.0, all_mults[...]+new_mult)`. See decisions.md for details.
+
+### Trace algorithm follow-ups (Phase 3 round 2)
+
+- [ ] **Replace cap-based fix with proper fixed-point iteration.** Current fix prevents catastrophic over-report by capping at 1.0 but may slightly under-report cases of legitimate compounded mults. Clean fix is iteration-to-convergence rather than 8 levels with caps.
+- [ ] **Normalize $1-receipts committees at parse time.** Some campaign committees have `total_receipts = $1` (likely FEC bulk-data quirks — technical filings without matching receipts). Decide: filter these from the trace, or normalize their receipts during parse.
+- [ ] **Verify validation harness assertions.** `scripts/validate_funding_channels.py` checks magnitude, BWC sanity, distribution. After current run completes, expand if any new failure modes appear.
 
 ### Wikidata client overhaul
 

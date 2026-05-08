@@ -199,8 +199,11 @@ def spent_on_asset(
                 "edges_created": MetadataValue.int(stats['edges_created']),
                 "support_edges": MetadataValue.int(stats['support_edges']),
                 "oppose_edges": MetadataValue.int(stats['oppose_edges']),
-                "support_amount": MetadataValue.float(stats['support_amount']),
-                "oppose_amount": MetadataValue.float(stats['oppose_amount']),
+                # Cast to float — these accumulate as int (cents/dollars summed)
+                # but Dagster's MetadataValue.float() raises a type-check error
+                # on int. Bug found 2026-05-08 when this crashed the aggregation.
+                "support_amount": MetadataValue.float(float(stats['support_amount'])),
+                "oppose_amount": MetadataValue.float(float(stats['oppose_amount'])),
                 "skipped_invalid_committee": MetadataValue.int(stats['skipped_invalid_committee']),
                 "skipped_invalid_candidate": MetadataValue.int(stats['skipped_invalid_candidate']),
                 "cycles_processed": MetadataValue.text(str(config.cycles)),
