@@ -102,6 +102,15 @@ This file is editable by both humans and the agent during sessions. Append-frien
 - Should we keep `feature/employer-enrichment` branch around (now merged into main) or delete it? Same for `feature/five-pies-by-cycle`, `feature/rag-implementation`, `feature/upstream-money-tracing`, `refactor/arango`.
 - Auto-memory cleanup: what specifically to keep vs. move to AGENTS.md? See "Memory model" section in AGENTS.md.
 
+## Brain stack — known issues (Phase 2 follow-ups)
+
+Location: `~/workspace/obsidian/` (not yet a git repo).
+
+- [ ] **Khoj chat doesn't use the vault for retrieval.** After the streaming bug fix, chat returns generic answers (with web citations like World Bank) rather than vault content. 15 docs / 201 entries are indexed but `references.context` in chat responses is empty. Probably a default-agent or search-config issue. Investigate: anonymous-mode chat may not bind to the admin user's indexed content; may need explicit per-conversation source binding via Khoj's API/agent model.
+- [ ] **Submit Khoj streaming None-content patch upstream** — `/app/src/khoj/processor/conversation/openai/utils.py` lines 513+613 need `or ""` guard. Local patch is in `~/workspace/obsidian/Dockerfile.khoj`; submit issue/PR to `khoj-ai/khoj`.
+- [ ] **Verify Khoj-as-MCP** when upstream confirms — currently deferred per research 2026-05-07.
+- [ ] **`docs/operations.md`** entry for the brain stack: how to add a project, how to re-index, how to recover Khoj DB.
+
 ## Done in this professionalization effort
 
 - [x] Storage relocation `~/workspace/.legal-tender/` → `~/workspace/data/legal-tender/{raw,dumps,cache}/` (commit `284a84b`)
@@ -111,3 +120,6 @@ This file is editable by both humans and the agent during sessions. Append-frien
 - [x] Arango memory tuning, dev + prod (commit `fb34a44`)
 - [x] Phase 0 audit complete (commits `ea5ae72` through `24da113`)
 - [x] AGENTS.md + CLAUDE.md symlink + doc reorg (Phase 1)
+- [x] Brain stack at `~/workspace/obsidian/` — `docker compose up -d --build` end-to-end self-driving: 4 services, idempotent config init, initial vault upload, patched Khoj. (Phase 2)
+- [x] `~/.claude/CLAUDE.md` user-global: identity, port allocation, joi infra, Docker-first install policy, anti-patterns.
+- [x] Khoj streaming None-content bug patched via `Dockerfile.khoj`.

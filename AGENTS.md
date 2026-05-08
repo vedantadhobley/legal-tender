@@ -17,7 +17,7 @@ docker compose -f docker-compose.dev.yml up -d
 
 - **Orchestrator**: Dagster (assets, schedules, jobs)
 - **Database**: ArangoDB (multi-model: documents + named graph)
-- **External LLMs**: Qwen3.5-35B-A3B (chat) + Qwen3-Embedding-8B served from `joi` over Tailscale, OpenAI-compatible endpoints. Configured via `EMBEDDING_HOST` in `.env`.
+- **External LLMs**: `Qwen3.5-122B-A10B` (chat) + `Qwen3-Embedding-8B-Q4_K_M` served from `joi` over Tailscale, OpenAI-compatible endpoints. Configured via `EMBEDDING_HOST` in `.env`. Live model IDs may shift; check `curl http://joi.<tailnet>:3101/v1/models` before relying on them.
 - **Anthropic API**: for me (Claude Code). Independent of `joi`.
 
 ## Where to look first
