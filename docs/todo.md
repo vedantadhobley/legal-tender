@@ -106,10 +106,13 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
 Location: `~/workspace/obsidian/` (not yet a git repo).
 
-- [ ] **Khoj chat doesn't use the vault for retrieval.** After the streaming bug fix, chat returns generic answers (with web citations like World Bank) rather than vault content. 15 docs / 201 entries are indexed but `references.context` in chat responses is empty. Probably a default-agent or search-config issue. Investigate: anonymous-mode chat may not bind to the admin user's indexed content; may need explicit per-conversation source binding via Khoj's API/agent model.
-- [ ] **Submit Khoj streaming None-content patch upstream** — `/app/src/khoj/processor/conversation/openai/utils.py` lines 513+613 need `or ""` guard. Local patch is in `~/workspace/obsidian/Dockerfile.khoj`; submit issue/PR to `khoj-ai/khoj`.
+- [x] ~~**Khoj chat doesn't use the vault for retrieval.**~~ FIXED 2026-05-08. Root cause: anonymous mode resolves requests to user `username="default"` (per `configure.py:187`), but our init script was attaching content to `vedanta@brain.local` (the Django admin user). Indexed entries lived on the wrong user. Fixed in `init-khoj.py` to attach LocalMarkdownConfig + API token + uploads to the `default` user. Verified: chat returns 17 context items citing real vault docs.
+- [x] ~~**Khoj streaming None-content bug.**~~ FIXED 2026-05-08. Patched in `~/workspace/obsidian/Dockerfile.khoj` (lines 513 + 613 in `openai/utils.py`). Still TODO: submit issue/PR upstream to `khoj-ai/khoj`.
+- [x] ~~**Khoj telemetry slowing chat.**~~ FIXED 2026-05-08. Set `KHOJ_TELEMETRY_DISABLE=true` in `.env` — Khoj was trying to phone home to `khoj.beta.haletic.com` and timing out.
+- [ ] **Submit Khoj patches upstream**: streaming None-content (lines 513, 613) — file issue/PR.
 - [ ] **Verify Khoj-as-MCP** when upstream confirms — currently deferred per research 2026-05-07.
 - [ ] **`docs/operations.md`** entry for the brain stack: how to add a project, how to re-index, how to recover Khoj DB.
+- [ ] **`~/workspace/obsidian/` as a git repo** — user noted this should become a private repo. Not yet `git init`'d.
 
 ## Done in this professionalization effort
 
