@@ -1,10 +1,113 @@
-# Pipeline — Data Model & Fix Tracker
+# Decisions Log
 
-**Started**: February 6, 2026  
-**Last Updated**: February 7, 2026  
-**Branch**: `feature/employer-enrichment`
+Append-only record of architectural and operational decisions, ordered by date. Earlier entries (Feb 6-7, 2026, originally `PIPELINE_FIXES.md`) are the data-model decisions for the funding-channels work. Later entries are the professionalization-effort decisions.
+
+When a non-obvious choice gets made, append a dated entry here with: what we decided, what we considered, why we picked the chosen path, and what still leaves open.
 
 ---
+
+## 2026-05-08 — Brain stack architecture (Phase 2 of professionalization)
+
+Built `~/workspace/obsidian/` as a self-hosted second-brain stack. Decisions made along the way:
+
+### Where it lives
+
+**Decision**: Brain stack at `~/workspace/obsidian/`, NOT under `~/workspace/monitor/`.
+
+**Considered**: Bolting it onto the existing monitor stack (Prometheus, Grafana, Loki, etc.) since both are "always-on infrastructure I want web-accessible from any tailnet device."
+
+**Why separate**: monitor is observability (read-only metrics, alerting); brain is knowledge (read+write, RAG, MCP). Different lifecycle, different data shapes, different security posture. Combining them would muddy both stacks. The "everything in one place" experience comes from a Homepage/Dashy dashboard linking to both, not from co-location.
+
+### Port allocation
+
+**Decision**: Brain stack uses **300x range** (specifically 3006-3008).
+
+**Considered**: 32xx/42xx (the project-prod/dev pattern used by found-footy/legal-tender/etc.).
+
+**Why 300x**: brain is *infrastructure*, not a project — it aggregates across projects, has no prod/dev split, and matches the always-on services already in 300x (grafana, prometheus, vikunja). The user's port allocation table (now in `~/.claude/CLAUDE.md`) reserves 300x for infra services. 421x or other ranges would have been awkward.
+
+### Containerized everything
+
+**Decision**: All four services (Khoj, Open WebUI, brain-postgres, basic-memory) run in Docker. **No host-side `pipx install`.**
+
+**Considered**: `pipx install basic-memory` on the host (the basic-memory docs' default suggestion).
+
+**Why Docker-only**: matches the user's preference (codified in `~/.claude/CLAUDE.md` "Tooling installation policy"). Reproducible from `docker compose up -d`. Survives host reprovisioning.
+
+### `docker compose up -d` does everything
+
+**Decision**: A `khoj-init` one-shot service runs after Khoj is healthy, idempotently configures it, and exits 0. No manual UI clicking required.
+
+**Considered**: A README-documented manual setup ("log into the admin UI, click here, paste this URL, etc.").
+
+**Why automated**: the user explicitly stated "perfect world is `docker compose up` does everything." Manual setup steps are the wrong shape — they don't survive reprovisioning, can't be code-reviewed, and document drift the moment Khoj's UI changes.
+
+**Implementation**: `~/workspace/obsidian/scripts/init-khoj.py` uses Khoj's Django ORM directly to create AI Model APIs, ChatModel, SearchModelConfig, ServerChatSettings, LocalMarkdownConfig, and an API token; then walks the vault and uploads markdown via `PUT /api/content`. All steps use `update_or_create` for idempotency.
+
+### Anonymous-mode user resolution (the trickiest gotcha)
+
+**Decision**: Vault content (LocalMarkdownConfig + uploaded files) attaches to user `username="default"`, NOT the Django admin user `vedanta@brain.local`.
+
+**Why**: Khoj's anonymous-mode middleware (`configure.py:187`) resolves all incoming requests to `KhojUser.objects.filter(username="default")`. The Django admin user (created from `KHOJ_ADMIN_EMAIL`) is a *separate* user, only used for `/server/admin/` access. If we attach content to the admin user but anonymous chat queries land on the default user, the LLM sees a user with zero entries → no Notes tool → falls back to web search.
+
+**This took 30 minutes to find** — the bug surfaced as "chat returns generic answers about NGOs and World Bank instead of legal-tender's actual funding channels." Easy to mistake as a search-config issue or RAG ranking problem; the real cause was multi-tenancy.
+
+### `KHOJ_ALLOWED_DOMAIN=*`
+
+**Decision**: Set the env var to `*` so Django's `DisallowedHost` doesn't reject requests with `Host: luv` or other tailnet hostnames.
+
+**Considered**: Setting it to a specific domain or the tailnet name.
+
+**Why wildcard**: tailnet is the perimeter; we don't need Django's host-header protection. Tightening this is on the TODO list for if/when the brain is ever exposed beyond tailnet (which is "never" per the user's stance on Google ties).
+
+### Khoj patches via local Dockerfile
+
+**Decision**: Build Khoj from a local `Dockerfile.khoj` that applies sed-based patches to the upstream image. Tag it `brain-khoj:patched`. Both `khoj` and `khoj-init` services use the patched image.
+
+**Considered**: Submitting upstream PRs and waiting for merge. Forking khoj-ai/khoj.
+
+**Why local Dockerfile**: needed the fixes immediately, not blocked on upstream review. The Dockerfile is small (one `RUN sed`), self-documenting (comment block lists each patch's purpose), and verifies on build (greps for the patched lines, fails if absent). When upstream merges, drop the Dockerfile and use the official image.
+
+**Patches applied (2026-05-08)**:
+- `src/khoj/processor/conversation/openai/utils.py:513,613`: `buf += <delta>` lacks `or ""` guard. llama.cpp's OpenAI-compatible streaming sends final chunks with `delta.content=None`; Khoj's code crashes with `TypeError: can only concatenate str (not "NoneType") to str`. OpenAI's own server papers over this by sending `""`. Fix: `buf += <delta> or ""`.
+
+### Telemetry off
+
+**Decision**: `KHOJ_TELEMETRY_DISABLE=true`.
+
+**Why**: Khoj phones home to `khoj.beta.haletic.com/v1/telemetry`. From this network the call times out, blocking each chat by ~5-10s before falling through. Match the privacy-conscious / no-Google-ties principle.
+
+### Host symlinks don't translate to containers
+
+**Decision**: The vault on the host has `brain/projects/legal-tender → ~/workspace/dev/legal-tender/docs` symlinks for human convenience. But for the containers, we **bypass the symlinks entirely** and Docker-mount each repo's `docs/` directly:
+
+```yaml
+- ${HOME}/workspace/dev/legal-tender/docs:/data/brain/projects/legal-tender:ro
+```
+
+**Why**: a symlink stores an absolute host path. Inside the container, that host path doesn't exist — `os.walk` falls into the symlink and finds nothing. Docker-mounting the real source bypasses this entirely. Costs: one line of compose per project. Onboarding a new project = add one mount line to `khoj` and `khoj-init` services.
+
+### What's NOT yet in the vault
+
+`AGENTS.md` and `CLAUDE.md` (the agent-context files) live at each repo's root, not in `docs/`. So they're NOT in the vault and Khoj does NOT index them. They're loaded directly by Claude Code at session start (separate retrieval path).
+
+**Open question**: should AGENTS.md also be in the vault for cross-project search? Right now if you ask Khoj "what conventions does legal-tender use?", it finds the docs but not AGENTS.md's terse "things to check before X" list. Might add a mount.
+
+### What's deferred
+
+- Khoj-as-MCP: not officially shipped per upstream as of 2026-05-07. Once confirmed, wire `khoj` into `~/.claude/mcp.json` alongside basic-memory.
+- claudewatch (drift detection for AGENTS.md / docs): planned for Phase 5 (continuous operation).
+- Quartz publishing (static site of the vault): only if we ever want a public-facing read-only view.
+- Homepage dashboard at `~/workspace/homepage/`: nice-to-have for unified tailnet entry, separate from brain.
+- Laptop-side native Obsidian + Syncthing: only if we want desktop editing of vault notes. Browser-based Khoj covers most use cases.
+
+---
+
+# Pipeline — Historical Decisions (Feb 2026, originally PIPELINE_FIXES.md)
+
+**Started**: February 6, 2026
+**Last Updated**: February 7, 2026
+**Branch**: `feature/employer-enrichment` (now merged into main)
 
 ## The Goal
 
