@@ -96,7 +96,7 @@ This is worth getting right early. You already have a `~/workspace/monitor/` sta
 │  Khoj      │ │ Open WebUI   │ │ basic-memory   │ │  Quartz (opt'l)  │
 │  (Docker)  │ │ (Docker)     │ │ (MCP server)   │ │  static publish  │
 │  vault RAG │ │ general LLM  │ │ agent writes   │ │  of vault → web  │
-│  :42110    │ │ chat :3000   │ │ into vault     │ │                  │
+│  :3006     │ │ chat :3007   │ │ MCP :3008      │ │                  │
 └────────────┘ └──────────────┘ └────────────────┘ └──────────────────┘
        │              │                 │
        └──────┬───────┘                 │
@@ -280,7 +280,7 @@ services:
     image: ghcr.io/khoj-ai/khoj:latest
     container_name: brain-khoj
     ports:
-      - "42110:42110"   # Khoj web UI + Obsidian plugin endpoint
+      - "3006:42110"  # Host 3006 → container default 42110   # Khoj web UI + Obsidian plugin endpoint
     volumes:
       - khoj-config:/root/.khoj
       - khoj-models:/root/.cache/torch
@@ -309,7 +309,7 @@ services:
     image: ghcr.io/open-webui/open-webui:main
     container_name: brain-open-webui
     ports:
-      - "3000:8080"   # Open WebUI
+      - "3007:8080"   # Open WebUI
     volumes:
       - open-webui-data:/app/backend/data
     environment:
@@ -336,12 +336,12 @@ networks:
 ```
 
 After `docker compose up -d`, you'll have:
-- **Khoj at `http://<tailnet-name>:42110`** — vault chat + search (after admin config)
-- **Open WebUI at `http://<tailnet-name>:3000`** — general LLM chat (Qwen via joi). First visitor signs up as admin, then turn off signup.
+- **Khoj at `http://<tailnet-name>:3006`** — vault chat + search (after admin config)
+- **Open WebUI at `http://<tailnet-name>:3007`** — general LLM chat (Qwen via joi). First visitor signs up as admin, then turn off signup.
 
 ### Configure Khoj for joi LLMs
 
-After bringing the stack up, navigate to `http://localhost:42110/server/admin/`. Add an **AI Model API**:
+After bringing the stack up, navigate to `http://localhost:3006/server/admin/`. Add an **AI Model API**:
 
 - Name: `joi-llama-cpp`
 - API Base URL: `http://joi.tailf424db.ts.net:3101/v1`
@@ -355,7 +355,7 @@ In Khoj's settings, add a content source pointing at `/data/brain`. It'll do an 
 
 ### Optional: Khoj Obsidian plugin
 
-Install the Khoj plugin from Obsidian's community plugins. Configure it to point at your local Khoj at `http://<server-tailscale-name>:42110`. You now get in-editor chat with the vault.
+Install the Khoj plugin from Obsidian's community plugins. Configure it to point at your local Khoj at `http://<server-tailscale-name>:3006`. You now get in-editor chat with the vault.
 
 ---
 
