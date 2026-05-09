@@ -94,6 +94,215 @@ class CandidateFundingConfig(Config):
     min_amount: float = 1000  # Minimum to include in top lists
 
 
+def is_conduit(name: str) -> bool:
+    """Whether a donor name represents a conduit (WinRed, ActBlue, etc.) —
+    aggregator pseudo-donors that pass through earmarked individual money.
+    Filtered out so we don't double-count individuals via the conduit."""
+    if not name:
+        return False
+    name_upper = name.upper()
+    return any(p in name_upper for p in CONDUIT_PATTERNS)
+
+
+def _resolve_company(name: str, employer: str,
+                     whale_to_company: Dict[str, str],
+                     employer_to_company: Dict[str, str]) -> Optional[str]:
+    """Resolve a donor to a corporate-family canonical name. Whale links
+    (founder/CEO/employee-by-name from Wikidata) take precedence over
+    employer canonical-mapping, since whale linkage is more specific."""
+    if name in whale_to_company:
+        return whale_to_company[name]
+    if employer and employer in employer_to_company:
+        return employer_to_company[employer]
+    return None
+
+
+def trace_committee_sources(
+    start_cmte_ids: List[str],
+    contrib_edges: Dict,
+    transfer_edges: Dict,
+    cycle_cmte_info: Dict,
+    donor_info: Dict[str, Dict],
+    whale_to_company: Dict[str, str],
+    employer_to_company: Dict[str, str],
+    max_trace_depth: int = 8,
+    multiplier: float = 1.0,
+) -> Dict[str, Any]:
+    """Two-phase proportional trace backwards from committees to terminal
+    sources. See module docstring for the funding-channels model.
+
+    Phase 1: Propagate multipliers level-by-level through passthrough
+    committees. Each committee accumulates the TOTAL proportion of its
+    money that flows to this candidate. Handles multiple transfer edges
+    correctly (e.g. JFC→candidate across 3 cycles = 3 edges, combined
+    into one mult).
+
+    Phase 2: Process each committee ONCE with its accumulated mult.
+    Attribute whale individuals, terminal org PACs, and upstream
+    grassroots.
+
+    Cycle break + multiplier caps prevent the catastrophic blowup
+    documented in decisions.md 2026-05-08.
+    """
+    org_results = {
+        'corporation': defaultdict(float),
+        'trade_association': defaultdict(float),
+        'labor_union': defaultdict(float),
+        'ideological': defaultdict(float),
+        'cooperative': defaultdict(float),
+    }
+    individual_results: Dict[str, Dict[str, Any]] = {}
+    traced_total = 0.0
+    grassroots_upstream = 0.0
+    start_set = set(start_cmte_ids)
+
+    # Phase 1: propagate multipliers level-by-level through the
+    # passthrough graph, attributing terminal orgs as we go.
+    all_mults: Dict[str, float] = defaultdict(float)
+    for cmte_id in start_cmte_ids:
+        all_mults[cmte_id] += multiplier
+    current_level: Dict[str, float] = defaultdict(float)
+    for cmte_id in start_cmte_ids:
+        current_level[cmte_id] += multiplier
+    propagated_from = set(start_cmte_ids)
+
+    for _depth in range(max_trace_depth):
+        next_level: Dict[str, float] = defaultdict(float)
+        for cmte_id, mult in current_level.items():
+            if mult < 0.0001:
+                continue
+            for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
+                from_cmte = cycle_cmte_info.get(from_cmte_id, {})
+                term_type = from_cmte.get('terminal_type', 'unknown')
+                attr_amount = amount * mult
+                from_name = from_cmte.get('name', from_cmte_id)
+
+                bucket = TERMINAL_TYPE_BUCKET.get(term_type)
+                if bucket:
+                    org_results[bucket][from_name] += attr_amount
+                    traced_total += attr_amount
+                elif term_type in PASSTHROUGH_TYPES or term_type == 'campaign':
+                    if from_cmte_id in propagated_from:
+                        continue
+                    from_receipts = from_cmte.get('total_receipts', 0) or 0
+                    if from_receipts <= 0:
+                        continue
+                    edge_fraction = min(1.0, amount / from_receipts)
+                    new_mult = mult * edge_fraction
+                    if new_mult >= 0.0001:
+                        next_level[from_cmte_id] += new_mult
+                        all_mults[from_cmte_id] = min(
+                            1.0, all_mults[from_cmte_id] + new_mult
+                        )
+        if not next_level:
+            break
+        propagated_from.update(current_level.keys())
+        current_level = next_level
+
+    # Phase 2: at each visited committee, attribute whale individuals
+    # and (for non-starting cmtes) the small-donor pool proportionally.
+    for cmte_id, mult in all_mults.items():
+        if mult < 0.0001:
+            continue
+        for donor_key, amount in contrib_edges.get(cmte_id, []):
+            donor = donor_info.get(donor_key, {})
+            name = donor.get('name', donor_key)
+            if is_conduit(name):
+                continue
+            attr_amount = amount * mult
+            traced_total += attr_amount
+            employer = donor.get('employer', '')
+            company = _resolve_company(name, employer, whale_to_company, employer_to_company)
+            if name not in individual_results:
+                individual_results[name] = {'amount': 0, 'employer': employer, 'company': company}
+            individual_results[name]['amount'] += attr_amount
+
+        if cmte_id not in start_set:
+            from_grassroots = cycle_cmte_info.get(cmte_id, {}).get('small_donor_total', 0) or 0
+            if from_grassroots > 0:
+                grassroots_upstream += from_grassroots * mult
+
+    return {
+        'organizational': org_results,
+        'individuals': individual_results,
+        'traced_total': traced_total,
+        'grassroots_upstream': grassroots_upstream,
+    }
+
+
+def trace_ie_sources(
+    ie_data: List[tuple],
+    contrib_edges: Dict,
+    transfer_edges: Dict,
+    cycle_cmte_info: Dict,
+    donor_info: Dict[str, Dict],
+    whale_to_company: Dict[str, str],
+    employer_to_company: Dict[str, str],
+    min_attr_amount: float = 100.0,
+) -> Dict[str, Any]:
+    """Trace IE spending back to its donors — who funded the Super PACs?
+
+    For each (spending_cmte, ie_amount) tuple, computes
+    `multiplier = min(ie_amount / cmte.total_receipts, 1.0)` and
+    attributes each donor to the PAC's spending in proportion to their
+    share. Whale donors mapped to a corporate family (via Wikidata or
+    employer canonical_name) accumulate at the company level; the rest
+    accumulate at the individual or PAC level.
+
+    `by_corporation_via_donors[company][donor_name] = amount` carries
+    the donor names that produced the corporate attribution so
+    `by_organization` can show "Pan Am Railways via MELLON, TIMOTHY"
+    transparently rather than implying corporate spending.
+    """
+    results: Dict[str, Any] = {
+        'by_corporation': defaultdict(float),
+        'by_corporation_via_donors': defaultdict(lambda: defaultdict(float)),
+        'by_individual': {},
+        'by_pac': defaultdict(float),
+    }
+
+    for cmte_id, ie_amount in ie_data:
+        cmte = cycle_cmte_info.get(cmte_id, {})
+        total_receipts = cmte.get('total_receipts', 0) or 0
+        if total_receipts <= 0 or ie_amount <= 0:
+            continue
+        multiplier = min(ie_amount / total_receipts, 1.0)
+
+        for donor_key, amount in contrib_edges.get(cmte_id, []):
+            donor = donor_info.get(donor_key, {})
+            if not donor:
+                continue
+            name = donor.get('name', donor_key)
+            if is_conduit(name):
+                continue
+            attr_amount = amount * multiplier
+            if attr_amount < min_attr_amount:
+                continue
+            employer = donor.get('employer', '')
+            company = _resolve_company(name, employer, whale_to_company, employer_to_company)
+            if company:
+                results['by_corporation'][company] += attr_amount
+                results['by_corporation_via_donors'][company][name] += attr_amount
+            else:
+                if name not in results['by_individual']:
+                    results['by_individual'][name] = {'amount': 0, 'employer': employer}
+                results['by_individual'][name]['amount'] += attr_amount
+
+        for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
+            from_cmte = cycle_cmte_info.get(from_cmte_id, {})
+            from_name = from_cmte.get('name', from_cmte_id)
+            term_type = from_cmte.get('terminal_type', 'unknown')
+            attr_amount = amount * multiplier
+            if attr_amount < min_attr_amount:
+                continue
+            if term_type in TERMINAL_TYPES:
+                results['by_corporation'][from_name] += attr_amount
+            else:
+                results['by_pac'][from_name] += attr_amount
+
+    return results
+
+
 @asset(
     name="candidate_funding",
     description="Trace ALL money to candidates by funding channel -- organizational direct, IE support/oppose, individuals, unaccounted.",
@@ -268,270 +477,8 @@ def candidate_funding_asset(
                         ", ".join(f"{c}={len(ie_by_cycle[c]):,} cands" for c in CYCLES))
         
         # ================================================================
-        # PHASE 2: Helper functions
-        # ================================================================
-        
-        def is_conduit(name: str) -> bool:
-            """Check if donor name is a conduit (WinRed, ActBlue, etc.)"""
-            if not name:
-                return False
-            name_upper = name.upper()
-            return any(p in name_upper for p in CONDUIT_PATTERNS)
-        
-        def trace_committee_sources(
-            start_cmte_ids: List[str],
-            contrib_edges: Dict,
-            transfer_edges: Dict,
-            cycle_cmte_info: Dict,
-            multiplier: float = 1.0
-        ) -> Dict[str, Any]:
-            """
-            Two-phase proportional trace backwards from committees to terminal sources.
-            
-            Phase 1: Propagate multipliers level-by-level through passthrough committees.
-                     Each committee accumulates the TOTAL proportion of its money that
-                     flows to this candidate. Handles multiple transfer edges correctly
-                     (e.g. JFC→candidate across 3 cycles = 3 edges, combined into one mult).
-            
-            Phase 2: Process each committee ONCE with its accumulated mult.
-                     Attribute whale individuals, terminal org PACs, and upstream grassroots.
-            
-            Returns:
-            {
-                'organizational': {
-                    'corporation': {name: amount, ...},
-                    'trade_association': {name: amount, ...},
-                    'labor_union': {name: amount, ...},
-                    'ideological': {name: amount, ...},
-                    'cooperative': {name: amount, ...},
-                },
-                'individuals': {name: {'amount': X, 'employer': Y, 'company': Z}, ...},
-                'traced_total': float,  # Total we could attribute (whale + org)
-                'grassroots_upstream': float,  # Sub-$10K individuals at upstream passthroughs
-            }
-            """
-            org_results = {
-                'corporation': defaultdict(float),
-                'trade_association': defaultdict(float),
-                'labor_union': defaultdict(float),
-                'ideological': defaultdict(float),
-                'cooperative': defaultdict(float),
-            }
-            individual_results = {}  # name -> {amount, employer, company}
-            traced_total = 0.0
-            grassroots_upstream = 0.0
-            
-            start_set = set(start_cmte_ids)
-            
-            # ============================================================
-            # PHASE 1: Propagate multipliers level-by-level
-            # ============================================================
-            # Each committee gets a total mult = fraction of its receipts
-            # that ultimately flows to this candidate's committees.
-            # Also collect terminal org attributions during propagation.
-            
-            # Initialize: starting committees get full multiplier
-            all_mults = defaultdict(float)  # cmte_id -> accumulated mult
-            for cmte_id in start_cmte_ids:
-                all_mults[cmte_id] += multiplier
-
-            # Level-by-level propagation through passthrough graph
-            current_level = defaultdict(float)
-            for cmte_id in start_cmte_ids:
-                current_level[cmte_id] += multiplier
-
-            # Track committees we've already propagated FROM, to break graph cycles.
-            # Without this, A→B→A bidirectional transfers (which exist in the data,
-            # see audit 2026-05-08) cause unbounded multiplier accumulation.
-            propagated_from = set(start_cmte_ids)
-
-            for depth in range(config.max_trace_depth):
-                next_level = defaultdict(float)
-
-                for cmte_id, mult in current_level.items():
-                    if mult < 0.0001:
-                        continue
-
-                    # Follow transfer edges INTO this committee
-                    for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
-                        from_cmte = cycle_cmte_info.get(from_cmte_id, {})
-                        term_type = from_cmte.get('terminal_type', 'unknown')
-                        attr_amount = amount * mult
-                        from_name = from_cmte.get('name', from_cmte_id)
-
-                        # Terminal sources: attribute directly (org PACs)
-                        bucket = TERMINAL_TYPE_BUCKET.get(term_type)
-                        if bucket:
-                            org_results[bucket][from_name] += attr_amount
-                            traced_total += attr_amount
-                        elif term_type in PASSTHROUGH_TYPES or term_type == 'campaign':
-                            # Cycle break: don't re-propagate from a committee we
-                            # already propagated from at this or a previous level.
-                            # This prevents A→B→A loops from inflating multipliers.
-                            if from_cmte_id in propagated_from:
-                                continue
-
-                            # Passthrough: propagate mult to next level
-                            from_receipts = from_cmte.get('total_receipts', 0) or 0
-                            if from_receipts <= 0:
-                                continue
-
-                            # Cap the per-edge fraction at 1.0. A committee can't
-                            # transfer out more than it received; values >1 indicate
-                            # a data-quality issue (committees with $1 receipts but
-                            # $10K outgoing transfers — see audit 2026-05-08).
-                            edge_fraction = min(1.0, amount / from_receipts)
-                            new_mult = mult * edge_fraction
-
-                            if new_mult >= 0.0001:
-                                next_level[from_cmte_id] += new_mult
-                                # Cap accumulated mult at 1.0 — no committee can be
-                                # responsible for >100% of a candidate's money.
-                                all_mults[from_cmte_id] = min(
-                                    1.0, all_mults[from_cmte_id] + new_mult
-                                )
-
-                if not next_level:
-                    break
-                # Mark the committees we just propagated from before recursing
-                propagated_from.update(current_level.keys())
-                current_level = next_level
-            
-            # ============================================================
-            # PHASE 2: Attribute individuals and grassroots at each committee
-            # ============================================================
-            # Process each committee ONCE with its total accumulated mult.
-            # No visited_edges needed — each committee appears once.
-            
-            for cmte_id, mult in all_mults.items():
-                if mult < 0.0001:
-                    continue
-                
-                # Whale individual contributions to this committee
-                for donor_key, amount in contrib_edges.get(cmte_id, []):
-                    donor = donor_info.get(donor_key, {})
-                    name = donor.get('name', donor_key)
-                    
-                    if is_conduit(name):
-                        continue
-                    
-                    attr_amount = amount * mult
-                    traced_total += attr_amount
-                    employer = donor.get('employer', '')
-                    
-                    # Resolve to company
-                    company = None
-                    if name in whale_to_company:
-                        company = whale_to_company[name]
-                    elif employer and employer in employer_to_company:
-                        company = employer_to_company[employer]
-                    
-                    if name not in individual_results:
-                        individual_results[name] = {
-                            'amount': 0,
-                            'employer': employer,
-                            'company': company
-                        }
-                    individual_results[name]['amount'] += attr_amount
-                
-                # Upstream grassroots: sub-$10K individuals at non-starting committees
-                # (Starting committees' grassroots is handled separately via committee_receipts)
-                if cmte_id not in start_set:
-                    from_grassroots = cycle_cmte_info.get(cmte_id, {}).get('small_donor_total', 0) or 0
-                    if from_grassroots > 0:
-                        grassroots_upstream += from_grassroots * mult
-            
-            return {
-                'organizational': org_results,
-                'individuals': individual_results,
-                'traced_total': traced_total,
-                'grassroots_upstream': grassroots_upstream,
-            }
-        
-        def trace_ie_sources(
-            ie_data: List[tuple],
-            contrib_edges: Dict,
-            transfer_edges: Dict,
-            cycle_cmte_info: Dict,
-        ) -> Dict[str, Any]:
-            """
-            Trace IE spending back to sources -- who funded the Super PACs?
-            
-            Returns:
-            {
-                'by_corporation': {corp_name: amount, ...},
-                'by_individual': {name: {'amount': X, 'employer': Y}, ...},
-                'by_pac': {pac_name: amount, ...},
-            }
-            """
-            results = {
-                'by_corporation': defaultdict(float),
-                # New: track which donors produced each corporate attribution.
-                # company → {donor_name → amount}. Lets downstream show
-                # "Pan Am Railways $20M via [MELLON, TIMOTHY]" rather than
-                # the misleading "the railroad funded $20M against Trump".
-                'by_corporation_via_donors': defaultdict(lambda: defaultdict(float)),
-                'by_individual': {},
-                'by_pac': defaultdict(float),
-            }
-
-            for cmte_id, ie_amount in ie_data:
-                cmte = cycle_cmte_info.get(cmte_id, {})
-                total_receipts = cmte.get('total_receipts', 0) or 0
-
-                if total_receipts <= 0 or ie_amount <= 0:
-                    continue
-
-                multiplier = min(ie_amount / total_receipts, 1.0)
-
-                # Trace donors to this PAC
-                for donor_key, amount in contrib_edges.get(cmte_id, []):
-                    donor = donor_info.get(donor_key, {})
-                    if not donor:
-                        continue
-
-                    name = donor.get('name', donor_key)
-                    if is_conduit(name):
-                        continue
-
-                    attr_amount = amount * multiplier
-                    if attr_amount < 100:
-                        continue
-
-                    employer = donor.get('employer', '')
-                    company = None
-                    if name in whale_to_company:
-                        company = whale_to_company[name]
-                    elif employer and employer in employer_to_company:
-                        company = employer_to_company[employer]
-
-                    if company:
-                        results['by_corporation'][company] += attr_amount
-                        results['by_corporation_via_donors'][company][name] += attr_amount
-                    else:
-                        if name not in results['by_individual']:
-                            results['by_individual'][name] = {'amount': 0, 'employer': employer}
-                        results['by_individual'][name]['amount'] += attr_amount
-                
-                # Trace committee transfers to this PAC
-                for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
-                    from_cmte = cycle_cmte_info.get(from_cmte_id, {})
-                    from_name = from_cmte.get('name', from_cmte_id)
-                    term_type = from_cmte.get('terminal_type', 'unknown')
-                    
-                    attr_amount = amount * multiplier
-                    if attr_amount < 100:
-                        continue
-                    
-                    if term_type in TERMINAL_TYPES:
-                        results['by_corporation'][from_name] += attr_amount
-                    else:
-                        results['by_pac'][from_name] += attr_amount
-            
-            return results
-
-        # ================================================================
-        # PHASE 3: Funding channels computation
+        # PHASE 2-3: Per-candidate computation (uses module-level helpers
+        # trace_committee_sources / trace_ie_sources lifted above)
         # ================================================================
         
         def compute_funding_channels(
@@ -548,7 +495,14 @@ def candidate_funding_asset(
             Returns the funding_channels dict or None if no funding.
             """
             # Trace direct funding through candidate's committees
-            sources = trace_committee_sources(cmte_ids, contrib_edges, transfer_edges, cycle_cmte_info, multiplier=1.0)
+            sources = trace_committee_sources(
+                cmte_ids, contrib_edges, transfer_edges, cycle_cmte_info,
+                donor_info=donor_info,
+                whale_to_company=whale_to_company,
+                employer_to_company=employer_to_company,
+                max_trace_depth=config.max_trace_depth,
+                multiplier=1.0,
+            )
             
             # --- CHANNEL 1: Organizational Direct ---
             org = sources['organizational']
@@ -618,8 +572,14 @@ def candidate_funding_asset(
             ie_oppose_total = sum(amt for _, amt in ie_oppose_data)
             
             # Trace IE funding to find who bankrolls the Super PACs
-            ie_support_sources = trace_ie_sources(ie_support_data, contrib_edges, transfer_edges, cycle_cmte_info) if ie_support_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
-            ie_oppose_sources = trace_ie_sources(ie_oppose_data, contrib_edges, transfer_edges, cycle_cmte_info) if ie_oppose_data else {'by_corporation': {}, 'by_individual': {}, 'by_pac': {}}
+            _ie_kwargs = dict(
+                donor_info=donor_info,
+                whale_to_company=whale_to_company,
+                employer_to_company=employer_to_company,
+            )
+            _empty_ie = {'by_corporation': {}, 'by_corporation_via_donors': {}, 'by_individual': {}, 'by_pac': {}}
+            ie_support_sources = trace_ie_sources(ie_support_data, contrib_edges, transfer_edges, cycle_cmte_info, **_ie_kwargs) if ie_support_data else _empty_ie
+            ie_oppose_sources = trace_ie_sources(ie_oppose_data, contrib_edges, transfer_edges, cycle_cmte_info, **_ie_kwargs) if ie_oppose_data else _empty_ie
             
             # --- Direct funding total (what candidate committees received) ---
             direct_total = org_direct_total + all_indiv_total
