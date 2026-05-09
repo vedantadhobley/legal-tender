@@ -22,11 +22,12 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
 ### Wikidata client overhaul
 
-- [ ] **Persistent negative cache.** `wikidata_cache.json` should store sentinel entries for "tried, no Wikidata match" so subsequent runs skip them. Currently dead-end queries get re-fired forever. Source: @audit/code-quality-findings.md §1b.
-- [ ] **Batched VALUES queries.** `_execute_sparql` issues one request per company name. Rewrite calling code to batch 50 names per request via SPARQL `VALUES ?label { ... }`. 5,000 sequential queries → ~100 batched queries. Source: @audit/code-quality-findings.md §1b.
-- [ ] **Exponential backoff + circuit breaker.** On 429/502, retry with `2^attempt` delay, cap at 60s, give up after 3 consecutive global failures. Prevents future 14-hour grinds.
-- [ ] **Incremental cache flush in `wikidata_resolution.py`.** Save cache every N queries, not only at end of run. Saves work if the asset crashes.
-- [ ] **Make `WIKIDATA_CACHE_PATH` configurable via storage helpers.** Currently hardcoded `/workspace/wikidata_cache.json`. Should use `get_cache_dir() / "wikidata.json"`.
+- [x] ~~**Persistent negative cache.**~~ Done in commit `9ac4321`. Asset now caches every name regardless of whether Wikidata had a match (`source='not_found'` for misses, distinct from `source='error'` which is intentionally NOT cached so failed requests retry next run).
+- [x] ~~**Batched VALUES queries.**~~ Done in commit `fc0d2a3`. New `resolve_companies(names, chunk_size=50)` and `resolve_people(names, chunk_size=25)` collapse 5,000 sequential requests into ~100 batched ones via SPARQL VALUES.
+- [x] ~~**Exponential backoff + circuit breaker.**~~ Done in commit `fc0d2a3`. 1s base delay doubling to 60s cap; 3 retries per query; circuit trips after 3 consecutive global failures (asset returns empty results rather than hanging for hours). `reset_circuit_breaker()` re-arms between runs.
+- [x] ~~**Incremental cache flush.**~~ Done in commit `9ac4321`. Cache saved after every 5 employer batches and 4 whale batches plus a final flush.
+- [x] ~~**Make cache path configurable via storage helpers.**~~ Done in commit `9ac4321`. Now `<cache_dir>/wikidata.json` via `get_cache_dir()`. Legacy `/workspace/wikidata_cache.json` read as one-time migration fallback.
+- [ ] **End-to-end live validation.** Pending — Wikidata's public SPARQL endpoint is currently returning 502/timeouts (verified with direct curl 2026-05-09). Re-run `wikidata_corporate_resolution` when their service recovers and confirm the new batched path actually pulls corporate-family data at scale. Cache file already at `~/workspace/data/legal-tender/cache/wikidata.json` with 27 employer entries from prior run as starting point.
 
 ### Configuration centralization
 
@@ -37,7 +38,7 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
 ### Cache + data hygiene
 
-- [ ] **Move repo-root caches to `cache/`.** `wikidata_cache.json` (13KB) and `corporate_families.json` are cache files tracked in git. Move to `~/workspace/data/legal-tender/cache/`, gitignore them, update path references. Source: @audit/code-quality-findings.md §11.
+- [x] ~~**Move repo-root caches to `cache/`.**~~ Done in commit `9ac4321`. `wikidata_cache.json` migrated to `~/workspace/data/legal-tender/cache/wikidata.json`. Both `/wikidata_cache.json` and `/corporate_families.json` removed from tracking and added to `.gitignore` so they can't be re-committed.
 
 ### Logging hygiene
 
