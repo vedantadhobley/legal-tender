@@ -6,6 +6,57 @@ When a non-obvious choice gets made, append a dated entry here with: what we dec
 
 ---
 
+## 2026-05-08 — Bulk validation against FEC weball + unitemized grassroots gap
+
+After parsing FEC's `weball`/`webl`/`webk` summary files (per-candidate / per-PAC totals from FEC's own aggregation), wrote `scripts/validation_report.py` to cross-reference our `direct_funding` against `weball.TTL_RECEIPTS` for every candidate. The bulk validation revealed a systematic undercount for grassroots-heavy candidates.
+
+**The pattern**: 100% of the worst offenders by absolute dollar delta are major Senate/Presidential candidates with massive small-donor bases. All under FEC's number, none over.
+
+| Cycle | Top offenders (% under FEC) |
+|---|---|
+| 2020 | Sanders -58%, Warren -61%, Trump -40%, Biden -33% |
+| 2022 | Oz -69%, Fetterman -56%, Demings -47%, Warnock -40% |
+| 2024 | Trone -99%, Allred -47%, Tester -36%, Harris/Biden -26% |
+| 2026 | Krishnamoorthi -67%, Kelly -66%, Talarico -57% |
+
+Median delta across 10,634 cycle-candidate comparisons: **33%**. Only 12.5% within ±5% of FEC.
+
+**Root cause**: We compute `total_from_individuals` by summing records in FEC's `indiv.zip`. But `indiv.zip` only contains *itemized* donations (typically donors who gave $200+ cumulative per committee per year). **Unitemized small donations are NOT in indiv.zip** — FEC reports them only as a sum in candidate filings.
+
+For BWC (incumbent, mostly $200+ donors): negligible gap → 0.7% delta.
+For Sanders (huge sub-$200 grassroots base): we miss ~$76M → 58% delta.
+
+**Fix (in flight)**: Modify `committee_receipts` to use `weball.TTL_INDIV_CONTRIB` (for principal campaign committees) and `webk.INDV_CONTRIB` (for PACs) as the authoritative individuals total. Compute grassroots as `TTL_INDIV_CONTRIB − whale_donor_total`. Whale machinery untouched — they continue being graph-traced for corporate attribution.
+
+**What this is NOT a fix for**:
+- The whale-threshold model (already documented in `funding-channels.md` as a "high-engagement proxy" — accurate within its definition)
+- The whale → employer conflation (intentional, used by `by_organization` cross-cut, not double-counting)
+- Trace algorithm bugs (those were the prior fix; cycle-break + multiplier caps)
+
+**What this exposes about our prior fix**: the cycle-break/cap fix prevented catastrophic blowup but masked this real gap. Without cross-validating against FEC's published numbers, we'd have shipped "looks plausible by magnitude" data with structural undercounts for the most-watched candidates.
+
+**Validation harness as a permanent check**: `scripts/validate_funding_channels.py` does smoke tests (magnitudes, BWC sanity, channel-sum). `scripts/validation_report.py` does the bulk cross-reference. Run after every aggregation re-run; flag regressions.
+
+## 2026-05-08 — Per-election limit threshold model documented as "high-engagement proxy"
+
+The whale threshold (`PER_ELECTION_LIMITS` in `donors.py`) is hardcoded per cycle:
+```python
+{"2020": 2_800, "2022": 2_900, "2024": 3_300, "2026": 3_500}
+```
+
+Source: FEC publishes contribution limits at fec.gov/help-candidates-and-committees/candidate-taking-receipts/contribution-limits. Inflation-adjusted every 2 years.
+
+**What we're computing isn't strictly "FEC max-out"**: we mark a donor as a whale if they aggregated `≥ per_election_limit` at any single committee in a cycle, regardless of whether any single election (primary, general, runoff) was technically maxed. So a donor giving $3,000 to primary + $3,000 to general at one candidate ($6,000 cycle total) is a whale per our definition; technically they didn't max either election.
+
+This is documented in `funding-channels.md` as a "high-engagement donor proxy" — useful for graph traversal and corporate attribution. The mis-classification at the boundary is small and doesn't affect totals (they end up in `whale.independent` or `whale.corporate_connected` based on employer link, contributing the same dollar amount either way).
+
+**Trade-offs of hardcoded values**:
+- ✅ Simple, predictable, no runtime API dep
+- ✅ Changes only every 2 years (trivial PR)
+- ❌ Requires explicit human update for each new cycle
+
+**Next maintenance window**: 2027 — when FEC publishes 2028 cycle limits, add `"2028": <new_limit>` to `PER_ELECTION_LIMITS` AND to `ACTIVE_CYCLES` (still hardcoded in 17 files; centralization is on the todo list).
+
 ## 2026-05-08 — Trace algorithm bug: cycle-break + multiplier caps
 
 **Problem.** First successful aggregation run (after fixing the spent_on int/float crash and dropping the wikidata_corporate_resolution dep) produced wildly wrong totals: the top candidate at $118 quintillion, BWC's NJ-12 House race at $16 trillion (vs ~$1-3M raw indiv data suggests). Validation immediately surfaced the bug.
