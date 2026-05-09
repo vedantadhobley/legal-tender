@@ -153,17 +153,25 @@ def transferred_to_asset(
             #   15B  contribution from affiliated party cmte
             #   15C  loan
             #   15E  Levin (state non-fed) contribution
+            #   15Z  in-kind contribution received
             #   18G  transfer-in from affiliated/other party cmte
-            #   18H  honorarium
-            #   18L  loan repayment received
+            #   18H  honorarium received
+            #   18K  contribution received from registered filer (cmte→cmte cash)
+            #   18L  bundled contribution received
+            #   22Z  refund of contribution received
+            #
+            # First-pass filter (just 11/15/18G/H/L) was too tight — it dropped
+            # 18K which alone is $348M in 2022 oth across all cmtes, a big
+            # systematic underflow. Added 18K + 15Z + 22Z this pass.
             oth_aql = """
             FOR doc IN oth
                 FILTER doc.CMTE_ID != null AND doc.OTHER_ID != null
                 FILTER doc.TRANSACTION_AMT != null
                 FILTER doc.TRANSACTION_TP IN [
                     "11", "11A", "11B", "11C",
-                    "15", "15B", "15C", "15E",
-                    "18G", "18H", "18L"
+                    "15", "15B", "15C", "15E", "15Z",
+                    "18G", "18H", "18K", "18L",
+                    "22Z"
                 ]
                 FILTER doc.MEMO_CD != "X"
                 COLLECT source_cmte = doc.OTHER_ID, dest_cmte = doc.CMTE_ID
