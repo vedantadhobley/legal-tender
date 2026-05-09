@@ -19,7 +19,7 @@ Source: fec_{cycle}.indiv, fec_{cycle}.pas2, fec_{cycle}.oth, aggregation.contri
 Target: aggregation.committees (updates financial fields)
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 import gc
 
@@ -359,9 +359,26 @@ def committee_receipts_asset(
         stats['cmtes_using_auth_total'] = 0
         stats['cmtes_using_indiv_fallback'] = 0
 
-        batch = []
-        for cmte_id in all_cmte_ids:
+        # Per-cmte computation is pure CPU/dict-lookup; the bottleneck is the
+        # UPSERT roundtrip. Split into N chunks, each chunk processed by a
+        # worker thread that builds doc updates and flushes 1000-row batches.
+        # ArangoDB serializes UPSERT per-document, and our chunks have disjoint
+        # _keys, so concurrent batches can't conflict on the same doc.
+        UPSERT_AQL = """
+        FOR doc IN @batch
+            UPSERT { _key: doc._key }
+            INSERT doc
+            UPDATE doc
+            IN committees
+            OPTIONS { mergeObjects: false }
+        """
+
+        def _process_one_cmte(cmte_id: str) -> Optional[Dict[str, Any]]:
+            """Compute the receipts_by_cycle dict + aggregate for one cmte.
+            Returns the upsert doc, or None if cmte has no data this cycle."""
             receipts_by_cycle = {}
+            cmte_auth_hits = 0
+            cmte_fallback_hits = 0
 
             for cycle in config.cycles:
                 indiv = indiv_by_cycle[cycle].get(cmte_id, {})
@@ -373,34 +390,18 @@ def committee_receipts_asset(
                 whale_count = whale.get('count', 0)
                 donation_count = indiv.get('count', 0)
                 self_funding = self_funding_by_cycle[cycle].get(cmte_id, 0)
-                # CAN-entity overlap = candidate's itemized self-contributions
-                # already in the whale graph. self_funding excludes it; we add
-                # it back here so committee-side total_receipts still matches
-                # FEC's TTL_RECEIPTS (which counts both buckets).
                 can_overlap = can_indiv_by_cycle[cycle].get(cmte_id, 0)
 
-                # Prefer FEC's authoritative TTL_INDIV_CONTRIB / INDV_CONTRIB
-                # (includes unitemized small donors). Fall back to summed
-                # indiv.zip when not available.
                 auth_total = auth_indiv_by_cycle[cycle].get(cmte_id)
                 if auth_total is not None:
                     individuals_external = auth_total
                     indiv_source = 'fec_summary'
-                    stats['cmtes_using_auth_total'] += 1
+                    cmte_auth_hits += 1
                 else:
                     individuals_external = indiv_summed
                     indiv_source = 'indiv_zip'
-                    stats['cmtes_using_indiv_fallback'] += 1
+                    cmte_fallback_hits += 1
 
-                # total_individuals = TTL_INDIV_CONTRIB + CAND_CONTRIB + CAND_LOANS
-                # (full FEC parity). Decomposed three ways:
-                #   external           — non-candidate donations
-                #   can_overlap        — candidate's itemized self-contribs
-                #                        (already in whale graph)
-                #   self_funding       — unitemized self + all loans
-                #                        (NOT in whale graph; new bucket)
-                # candidate_funding consumes (whale + grassroots + self_funding)
-                # to avoid double-counting can_overlap with whale.
                 total_individuals = individuals_external + self_funding + can_overlap
                 small_total = max(0, individuals_external - whale_total)
                 total_receipts = total_individuals + transfer
@@ -408,8 +409,8 @@ def committee_receipts_asset(
                 if total_individuals > 0 or transfer > 0 or whale_total > 0:
                     receipts_by_cycle[cycle] = {
                         'total_from_individuals': total_individuals,
-                        'total_from_individuals_source': indiv_source,  # 'fec_summary' | 'indiv_zip'
-                        'total_from_individuals_indiv_zip': indiv_summed,  # for diff/debugging
+                        'total_from_individuals_source': indiv_source,
+                        'total_from_individuals_indiv_zip': indiv_summed,
                         'total_from_individuals_external': individuals_external,
                         'self_funding_total': self_funding,
                         'small_donor_total': small_total,
@@ -421,9 +422,8 @@ def committee_receipts_asset(
                     }
 
             if not receipts_by_cycle:
-                continue
+                return None
 
-            # Aggregate = sum of per-cycle values
             agg_total_individuals = sum(r.get('total_from_individuals', 0) for r in receipts_by_cycle.values())
             agg_individuals_external = sum(r.get('total_from_individuals_external', 0) for r in receipts_by_cycle.values())
             agg_self_funding = sum(r.get('self_funding_total', 0) for r in receipts_by_cycle.values())
@@ -434,45 +434,66 @@ def committee_receipts_asset(
             agg_small_total = max(0, agg_individuals_external - agg_whale_total)
             agg_total_receipts = agg_total_individuals + agg_transfer
 
-            update = {
-                '_key': cmte_id,
-                'receipts_by_cycle': receipts_by_cycle,
-                # Aggregate fields (backward compat)
-                'total_from_individuals': agg_total_individuals,
-                'total_from_individuals_external': agg_individuals_external,
-                'self_funding_total': agg_self_funding,
-                'small_donor_total': agg_small_total,
-                'whale_donor_total': agg_whale_total,
-                'whale_donor_count': agg_whale_count,
-                'donation_count': agg_donation_count,
-                'total_from_committees': agg_transfer,
-                'total_receipts': agg_total_receipts,
-                'receipts_updated_at': datetime.now().isoformat(),
+            return {
+                '_doc': {
+                    '_key': cmte_id,
+                    'receipts_by_cycle': receipts_by_cycle,
+                    'total_from_individuals': agg_total_individuals,
+                    'total_from_individuals_external': agg_individuals_external,
+                    'self_funding_total': agg_self_funding,
+                    'small_donor_total': agg_small_total,
+                    'whale_donor_total': agg_whale_total,
+                    'whale_donor_count': agg_whale_count,
+                    'donation_count': agg_donation_count,
+                    'total_from_committees': agg_transfer,
+                    'total_receipts': agg_total_receipts,
+                    'receipts_updated_at': datetime.now().isoformat(),
+                },
+                'auth_hits': cmte_auth_hits,
+                'fallback_hits': cmte_fallback_hits,
             }
-            batch.append(update)
 
-            if len(batch) >= 1000:
-                agg_db.aql.execute("""
-                    FOR doc IN @batch
-                        UPSERT { _key: doc._key }
-                        INSERT doc
-                        UPDATE doc
-                        IN committees
-                        OPTIONS { mergeObjects: false }
-                """, bind_vars={"batch": batch})
-                stats['committees_updated'] += len(batch)
-                batch = []
+        def _process_chunk(chunk: List[str]) -> Dict[str, int]:
+            """Process a chunk of cmte_ids. Each thread owns its own connection
+            (created lazily by python-arango) and its own batch list."""
+            local_db = client.db("aggregation", username=arango.username, password=arango.password)
+            batch = []
+            written = 0
+            auth_hits = 0
+            fallback_hits = 0
+            for cmte_id in chunk:
+                result = _process_one_cmte(cmte_id)
+                if result is None:
+                    continue
+                batch.append(result['_doc'])
+                auth_hits += result['auth_hits']
+                fallback_hits += result['fallback_hits']
+                if len(batch) >= 1000:
+                    local_db.aql.execute(UPSERT_AQL, bind_vars={"batch": batch})
+                    written += len(batch)
+                    batch = []
+            if batch:
+                local_db.aql.execute(UPSERT_AQL, bind_vars={"batch": batch})
+                written += len(batch)
+            return {'written': written, 'auth_hits': auth_hits, 'fallback_hits': fallback_hits}
 
-        if batch:
-            agg_db.aql.execute("""
-                FOR doc IN @batch
-                    UPSERT { _key: doc._key }
-                    INSERT doc
-                    UPDATE doc
-                    IN committees
-                    OPTIONS { mergeObjects: false }
-            """, bind_vars={"batch": batch})
-            stats['committees_updated'] += len(batch)
+        # Split cmte_ids into N chunks. 8 workers is a good balance —
+        # enough to saturate Arango's writers without overwhelming the
+        # connection pool.
+        cmte_list = list(all_cmte_ids)
+        N_WORKERS = 8
+        chunk_size = (len(cmte_list) + N_WORKERS - 1) // N_WORKERS
+        chunks = [cmte_list[i:i + chunk_size] for i in range(0, len(cmte_list), chunk_size)]
+        context.log.info(f"   Splitting {len(cmte_list):,} cmtes into {len(chunks)} chunks of ~{chunk_size:,} for parallel UPSERT")
+
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        with ThreadPoolExecutor(max_workers=N_WORKERS) as pool:
+            futures = [pool.submit(_process_chunk, chunk) for chunk in chunks]
+            for fut in as_completed(futures):
+                r = fut.result()
+                stats['committees_updated'] += r['written']
+                stats['cmtes_using_auth_total'] += r['auth_hits']
+                stats['cmtes_using_indiv_fallback'] += r['fallback_hits']
 
         # ================================================================
         # Validation
