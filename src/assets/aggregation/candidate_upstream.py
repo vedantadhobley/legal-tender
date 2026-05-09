@@ -230,6 +230,32 @@ def trace_committee_sources(
     }
 
 
+def _safe_pct(num: float, denom: float) -> float:
+    """Percentage helper that returns 0 instead of dividing by zero."""
+    return (num / denom * 100) if denom > 0 else 0
+
+
+def _top_sources(d: Dict[str, float], n: int, min_amount: float) -> List[Dict[str, Any]]:
+    """Top-N {name, amount} entries from a {name -> amount} dict, threshold-filtered."""
+    sorted_items = sorted(d.items(), key=lambda x: -x[1])[:n]
+    return [{'name': k, 'amount': v} for k, v in sorted_items if v >= min_amount]
+
+
+def _top_companies(d: Dict[str, Dict[str, Any]], n: int, min_amount: float) -> List[Dict[str, Any]]:
+    """Top-N companies from a {company -> {amount, donors}} dict, with top-5
+    donors per company, threshold-filtered."""
+    sorted_items = sorted(d.items(), key=lambda x: -x[1]['amount'])[:n]
+    return [
+        {
+            'company': k,
+            'amount': v['amount'],
+            'top_donors': sorted(v['donors'], key=lambda x: -x['amount'])[:5],
+        }
+        for k, v in sorted_items
+        if v['amount'] >= min_amount
+    ]
+
+
 def trace_ie_sources(
     ie_data: List[tuple],
     contrib_edges: Dict,
@@ -301,6 +327,299 @@ def trace_ie_sources(
                 results['by_pac'][from_name] += attr_amount
 
     return results
+
+
+def compute_funding_channels(
+    cmte_ids: List[str],
+    cand_key: str,
+    contrib_edges: Dict,
+    transfer_edges: Dict,
+    ie_data: Dict,
+    cycle_cmte_info: Dict,
+    donor_info: Dict[str, Dict],
+    whale_to_company: Dict[str, str],
+    employer_to_company: Dict[str, str],
+    config: 'CandidateFundingConfig',
+) -> Optional[Dict[str, Any]]:
+    """Compute the per-cycle funding_channels dict for one candidate.
+
+    Combines a backwards trace through the candidate's affiliated
+    committees (organizational direct + whale individuals + upstream
+    grassroots) with IE Support/Oppose source attribution, plus the
+    grassroots and self-funding totals from committee_receipts.
+
+    Returns None if the candidate has no funding in this cycle.
+    """
+    # --- Trace backwards through candidate's committees ---
+    sources = trace_committee_sources(
+        cmte_ids, contrib_edges, transfer_edges, cycle_cmte_info,
+        donor_info=donor_info,
+        whale_to_company=whale_to_company,
+        employer_to_company=employer_to_company,
+        max_trace_depth=config.max_trace_depth,
+        multiplier=1.0,
+    )
+
+    # --- CHANNEL 1: Organizational Direct ---
+    org = sources['organizational']
+    corp_total = sum(org['corporation'].values())
+    trade_total = sum(org['trade_association'].values())
+    labor_total = sum(org['labor_union'].values())
+    ideological_total = sum(org['ideological'].values())
+    coop_total = sum(org['cooperative'].values())
+    org_direct_total = corp_total + trade_total + labor_total + ideological_total + coop_total
+
+    # --- CHANNEL 4: Individuals (whale graph + grassroots from cmte_receipts) ---
+    whale_indiv_total = sum(d['amount'] for d in sources['individuals'].values())
+
+    corp_connected: Dict[str, Dict[str, Any]] = {}
+    independent: Dict[str, float] = {}
+    for name, data in sources['individuals'].items():
+        if data['company']:
+            if data['company'] not in corp_connected:
+                corp_connected[data['company']] = {'amount': 0, 'donors': []}
+            corp_connected[data['company']]['amount'] += data['amount']
+            if data['amount'] >= config.min_amount:
+                corp_connected[data['company']]['donors'].append({
+                    'name': name,
+                    'amount': data['amount'],
+                })
+        else:
+            independent[name] = data['amount']
+    corp_connected_total = sum(c['amount'] for c in corp_connected.values())
+    independent_total = whale_indiv_total - corp_connected_total
+
+    # Aggregate cmte-side totals from committee_receipts
+    cmte_total_receipts = sum(
+        (cycle_cmte_info.get(cid, {}).get('total_receipts', 0) or 0) for cid in cmte_ids
+    )
+    cmte_total_from_individuals = sum(
+        (cycle_cmte_info.get(cid, {}).get('total_from_individuals', 0) or 0) for cid in cmte_ids
+    )
+    cmte_total_from_committees = sum(
+        (cycle_cmte_info.get(cid, {}).get('total_from_committees', 0) or 0) for cid in cmte_ids
+    )
+    grassroots_direct = sum(
+        (cycle_cmte_info.get(cid, {}).get('small_donor_total', 0) or 0) for cid in cmte_ids
+    )
+    grassroots_upstream = sources.get('grassroots_upstream', 0)
+    grassroots_total = grassroots_direct + grassroots_upstream
+
+    # Self-funding (CAND_CONTRIB + CAND_LOANS) — separate sub-bucket so
+    # journalists see it cleanly without it masquerading as small donors
+    # or whale donations.
+    self_funded_total = sum(
+        (cycle_cmte_info.get(cid, {}).get('self_funding_total', 0) or 0) for cid in cmte_ids
+    )
+    all_indiv_total = whale_indiv_total + grassroots_total + self_funded_total
+
+    # --- CHANNELS 2 & 3: IE Support / Oppose ---
+    ie_support_data = ie_data.get('support', [])
+    ie_oppose_data = ie_data.get('oppose', [])
+    ie_support_total = sum(amt for _, amt in ie_support_data)
+    ie_oppose_total = sum(amt for _, amt in ie_oppose_data)
+
+    _ie_kwargs = dict(
+        donor_info=donor_info,
+        whale_to_company=whale_to_company,
+        employer_to_company=employer_to_company,
+    )
+    _empty_ie = {'by_corporation': {}, 'by_corporation_via_donors': {}, 'by_individual': {}, 'by_pac': {}}
+    ie_support_sources = (
+        trace_ie_sources(ie_support_data, contrib_edges, transfer_edges, cycle_cmte_info, **_ie_kwargs)
+        if ie_support_data else _empty_ie
+    )
+    ie_oppose_sources = (
+        trace_ie_sources(ie_oppose_data, contrib_edges, transfer_edges, cycle_cmte_info, **_ie_kwargs)
+        if ie_oppose_data else _empty_ie
+    )
+
+    direct_total = org_direct_total + all_indiv_total
+    traced_direct = sources['traced_total']
+    total_accounted = traced_direct + grassroots_total + self_funded_total
+    unaccounted = max(0, cmte_total_receipts - total_accounted)
+    total_funding = direct_total + ie_support_total
+
+    if total_funding <= 0 and ie_oppose_total <= 0:
+        return None
+
+    # --- by_organization cross-cut (combines direct PAC + employees + IE)
+    # via_donors per org tracks which donor names produced the
+    # employees/IE attribution rolled up to a corporate identity, so
+    # readers can distinguish founder personal donations from corporate
+    # PAC money.
+    by_org: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+        'direct_pac': 0,
+        'direct_employees': 0,
+        'ie_support': 0,
+        'ie_oppose': 0,
+        'total': 0,
+        '_via_donors': defaultdict(lambda: {'ie_support': 0, 'ie_oppose': 0, 'employees': 0}),
+    })
+    for bucket_name in ('corporation', 'trade_association', 'labor_union', 'ideological', 'cooperative'):
+        for org_name, amount in org[bucket_name].items():
+            by_org[org_name]['direct_pac'] += amount
+            by_org[org_name]['total'] += amount
+    for company, data in corp_connected.items():
+        by_org[company]['direct_employees'] += data['amount']
+        by_org[company]['total'] += data['amount']
+        for d in data.get('donors', []):
+            by_org[company]['_via_donors'][d['name']]['employees'] += d['amount']
+    for corp_name, amount in ie_support_sources['by_corporation'].items():
+        by_org[corp_name]['ie_support'] += amount
+        by_org[corp_name]['total'] += amount
+        for donor_name, donor_amt in ie_support_sources.get('by_corporation_via_donors', {}).get(corp_name, {}).items():
+            by_org[corp_name]['_via_donors'][donor_name]['ie_support'] += donor_amt
+    for corp_name, amount in ie_oppose_sources['by_corporation'].items():
+        by_org[corp_name]['ie_oppose'] += amount
+        for donor_name, donor_amt in ie_oppose_sources.get('by_corporation_via_donors', {}).get(corp_name, {}).items():
+            by_org[corp_name]['_via_donors'][donor_name]['ie_oppose'] += donor_amt
+
+    return {
+        'total_funding': total_funding,
+        'direct_funding': direct_total,
+        'ie_support': ie_support_total,
+        'ie_oppose': ie_oppose_total,
+
+        'organizational_direct': {
+            'total': org_direct_total,
+            'pct': _safe_pct(org_direct_total, total_funding),
+            'by_type': {
+                'corporation': {
+                    'total': corp_total,
+                    'pct': _safe_pct(corp_total, total_funding),
+                    'top': _top_sources(org['corporation'], config.top_n_sources, config.min_amount),
+                },
+                'trade_association': {
+                    'total': trade_total,
+                    'pct': _safe_pct(trade_total, total_funding),
+                    'top': _top_sources(org['trade_association'], config.top_n_sources, config.min_amount),
+                },
+                'labor_union': {
+                    'total': labor_total,
+                    'pct': _safe_pct(labor_total, total_funding),
+                    'top': _top_sources(org['labor_union'], config.top_n_sources, config.min_amount),
+                },
+                'ideological': {
+                    'total': ideological_total,
+                    'pct': _safe_pct(ideological_total, total_funding),
+                    'top': _top_sources(org['ideological'], config.top_n_sources, config.min_amount),
+                },
+                'cooperative': {
+                    'total': coop_total,
+                    'pct': _safe_pct(coop_total, total_funding),
+                    'top': _top_sources(org['cooperative'], config.top_n_sources, config.min_amount),
+                },
+            },
+        },
+
+        'ie': {
+            'support': {
+                'total': ie_support_total,
+                'pct': _safe_pct(ie_support_total, total_funding),
+                'top_pacs': [
+                    {'name': cycle_cmte_info.get(c, {}).get('name', c), 'amount': amt}
+                    for c, amt in sorted(ie_support_data, key=lambda x: -x[1])[:10]
+                    if amt >= config.min_amount
+                ],
+                'by_corporation': _top_sources(ie_support_sources['by_corporation'], config.top_n_sources, config.min_amount),
+                'by_pac': _top_sources(ie_support_sources['by_pac'], 10, config.min_amount),
+            },
+            'oppose': {
+                'total': ie_oppose_total,
+                'pct': _safe_pct(ie_oppose_total, total_funding) if total_funding > 0 else 0,
+                'top_pacs': [
+                    {'name': cycle_cmte_info.get(c, {}).get('name', c), 'amount': amt}
+                    for c, amt in sorted(ie_oppose_data, key=lambda x: -x[1])[:10]
+                    if amt >= config.min_amount
+                ],
+                'by_corporation': _top_sources(ie_oppose_sources['by_corporation'], config.top_n_sources, config.min_amount),
+                'by_pac': _top_sources(ie_oppose_sources['by_pac'], 10, config.min_amount),
+            },
+        },
+
+        'individuals': {
+            'total': all_indiv_total,
+            'pct': _safe_pct(all_indiv_total, total_funding),
+            'whale': {
+                'total': whale_indiv_total,
+                'pct': _safe_pct(whale_indiv_total, total_funding),
+                'corporate_connected': {
+                    'total': corp_connected_total,
+                    'pct': _safe_pct(corp_connected_total, total_funding),
+                    'by_company': _top_companies(corp_connected, config.top_n_sources, config.min_amount),
+                },
+                'independent': {
+                    'total': independent_total,
+                    'pct': _safe_pct(independent_total, total_funding),
+                    'top': _top_sources(independent, config.top_n_individuals, config.min_amount),
+                },
+            },
+            'grassroots': {
+                'total': grassroots_total,
+                'pct': _safe_pct(grassroots_total, total_funding),
+                'direct': grassroots_direct,
+                'upstream': grassroots_upstream,
+                'explanation': (
+                    "Individual donors below $10K aggregate threshold. "
+                    "'direct' = grassroots giving to candidate's own committees. "
+                    "'upstream' = grassroots at feeder committees (JFCs, conduits, "
+                    "party committees) attributed proportionally through transfer chain."
+                ),
+            },
+            'self_funded': {
+                'total': self_funded_total,
+                'pct': _safe_pct(self_funded_total, total_funding),
+            },
+        },
+
+        'unaccounted': {
+            'total': unaccounted,
+            'pct': _safe_pct(unaccounted, cmte_total_receipts) if cmte_total_receipts > 0 else 0,
+            'cmte_total_receipts': cmte_total_receipts,
+            'total_accounted': total_accounted,
+            'breakdown': {
+                'from_individuals_raw': cmte_total_from_individuals,
+                'from_committees_raw': cmte_total_from_committees,
+            },
+            'explanation': (
+                "True residual: committee trace loss through passthrough hops, "
+                "unitemized contributions (<$200 aggregate not in FEC indiv file), "
+                "and data gaps. Sub-$10K individual donors are accounted for "
+                "in the individuals.grassroots channel."
+            ),
+        },
+
+        'by_organization': sorted(
+            [
+                {
+                    'name': org_name,
+                    'direct_pac': data['direct_pac'],
+                    'direct_employees': data['direct_employees'],
+                    'ie_support': data['ie_support'],
+                    'ie_oppose': data['ie_oppose'],
+                    'total_pro': data['total'],
+                    'total_against': data['ie_oppose'],
+                    'via_donors': sorted(
+                        [
+                            {
+                                'name': dn,
+                                'ie_support': vd['ie_support'],
+                                'ie_oppose': vd['ie_oppose'],
+                                'employees': vd['employees'],
+                            }
+                            for dn, vd in data['_via_donors'].items()
+                            if (vd['ie_support'] + vd['ie_oppose'] + vd['employees']) >= config.min_amount
+                        ],
+                        key=lambda x: -(x['ie_support'] + x['ie_oppose'] + x['employees']),
+                    )[:5],
+                }
+                for org_name, data in by_org.items()
+                if data['total'] >= config.min_amount or data['ie_oppose'] >= config.min_amount
+            ],
+            key=lambda x: -x['total_pro'],
+        )[:50],
+    }
 
 
 @asset(
@@ -480,343 +799,6 @@ def candidate_funding_asset(
         # PHASE 2-3: Per-candidate computation (uses module-level helpers
         # trace_committee_sources / trace_ie_sources lifted above)
         # ================================================================
-        
-        def compute_funding_channels(
-            cmte_ids: List[str],
-            cand_key: str,
-            contrib_edges: Dict,
-            transfer_edges: Dict,
-            ie_data: Dict,
-            cycle_cmte_info: Dict,
-        ) -> Optional[Dict[str, Any]]:
-            """
-            Compute funding channels for a candidate given cycle-specific edges.
-            
-            Returns the funding_channels dict or None if no funding.
-            """
-            # Trace direct funding through candidate's committees
-            sources = trace_committee_sources(
-                cmte_ids, contrib_edges, transfer_edges, cycle_cmte_info,
-                donor_info=donor_info,
-                whale_to_company=whale_to_company,
-                employer_to_company=employer_to_company,
-                max_trace_depth=config.max_trace_depth,
-                multiplier=1.0,
-            )
-            
-            # --- CHANNEL 1: Organizational Direct ---
-            org = sources['organizational']
-            corp_total = sum(org['corporation'].values())
-            trade_total = sum(org['trade_association'].values())
-            labor_total = sum(org['labor_union'].values())
-            ideological_total = sum(org['ideological'].values())
-            coop_total = sum(org['cooperative'].values())
-            org_direct_total = corp_total + trade_total + labor_total + ideological_total + coop_total
-            
-            # --- CHANNEL 4: Individuals ---
-            # Whale donors: $10K+ aggregate, traced through graph with employer detail
-            whale_indiv_total = sum(d['amount'] for d in sources['individuals'].values())
-            
-            # Split whale individuals by corporate connection
-            corp_connected = {}
-            independent = {}
-            for name, data in sources['individuals'].items():
-                if data['company']:
-                    if data['company'] not in corp_connected:
-                        corp_connected[data['company']] = {'amount': 0, 'donors': []}
-                    corp_connected[data['company']]['amount'] += data['amount']
-                    if data['amount'] >= config.min_amount:
-                        corp_connected[data['company']]['donors'].append({
-                            'name': name,
-                            'amount': data['amount']
-                        })
-                else:
-                    independent[name] = data['amount']
-            
-            corp_connected_total = sum(c['amount'] for c in corp_connected.values())
-            independent_total = whale_indiv_total - corp_connected_total
-            
-            # Grassroots donors: sub-$10K aggregate, known total from raw FEC but no per-donor detail
-            # committee_receipts computes this as: total_from_individuals - whale_donor_total
-            cmte_total_receipts = sum(
-                (cycle_cmte_info.get(cid, {}).get('total_receipts', 0) or 0) for cid in cmte_ids
-            )
-            cmte_total_from_individuals = sum(
-                (cycle_cmte_info.get(cid, {}).get('total_from_individuals', 0) or 0) for cid in cmte_ids
-            )
-            cmte_total_from_committees = sum(
-                (cycle_cmte_info.get(cid, {}).get('total_from_committees', 0) or 0) for cid in cmte_ids
-            )
-            grassroots_direct = sum(
-                (cycle_cmte_info.get(cid, {}).get('small_donor_total', 0) or 0) for cid in cmte_ids
-            )
-            # Grassroots at upstream passthroughs (BFS-traced proportionally)
-            grassroots_upstream = sources.get('grassroots_upstream', 0)
-            grassroots_total = grassroots_direct + grassroots_upstream
-
-            # Self-funding (CAND_CONTRIB + CAND_LOANS from weball, sourced via
-            # committee_receipts). Reported as its own sub-bucket under individuals
-            # so journalists can read "Trone self-funded $62.9M" cleanly without it
-            # masquerading as small donors or whale donations.
-            self_funded_total = sum(
-                (cycle_cmte_info.get(cid, {}).get('self_funding_total', 0) or 0) for cid in cmte_ids
-            )
-
-            # All individuals = whale (graph-traced) + grassroots (direct + upstream) + self-funding
-            all_indiv_total = whale_indiv_total + grassroots_total + self_funded_total
-            
-            # --- CHANNELS 2 & 3: IE Support / Oppose ---
-            ie_support_data = ie_data.get('support', [])
-            ie_oppose_data = ie_data.get('oppose', [])
-            ie_support_total = sum(amt for _, amt in ie_support_data)
-            ie_oppose_total = sum(amt for _, amt in ie_oppose_data)
-            
-            # Trace IE funding to find who bankrolls the Super PACs
-            _ie_kwargs = dict(
-                donor_info=donor_info,
-                whale_to_company=whale_to_company,
-                employer_to_company=employer_to_company,
-            )
-            _empty_ie = {'by_corporation': {}, 'by_corporation_via_donors': {}, 'by_individual': {}, 'by_pac': {}}
-            ie_support_sources = trace_ie_sources(ie_support_data, contrib_edges, transfer_edges, cycle_cmte_info, **_ie_kwargs) if ie_support_data else _empty_ie
-            ie_oppose_sources = trace_ie_sources(ie_oppose_data, contrib_edges, transfer_edges, cycle_cmte_info, **_ie_kwargs) if ie_oppose_data else _empty_ie
-            
-            # --- Direct funding total (what candidate committees received) ---
-            direct_total = org_direct_total + all_indiv_total
-            
-            # --- CHANNEL 5: Unaccounted (TRUE residual only) ---
-            # BFS traced: whale individuals + terminal org transfers (proportional through passthroughs)
-            traced_direct = sources['traced_total']
-            # Total accounted = BFS-traced + grassroots + self-funding (all from raw FEC)
-            total_accounted = traced_direct + grassroots_total + self_funded_total
-            unaccounted = max(0, cmte_total_receipts - total_accounted)
-            
-            # Total pro-candidate money (direct + IE support)
-            total_funding = direct_total + ie_support_total
-            
-            if total_funding <= 0 and ie_oppose_total <= 0:
-                return None
-            
-            # Helper functions
-            def top_sources(d: Dict[str, float], n: int) -> List[Dict]:
-                sorted_items = sorted(d.items(), key=lambda x: -x[1])[:n]
-                return [{'name': k, 'amount': v} for k, v in sorted_items if v >= config.min_amount]
-            
-            def top_companies(d: Dict[str, Dict], n: int) -> List[Dict]:
-                sorted_items = sorted(d.items(), key=lambda x: -x[1]['amount'])[:n]
-                return [{
-                    'company': k,
-                    'amount': v['amount'],
-                    'top_donors': sorted(v['donors'], key=lambda x: -x['amount'])[:5]
-                } for k, v in sorted_items if v['amount'] >= config.min_amount]
-            
-            def safe_pct(num, denom):
-                return (num / denom * 100) if denom > 0 else 0
-            
-            # --- Build by-organization view ---
-            # Each org may have:
-            #   direct_pac     — real corporate-PAC contributions to this candidate
-            #   direct_employees — whale donations from individuals whose employer
-            #                      maps to this org via canonical_employers
-            #   ie_support / ie_oppose — IE money traced back to donors who map
-            #                            to this org via whale_corporate_links or
-            #                            employer_to_company
-            #
-            # The direct_employees + IE columns can attribute to a corporate
-            # NAME via founder personal donations (e.g. Mellon → Pan Am
-            # Railways). _via_donors makes that transparency explicit so
-            # readers don't mistake founder personal donations for corporate
-            # PAC money.
-            by_org = defaultdict(lambda: {
-                'direct_pac': 0,
-                'direct_employees': 0,
-                'ie_support': 0,
-                'ie_oppose': 0,
-                'total': 0,
-                # donor_name → {ie_support, ie_oppose, employees}
-                '_via_donors': defaultdict(lambda: {'ie_support': 0, 'ie_oppose': 0, 'employees': 0}),
-            })
-
-            # All org types into one view
-            for bucket_name in ['corporation', 'trade_association', 'labor_union', 'ideological', 'cooperative']:
-                for org_name, amount in org[bucket_name].items():
-                    by_org[org_name]['direct_pac'] += amount
-                    by_org[org_name]['total'] += amount
-
-            for company, data in corp_connected.items():
-                by_org[company]['direct_employees'] += data['amount']
-                by_org[company]['total'] += data['amount']
-                for d in data.get('donors', []):
-                    by_org[company]['_via_donors'][d['name']]['employees'] += d['amount']
-            for corp_name, amount in ie_support_sources['by_corporation'].items():
-                by_org[corp_name]['ie_support'] += amount
-                by_org[corp_name]['total'] += amount
-                for donor_name, donor_amt in ie_support_sources.get('by_corporation_via_donors', {}).get(corp_name, {}).items():
-                    by_org[corp_name]['_via_donors'][donor_name]['ie_support'] += donor_amt
-            for corp_name, amount in ie_oppose_sources['by_corporation'].items():
-                by_org[corp_name]['ie_oppose'] += amount
-                for donor_name, donor_amt in ie_oppose_sources.get('by_corporation_via_donors', {}).get(corp_name, {}).items():
-                    by_org[corp_name]['_via_donors'][donor_name]['ie_oppose'] += donor_amt
-            
-            return {
-                # Top-level totals
-                'total_funding': total_funding,
-                'direct_funding': direct_total,
-                'ie_support': ie_support_total,
-                'ie_oppose': ie_oppose_total,
-                
-                # CHANNEL 1: Organizational Direct (all org types collapsed)
-                'organizational_direct': {
-                    'total': org_direct_total,
-                    'pct': safe_pct(org_direct_total, total_funding),
-                    'by_type': {
-                        'corporation': {
-                            'total': corp_total,
-                            'pct': safe_pct(corp_total, total_funding),
-                            'top': top_sources(org['corporation'], config.top_n_sources),
-                        },
-                        'trade_association': {
-                            'total': trade_total,
-                            'pct': safe_pct(trade_total, total_funding),
-                            'top': top_sources(org['trade_association'], config.top_n_sources),
-                        },
-                        'labor_union': {
-                            'total': labor_total,
-                            'pct': safe_pct(labor_total, total_funding),
-                            'top': top_sources(org['labor_union'], config.top_n_sources),
-                        },
-                        'ideological': {
-                            'total': ideological_total,
-                            'pct': safe_pct(ideological_total, total_funding),
-                            'top': top_sources(org['ideological'], config.top_n_sources),
-                        },
-                        'cooperative': {
-                            'total': coop_total,
-                            'pct': safe_pct(coop_total, total_funding),
-                            'top': top_sources(org['cooperative'], config.top_n_sources),
-                        },
-                    },
-                },
-                
-                # CHANNEL 2: IE Support
-                'ie': {
-                    'support': {
-                        'total': ie_support_total,
-                        'pct': safe_pct(ie_support_total, total_funding),
-                        'top_pacs': [
-                            {'name': cycle_cmte_info.get(c, {}).get('name', c), 'amount': amt}
-                            for c, amt in sorted(ie_support_data, key=lambda x: -x[1])[:10]
-                            if amt >= config.min_amount
-                        ],
-                        'by_corporation': top_sources(ie_support_sources['by_corporation'], config.top_n_sources),
-                        'by_pac': top_sources(ie_support_sources['by_pac'], 10),
-                    },
-                    # CHANNEL 3: IE Oppose
-                    'oppose': {
-                        'total': ie_oppose_total,
-                        'pct': safe_pct(ie_oppose_total, total_funding) if total_funding > 0 else 0,
-                        'top_pacs': [
-                            {'name': cycle_cmte_info.get(c, {}).get('name', c), 'amount': amt}
-                            for c, amt in sorted(ie_oppose_data, key=lambda x: -x[1])[:10]
-                            if amt >= config.min_amount
-                        ],
-                        'by_corporation': top_sources(ie_oppose_sources['by_corporation'], config.top_n_sources),
-                        'by_pac': top_sources(ie_oppose_sources['by_pac'], 10),
-                    },
-                },
-                
-                # CHANNEL 4: Individuals (whale + grassroots)
-                'individuals': {
-                    'total': all_indiv_total,
-                    'pct': safe_pct(all_indiv_total, total_funding),
-                    # Whale donors: $10K+ aggregate, graph-traced with employer detail
-                    'whale': {
-                        'total': whale_indiv_total,
-                        'pct': safe_pct(whale_indiv_total, total_funding),
-                        'corporate_connected': {
-                            'total': corp_connected_total,
-                            'pct': safe_pct(corp_connected_total, total_funding),
-                            'by_company': top_companies(corp_connected, config.top_n_sources),
-                        },
-                        'independent': {
-                            'total': independent_total,
-                            'pct': safe_pct(independent_total, total_funding),
-                            'top': top_sources(independent, config.top_n_individuals),
-                        },
-                    },
-                    # Grassroots: sub-$10K aggregate, known total from raw FEC, no per-donor detail
-                    'grassroots': {
-                        'total': grassroots_total,
-                        'pct': safe_pct(grassroots_total, total_funding),
-                        'direct': grassroots_direct,
-                        'upstream': grassroots_upstream,
-                        'explanation': (
-                            "Individual donors below $10K aggregate threshold. "
-                            "'direct' = grassroots giving to candidate's own committees. "
-                            "'upstream' = grassroots at feeder committees (JFCs, conduits, "
-                            "party committees) attributed proportionally through transfer chain."
-                        ),
-                    },
-                    # Self-funding: candidate's own contributions + loans to their committee
-                    'self_funded': {
-                        'total': self_funded_total,
-                        'pct': safe_pct(self_funded_total, total_funding),
-                    },
-                },
-                
-                # CHANNEL 5: Unaccounted (TRUE residual only)
-                'unaccounted': {
-                    'total': unaccounted,
-                    'pct': safe_pct(unaccounted, cmte_total_receipts) if cmte_total_receipts > 0 else 0,
-                    'cmte_total_receipts': cmte_total_receipts,
-                    'total_accounted': total_accounted,
-                    'breakdown': {
-                        'from_individuals_raw': cmte_total_from_individuals,
-                        'from_committees_raw': cmte_total_from_committees,
-                    },
-                    'explanation': (
-                        "True residual: committee trace loss through passthrough hops, "
-                        "unitemized contributions (<$200 aggregate not in FEC indiv file), "
-                        "and data gaps. Sub-$10K individual donors are accounted for "
-                        "in the individuals.grassroots channel."
-                    ),
-                },
-                
-                # Cross-channel org view
-                'by_organization': sorted(
-                    [
-                        {
-                            'name': org_name,
-                            'direct_pac': data['direct_pac'],
-                            'direct_employees': data['direct_employees'],
-                            'ie_support': data['ie_support'],
-                            'ie_oppose': data['ie_oppose'],
-                            'total_pro': data['total'],
-                            'total_against': data['ie_oppose'],
-                            # Top contributing donor names that produced any
-                            # employees/IE attribution rolled up to this org.
-                            # Empty when the org's totals come purely from
-                            # corporate-PAC contributions (direct_pac).
-                            'via_donors': sorted(
-                                [
-                                    {
-                                        'name': dn,
-                                        'ie_support': vd['ie_support'],
-                                        'ie_oppose': vd['ie_oppose'],
-                                        'employees': vd['employees'],
-                                    }
-                                    for dn, vd in data['_via_donors'].items()
-                                    if (vd['ie_support'] + vd['ie_oppose'] + vd['employees']) >= config.min_amount
-                                ],
-                                key=lambda x: -(x['ie_support'] + x['ie_oppose'] + x['employees']),
-                            )[:5],
-                        }
-                        for org_name, data in by_org.items()
-                        if data['total'] >= config.min_amount or data['ie_oppose'] >= config.min_amount
-                    ],
-                    key=lambda x: -x['total_pro'],
-                )[:50],
-            }
 
         # ================================================================
         # merge_funding_channels: Aggregate = sum of per-cycle results
@@ -1111,6 +1093,10 @@ def candidate_funding_asset(
                     transfer_edges=transfer_edges_by_cycle[cycle],
                     ie_data=cycle_ie,
                     cycle_cmte_info=cmte_info_by_cycle[cycle],
+                    donor_info=donor_info,
+                    whale_to_company=whale_to_company,
+                    employer_to_company=employer_to_company,
+                    config=config,
                 )
                 if cycle_channels:
                     funding_by_cycle[cycle] = cycle_channels
