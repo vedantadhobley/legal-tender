@@ -20,31 +20,27 @@ from src.rag.employer_normalization import (
 )
 
 from src.rag.wikidata_client import (
-    search_company,
-    get_subsidiaries,
-    get_parent_company,
-    get_person_companies,
-    get_companies_by_owner,
+    resolve_companies,
+    resolve_people,
     resolve_company_to_canonical,
     resolve_person_to_companies,
-    CompanyInfo,
-    PersonCompanyLink,
+    reset_circuit_breaker,
+    WikidataCircuitOpen,
 )
 
 __all__ = [
     # Employer normalization
     'normalize_employer_name',
-    'compute_normalized_key', 
+    'compute_normalized_key',
     'find_potential_matches',
     'NON_EMPLOYERS',
-    # Wikidata resolution
-    'search_company',
-    'get_subsidiaries',
-    'get_parent_company',
-    'get_person_companies',
-    'get_companies_by_owner',
+    # Wikidata resolution (batched API)
+    'resolve_companies',
+    'resolve_people',
+    # Single-name shims
     'resolve_company_to_canonical',
     'resolve_person_to_companies',
-    'CompanyInfo',
-    'PersonCompanyLink',
+    # Circuit breaker control
+    'reset_circuit_breaker',
+    'WikidataCircuitOpen',
 ]
