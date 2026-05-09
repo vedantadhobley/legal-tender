@@ -466,42 +466,48 @@ def candidate_funding_asset(
             """
             results = {
                 'by_corporation': defaultdict(float),
+                # New: track which donors produced each corporate attribution.
+                # company → {donor_name → amount}. Lets downstream show
+                # "Pan Am Railways $20M via [MELLON, TIMOTHY]" rather than
+                # the misleading "the railroad funded $20M against Trump".
+                'by_corporation_via_donors': defaultdict(lambda: defaultdict(float)),
                 'by_individual': {},
                 'by_pac': defaultdict(float),
             }
-            
+
             for cmte_id, ie_amount in ie_data:
                 cmte = cycle_cmte_info.get(cmte_id, {})
                 total_receipts = cmte.get('total_receipts', 0) or 0
-                
+
                 if total_receipts <= 0 or ie_amount <= 0:
                     continue
-                
+
                 multiplier = min(ie_amount / total_receipts, 1.0)
-                
+
                 # Trace donors to this PAC
                 for donor_key, amount in contrib_edges.get(cmte_id, []):
                     donor = donor_info.get(donor_key, {})
                     if not donor:
                         continue
-                    
+
                     name = donor.get('name', donor_key)
                     if is_conduit(name):
                         continue
-                    
+
                     attr_amount = amount * multiplier
                     if attr_amount < 100:
                         continue
-                    
+
                     employer = donor.get('employer', '')
                     company = None
                     if name in whale_to_company:
                         company = whale_to_company[name]
                     elif employer and employer in employer_to_company:
                         company = employer_to_company[employer]
-                    
+
                     if company:
                         results['by_corporation'][company] += attr_amount
+                        results['by_corporation_via_donors'][company][name] += attr_amount
                     else:
                         if name not in results['by_individual']:
                             results['by_individual'][name] = {'amount': 0, 'employer': employer}
@@ -648,28 +654,49 @@ def candidate_funding_asset(
                 return (num / denom * 100) if denom > 0 else 0
             
             # --- Build by-organization view ---
+            # Each org may have:
+            #   direct_pac     — real corporate-PAC contributions to this candidate
+            #   direct_employees — whale donations from individuals whose employer
+            #                      maps to this org via canonical_employers
+            #   ie_support / ie_oppose — IE money traced back to donors who map
+            #                            to this org via whale_corporate_links or
+            #                            employer_to_company
+            #
+            # The direct_employees + IE columns can attribute to a corporate
+            # NAME via founder personal donations (e.g. Mellon → Pan Am
+            # Railways). _via_donors makes that transparency explicit so
+            # readers don't mistake founder personal donations for corporate
+            # PAC money.
             by_org = defaultdict(lambda: {
                 'direct_pac': 0,
                 'direct_employees': 0,
                 'ie_support': 0,
                 'ie_oppose': 0,
                 'total': 0,
+                # donor_name → {ie_support, ie_oppose, employees}
+                '_via_donors': defaultdict(lambda: {'ie_support': 0, 'ie_oppose': 0, 'employees': 0}),
             })
-            
+
             # All org types into one view
             for bucket_name in ['corporation', 'trade_association', 'labor_union', 'ideological', 'cooperative']:
                 for org_name, amount in org[bucket_name].items():
                     by_org[org_name]['direct_pac'] += amount
                     by_org[org_name]['total'] += amount
-            
+
             for company, data in corp_connected.items():
                 by_org[company]['direct_employees'] += data['amount']
                 by_org[company]['total'] += data['amount']
+                for d in data.get('donors', []):
+                    by_org[company]['_via_donors'][d['name']]['employees'] += d['amount']
             for corp_name, amount in ie_support_sources['by_corporation'].items():
                 by_org[corp_name]['ie_support'] += amount
                 by_org[corp_name]['total'] += amount
+                for donor_name, donor_amt in ie_support_sources.get('by_corporation_via_donors', {}).get(corp_name, {}).items():
+                    by_org[corp_name]['_via_donors'][donor_name]['ie_support'] += donor_amt
             for corp_name, amount in ie_oppose_sources['by_corporation'].items():
                 by_org[corp_name]['ie_oppose'] += amount
+                for donor_name, donor_amt in ie_oppose_sources.get('by_corporation_via_donors', {}).get(corp_name, {}).items():
+                    by_org[corp_name]['_via_donors'][donor_name]['ie_oppose'] += donor_amt
             
             return {
                 # Top-level totals
@@ -806,6 +833,23 @@ def candidate_funding_asset(
                             'ie_oppose': data['ie_oppose'],
                             'total_pro': data['total'],
                             'total_against': data['ie_oppose'],
+                            # Top contributing donor names that produced any
+                            # employees/IE attribution rolled up to this org.
+                            # Empty when the org's totals come purely from
+                            # corporate-PAC contributions (direct_pac).
+                            'via_donors': sorted(
+                                [
+                                    {
+                                        'name': dn,
+                                        'ie_support': vd['ie_support'],
+                                        'ie_oppose': vd['ie_oppose'],
+                                        'employees': vd['employees'],
+                                    }
+                                    for dn, vd in data['_via_donors'].items()
+                                    if (vd['ie_support'] + vd['ie_oppose'] + vd['employees']) >= config.min_amount
+                                ],
+                                key=lambda x: -(x['ie_support'] + x['ie_oppose'] + x['employees']),
+                            )[:5],
                         }
                         for org_name, data in by_org.items()
                         if data['total'] >= config.min_amount or data['ie_oppose'] >= config.min_amount
@@ -938,6 +982,8 @@ def candidate_funding_asset(
                 'direct_pac': 0, 'direct_employees': 0,
                 'ie_support': 0, 'ie_oppose': 0,
                 'total': 0, 'total_against': 0,
+                # donor_name → {ie_support, ie_oppose, employees}
+                'via_donors': defaultdict(lambda: {'ie_support': 0, 'ie_oppose': 0, 'employees': 0}),
             })
             for r in results:
                 for org in r.get('by_organization', []):
@@ -947,6 +993,10 @@ def candidate_funding_asset(
                     by_org_merged[org['name']]['ie_oppose'] += org.get('ie_oppose', 0)
                     by_org_merged[org['name']]['total'] += org.get('total_pro', 0)
                     by_org_merged[org['name']]['total_against'] += org.get('total_against', 0)
+                    for vd in org.get('via_donors', []):
+                        by_org_merged[org['name']]['via_donors'][vd['name']]['ie_support'] += vd.get('ie_support', 0)
+                        by_org_merged[org['name']]['via_donors'][vd['name']]['ie_oppose'] += vd.get('ie_oppose', 0)
+                        by_org_merged[org['name']]['via_donors'][vd['name']]['employees'] += vd.get('employees', 0)
 
             return {
                 'total_funding': total_funding,
@@ -1022,6 +1072,19 @@ def candidate_funding_asset(
                             'ie_oppose': data['ie_oppose'],
                             'total_pro': data['total'],
                             'total_against': data['total_against'],
+                            'via_donors': sorted(
+                                [
+                                    {
+                                        'name': dn,
+                                        'ie_support': vd['ie_support'],
+                                        'ie_oppose': vd['ie_oppose'],
+                                        'employees': vd['employees'],
+                                    }
+                                    for dn, vd in data['via_donors'].items()
+                                    if (vd['ie_support'] + vd['ie_oppose'] + vd['employees']) >= config.min_amount
+                                ],
+                                key=lambda x: -(x['ie_support'] + x['ie_oppose'] + x['employees']),
+                            )[:5],
                         }
                         for org_name, data in by_org_merged.items()
                         if data['total'] >= config.min_amount or data['total_against'] >= config.min_amount

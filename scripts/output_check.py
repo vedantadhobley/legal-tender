@@ -160,6 +160,21 @@ def print_card(c):
                   f"{fmt_money(item.get('direct_employees')):>8} "
                   f"{fmt_money(item.get('ie_support')):>8} "
                   f"{fmt_money(item.get('ie_oppose')):>8}")
+            # When the org's totals come via founder/employee donations
+            # (not corporate-PAC money), surface the donor names that
+            # produced the attribution. Prevents readers from mistaking
+            # "Pan Am Railways $20M IE+" as corporate spending when it's
+            # actually Timothy Mellon's personal donations rolled up.
+            for vd in (item.get('via_donors') or [])[:3]:
+                bits = []
+                if vd.get('ie_support', 0) >= 1000:
+                    bits.append(f"IE+ {fmt_money(vd['ie_support'])}")
+                if vd.get('ie_oppose', 0) >= 1000:
+                    bits.append(f"IE- {fmt_money(vd['ie_oppose'])}")
+                if vd.get('employees', 0) >= 1000:
+                    bits.append(f"emp {fmt_money(vd['employees'])}")
+                if bits:
+                    print(f"    {'':>10}    └─ via {vd['name'][:35]:<35}  ({', '.join(bits)})")
 
 
 def main():
