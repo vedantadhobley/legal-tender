@@ -141,6 +141,7 @@ def candidate_funding_asset(
                 total_from_individuals: c.total_from_individuals || 0,
                 total_from_committees: c.total_from_committees || 0,
                 small_donor_total: c.small_donor_total || 0,
+                self_funding_total: c.self_funding_total || 0,
                 receipts_by_cycle: c.receipts_by_cycle || {}
             }
         """):
@@ -161,6 +162,7 @@ def candidate_funding_asset(
                     'total_from_individuals': cycle_data.get('total_from_individuals', 0) or 0,
                     'total_from_committees': cycle_data.get('total_from_committees', 0) or 0,
                     'small_donor_total': cycle_data.get('small_donor_total', 0) or 0,
+                    'self_funding_total': cycle_data.get('self_funding_total', 0) or 0,
                 }
             cmte_info_by_cycle[cycle] = cycle_info
         context.log.info(f"   Built per-cycle cmte_info dicts")
@@ -591,9 +593,17 @@ def candidate_funding_asset(
             # Grassroots at upstream passthroughs (BFS-traced proportionally)
             grassroots_upstream = sources.get('grassroots_upstream', 0)
             grassroots_total = grassroots_direct + grassroots_upstream
-            
-            # All individuals = whale (graph-traced) + grassroots (direct + upstream)
-            all_indiv_total = whale_indiv_total + grassroots_total
+
+            # Self-funding (CAND_CONTRIB + CAND_LOANS from weball, sourced via
+            # committee_receipts). Reported as its own sub-bucket under individuals
+            # so journalists can read "Trone self-funded $62.9M" cleanly without it
+            # masquerading as small donors or whale donations.
+            self_funded_total = sum(
+                (cycle_cmte_info.get(cid, {}).get('self_funding_total', 0) or 0) for cid in cmte_ids
+            )
+
+            # All individuals = whale (graph-traced) + grassroots (direct + upstream) + self-funding
+            all_indiv_total = whale_indiv_total + grassroots_total + self_funded_total
             
             # --- CHANNELS 2 & 3: IE Support / Oppose ---
             ie_support_data = ie_data.get('support', [])
@@ -611,8 +621,8 @@ def candidate_funding_asset(
             # --- CHANNEL 5: Unaccounted (TRUE residual only) ---
             # BFS traced: whale individuals + terminal org transfers (proportional through passthroughs)
             traced_direct = sources['traced_total']
-            # Total accounted = BFS-traced + grassroots (known from raw FEC)
-            total_accounted = traced_direct + grassroots_total
+            # Total accounted = BFS-traced + grassroots + self-funding (all from raw FEC)
+            total_accounted = traced_direct + grassroots_total + self_funded_total
             unaccounted = max(0, cmte_total_receipts - total_accounted)
             
             # Total pro-candidate money (direct + IE support)
@@ -760,6 +770,11 @@ def candidate_funding_asset(
                             "party committees) attributed proportionally through transfer chain."
                         ),
                     },
+                    # Self-funding: candidate's own contributions + loans to their committee
+                    'self_funded': {
+                        'total': self_funded_total,
+                        'pct': safe_pct(self_funded_total, total_funding),
+                    },
                 },
                 
                 # CHANNEL 5: Unaccounted (TRUE residual only)
@@ -880,7 +895,10 @@ def candidate_funding_asset(
             grassroots_direct = sum(r['individuals']['grassroots']['direct'] for r in results)
             grassroots_upstream = sum(r['individuals']['grassroots']['upstream'] for r in results)
             grassroots_total = grassroots_direct + grassroots_upstream
-            all_indiv_total = whale_total + grassroots_total
+            self_funded_total = sum(
+                r['individuals'].get('self_funded', {}).get('total', 0) for r in results
+            )
+            all_indiv_total = whale_total + grassroots_total + self_funded_total
 
             # Merge corporate connected by_company
             corp_by_company = defaultdict(lambda: {'amount': 0, 'donors': defaultdict(float)})
@@ -972,6 +990,10 @@ def candidate_funding_asset(
                             "'upstream' = grassroots at feeder committees (JFCs, conduits, "
                             "party committees) attributed proportionally through transfer chain."
                         ),
+                    },
+                    'self_funded': {
+                        'total': self_funded_total,
+                        'pct': safe_pct(self_funded_total, total_funding),
                     },
                 },
                 'unaccounted': {

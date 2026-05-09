@@ -26,6 +26,7 @@ import gc
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config
 
 from src.resources.arango import ArangoDBResource
+from src.utils.parallel import parallel_cycles
 
 
 class CommitteeReceiptsConfig(Config):
@@ -121,6 +122,13 @@ def committee_receipts_asset(
         # Phase 3: Individual contributions per committee PER CYCLE
         # ================================================================
         indiv_by_cycle: Dict[str, Dict[str, Dict]] = {c: {} for c in config.cycles}
+        # Also separately track ENTITY_TP=CAN totals — these are the candidate's
+        # own itemized contributions to their own committee (Bloomberg's $1.09B,
+        # etc.). They're already in the whale graph because donors.py includes
+        # ENTITY_TP IN ['IND','CAN']. We need this to subtract from weball's
+        # CAND_CONTRIB so self_funding_total only contains the *unitemized + loans*
+        # portion, avoiding double-count with whale_indiv_total downstream.
+        can_indiv_by_cycle: Dict[str, Dict[str, float]] = {c: {} for c in config.cycles}
 
         stats = {
             'cycles_processed': 0,
@@ -128,18 +136,22 @@ def committee_receipts_asset(
             'committees_updated': 0,
         }
 
-        for cycle in config.cycles:
+        # Each cycle hits a different database (fec_2020, fec_2022, etc.) — no
+        # contention, so run them concurrently. Threads are correct here
+        # because the AQL execute() blocks on socket I/O (GIL released).
+        def _phase3_for_cycle(cycle: str) -> Dict[str, Any]:
             db_name = f"fec_{cycle}"
             if not sys_db.has_database(db_name):
-                context.log.warning(f"   {db_name} not found, skipping")
-                continue
+                return {'cycle': cycle, 'skipped': True}
 
             cycle_db = client.db(db_name, username=arango.username, password=arango.password)
-            stats['cycles_processed'] += 1
+            indiv_map: Dict[str, Dict] = {}
+            can_map: Dict[str, float] = {}
+            cycle_total = 0
+            cycle_cmtes = 0
+            n_can = 0
 
             if cycle_db.has_collection("indiv"):
-                context.log.info(f"Processing {cycle} individual contributions...")
-
                 cursor = cycle_db.aql.execute("""
                     FOR d IN indiv
                         FILTER d.CMTE_ID != null
@@ -150,25 +162,54 @@ def committee_receipts_asset(
                             count = COUNT(1)
                         RETURN { cmte_id, total, count }
                 """, ttl=14400, batch_size=5000, stream=True)
-
-                cycle_total = 0
-                cycle_cmtes = 0
-
                 for row in cursor:
                     cmte_id = row['cmte_id']
                     total = row['total'] or 0
                     count = row['count'] or 0
-
-                    indiv_by_cycle[cycle][cmte_id] = {
-                        'total': total,
-                        'count': count,
-                    }
+                    indiv_map[cmte_id] = {'total': total, 'count': count}
                     cycle_total += total
                     cycle_cmtes += 1
 
-                stats['total_individual_amount'] += cycle_total
-                context.log.info(f"   {cycle}: ${cycle_total:,.0f} across {cycle_cmtes:,} committees")
-                gc.collect()
+                # ENTITY_TP=CAN subtotal — used to avoid double-counting between
+                # whale_indiv_total and self_funding_total.
+                can_cursor = cycle_db.aql.execute("""
+                    FOR d IN indiv
+                        FILTER d.CMTE_ID != null
+                        FILTER d.ENTITY_TP == 'CAN'
+                        FILTER d.TRANSACTION_AMT != null
+                        COLLECT cmte_id = d.CMTE_ID
+                        AGGREGATE total = SUM(TO_NUMBER(d.TRANSACTION_AMT))
+                        RETURN { cmte_id, total }
+                """, ttl=14400, batch_size=5000, stream=True)
+                for row in can_cursor:
+                    if row.get('cmte_id') and row.get('total'):
+                        can_map[row['cmte_id']] = float(row['total'])
+                        n_can += 1
+
+            return {
+                'cycle': cycle,
+                'indiv_map': indiv_map,
+                'can_map': can_map,
+                'cycle_total': cycle_total,
+                'cycle_cmtes': cycle_cmtes,
+                'n_can': n_can,
+                'skipped': False,
+            }
+
+        context.log.info("Phase 3: Aggregating indiv per cycle (parallel)...")
+        phase3_results = parallel_cycles(_phase3_for_cycle, config.cycles, max_workers=4)
+        for cycle in config.cycles:
+            r = phase3_results.get(cycle)
+            if not r or r.get('skipped'):
+                context.log.warning(f"   fec_{cycle} not found, skipping")
+                continue
+            indiv_by_cycle[cycle] = r['indiv_map']
+            can_indiv_by_cycle[cycle] = r['can_map']
+            stats['cycles_processed'] += 1
+            stats['total_individual_amount'] += r['cycle_total']
+            context.log.info(f"   {cycle}: ${r['cycle_total']:,.0f} across {r['cycle_cmtes']:,} cmtes "
+                             f"({r['n_can']:,} with ENTITY_TP=CAN)")
+        gc.collect()
 
         # ================================================================
         # Phase 3.5: Authoritative individual contribution totals from FEC's
@@ -184,38 +225,119 @@ def committee_receipts_asset(
         # documented in docs/funding-channels.md.
         context.log.info("Phase 3.5: Loading authoritative TTL_INDIV_CONTRIB from weball/webk...")
         auth_indiv_by_cycle: Dict[str, Dict[str, float]] = {c: {} for c in config.cycles}
-        for cycle in config.cycles:
+        # Self-funding (CAND_CONTRIB + CAND_LOANS) lives only in weball — never in
+        # indiv.zip, where candidates show up only via small itemized splits.
+        # Without this, self-funders like Trone (-99% delta) look like they
+        # raised almost nothing because $62.9M of loans aren't in any donor edge.
+        self_funding_by_cycle: Dict[str, Dict[str, float]] = {c: {} for c in config.cycles}
+        # Per-cycle worker — independent across cycles (different databases).
+        # Reads indiv_by_cycle / can_indiv_by_cycle that Phase 3 has already
+        # populated; those dicts are read-only here so no synchronization
+        # needed.
+        def _phase35_for_cycle(cycle: str) -> Dict[str, Any]:
             db_name = f"fec_{cycle}"
             if not sys_db.has_database(db_name):
-                continue
+                return {'cycle': cycle, 'skipped': True}
             cycle_db = client.db(db_name, username=arango.username, password=arango.password)
 
-            # webk first (PACs and most non-candidate committees)
+            auth: Dict[str, float] = {}
+            self_fund: Dict[str, float] = {}
             n_webk = 0
+            n_weball = 0
+            n_self = 0
+            n_rerouted = 0
+
+            # webk first (PACs and most non-candidate committees)
             if cycle_db.has_collection("webk"):
                 for r in cycle_db.aql.execute(
                     "FOR c IN webk RETURN { cmte_id: c.CMTE_ID, val: c.INDV_CONTRIB }"
                 ):
                     if r.get('val') is not None and r.get('cmte_id'):
-                        auth_indiv_by_cycle[cycle][r['cmte_id']] = float(r['val'])
+                        auth[r['cmte_id']] = float(r['val'])
                         n_webk += 1
 
-            # weball overrides for candidate principal committees (resolved via cn.CAND_PCC)
-            n_weball = 0
+            # weball overrides for candidate principal committees.
+            # Route via ccl-linked principals: among each candidate's
+            # CMTE_DSGN='P' committees for this cycle, pick the one with the
+            # most indiv records. Falls back to cn.CAND_PCC only when no
+            # principal has activity. (Diagnosed via Sanders 2020: cn.CAND_PCC
+            # pointed at dormant BERNIE 2016 instead of operational BERNIE 2020.)
+            principals_per_cand: Dict[str, List[str]] = {}
+            if cycle_db.has_collection("ccl"):
+                for r in cycle_db.aql.execute(
+                    "FOR l IN ccl FILTER l.CMTE_DSGN == 'P' "
+                    "RETURN { cand_id: l.CAND_ID, cmte_id: l.CMTE_ID }"
+                ):
+                    if r.get('cand_id') and r.get('cmte_id'):
+                        principals_per_cand.setdefault(r['cand_id'], []).append(r['cmte_id'])
+
+            cycle_indiv = indiv_by_cycle.get(cycle, {})
+            cycle_can = can_indiv_by_cycle.get(cycle, {})
+
             if cycle_db.has_collection("weball") and cycle_db.has_collection("cn"):
                 for r in cycle_db.aql.execute("""
                     FOR w IN weball
                         LET cn_rec = FIRST(FOR cn IN cn FILTER cn.CAND_ID == w.CAND_ID RETURN cn)
-                        FILTER cn_rec != null
-                           AND cn_rec.CAND_PCC != null AND cn_rec.CAND_PCC != ""
-                           AND w.TTL_INDIV_CONTRIB != null
-                        RETURN { cmte_id: cn_rec.CAND_PCC, val: w.TTL_INDIV_CONTRIB }
+                        RETURN {
+                            cand_id: w.CAND_ID,
+                            fallback_pcc: cn_rec ? cn_rec.CAND_PCC : null,
+                            indiv: w.TTL_INDIV_CONTRIB,
+                            cand_contrib: w.CAND_CONTRIB,
+                            cand_loans: w.CAND_LOANS
+                        }
                 """):
-                    auth_indiv_by_cycle[cycle][r['cmte_id']] = float(r['val'])
-                    n_weball += 1
+                    cand_id = r.get('cand_id')
+                    fallback = r.get('fallback_pcc') or ''
+                    principals = principals_per_cand.get(cand_id, [])
+                    active = [
+                        (c, cycle_indiv.get(c, {}).get('count', 0))
+                        for c in principals
+                        if cycle_indiv.get(c, {}).get('count', 0) > 0
+                    ]
+                    if active:
+                        target_cmte = max(active, key=lambda x: x[1])[0]
+                        if fallback and target_cmte != fallback:
+                            n_rerouted += 1
+                    elif fallback:
+                        target_cmte = fallback
+                    else:
+                        continue
 
-            context.log.info(f"   {cycle}: {n_webk:,} from webk + {n_weball:,} from weball "
-                             f"(total {len(auth_indiv_by_cycle[cycle]):,} cmtes with auth values)")
+                    if r.get('indiv') is not None:
+                        auth[target_cmte] = float(r['indiv'])
+                        n_weball += 1
+                    cand_contrib = float(r.get('cand_contrib') or 0)
+                    cand_loans = float(r.get('cand_loans') or 0)
+                    # Subtract indiv.zip ENTITY_TP=CAN overlap to avoid double-
+                    # counting with whale_indiv_total. Loans aren't in indiv.zip
+                    # so they survive; itemized candidate contributions net out.
+                    can_already_counted = cycle_can.get(target_cmte, 0)
+                    self_amt = max(0.0, cand_contrib + cand_loans - can_already_counted)
+                    if self_amt > 0:
+                        self_fund[target_cmte] = self_amt
+                        n_self += 1
+
+            return {
+                'cycle': cycle,
+                'auth': auth,
+                'self_fund': self_fund,
+                'n_webk': n_webk,
+                'n_weball': n_weball,
+                'n_self': n_self,
+                'n_rerouted': n_rerouted,
+                'skipped': False,
+            }
+
+        phase35_results = parallel_cycles(_phase35_for_cycle, config.cycles, max_workers=4)
+        for cycle in config.cycles:
+            r = phase35_results.get(cycle)
+            if not r or r.get('skipped'):
+                continue
+            auth_indiv_by_cycle[cycle] = r['auth']
+            self_funding_by_cycle[cycle] = r['self_fund']
+            context.log.info(f"   {cycle}: {r['n_webk']:,} from webk + {r['n_weball']:,} from weball "
+                             f"(total {len(r['auth']):,} cmtes with auth values, "
+                             f"{r['n_self']:,} self-funded, {r['n_rerouted']:,} rerouted)")
 
         # ================================================================
         # Phase 4: Compute per-cycle receipts and write to committees
@@ -229,6 +351,7 @@ def committee_receipts_asset(
             all_cmte_ids.update(whale_by_cycle[cycle].keys())
             all_cmte_ids.update(transfer_by_cycle[cycle].keys())
             all_cmte_ids.update(auth_indiv_by_cycle[cycle].keys())
+            all_cmte_ids.update(self_funding_by_cycle[cycle].keys())
 
         context.log.info(f"   {len(all_cmte_ids):,} committees to process")
 
@@ -249,21 +372,37 @@ def committee_receipts_asset(
                 whale_total = whale.get('total', 0)
                 whale_count = whale.get('count', 0)
                 donation_count = indiv.get('count', 0)
+                self_funding = self_funding_by_cycle[cycle].get(cmte_id, 0)
+                # CAN-entity overlap = candidate's itemized self-contributions
+                # already in the whale graph. self_funding excludes it; we add
+                # it back here so committee-side total_receipts still matches
+                # FEC's TTL_RECEIPTS (which counts both buckets).
+                can_overlap = can_indiv_by_cycle[cycle].get(cmte_id, 0)
 
                 # Prefer FEC's authoritative TTL_INDIV_CONTRIB / INDV_CONTRIB
                 # (includes unitemized small donors). Fall back to summed
                 # indiv.zip when not available.
                 auth_total = auth_indiv_by_cycle[cycle].get(cmte_id)
                 if auth_total is not None:
-                    total_individuals = auth_total
+                    individuals_external = auth_total
                     indiv_source = 'fec_summary'
                     stats['cmtes_using_auth_total'] += 1
                 else:
-                    total_individuals = indiv_summed
+                    individuals_external = indiv_summed
                     indiv_source = 'indiv_zip'
                     stats['cmtes_using_indiv_fallback'] += 1
 
-                small_total = max(0, total_individuals - whale_total)
+                # total_individuals = TTL_INDIV_CONTRIB + CAND_CONTRIB + CAND_LOANS
+                # (full FEC parity). Decomposed three ways:
+                #   external           — non-candidate donations
+                #   can_overlap        — candidate's itemized self-contribs
+                #                        (already in whale graph)
+                #   self_funding       — unitemized self + all loans
+                #                        (NOT in whale graph; new bucket)
+                # candidate_funding consumes (whale + grassroots + self_funding)
+                # to avoid double-counting can_overlap with whale.
+                total_individuals = individuals_external + self_funding + can_overlap
+                small_total = max(0, individuals_external - whale_total)
                 total_receipts = total_individuals + transfer
 
                 if total_individuals > 0 or transfer > 0 or whale_total > 0:
@@ -271,6 +410,8 @@ def committee_receipts_asset(
                         'total_from_individuals': total_individuals,
                         'total_from_individuals_source': indiv_source,  # 'fec_summary' | 'indiv_zip'
                         'total_from_individuals_indiv_zip': indiv_summed,  # for diff/debugging
+                        'total_from_individuals_external': individuals_external,
+                        'self_funding_total': self_funding,
                         'small_donor_total': small_total,
                         'whale_donor_total': whale_total,
                         'whale_donor_count': whale_count,
@@ -284,11 +425,13 @@ def committee_receipts_asset(
 
             # Aggregate = sum of per-cycle values
             agg_total_individuals = sum(r.get('total_from_individuals', 0) for r in receipts_by_cycle.values())
+            agg_individuals_external = sum(r.get('total_from_individuals_external', 0) for r in receipts_by_cycle.values())
+            agg_self_funding = sum(r.get('self_funding_total', 0) for r in receipts_by_cycle.values())
             agg_whale_total = sum(r.get('whale_donor_total', 0) for r in receipts_by_cycle.values())
             agg_whale_count = sum(r.get('whale_donor_count', 0) for r in receipts_by_cycle.values())
             agg_donation_count = sum(r.get('donation_count', 0) for r in receipts_by_cycle.values())
             agg_transfer = sum(r.get('total_from_committees', 0) for r in receipts_by_cycle.values())
-            agg_small_total = max(0, agg_total_individuals - agg_whale_total)
+            agg_small_total = max(0, agg_individuals_external - agg_whale_total)
             agg_total_receipts = agg_total_individuals + agg_transfer
 
             update = {
@@ -296,6 +439,8 @@ def committee_receipts_asset(
                 'receipts_by_cycle': receipts_by_cycle,
                 # Aggregate fields (backward compat)
                 'total_from_individuals': agg_total_individuals,
+                'total_from_individuals_external': agg_individuals_external,
+                'self_funding_total': agg_self_funding,
                 'small_donor_total': agg_small_total,
                 'whale_donor_total': agg_whale_total,
                 'whale_donor_count': agg_whale_count,
@@ -313,6 +458,7 @@ def committee_receipts_asset(
                         INSERT doc
                         UPDATE doc
                         IN committees
+                        OPTIONS { mergeObjects: false }
                 """, bind_vars={"batch": batch})
                 stats['committees_updated'] += len(batch)
                 batch = []
@@ -324,6 +470,7 @@ def committee_receipts_asset(
                     INSERT doc
                     UPDATE doc
                     IN committees
+                    OPTIONS { mergeObjects: false }
             """, bind_vars={"batch": batch})
             stats['committees_updated'] += len(batch)
 
