@@ -109,6 +109,18 @@ This file is editable by both humans and the agent during sessions. Append-frien
 - Should we keep `feature/employer-enrichment` branch around (now merged into main) or delete it? Same for `feature/five-pies-by-cycle`, `feature/rag-implementation`, `feature/upstream-money-tracing`, `refactor/arango`.
 - Auto-memory cleanup: what specifically to keep vs. move to AGENTS.md? See "Memory model" section in AGENTS.md.
 
+## Validation follow-ups (revealed by bulk weball cross-reference)
+
+After the unitemized-grassroots fix landed (commit `1298db7`), median delta dropped 33% → 10.8%. The next layer of issues showed up in the worst-offenders list:
+
+- [ ] **Self-funder gap.** Candidates who poured their own money in (David Trone -99%, Jim Lamon -94%, Michael Gibbons -95%, Christina Clement -100%) show massive undercounts because **`CAND_CONTRIB` isn't folded into our individuals total**. FEC counts a candidate's self-funding as a receipt; we don't. Two options: fold into `individuals.total` (treat self-funding like an individual contribution), OR add a new channel/sub-bucket for self-funding. Lean toward the former — it's an individual giving to a campaign, just one with a special FEC code. Source: `validation_report.py` 2026-05-09.
+
+- [ ] **JFC / leadership-PAC scope mismatch.** Some candidates with multiple affiliated committees (Scalise +81%, Sanders +35%, Haley +45%) show *over*-attribution. Our `direct_funding` aggregates across ALL affiliated committees while `weball.TTL_RECEIPTS` reports only the principal campaign committee. This is a *definitional* difference, not strictly a bug. Decide: do we restrict trace to principal committee only (matches weball), or keep the broader scope (more accurate "total money raised in this candidate's name") and document the difference? Likely keep + document.
+
+- [ ] **Possible whale/grassroots double-count for unitemized-heavy candidates.** Sanders 2020 went from -58% to +35% — direction flipped. The +35% suggests we may be counting whales twice: once via graph attribution (in `individuals.whale.corporate_connected`/`independent`) AND once via the grassroots residual (`weball.TTL_INDIV_CONTRIB - whale_total` may not perfectly subtract). Investigate: is the whale_total we subtract truly equal to the whale donations within TTL_INDIV_CONTRIB? Or is there a definitional gap?
+
+- [ ] **Bulk validation — automate as part of Phase 4 production-readiness.** Add `validation_report.py` to a CI step or scheduled job. Set thresholds: median should stay <15%, within-±10% rate should stay >40%. Alert if regressions.
+
 ## Brain stack — known issues (Phase 2 follow-ups)
 
 Location: `~/workspace/obsidian/` (not yet a git repo).
