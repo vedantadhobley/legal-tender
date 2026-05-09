@@ -32,6 +32,7 @@ import gc
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config
 
 from src.resources.arango import ArangoDBResource
+from src.utils.parallel import parallel_cycles
 
 
 class DonorsConfig(Config):
@@ -143,20 +144,20 @@ def donors_asset(
             'by_cycle': {}
         }
         
-        for cycle in config.cycles:
+        # Per-cycle worker. Each cycle reads its own fec_{cycle}.indiv (no
+        # contention) and writes to aggregation.donors via per-document UPSERT,
+        # which Arango serializes per-_key. Concurrent UPSERTs from different
+        # cycles on the same donor merge correctly (cycles array appended,
+        # totals summed atomically inside the document lock).
+        def _process_cycle(cycle: str) -> Dict[str, Any]:
             db_name = f"fec_{cycle}"
-            
             if not sys_db.has_database(db_name):
-                context.log.warning(f"Database {db_name} does not exist, skipping")
-                continue
-            
+                return {'cycle': cycle, 'skipped': True, 'reason': 'no_db'}
+
             cycle_db = client.db(db_name, username=arango.username, password=arango.password)
-            
             if not cycle_db.has_collection("indiv"):
-                context.log.warning(f"{db_name}.indiv does not exist, skipping")
-                continue
-            
-            # Get the FEC per-election limit for this cycle
+                return {'cycle': cycle, 'skipped': True, 'reason': 'no_indiv'}
+
             per_election_limit = PER_ELECTION_LIMITS.get(cycle, 3300)
             context.log.info(f"📊 Processing {cycle} - per-election limit: ${per_election_limit:,}...")
             
@@ -214,14 +215,14 @@ def donors_asset(
                 batch_size=config.batch_size,
                 stream=True
             )
-            
+
             cycle_donors = 0
             cycle_total = 0.0
+            cycle_inserted = 0
             batch = []
-            
+
             for record in cursor:
                 donor_key = make_donor_key(record['name'], record['employer'])
-                
                 doc = {
                     '_key': donor_key,
                     'canonical_name': record['name'],
@@ -229,37 +230,50 @@ def donors_asset(
                     'total_amount': record['total_amount'],
                     'transaction_count': record['transaction_count'],
                     'cycles': [cycle],
-                    'updated_at': datetime.now().isoformat()
+                    'updated_at': datetime.now().isoformat(),
                 }
-                
                 batch.append(doc)
                 cycle_donors += 1
                 cycle_total += record['total_amount']
-                
+
                 if len(batch) >= config.batch_size:
                     upsert_donors_batch(agg_db, batch, cycle)
-                    stats['total_donors_inserted'] += len(batch)
+                    cycle_inserted += len(batch)
                     batch = []
-                    
                     if cycle_donors % 25000 == 0:
                         context.log.info(f"  [{cycle}] {cycle_donors:,} donors...")
-                        gc.collect()  # Periodic GC
-            
+                        gc.collect()
+
             if batch:
                 upsert_donors_batch(agg_db, batch, cycle)
-                stats['total_donors_inserted'] += len(batch)
-            
-            stats['by_cycle'][cycle] = {
+                cycle_inserted += len(batch)
+
+            context.log.info(f"✅ {cycle}: {cycle_donors:,} donors, ${cycle_total:,.0f}")
+            gc.collect()
+            return {
+                'cycle': cycle,
                 'per_election_limit': per_election_limit,
                 'donors_above_threshold': cycle_donors,
-                'total_contributed': cycle_total
+                'total_contributed': cycle_total,
+                'inserted': cycle_inserted,
+                'skipped': False,
+            }
+
+        results = parallel_cycles(_process_cycle, config.cycles, max_workers=4)
+        for cycle in config.cycles:
+            r = results.get(cycle)
+            if not r:
+                continue
+            if r.get('skipped'):
+                context.log.warning(f"  {cycle}: skipped ({r.get('reason')})")
+                continue
+            stats['total_donors_inserted'] += r['inserted']
+            stats['by_cycle'][cycle] = {
+                'per_election_limit': r['per_election_limit'],
+                'donors_above_threshold': r['donors_above_threshold'],
+                'total_contributed': r['total_contributed'],
             }
             stats['cycles_processed'] += 1
-            
-            context.log.info(f"✅ {cycle}: {cycle_donors:,} donors, ${cycle_total:,.0f}")
-            
-            # Force GC between cycles
-            gc.collect()
         
         # Create indexes
         context.log.info("🔧 Creating indexes...")
