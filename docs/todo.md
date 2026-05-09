@@ -136,6 +136,14 @@ Headline metrics now: median |delta| **2.5%**, within ±5% **62%**, within ±10%
 - [ ] **Ramaswamy 2024 +28%.** Self-funder — verify our self-funding netting handled his case correctly. May have CAND_LOANS that were also itemized differently.
 - [ ] **CHRISTINA CLEMENT 2024 +75476%** ($12.1M vs $16K). Almost certainly a different-candidate-with-same-name aliasing problem (data joining on NAME instead of CAND_ID at some point). Verify CAND_ID handling in candidate_funding.
 
+### Issues surfaced by output spot-checks (2026-05-09)
+
+Ran `scripts/output_check.py` against BWC, Cruz, Trump, Sanders, Bloomberg, Pelosi, Scalise. Structural data quality is high; whale corporate-connections work where Wikidata data exists. Concrete issues found:
+
+- [ ] **`NEA FUND FOR CHILDREN AND PUBLIC EDUCATION` classified as `corporation`.** Shows up in the corporation bucket of BWC, Pelosi, and likely many Dem incumbents. NEA = National Education Association = teachers' union → should be `labor_union`. Edge case in `committee_classification` AQL rules. The committee's `CONNECTED_ORG_NM` likely doesn't match the labor-union pattern. Inspect the classification logic for "FUND FOR..." prefixed PACs that obscure the union connection.
+- [ ] **`WhatsApp LLC` showing $10M IE Oppose against Trump.** Jan Koum (WhatsApp founder) is a known conservative donor — him funding $10M *against* Trump is implausible. Likely either (a) a name collision in `whale_corporate_links` (multiple "Jan Koum"s or similar in Wikidata getting conflated), or (b) the IE trace attributing the wrong direction at a Super PAC where Koum donated. Investigate the specific records: which donor name resolves to "WhatsApp LLC" in `whale_corporate_links`, and which IE-Oppose Super PAC against Trump received that donor's money.
+- [ ] **Whale → corporate attribution labels are interpretively misleading.** "Pan Am Railways: $47M IE Support for Trump" reads like a corporation funded the support, when really it's Timothy Mellon (Pan Am founder) personally donating. Same for "Marvel Entertainment" (Perlmutter), "Budget Suites of America" (Bigelow), "WhatsApp LLC" (Koum). Either rename the column header in `by_organization` to something like `org_or_founder_personal` OR add a `_via` field showing the founder/CEO whose donation produced the attribution. Documented as a known model choice in funding-channels.md but the labels still surprise readers.
+
 ## Performance / iteration speed (2026-05-09)
 
 - [x] ~~**Cycle-level parallelism via threads.**~~ Done in commit `2542b86`. Added `src/utils/parallel.py` with `parallel_cycles` (threads, I/O-bound) and `parallel_map` (processes, CPU-bound, reserved for future use). Wired into `committee_receipts` Phases 3+3.5, `donors`, `transferred_to`. `committee_receipts` ~12min → ~6min (2× — Amdahl-limited because Phases 1, 2, 4 are still sequential single AQL queries / single UPSERT loop). `indiv`, `pas2`, `oth` were already parallel.
