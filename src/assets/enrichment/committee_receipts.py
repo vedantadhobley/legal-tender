@@ -392,15 +392,29 @@ def committee_receipts_asset(
                 self_funding = self_funding_by_cycle[cycle].get(cmte_id, 0)
                 can_overlap = can_indiv_by_cycle[cycle].get(cmte_id, 0)
 
+                # FEC's webk.INDV_CONTRIB / weball.TTL_INDIV_CONTRIB usually
+                # includes unitemized small donors and is preferred — but for
+                # Super PACs / Hybrid PACs (CMTE_TP=O, V) FEC's webk reports
+                # individual contribs at $0-$100 even when indiv.zip shows
+                # tens of millions in actual itemized megadonor money (e.g.
+                # SFA FUND: webk says $75, indiv.zip shows $81M).
+                #
+                # Heuristic: trust whichever number is larger. Candidate
+                # cmtes get auth_total (includes unitemized). Super PACs and
+                # other broken-summary cmtes get indiv_summed.
                 auth_total = auth_indiv_by_cycle[cycle].get(cmte_id)
-                if auth_total is not None:
-                    individuals_external = auth_total
-                    indiv_source = 'fec_summary'
-                    cmte_auth_hits += 1
-                else:
+                if auth_total is None:
                     individuals_external = indiv_summed
                     indiv_source = 'indiv_zip'
                     cmte_fallback_hits += 1
+                elif indiv_summed > auth_total:
+                    individuals_external = indiv_summed
+                    indiv_source = 'indiv_zip_over_summary'
+                    cmte_fallback_hits += 1
+                else:
+                    individuals_external = auth_total
+                    indiv_source = 'fec_summary'
+                    cmte_auth_hits += 1
 
                 total_individuals = individuals_external + self_funding + can_overlap
                 small_total = max(0, individuals_external - whale_total)
