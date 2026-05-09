@@ -32,8 +32,6 @@ Pipeline integration
   whale_corporate_links
 """
 
-from __future__ import annotations
-
 import hashlib
 import json
 import logging

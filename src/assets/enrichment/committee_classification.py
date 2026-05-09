@@ -130,17 +130,59 @@ def committee_classification_asset(
         
         context.log.info("🔧 Updating committees with terminal_type...")
         result = list(agg_db.aql.execute(update_aql))
-        
-        # Log results
-        stats = {r['type']: r['cnt'] for r in result}
+
+        # Phase 2: parent-organization inheritance pass.
+        #
+        # FEC bulk data sometimes labels a PAC's ORG_TP as "C" (corporation)
+        # even when the connected parent is clearly a labor union, trade
+        # association, etc. Discovered via NEA Fund: ORG_TP="C" and parent
+        # NEA itself classified labor_union from its own ORG_TP="L" filing.
+        #
+        # Fix: for each committee classified as "corporation" with a
+        # non-empty CONNECTED_ORG_NM, look up the parent committee by name
+        # match. If the parent has a more specific type (labor_union,
+        # trade_association, ideological, cooperative), inherit it.
+        # Self-extends as the corpus grows — no manual override list to
+        # maintain.
+        context.log.info("🔧 Phase 2: parent-organization inheritance for misclassified PACs...")
+        inheritance_aql = """
+        FOR c IN committees
+            FILTER c.terminal_type == "corporation"
+            FILTER c.CONNECTED_ORG_NM != null AND c.CONNECTED_ORG_NM != ""
+            LET parent = FIRST(
+                FOR p IN committees
+                    FILTER UPPER(p.CMTE_NM) == UPPER(c.CONNECTED_ORG_NM)
+                    FILTER p._key != c._key
+                    FILTER p.terminal_type IN ["labor_union", "trade_association", "ideological", "cooperative"]
+                    LIMIT 1
+                    RETURN p.terminal_type
+            )
+            FILTER parent != null
+            UPDATE c WITH { terminal_type: parent, terminal_type_inherited_from_connected: true } IN committees
+            COLLECT type = parent WITH COUNT INTO cnt
+            RETURN { type, cnt }
+        """
+        inh_result = list(agg_db.aql.execute(inheritance_aql))
+        if inh_result:
+            for r in inh_result:
+                context.log.info(f"  inherited {r['cnt']:,} → {r['type']}")
+            # Refresh stats since some 'corporation' counts moved
+            refresh = list(agg_db.aql.execute(
+                "FOR c IN committees COLLECT t = c.terminal_type WITH COUNT INTO cnt RETURN { type: t, cnt }"
+            ))
+            stats = {r['type']: r['cnt'] for r in refresh}
+        else:
+            context.log.info("  no inheritance corrections needed this run")
+            stats = {r['type']: r['cnt'] for r in result}
+
         total = sum(stats.values())
-        
+
         context.log.info(f"✅ Classified {total:,} committees:")
         for terminal_type, count in sorted(stats.items(), key=lambda x: -x[1]):
             pct = count / total * 100
             action = "STOP" if terminal_type not in ["passthrough", "unknown"] else "TRACE UPSTREAM"
             context.log.info(f"  {terminal_type}: {count:,} ({pct:.1f}%) → {action}")
-        
+
         # Create index on terminal_type for fast filtering
         collection = agg_db.collection("committees")
         collection.add_persistent_index(fields=["terminal_type"], unique=False, sparse=False)
