@@ -233,3 +233,9 @@ src/flows/
 # Anchored with leading slash so it doesn't match src/data/ (a Python module).
 /data/
 !/data/.gitkeep
+
+# Repo-root JSON caches (regenerated; live in ~/workspace/data/legal-tender/cache/
+# now via src/utils/storage.get_cache_dir()). Kept in gitignore to prevent
+# re-introduction.
+/wikidata_cache.json
+/corporate_families.json

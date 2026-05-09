@@ -22,7 +22,8 @@ Structure:
     │   └── graphs/                # Graph definitions
     └── cache/                     # API caches (regeneratable)
         ├── congress_api/
-        └── (future: wikidata_cache.json, embeddings)
+        ├── wikidata.json          # Wikidata SPARQL resolutions (employer + person)
+        └── (future: embeddings)
 """
 
 import os
