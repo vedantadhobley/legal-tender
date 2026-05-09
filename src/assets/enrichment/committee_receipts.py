@@ -44,7 +44,13 @@ class CommitteeReceiptsConfig(Config):
     # start this asset before transferred_to is rebuilt — leading to stale
     # divisor data in candidate_funding's trace and 8.8x over-attribution.
     # Bug discovered during validation against FEC weball, 2026-05-08.
-    deps=["indiv", "pas2", "oth", "contributed_to", "transferred_to"],
+    #
+    # weball + webk are needed for the AUTHORITATIVE total_from_individuals.
+    # Without them, we'd count only itemized donations from indiv.zip and
+    # miss unitemized small donors — major undercount (33% median delta) for
+    # grassroots-heavy candidates. See docs/funding-channels.md "unitemized
+    # grassroots gap" + decisions.md 2026-05-08 for full context.
+    deps=["indiv", "pas2", "oth", "contributed_to", "transferred_to", "weball", "webk"],
 )
 def committee_receipts_asset(
     context: AssetExecutionContext,
@@ -165,6 +171,53 @@ def committee_receipts_asset(
                 gc.collect()
 
         # ================================================================
+        # Phase 3.5: Authoritative individual contribution totals from FEC's
+        # own summary files (weball + webk).
+        # ================================================================
+        # indiv_by_cycle (Phase 3) only has ITEMIZED donations from indiv.zip.
+        # FEC reports both itemized + unitemized in the summary files:
+        #   - webk.INDV_CONTRIB     — per-PAC, covers most non-candidate cmtes
+        #   - weball.TTL_INDIV_CONTRIB — per-CANDIDATE; resolve to principal
+        #     campaign committee via cn.CAND_PCC
+        # Use whichever covers a given committee; fall back to indiv-summed
+        # when neither has data. This closes the "unitemized grassroots gap"
+        # documented in docs/funding-channels.md.
+        context.log.info("Phase 3.5: Loading authoritative TTL_INDIV_CONTRIB from weball/webk...")
+        auth_indiv_by_cycle: Dict[str, Dict[str, float]] = {c: {} for c in config.cycles}
+        for cycle in config.cycles:
+            db_name = f"fec_{cycle}"
+            if not sys_db.has_database(db_name):
+                continue
+            cycle_db = client.db(db_name, username=arango.username, password=arango.password)
+
+            # webk first (PACs and most non-candidate committees)
+            n_webk = 0
+            if cycle_db.has_collection("webk"):
+                for r in cycle_db.aql.execute(
+                    "FOR c IN webk RETURN { cmte_id: c.CMTE_ID, val: c.INDV_CONTRIB }"
+                ):
+                    if r.get('val') is not None and r.get('cmte_id'):
+                        auth_indiv_by_cycle[cycle][r['cmte_id']] = float(r['val'])
+                        n_webk += 1
+
+            # weball overrides for candidate principal committees (resolved via cn.CAND_PCC)
+            n_weball = 0
+            if cycle_db.has_collection("weball") and cycle_db.has_collection("cn"):
+                for r in cycle_db.aql.execute("""
+                    FOR w IN weball
+                        LET cn_rec = FIRST(FOR cn IN cn FILTER cn.CAND_ID == w.CAND_ID RETURN cn)
+                        FILTER cn_rec != null
+                           AND cn_rec.CAND_PCC != null AND cn_rec.CAND_PCC != ""
+                           AND w.TTL_INDIV_CONTRIB != null
+                        RETURN { cmte_id: cn_rec.CAND_PCC, val: w.TTL_INDIV_CONTRIB }
+                """):
+                    auth_indiv_by_cycle[cycle][r['cmte_id']] = float(r['val'])
+                    n_weball += 1
+
+            context.log.info(f"   {cycle}: {n_webk:,} from webk + {n_weball:,} from weball "
+                             f"(total {len(auth_indiv_by_cycle[cycle]):,} cmtes with auth values)")
+
+        # ================================================================
         # Phase 4: Compute per-cycle receipts and write to committees
         # ================================================================
         context.log.info("Phase 4: Computing per-cycle receipts and updating committees...")
@@ -175,8 +228,13 @@ def committee_receipts_asset(
             all_cmte_ids.update(indiv_by_cycle[cycle].keys())
             all_cmte_ids.update(whale_by_cycle[cycle].keys())
             all_cmte_ids.update(transfer_by_cycle[cycle].keys())
+            all_cmte_ids.update(auth_indiv_by_cycle[cycle].keys())
 
         context.log.info(f"   {len(all_cmte_ids):,} committees to process")
+
+        # Track how often we used the authoritative value vs fell back
+        stats['cmtes_using_auth_total'] = 0
+        stats['cmtes_using_indiv_fallback'] = 0
 
         batch = []
         for cmte_id in all_cmte_ids:
@@ -187,16 +245,32 @@ def committee_receipts_asset(
                 whale = whale_by_cycle[cycle].get(cmte_id, {})
                 transfer = transfer_by_cycle[cycle].get(cmte_id, 0)
 
-                total_individuals = indiv.get('total', 0)
+                indiv_summed = indiv.get('total', 0)
                 whale_total = whale.get('total', 0)
                 whale_count = whale.get('count', 0)
                 donation_count = indiv.get('count', 0)
+
+                # Prefer FEC's authoritative TTL_INDIV_CONTRIB / INDV_CONTRIB
+                # (includes unitemized small donors). Fall back to summed
+                # indiv.zip when not available.
+                auth_total = auth_indiv_by_cycle[cycle].get(cmte_id)
+                if auth_total is not None:
+                    total_individuals = auth_total
+                    indiv_source = 'fec_summary'
+                    stats['cmtes_using_auth_total'] += 1
+                else:
+                    total_individuals = indiv_summed
+                    indiv_source = 'indiv_zip'
+                    stats['cmtes_using_indiv_fallback'] += 1
+
                 small_total = max(0, total_individuals - whale_total)
                 total_receipts = total_individuals + transfer
 
                 if total_individuals > 0 or transfer > 0 or whale_total > 0:
                     receipts_by_cycle[cycle] = {
                         'total_from_individuals': total_individuals,
+                        'total_from_individuals_source': indiv_source,  # 'fec_summary' | 'indiv_zip'
+                        'total_from_individuals_indiv_zip': indiv_summed,  # for diff/debugging
                         'small_donor_total': small_total,
                         'whale_donor_total': whale_total,
                         'whale_donor_count': whale_count,
