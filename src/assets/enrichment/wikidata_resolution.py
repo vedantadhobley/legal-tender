@@ -45,7 +45,20 @@ from typing import Any, Dict, List, Optional
 from dagster import asset, AssetExecutionContext, Config, MetadataValue, Output
 from pydantic import Field
 
-from src.rag.employer_normalization import NON_EMPLOYERS, normalize_employer_name
+from src.rag.employer_normalization import (
+    EMPLOYER_FAMILY_ALIASES,
+    NON_EMPLOYERS,
+    normalize_employer_name,
+)
+
+
+def _apply_family_alias(canonical: str) -> str:
+    """Map a Wikidata-canonical or raw-FEC canonical name through the
+    EMPLOYER_FAMILY_ALIASES table. Returns the unified canonical when
+    matched, or the input unchanged. Case-insensitive lookup."""
+    if not canonical:
+        return canonical
+    return EMPLOYER_FAMILY_ALIASES.get(canonical.upper(), canonical)
 from src.rag.wikidata_client import (
     reset_circuit_breaker,
     resolve_companies,
@@ -411,6 +424,11 @@ def wikidata_corporate_resolution(
                 relationship = 'self'
                 wikidata_id = None
 
+            # Apply alias merges: same physical entity that surfaced as
+            # multiple canonical groups (different FEC name variants
+            # without Wikidata, or Wikidata returning sibling Q-ids).
+            canonical = _apply_family_alias(canonical)
+
             family = corporate_families.setdefault(canonical, {
                 'canonical_name': canonical,
                 'wikidata_id': wikidata_id,
@@ -540,7 +558,7 @@ def wikidata_corporate_resolution(
                     continue
                 stats['total_whale_money_attributed'] += whale['total']
                 for company in companies:
-                    canonical = company['name']
+                    canonical = _apply_family_alias(company['name'])
                     whale_links.append({
                         '_key': hashlib.md5(f"{whale['name']}_{canonical}".encode()).hexdigest()[:16],
                         'donor_key': whale['_key'],

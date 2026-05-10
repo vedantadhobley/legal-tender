@@ -656,6 +656,14 @@ def _alternate_employer_forms(name: str) -> List[str]:
 _EMPLOYER_OVERRIDES: Dict[str, str] = {
     # FEC name (normalized, uppercase)  →  Wikidata Q-id
     "NEA": "Q3111510",  # National Education Association (teachers union)
+    # Citadel — wbsearchentities ranks "Citadel" the 1985 video game
+    # ahead of Citadel LLC (Ken Griffin's hedge fund) when searching
+    # the bare "CITADEL" string. Force the corporate parent. Also
+    # used for sub-entities and a typo we observed in FEC data.
+    "CITADEL": "Q2974366",  # Citadel Enterprise Americas LLC
+    "CITADEL ASSET MANAGEMENT": "Q2974366",
+    "CITADELL": "Q2974366",  # FEC typo
+    "CITADEL LLC": "Q2974366",
 }
 
 

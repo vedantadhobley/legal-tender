@@ -94,6 +94,27 @@ NON_EMPLOYERS = {
 }
 
 
+# Corporate-family alias map: forces unification of FEC employer names
+# that refer to the same entity but appear as separate canonical groups
+# because Wikidata either has no entry for them or has them as separate
+# Q-ids. Applied in wikidata_resolution Phase 2/3 when assembling
+# corporate_families — entries whose canonical_name (post-Wikidata
+# resolution) matches a key here get remapped to the value, merging
+# their dollars into the target family.
+#
+# Use sparingly. Each entry should be:
+#   - A real semantic equivalence (same physical entity / same parent)
+#   - High-value enough to justify a hardcode (≥$X00M typically)
+#
+# Discovered via spot-checks of top-30 corporate_families:
+EMPLOYER_FAMILY_ALIASES = {
+    # FEC employer name (or Wikidata canonical, uppercase keying)
+    #   →  preferred unified canonical name
+    "ADELSON CLINIC": "ADELSON DRUG CLINIC",  # Miriam Adelson's clinic
+    "ULINE INDUSTRIES": "ULINE",  # Same Uline (the box company)
+}
+
+
 # Campaign-committee-name patterns that occasionally leak in as donor
 # "employers" (e.g. "LEXI REESE FOR SENATE", "TED LIEU FOR CONGRESS
 # COMMITTEE"). These are not employers — the donor is filing a
