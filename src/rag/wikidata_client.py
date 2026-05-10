@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -42,6 +43,10 @@ REQUEST_TIMEOUT = 180  # batched queries with P279* ontology walks can be slow
 REST_TIMEOUT = 15      # MediaWiki REST API is consistently fast; tight budget
 RATE_LIMIT_DELAY = 1.0  # base inter-request sleep
 REST_RATE_LIMIT_DELAY = 0.1  # MediaWiki REST is more lenient than SPARQL
+REST_PARALLEL_WORKERS = 8  # ThreadPool size for resolve_*_rest. MediaWiki's
+                            # REST endpoints serve concurrent requests fine;
+                            # 8 is empirically a good balance between
+                            # throughput and not triggering 429 rate-limits.
 MAX_BACKOFF = 60.0
 MAX_RETRIES = 3
 CIRCUIT_BREAKER_THRESHOLD = 3  # consecutive failures before tripping
@@ -764,24 +769,32 @@ def _resolve_company_rest(name: str) -> Dict[str, Any]:
     return result  # all forms returned not_found / failed strict check
 
 
-def resolve_companies_rest(names: List[str]) -> Dict[str, Dict[str, Any]]:
-    """REST-based per-name company resolution. Slower per-name than
-    `resolve_companies` (the SPARQL batched version) but reliable when
-    the SPARQL endpoint is overloaded. ~0.2s per name.
+def _resolve_company_safe(name: str) -> Dict[str, Any]:
+    """ThreadPool worker: handles circuit-open shortcut + dispatches to
+    _resolve_company_rest. Kept separate so the executor can map cleanly
+    over names without lambda-in-pool surprises."""
+    if _circuit_open:
+        return {
+            'canonical': name, 'original': name, 'relationship': 'self',
+            'wikidata_id': None, 'parent_id': None, 'source': 'error',
+        }
+    return _resolve_company_rest(name)
 
-    Stops early if the circuit breaker trips — remaining names get
-    `source='error'` (not cached, will retry next run).
+
+def resolve_companies_rest(names: List[str]) -> Dict[str, Dict[str, Any]]:
+    """REST-based per-name company resolution. Parallelized via ThreadPool
+    (REST_PARALLEL_WORKERS workers). MediaWiki's REST endpoints handle
+    concurrent requests well, and the per-call REST_RATE_LIMIT_DELAY
+    naturally interleaves across threads.
+
+    Stops early if the circuit breaker trips — names submitted after the
+    trip get `source='error'` (not cached, will retry next run).
     """
-    results: Dict[str, Dict[str, Any]] = {}
-    for name in names:
-        if _circuit_open:
-            results[name] = {
-                'canonical': name, 'original': name, 'relationship': 'self',
-                'wikidata_id': None, 'parent_id': None, 'source': 'error',
-            }
-            continue
-        results[name] = _resolve_company_rest(name)
-    return results
+    if not names:
+        return {}
+    with ThreadPoolExecutor(max_workers=REST_PARALLEL_WORKERS) as ex:
+        # Preserve input ordering by using map() so result indices align.
+        return {name: r for name, r in zip(names, ex.map(_resolve_company_safe, names))}
 
 
 def _resolve_person_rest(name: str) -> Dict[str, Any]:
@@ -895,18 +908,23 @@ def _resolve_person_rest(name: str) -> Dict[str, Any]:
     }
 
 
+def _resolve_person_safe(name: str) -> Dict[str, Any]:
+    """ThreadPool worker for resolve_people_rest."""
+    if _circuit_open:
+        return {
+            'person': name, 'companies': [], 'primary_company': None,
+            'source': 'error',
+        }
+    return _resolve_person_rest(name)
+
+
 def resolve_people_rest(names: List[str]) -> Dict[str, Dict[str, Any]]:
-    """REST-based per-name person resolution. See resolve_companies_rest."""
-    results: Dict[str, Dict[str, Any]] = {}
-    for name in names:
-        if _circuit_open:
-            results[name] = {
-                'person': name, 'companies': [], 'primary_company': None,
-                'source': 'error',
-            }
-            continue
-        results[name] = _resolve_person_rest(name)
-    return results
+    """REST-based per-name person resolution. Parallelized via ThreadPool;
+    see resolve_companies_rest for rationale."""
+    if not names:
+        return {}
+    with ThreadPoolExecutor(max_workers=REST_PARALLEL_WORKERS) as ex:
+        return {name: r for name, r in zip(names, ex.map(_resolve_person_safe, names))}
 
 
 # ---------------------------------------------------------------------------
