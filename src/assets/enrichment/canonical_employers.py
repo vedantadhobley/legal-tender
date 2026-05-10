@@ -36,6 +36,15 @@ class CanonicalEmployersConfig(Config):
     min_total_amount: float = 10000.0  # Minimum total donations to include
     similarity_threshold: float = 0.7  # Jaccard similarity for clustering
     batch_size: int = 100
+    # Phase 3 fuzzy clustering is O(n²) on ~100K canonical groups → can
+    # take 30-60 min and produces dubious merges (matches "RIVERSIDE
+    # COUNTY HOSPITAL" with "RIVERSIDE BOARD HOSPITAL" via shared
+    # tokens). Now that wikidata_corporate_resolution does
+    # corporate-family rollups via P749, the marginal value of this
+    # fuzzy step is small. Default OFF; flip to True if a particular
+    # use case needs token-similarity merges that Wikidata can't
+    # capture.
+    enable_fuzzy_clustering: bool = False
 
 
 @asset(
@@ -123,21 +132,23 @@ def canonical_employers_asset(
         # ============================================================
         # Phase 3: Cluster similar normalized names (Tier 2)
         # ============================================================
-        context.log.info("  Phase 3: Clustering similar names...")
-        
-        # For groups with only normalized names (no canonical mapping),
-        # try to merge based on token similarity
-        merge_candidates = _find_merge_candidates(canonical_groups, config.similarity_threshold)
-        
-        context.log.info(f"    Found {len(merge_candidates)} potential merges")
-        
-        # Apply merges
-        for target, source in merge_candidates:
-            if source in canonical_groups and target in canonical_groups:
-                canonical_groups[target].extend(canonical_groups[source])
-                del canonical_groups[source]
-        
-        context.log.info(f"    After merging: {len(canonical_groups):,} canonical groups")
+        if config.enable_fuzzy_clustering:
+            context.log.info("  Phase 3: Clustering similar names...")
+            # For groups with only normalized names (no canonical mapping),
+            # try to merge based on token similarity. Note: this is O(n²)
+            # over ~100K canonical groups and can take 30-60 min.
+            merge_candidates = _find_merge_candidates(canonical_groups, config.similarity_threshold)
+            context.log.info(f"    Found {len(merge_candidates)} potential merges")
+            for target, source in merge_candidates:
+                if source in canonical_groups and target in canonical_groups:
+                    canonical_groups[target].extend(canonical_groups[source])
+                    del canonical_groups[source]
+            context.log.info(f"    After merging: {len(canonical_groups):,} canonical groups")
+        else:
+            context.log.info(
+                "  Phase 3: SKIPPED (enable_fuzzy_clustering=False). "
+                "Corporate-family rollups handled by wikidata_corporate_resolution."
+            )
         
         # ============================================================
         # Phase 4: Create canonical_employers collection
