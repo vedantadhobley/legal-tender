@@ -469,7 +469,68 @@ _NON_CORPORATE_P31 = {
     "Q15873",  # basketball team
     "Q15976457",  # American football team
     "Q1078541",  # ice hockey club
+    # Transit / rail lines (catches "ULINE" → "U Line" light rail noise)
+    "Q15145537",  # transit line / metro line
+    "Q107343049",  # transit subline
+    "Q124130104",  # railway service
+    # Biology / genes (catches "LFG" → FAIM2 protein-coding gene)
+    "Q7187",  # gene
+    "Q8054",  # protein
+    "Q11173",  # chemical compound (already in but listed here for clarity)
+    "Q16521",  # taxon (insects, plants)
+    "Q713623",  # clade
+    # Other generic-noise types surfaced via FEC abbreviations
+    "Q936518",  # aerospace manufacturer (caught a defunct German aircraft co for "LFG")
 }
+
+
+# Strict corporate-only P31 set used as a positive whitelist for the
+# alternate-form retry path. Suffix-stripping is aggressive ("PRATT
+# INDUSTRIES" → "PRATT") and it's easy to land on a real entity that
+# isn't the intended employer (Pratt Institute the school, Pratt &
+# Whitney the engine maker). Requiring the retry result's P31 to
+# overlap with this strict set prevents non-corporate matches from
+# winning a retry — at the cost of missing some legit corporate
+# matches whose P31 isn't in this set. Trade-off chosen toward
+# precision over recall on the retry path.
+_STRICT_CORPORATE_P31 = {
+    "Q4830453",  # business
+    "Q6881511",  # enterprise
+    "Q43229",  # organization
+    "Q167037",  # corporation
+    "Q891723",  # public company
+    "Q161726",  # multinational corporation
+    "Q740752",  # limited liability company
+    "Q3558581",  # joint-stock company
+    "Q22687",  # bank
+    "Q1331793",  # financial institution
+    "Q7257717",  # financial services company
+    "Q1361353",  # consulting firm
+    "Q11691",  # stock exchange
+    "Q15911314",  # association
+    "Q163740",  # nonprofit organization
+    "Q178790",  # trade union
+    "Q11707",  # restaurant
+    "Q210167",  # video game developer
+    "Q319845",  # investment bank
+    "Q15265344",  # broadcasting company
+    "Q45776",  # holding company
+    "Q43501",  # zoo (sometimes employer)
+    "Q188509",  # suburb (no — remove)
+}
+_STRICT_CORPORATE_P31.discard("Q188509")
+
+
+def _entity_has_strict_corporate_p31(entity: Dict[str, Any]) -> bool:
+    """True iff at least one P31 (instance of) on the entity is in the
+    strict corporate whitelist. Used to gate the alternate-form retry
+    path so suffix-stripped names can't accidentally win against
+    universities, government agencies, etc."""
+    claims = entity.get('claims', {})
+    for claim in claims.get('P31', []):
+        if _claim_qid(claim) in _STRICT_CORPORATE_P31:
+            return True
+    return False
 
 
 def _entity_has_non_corporate_p31(entity: Dict[str, Any]) -> bool:
@@ -671,7 +732,10 @@ def _resolve_company_rest(name: str) -> Dict[str, Any]:
 
     First tries the literal name with top-5 candidate filtering. If that
     returns not_found, generates a small set of alternate forms (suffix
-    stripping) and retries each once. The first form that resolves wins.
+    stripping) and retries each once. The first form that resolves AND
+    passes the strict corporate-P31 check wins. The strict check on the
+    retry path prevents suffix-stripping from landing on a wrong entity
+    (e.g. PRATT INDUSTRIES → PRATT → Pratt Institute the school).
     """
     result = _resolve_company_one_query(name)
     if result['source'] in ('wikidata', 'error'):
@@ -680,15 +744,24 @@ def _resolve_company_rest(name: str) -> Dict[str, Any]:
     # Retry with alternate forms (e.g. "BLACKSTONE GROUP" → "BLACKSTONE").
     for alt in _alternate_employer_forms(name):
         retry = _resolve_company_one_query(alt)
-        if retry['source'] == 'wikidata':
-            # Preserve the original query name in `original`; the canonical
-            # / wikidata_id come from the alternate-form match.
-            retry['original'] = name
-            return retry
         if retry['source'] == 'error':
             return retry  # circuit just opened — don't keep retrying
+        if retry['source'] != 'wikidata':
+            continue
+        # Strict corporate-P31 gate: only accept the alternate form if
+        # the matched entity is unambiguously corporate. Fetches entity
+        # data once to inspect P31; cheap relative to the search itself.
+        retry_qid = retry.get('wikidata_id')
+        if retry_qid:
+            ent = _entity_data(retry_qid)
+            if ent is not None and not _entity_has_strict_corporate_p31(ent):
+                continue
+        # Preserve the original query name in `original`; the canonical
+        # / wikidata_id come from the alternate-form match.
+        retry['original'] = name
+        return retry
 
-    return result  # all forms returned not_found
+    return result  # all forms returned not_found / failed strict check
 
 
 def resolve_companies_rest(names: List[str]) -> Dict[str, Dict[str, Any]]:
