@@ -42,11 +42,14 @@ REQUEST_TIMEOUT = 180  # batched queries with P279* ontology walks can be slow
                        # on Wikidata's public endpoint, especially under load
 REST_TIMEOUT = 15      # MediaWiki REST API is consistently fast; tight budget
 RATE_LIMIT_DELAY = 1.0  # base inter-request sleep
-REST_RATE_LIMIT_DELAY = 0.1  # MediaWiki REST is more lenient than SPARQL
-REST_PARALLEL_WORKERS = 8  # ThreadPool size for resolve_*_rest. MediaWiki's
-                            # REST endpoints serve concurrent requests fine;
-                            # 8 is empirically a good balance between
-                            # throughput and not triggering 429 rate-limits.
+REST_RATE_LIMIT_DELAY = 0.3  # MediaWiki REST is more lenient than SPARQL
+                              # but per-IP 429s kick in at higher concurrency.
+                              # 0.3s with 4 threads = ~13 req/s, well under
+                              # MediaWiki's documented 200/min anonymous quota.
+REST_PARALLEL_WORKERS = 4  # ThreadPool size for resolve_*_rest. Lowered from
+                            # 8 after 429-storm tripped the circuit on a real
+                            # run. 4 workers × 0.3s delay keeps us safely
+                            # below MediaWiki's anonymous rate limits.
 MAX_BACKOFF = 60.0
 MAX_RETRIES = 3
 CIRCUIT_BREAKER_THRESHOLD = 3  # consecutive failures before tripping
@@ -84,11 +87,18 @@ def _execute_rest(url: str, params: Dict[str, Any], timeout: float = REST_TIMEOU
     """Issue a request to MediaWiki's REST endpoints with the same backoff
     + circuit breaker as SPARQL. The REST endpoints (wbsearchentities,
     Special:EntityData) are on different infrastructure than the SPARQL
-    query service and stay reliable when SPARQL is overloaded."""
+    query service and stay reliable when SPARQL is overloaded.
+
+    429 (rate-limit) responses are handled separately from request
+    failures: a 429 means "slow down", not "service is down". Repeated
+    429s back off this thread but do NOT count toward the circuit
+    breaker. Only RequestException (5xx, connection errors, timeouts)
+    increment the failure counter."""
     global _consecutive_failures, _circuit_open
     if _circuit_open:
         return None
     last_exc: Optional[BaseException] = None
+    last_was_429 = False
     for attempt in range(MAX_RETRIES):
         delay = min(REST_RATE_LIMIT_DELAY * (2 ** attempt), MAX_BACKOFF)
         time.sleep(delay)
@@ -100,18 +110,24 @@ def _execute_rest(url: str, params: Dict[str, Any], timeout: float = REST_TIMEOU
                 timeout=timeout,
             )
             if response.status_code == 429:
+                last_was_429 = True
                 last_exc = requests.HTTPError("429")
                 continue
             response.raise_for_status()
             _consecutive_failures = 0
             return response.json()
         except requests.RequestException as e:
+            last_was_429 = False
             last_exc = e
             logger.warning(f"Wikidata REST {url} failed (attempt {attempt + 1}/{MAX_RETRIES}): {e}")
-    _consecutive_failures += 1
-    if _consecutive_failures >= CIRCUIT_BREAKER_THRESHOLD:
-        _circuit_open = True
-        logger.error(f"Wikidata circuit breaker tripped: {last_exc}")
+    # Only count non-429 failures toward the circuit breaker. A 429-only
+    # failure pattern indicates client should slow down, not that the
+    # endpoint is down.
+    if not last_was_429:
+        _consecutive_failures += 1
+        if _consecutive_failures >= CIRCUIT_BREAKER_THRESHOLD:
+            _circuit_open = True
+            logger.error(f"Wikidata circuit breaker tripped: {last_exc}")
     return None
 
 
