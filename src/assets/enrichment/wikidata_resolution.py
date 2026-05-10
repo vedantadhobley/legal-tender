@@ -137,15 +137,59 @@ def _is_cache_hit(entry: Optional[Dict[str, Any]]) -> bool:
     return entry.get('source') in ('wikidata', 'not_found')
 
 
-# Convert "MELLON, TIMOTHY" -> "Timothy Mellon" for Wikidata search.
+# Suffix tokens to strip from FEC-format names ("MR.", "JR.", "II", etc).
+# Lower-cased here for case-insensitive matching against `.lower()` parts.
+_NAME_SUFFIX_TOKENS = {
+    'mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'dr', 'dr.', 'sr', 'sr.',
+    'jr', 'jr.', 'ii', 'iii', 'iv', 'esq', 'esq.', 'phd', 'phd.', 'md', 'md.',
+}
+
+
+def _is_initial(token: str) -> bool:
+    """Whether a token looks like a single-letter initial (e.g. 'W.', 'A',
+    'J.J.'). Multi-character tokens with a trailing period like 'JR.' are
+    NOT initials (single-letter base check)."""
+    bare = token.replace('.', '')
+    return len(bare) == 1 and bare.isalpha()
+
+
 def _whale_name_to_search(name: str) -> str:
+    """Convert FEC-format "LASTNAME, FIRSTNAME [MIDDLE...] [SUFFIX]" into
+    a search-friendly "Firstname Lastname" form for Wikidata.
+
+    Handles:
+    - Skip leading initials when extracting first name. "BROWN, W. L. LYONS JR."
+      → uses "Lyons" not "W." as the first name → "Lyons Brown".
+    - Strip trailing suffixes (JR./SR./II/III/IV/MR./DR./PHD/etc).
+    - Fall back to title-casing the full name when there's no comma.
+    """
     parts = name.split(',', 1)
-    if len(parts) == 2:
-        last = parts[0].strip().title()
-        first_parts = parts[1].strip().split()
-        first = first_parts[0].title() if first_parts else ''
-        return f"{first} {last}".strip()
-    return name.title()
+    if len(parts) != 2:
+        return name.title()
+
+    last = parts[0].strip().title()
+
+    raw_tokens = parts[1].strip().split()
+    # Strip trailing suffix tokens
+    while raw_tokens and raw_tokens[-1].lower() in _NAME_SUFFIX_TOKENS:
+        raw_tokens.pop()
+    if not raw_tokens:
+        return last  # all-suffix first names — degenerate, return last only
+
+    # Skip leading initials. Keep going until we find a non-initial token.
+    # Example: ['W.', 'L.', 'LYONS'] → use 'LYONS' as first name.
+    first_idx = 0
+    while first_idx < len(raw_tokens) and _is_initial(raw_tokens[first_idx]):
+        first_idx += 1
+    if first_idx >= len(raw_tokens):
+        # All initials — degenerate, fall back to first initial
+        first = raw_tokens[0]
+    else:
+        first = raw_tokens[first_idx]
+
+    # Strip trailing punctuation (e.g. an embedded comma like "LYONS,")
+    first = first.rstrip(',.;:')
+    return f"{first.title()} {last}".strip()
 
 
 class WikidataResolutionConfig(Config):

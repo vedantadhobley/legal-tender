@@ -68,14 +68,35 @@ ABBREVIATIONS = {
     'FNDN': 'FOUNDATION',
 }
 
-# Non-employer values to flag
+# Non-employer values to flag.
+#
+# Beyond the obvious placeholders (RETIRED / SELF-EMPLOYED / N/A), this
+# also catches values that drift through to Wikidata as bogus "employer
+# = SOMETHING" lookups: ENTREPRENEUR (Wikidata resolves to a Q-id for
+# the concept), NOT-EMPLOYED (with a hyphen), and INVESTOR which often
+# describes the donor rather than identifying an employer.
 NON_EMPLOYERS = {
     'RETIRED', 'SELF', 'SELF EMPLOYED', 'SELF-EMPLOYED', 'SELFEMPLOYED',
-    'NOT EMPLOYED', 'UNEMPLOYED', 'NONE', 'N/A', 'NA', 'STUDENT',
+    'NOT EMPLOYED', 'NOT-EMPLOYED', 'UNEMPLOYED', 'NONE', 'N/A', 'NA', 'STUDENT',
     'HOMEMAKER', 'HOME MAKER', 'HOUSEWIFE', 'HUSBAND', 'WIFE',
     'NOT APPLICABLE', 'INFORMATION REQUESTED', 'REQUESTED',
     'INFORMATION REQUESTED PER BEST EFFORTS', 'REFUSED',
+    'ENTREPRENEUR', 'INVESTOR', 'PRIVATE INVESTOR', 'PHILANTHROPIST',
+    'BUSINESSMAN', 'BUSINESSWOMAN', 'CONSULTANT', 'ATTORNEY', 'LAWYER',
+    'PHYSICIAN', 'DOCTOR', 'EXECUTIVE', 'CEO', 'OWNER',
 }
+
+
+# Campaign-committee-name patterns that occasionally leak in as donor
+# "employers" (e.g. "LEXI REESE FOR SENATE", "TED LIEU FOR CONGRESS
+# COMMITTEE"). These are not employers — the donor is filing a
+# self-funding contribution and listing their own campaign committee.
+# Detected by substring match (case-insensitive).
+CAMPAIGN_COMMITTEE_MARKERS = (
+    'FOR CONGRESS', 'FOR SENATE', 'FOR PRESIDENT',
+    'FOR HOUSE', 'CAMPAIGN COMMITTEE', 'POLITICAL ACTION',
+    ' PAC', '_PAC', 'VICTORY FUND',
+)
 
 
 def normalize_employer_name(name: str) -> Tuple[str, dict]:
@@ -102,6 +123,17 @@ def normalize_employer_name(name: str) -> Tuple[str, dict]:
             'is_non_employer': True,
             'reason': 'non_employer_value',
             'category': _categorize_non_employer(name)
+        }
+
+    # Step 2b: Filter out campaign committee names that leak through as
+    # "employer" — donors self-funding their own campaign sometimes list
+    # the campaign committee name in the employer field.
+    if any(marker in name for marker in CAMPAIGN_COMMITTEE_MARKERS):
+        return name, {
+            'original': original,
+            'is_non_employer': True,
+            'reason': 'campaign_committee_leakage',
+            'category': 'political',
         }
     
     # Step 3: Remove legal suffixes
