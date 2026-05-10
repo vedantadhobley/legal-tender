@@ -35,6 +35,7 @@ from src.rag.wikidata_reconci import (
     ReconciCandidate,
     reconcile_batch,
 )
+from src.rag.gleif import resolve_batch as gleif_resolve_batch, GleifResolution
 
 logger = logging.getLogger(__name__)
 
@@ -244,7 +245,13 @@ class ResolutionResult:
     wikidata_id: Optional[str]
     parent_id: Optional[str]
     relationship: str  # 'self' | 'parent' | 'subsidiary_of' | 'override' | 'data_gap'
-    source: str  # 'wikidata' | 'not_found' | 'override' | 'data_gap' | 'error'
+    source: str  # 'wikidata' | 'gleif' | 'not_found' | 'override' | 'data_gap' | 'error'
+
+    # External identifier from non-Wikidata sources. For source='gleif',
+    # this carries the LEI. None otherwise. Useful for downstream
+    # debugging and possible future cross-database joins.
+    external_id: Optional[str] = None
+    external_id_type: Optional[str] = None  # 'lei' | None
 
     # Provenance — written so future debugging doesn't require code spelunking.
     method: str = ""  # which decision path produced this
@@ -261,7 +268,9 @@ class ResolutionResult:
             "parent_id": self.parent_id,
             "relationship": self.relationship,
             "source": self.source,
-            # Provenance fields — additional to existing cache schema.
+            # Extended schema fields:
+            "external_id": self.external_id,
+            "external_id_type": self.external_id_type,
             "method": self.method,
             "confidence": self.confidence,
             "alternatives": self.alternatives,
@@ -435,16 +444,82 @@ def resolve_one(
     )
 
 
-def resolve_batch(names: List[str]) -> Dict[str, ResolutionResult]:
-    """Resolve many FEC names. Batched reconcile_batch() upstream, then
-    per-name decision logic locally. Output keyed by input name."""
+def _gleif_to_resolution(name: str, g: GleifResolution) -> ResolutionResult:
+    """Convert a GleifResolution to a ResolutionResult."""
+    if g.source == "gleif":
+        return ResolutionResult(
+            original=name,
+            canonical=g.canonical,
+            wikidata_id=None,
+            parent_id=None,
+            relationship="parent",
+            source="gleif",
+            external_id=g.lei,
+            external_id_type="lei",
+            method=f"gleif_{g.method}",
+            confidence=100.0,  # GLEIF strict-match is binary; "100" reflects high confidence
+            alternatives=g.alternatives,
+        )
+    # not_found / ambiguous → return not_found, but preserve provenance
+    return ResolutionResult(
+        original=name,
+        canonical=name,
+        wikidata_id=None,
+        parent_id=None,
+        relationship="self",
+        source="not_found",
+        method=f"gleif_{g.method}",
+        alternatives=g.alternatives,
+    )
+
+
+def resolve_batch(
+    names: List[str],
+    use_gleif_fallback: bool = True,
+) -> Dict[str, ResolutionResult]:
+    """Resolve many FEC names through the two-layer pipeline:
+       Layer 1: Wikidata via reconci.link (typed candidate space)
+       Layer 2: GLEIF (LEI registry) as fallback for not_found
+
+    GLEIF is gated by `use_gleif_fallback`. Disable for tests / dry-runs.
+    """
     if not names:
         return {}
 
-    # One round-trip to reconci.link covering all names.
+    # Layer 1: Wikidata via reconci.link.
     candidates_by_name = reconcile_batch(names)
+    layer1: Dict[str, ResolutionResult] = {
+        name: resolve_one(name, candidates_by_name) for name in names
+    }
 
-    return {name: resolve_one(name, candidates_by_name) for name in names}
+    if not use_gleif_fallback:
+        return layer1
+
+    # Layer 2: for names that came back not_found from Wikidata,
+    # try GLEIF. Only the not-found subset is queried — GLEIF should
+    # never override a confident Wikidata match.
+    gleif_input = [name for name, r in layer1.items() if r.source == "not_found"]
+    if not gleif_input:
+        return layer1
+
+    logger.info(
+        "Wikidata resolved %d/%d names; trying GLEIF fallback on %d not-founds",
+        len(names) - len(gleif_input), len(names), len(gleif_input),
+    )
+    gleif_results = gleif_resolve_batch(gleif_input)
+
+    # Merge: GLEIF result OVERRIDES the layer1 not_found if and only if
+    # GLEIF actually matched.
+    out: Dict[str, ResolutionResult] = dict(layer1)
+    for name in gleif_input:
+        g = gleif_results.get(name)
+        if g is None:
+            continue
+        if g.source == "gleif":
+            out[name] = _gleif_to_resolution(name, g)
+        # else: keep the layer1 not_found (with its more-detailed
+        # Wikidata-side alternatives provenance)
+    return out
 
 
 if __name__ == "__main__":
