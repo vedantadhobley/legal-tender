@@ -329,6 +329,229 @@ def trace_ie_sources(
     return results
 
 
+def _merge_named_list(lists: List[List[Dict[str, Any]]], n: Optional[int], min_amount: float) -> List[Dict[str, Any]]:
+    """Merge per-cycle lists of {name, amount} dicts by name, threshold-
+    filtered, sorted descending. Used by merge_funding_channels."""
+    merged: Dict[str, float] = defaultdict(float)
+    for lst in lists:
+        for item in lst:
+            merged[item['name']] += item['amount']
+    result = sorted(
+        [{'name': k, 'amount': v} for k, v in merged.items() if v >= min_amount],
+        key=lambda x: -x['amount'],
+    )
+    return result[:n] if n else result
+
+
+def merge_funding_channels(cycle_results: Dict[str, Dict], config: 'CandidateFundingConfig') -> Optional[Dict[str, Any]]:
+    """Merge per-cycle funding_channels dicts into a single aggregate.
+
+    Sums numeric values, merges {name, amount} top-source lists by
+    name, recomputes percentages against the new aggregate total. Top
+    lists are re-sorted and re-truncated at the merged level so the
+    aggregate's "top corporations" reflects the cross-cycle total
+    rather than concatenating per-cycle tops.
+    """
+    results = [v for v in cycle_results.values() if v is not None]
+    if not results:
+        return None
+
+    total_funding = sum(r['total_funding'] for r in results)
+    direct_funding = sum(r['direct_funding'] for r in results)
+    ie_support_total = sum(r['ie_support'] for r in results)
+    ie_oppose_total = sum(r['ie_oppose'] for r in results)
+
+    # Org direct by type (corporation/trade_assoc/labor_union/...)
+    org_by_type: Dict[str, Dict[str, Any]] = {}
+    for t in ('corporation', 'trade_association', 'labor_union', 'ideological', 'cooperative'):
+        total = sum(r['organizational_direct']['by_type'][t]['total'] for r in results)
+        top = _merge_named_list(
+            [r['organizational_direct']['by_type'][t]['top'] for r in results],
+            n=config.top_n_sources,
+            min_amount=config.min_amount,
+        )
+        org_by_type[t] = {'total': total, 'pct': _safe_pct(total, total_funding), 'top': top}
+    org_direct_total = sum(v['total'] for v in org_by_type.values())
+
+    ie_support = {
+        'total': ie_support_total,
+        'pct': _safe_pct(ie_support_total, total_funding),
+        'top_pacs': _merge_named_list([r['ie']['support'].get('top_pacs', []) for r in results], 10, config.min_amount),
+        'by_corporation': _merge_named_list(
+            [r['ie']['support'].get('by_corporation', []) for r in results],
+            config.top_n_sources, config.min_amount,
+        ),
+        'by_pac': _merge_named_list([r['ie']['support'].get('by_pac', []) for r in results], 10, config.min_amount),
+    }
+    ie_oppose = {
+        'total': ie_oppose_total,
+        'pct': _safe_pct(ie_oppose_total, total_funding) if total_funding > 0 else 0,
+        'top_pacs': _merge_named_list([r['ie']['oppose'].get('top_pacs', []) for r in results], 10, config.min_amount),
+        'by_corporation': _merge_named_list(
+            [r['ie']['oppose'].get('by_corporation', []) for r in results],
+            config.top_n_sources, config.min_amount,
+        ),
+        'by_pac': _merge_named_list([r['ie']['oppose'].get('by_pac', []) for r in results], 10, config.min_amount),
+    }
+
+    whale_total = sum(r['individuals']['whale']['total'] for r in results)
+    corp_connected_total = sum(r['individuals']['whale']['corporate_connected']['total'] for r in results)
+    independent_total = sum(r['individuals']['whale']['independent']['total'] for r in results)
+    grassroots_direct = sum(r['individuals']['grassroots']['direct'] for r in results)
+    grassroots_upstream = sum(r['individuals']['grassroots']['upstream'] for r in results)
+    grassroots_total = grassroots_direct + grassroots_upstream
+    self_funded_total = sum(r['individuals'].get('self_funded', {}).get('total', 0) for r in results)
+    all_indiv_total = whale_total + grassroots_total + self_funded_total
+
+    # Merge corporate_connected.by_company across cycles, with each
+    # company's top_donors merged by donor name.
+    corp_by_company: Dict[str, Dict[str, Any]] = defaultdict(lambda: {'amount': 0, 'donors': defaultdict(float)})
+    for r in results:
+        for item in r['individuals']['whale']['corporate_connected'].get('by_company', []):
+            corp_by_company[item['company']]['amount'] += item['amount']
+            for donor in item.get('top_donors', []):
+                corp_by_company[item['company']]['donors'][donor['name']] += donor['amount']
+    merged_by_company = sorted(
+        [
+            {
+                'company': k,
+                'amount': v['amount'],
+                'top_donors': sorted(
+                    [{'name': dk, 'amount': dv} for dk, dv in v['donors'].items()],
+                    key=lambda x: -x['amount'],
+                )[:5],
+            }
+            for k, v in corp_by_company.items()
+            if v['amount'] >= config.min_amount
+        ],
+        key=lambda x: -x['amount'],
+    )[:config.top_n_sources]
+
+    indep_top = _merge_named_list(
+        [r['individuals']['whale']['independent'].get('top', []) for r in results],
+        config.top_n_individuals, config.min_amount,
+    )
+
+    unaccounted_total = sum(r['unaccounted']['total'] for r in results)
+    cmte_total_receipts = sum(r['unaccounted']['cmte_total_receipts'] for r in results)
+    total_accounted = sum(r['unaccounted']['total_accounted'] for r in results)
+    from_individuals_raw = sum(r['unaccounted']['breakdown']['from_individuals_raw'] for r in results)
+    from_committees_raw = sum(r['unaccounted']['breakdown']['from_committees_raw'] for r in results)
+
+    # Merge by_organization with via_donors propagated per-org.
+    by_org_merged: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+        'direct_pac': 0, 'direct_employees': 0,
+        'ie_support': 0, 'ie_oppose': 0,
+        'total': 0, 'total_against': 0,
+        'via_donors': defaultdict(lambda: {'ie_support': 0, 'ie_oppose': 0, 'employees': 0}),
+    })
+    for r in results:
+        for org in r.get('by_organization', []):
+            entry = by_org_merged[org['name']]
+            entry['direct_pac'] += org.get('direct_pac', 0)
+            entry['direct_employees'] += org.get('direct_employees', 0)
+            entry['ie_support'] += org.get('ie_support', 0)
+            entry['ie_oppose'] += org.get('ie_oppose', 0)
+            entry['total'] += org.get('total_pro', 0)
+            entry['total_against'] += org.get('total_against', 0)
+            for vd in org.get('via_donors', []):
+                entry['via_donors'][vd['name']]['ie_support'] += vd.get('ie_support', 0)
+                entry['via_donors'][vd['name']]['ie_oppose'] += vd.get('ie_oppose', 0)
+                entry['via_donors'][vd['name']]['employees'] += vd.get('employees', 0)
+
+    return {
+        'total_funding': total_funding,
+        'direct_funding': direct_funding,
+        'ie_support': ie_support_total,
+        'ie_oppose': ie_oppose_total,
+        'organizational_direct': {
+            'total': org_direct_total,
+            'pct': _safe_pct(org_direct_total, total_funding),
+            'by_type': org_by_type,
+        },
+        'ie': {'support': ie_support, 'oppose': ie_oppose},
+        'individuals': {
+            'total': all_indiv_total,
+            'pct': _safe_pct(all_indiv_total, total_funding),
+            'whale': {
+                'total': whale_total,
+                'pct': _safe_pct(whale_total, total_funding),
+                'corporate_connected': {
+                    'total': corp_connected_total,
+                    'pct': _safe_pct(corp_connected_total, total_funding),
+                    'by_company': merged_by_company,
+                },
+                'independent': {
+                    'total': independent_total,
+                    'pct': _safe_pct(independent_total, total_funding),
+                    'top': indep_top,
+                },
+            },
+            'grassroots': {
+                'total': grassroots_total,
+                'pct': _safe_pct(grassroots_total, total_funding),
+                'direct': grassroots_direct,
+                'upstream': grassroots_upstream,
+                'explanation': (
+                    "Individual donors below $10K aggregate threshold. "
+                    "'direct' = grassroots giving to candidate's own committees. "
+                    "'upstream' = grassroots at feeder committees (JFCs, conduits, "
+                    "party committees) attributed proportionally through transfer chain."
+                ),
+            },
+            'self_funded': {
+                'total': self_funded_total,
+                'pct': _safe_pct(self_funded_total, total_funding),
+            },
+        },
+        'unaccounted': {
+            'total': unaccounted_total,
+            'pct': _safe_pct(unaccounted_total, cmte_total_receipts) if cmte_total_receipts > 0 else 0,
+            'cmte_total_receipts': cmte_total_receipts,
+            'total_accounted': total_accounted,
+            'breakdown': {
+                'from_individuals_raw': from_individuals_raw,
+                'from_committees_raw': from_committees_raw,
+            },
+            'explanation': (
+                "True residual: committee trace loss through passthrough hops, "
+                "unitemized contributions (<$200 aggregate not in FEC indiv file), "
+                "and data gaps. Sub-$10K individual donors are accounted for "
+                "in the individuals.grassroots channel."
+            ),
+        },
+        'by_organization': sorted(
+            [
+                {
+                    'name': org_name,
+                    'direct_pac': data['direct_pac'],
+                    'direct_employees': data['direct_employees'],
+                    'ie_support': data['ie_support'],
+                    'ie_oppose': data['ie_oppose'],
+                    'total_pro': data['total'],
+                    'total_against': data['total_against'],
+                    'via_donors': sorted(
+                        [
+                            {
+                                'name': dn,
+                                'ie_support': vd['ie_support'],
+                                'ie_oppose': vd['ie_oppose'],
+                                'employees': vd['employees'],
+                            }
+                            for dn, vd in data['via_donors'].items()
+                            if (vd['ie_support'] + vd['ie_oppose'] + vd['employees']) >= config.min_amount
+                        ],
+                        key=lambda x: -(x['ie_support'] + x['ie_oppose'] + x['employees']),
+                    )[:5],
+                }
+                for org_name, data in by_org_merged.items()
+                if data['total'] >= config.min_amount or data['total_against'] >= config.min_amount
+            ],
+            key=lambda x: -x['total_pro'],
+        )[:50],
+    }
+
+
 def compute_funding_channels(
     cmte_ids: List[str],
     cand_key: str,
@@ -801,241 +1024,6 @@ def candidate_funding_asset(
         # ================================================================
 
         # ================================================================
-        # merge_funding_channels: Aggregate = sum of per-cycle results
-        # ================================================================
-        def merge_funding_channels(cycle_results: Dict[str, Dict]) -> Optional[Dict[str, Any]]:
-            """Merge per-cycle funding channel results into aggregate.
-
-            Sums numeric values, merges top-source lists by name, recomputes percentages.
-            """
-            results = [v for v in cycle_results.values() if v is not None]
-            if not results:
-                return None
-
-            def safe_pct(num, denom):
-                return (num / denom * 100) if denom > 0 else 0
-
-            def merge_named_list(lists, n=None):
-                """Merge lists of {name, amount} dicts, summing by name."""
-                merged = defaultdict(float)
-                for lst in lists:
-                    for item in lst:
-                        merged[item['name']] += item['amount']
-                result = sorted(
-                    [{'name': k, 'amount': v} for k, v in merged.items() if v >= config.min_amount],
-                    key=lambda x: -x['amount']
-                )
-                return result[:n] if n else result
-
-            # Top-level sums
-            total_funding = sum(r['total_funding'] for r in results)
-            direct_funding = sum(r['direct_funding'] for r in results)
-            ie_support_total = sum(r['ie_support'] for r in results)
-            ie_oppose_total = sum(r['ie_oppose'] for r in results)
-
-            # Organizational direct by type
-            org_by_type = {}
-            for t in ['corporation', 'trade_association', 'labor_union', 'ideological', 'cooperative']:
-                total = sum(r['organizational_direct']['by_type'][t]['total'] for r in results)
-                top = merge_named_list(
-                    [r['organizational_direct']['by_type'][t]['top'] for r in results],
-                    n=config.top_n_sources
-                )
-                org_by_type[t] = {'total': total, 'pct': safe_pct(total, total_funding), 'top': top}
-            org_direct_total = sum(v['total'] for v in org_by_type.values())
-
-            # IE support/oppose
-            ie_support = {
-                'total': ie_support_total,
-                'pct': safe_pct(ie_support_total, total_funding),
-                'top_pacs': merge_named_list(
-                    [r['ie']['support'].get('top_pacs', []) for r in results], n=10
-                ),
-                'by_corporation': merge_named_list(
-                    [r['ie']['support'].get('by_corporation', []) for r in results],
-                    n=config.top_n_sources
-                ),
-                'by_pac': merge_named_list(
-                    [r['ie']['support'].get('by_pac', []) for r in results], n=10
-                ),
-            }
-            ie_oppose = {
-                'total': ie_oppose_total,
-                'pct': safe_pct(ie_oppose_total, total_funding) if total_funding > 0 else 0,
-                'top_pacs': merge_named_list(
-                    [r['ie']['oppose'].get('top_pacs', []) for r in results], n=10
-                ),
-                'by_corporation': merge_named_list(
-                    [r['ie']['oppose'].get('by_corporation', []) for r in results],
-                    n=config.top_n_sources
-                ),
-                'by_pac': merge_named_list(
-                    [r['ie']['oppose'].get('by_pac', []) for r in results], n=10
-                ),
-            }
-
-            # Individuals
-            whale_total = sum(r['individuals']['whale']['total'] for r in results)
-            corp_connected_total = sum(r['individuals']['whale']['corporate_connected']['total'] for r in results)
-            independent_total = sum(r['individuals']['whale']['independent']['total'] for r in results)
-            grassroots_direct = sum(r['individuals']['grassroots']['direct'] for r in results)
-            grassroots_upstream = sum(r['individuals']['grassroots']['upstream'] for r in results)
-            grassroots_total = grassroots_direct + grassroots_upstream
-            self_funded_total = sum(
-                r['individuals'].get('self_funded', {}).get('total', 0) for r in results
-            )
-            all_indiv_total = whale_total + grassroots_total + self_funded_total
-
-            # Merge corporate connected by_company
-            corp_by_company = defaultdict(lambda: {'amount': 0, 'donors': defaultdict(float)})
-            for r in results:
-                for item in r['individuals']['whale']['corporate_connected'].get('by_company', []):
-                    corp_by_company[item['company']]['amount'] += item['amount']
-                    for donor in item.get('top_donors', []):
-                        corp_by_company[item['company']]['donors'][donor['name']] += donor['amount']
-
-            merged_by_company = sorted(
-                [{
-                    'company': k,
-                    'amount': v['amount'],
-                    'top_donors': sorted(
-                        [{'name': dk, 'amount': dv} for dk, dv in v['donors'].items()],
-                        key=lambda x: -x['amount']
-                    )[:5]
-                } for k, v in corp_by_company.items() if v['amount'] >= config.min_amount],
-                key=lambda x: -x['amount']
-            )[:config.top_n_sources]
-
-            # Independent top
-            indep_top = merge_named_list(
-                [r['individuals']['whale']['independent'].get('top', []) for r in results],
-                n=config.top_n_individuals
-            )
-
-            # Unaccounted
-            unaccounted_total = sum(r['unaccounted']['total'] for r in results)
-            cmte_total_receipts = sum(r['unaccounted']['cmte_total_receipts'] for r in results)
-            total_accounted = sum(r['unaccounted']['total_accounted'] for r in results)
-            from_individuals_raw = sum(r['unaccounted']['breakdown']['from_individuals_raw'] for r in results)
-            from_committees_raw = sum(r['unaccounted']['breakdown']['from_committees_raw'] for r in results)
-
-            # By organization
-            by_org_merged = defaultdict(lambda: {
-                'direct_pac': 0, 'direct_employees': 0,
-                'ie_support': 0, 'ie_oppose': 0,
-                'total': 0, 'total_against': 0,
-                # donor_name → {ie_support, ie_oppose, employees}
-                'via_donors': defaultdict(lambda: {'ie_support': 0, 'ie_oppose': 0, 'employees': 0}),
-            })
-            for r in results:
-                for org in r.get('by_organization', []):
-                    by_org_merged[org['name']]['direct_pac'] += org.get('direct_pac', 0)
-                    by_org_merged[org['name']]['direct_employees'] += org.get('direct_employees', 0)
-                    by_org_merged[org['name']]['ie_support'] += org.get('ie_support', 0)
-                    by_org_merged[org['name']]['ie_oppose'] += org.get('ie_oppose', 0)
-                    by_org_merged[org['name']]['total'] += org.get('total_pro', 0)
-                    by_org_merged[org['name']]['total_against'] += org.get('total_against', 0)
-                    for vd in org.get('via_donors', []):
-                        by_org_merged[org['name']]['via_donors'][vd['name']]['ie_support'] += vd.get('ie_support', 0)
-                        by_org_merged[org['name']]['via_donors'][vd['name']]['ie_oppose'] += vd.get('ie_oppose', 0)
-                        by_org_merged[org['name']]['via_donors'][vd['name']]['employees'] += vd.get('employees', 0)
-
-            return {
-                'total_funding': total_funding,
-                'direct_funding': direct_funding,
-                'ie_support': ie_support_total,
-                'ie_oppose': ie_oppose_total,
-                'organizational_direct': {
-                    'total': org_direct_total,
-                    'pct': safe_pct(org_direct_total, total_funding),
-                    'by_type': org_by_type,
-                },
-                'ie': {
-                    'support': ie_support,
-                    'oppose': ie_oppose,
-                },
-                'individuals': {
-                    'total': all_indiv_total,
-                    'pct': safe_pct(all_indiv_total, total_funding),
-                    'whale': {
-                        'total': whale_total,
-                        'pct': safe_pct(whale_total, total_funding),
-                        'corporate_connected': {
-                            'total': corp_connected_total,
-                            'pct': safe_pct(corp_connected_total, total_funding),
-                            'by_company': merged_by_company,
-                        },
-                        'independent': {
-                            'total': independent_total,
-                            'pct': safe_pct(independent_total, total_funding),
-                            'top': indep_top,
-                        },
-                    },
-                    'grassroots': {
-                        'total': grassroots_total,
-                        'pct': safe_pct(grassroots_total, total_funding),
-                        'direct': grassroots_direct,
-                        'upstream': grassroots_upstream,
-                        'explanation': (
-                            "Individual donors below $10K aggregate threshold. "
-                            "'direct' = grassroots giving to candidate's own committees. "
-                            "'upstream' = grassroots at feeder committees (JFCs, conduits, "
-                            "party committees) attributed proportionally through transfer chain."
-                        ),
-                    },
-                    'self_funded': {
-                        'total': self_funded_total,
-                        'pct': safe_pct(self_funded_total, total_funding),
-                    },
-                },
-                'unaccounted': {
-                    'total': unaccounted_total,
-                    'pct': safe_pct(unaccounted_total, cmte_total_receipts) if cmte_total_receipts > 0 else 0,
-                    'cmte_total_receipts': cmte_total_receipts,
-                    'total_accounted': total_accounted,
-                    'breakdown': {
-                        'from_individuals_raw': from_individuals_raw,
-                        'from_committees_raw': from_committees_raw,
-                    },
-                    'explanation': (
-                        "True residual: committee trace loss through passthrough hops, "
-                        "unitemized contributions (<$200 aggregate not in FEC indiv file), "
-                        "and data gaps. Sub-$10K individual donors are accounted for "
-                        "in the individuals.grassroots channel."
-                    ),
-                },
-                'by_organization': sorted(
-                    [
-                        {
-                            'name': org_name,
-                            'direct_pac': data['direct_pac'],
-                            'direct_employees': data['direct_employees'],
-                            'ie_support': data['ie_support'],
-                            'ie_oppose': data['ie_oppose'],
-                            'total_pro': data['total'],
-                            'total_against': data['total_against'],
-                            'via_donors': sorted(
-                                [
-                                    {
-                                        'name': dn,
-                                        'ie_support': vd['ie_support'],
-                                        'ie_oppose': vd['ie_oppose'],
-                                        'employees': vd['employees'],
-                                    }
-                                    for dn, vd in data['via_donors'].items()
-                                    if (vd['ie_support'] + vd['ie_oppose'] + vd['employees']) >= config.min_amount
-                                ],
-                                key=lambda x: -(x['ie_support'] + x['ie_oppose'] + x['employees']),
-                            )[:5],
-                        }
-                        for org_name, data in by_org_merged.items()
-                        if data['total'] >= config.min_amount or data['total_against'] >= config.min_amount
-                    ],
-                    key=lambda x: -x['total_pro'],
-                )[:50],
-            }
-
-        # ================================================================
         # PHASE 4: Process each candidate
         # ================================================================
         context.log.info("Phase 4: Processing candidates...")
@@ -1106,7 +1094,7 @@ def candidate_funding_asset(
                 continue
 
             # Aggregate = merge per-cycle results (not independent computation)
-            funding_aggregate = merge_funding_channels(funding_by_cycle)
+            funding_aggregate = merge_funding_channels(funding_by_cycle, config)
 
             stats['candidates_with_funding'] += 1
 
