@@ -6,6 +6,76 @@ When a non-obvious choice gets made, append a dated entry here with: what we dec
 
 ---
 
+## 2026-05-10 — Wikidata corporate-identity resolution: pivoting from band-aid filters to reconciliation-API + OpenCorporates
+
+**Context.** Corporate identity resolution is structurally central to legal-tender — the whole project is "trace dollars to corporate origins," and without correct mapping from FEC employer strings to corporate identities, the `whale → corporation` claim that powers `by_organization` cross-cuts is unreliable. Over this session we pushed hit-rate from ~600 (pre-this-session, mostly via SPARQL UNION queries that the WDQS endpoint couldn't reliably serve) to ~3,049 wikidata-resolved out of 5,054 canonical employers (60% hit-rate) by switching the primary path from SPARQL to MediaWiki REST (`wbsearchentities` + `Special:EntityData`), then layering in:
+
+- top-N candidate filtering (`limit=5`)
+- description-keyword blacklist for generic-concept matches
+- government-entity description filter
+- P31 (instance-of) blacklist for non-corporate types (60+ Q-ids)
+- strict P31 corporate whitelist gate on suffix-retry path
+- alternate-form retry (suffix stripping)
+- hardcoded `_EMPLOYER_OVERRIDES` per-name forced Q-ids (NEA, CITADEL family)
+- hardcoded `EMPLOYER_FAMILY_ALIASES` for entity-merge cases (ADELSON CLINIC → ADELSON DRUG CLINIC)
+- bare-generic-word filter (CORPORATION, COMPANY, BUSINESS as full-string employer values)
+
+This brought visible quality to the top-30 corporate_families and zeroed the obvious bogus matches (advocacy group, Sigmund Freud, Federal Government, Corporation video game). But it's a band-aid layer — ~250 lines of filter-shaped code across two files, growing one entry at a time as new wrong matches surface. Each new wrong match teaches us a new filter pattern. That's whack-a-mole.
+
+**The structural mistake.** wbsearchentities ranks by string relevance over *all of Wikidata* (humans, films, books, vaccines, cities, given names, organizations, video games — everything). Then we post-filter the wrong ones. The right structure: never let non-organizations into the candidate set in the first place.
+
+**Three architectures considered.**
+
+1. **Bulk SPARQL fetch + local corporate index.** Pre-fetch every Wikidata entity that's `wdt:P31/wdt:P279* wd:Q43229` (organization or subclass), with labels, `skos:altLabel` aliases, `wdt:P749` parent links, and sitelink counts. Local JSON file (~100-300MB), refreshed quarterly. Lookup: exact label/alias match against pre-filtered org-only index, sitelink-count tiebreak for ambiguity. Eliminates the entire P31 blacklist (entities not in index can't be candidates), most of `_EMPLOYER_OVERRIDES` (Wikidata's own aliases catch NEA-style cases), and the suffix-retry mechanism (aliases handle suffix variants). Trade-off: 100MB local file, quarterly maintenance, a one-time bulk-fetch cost (~1-2 hrs of paginated SPARQL).
+
+2. **Wikidata Reconciliation API** (`https://wikidata.reconci.link/`). Third-party hosted ElasticSearch over Wikidata, designed for OpenRefine-style entity reconciliation. Supports `type` filter (Q43229) and returns ranked candidates with scores and types. Same architectural fix (typed candidate space, scored matches) without the bulk fetch — query on demand. Built and maintained by Antonin Delpeuch.
+
+3. **OpenCorporates** (`https://api.opencorporates.com/`). Authoritative corporate registry data covering 200M+ companies including small US private (where Wikidata's coverage is poor). Free tier 500 reqs/day, paid for production. Best for the entities Wikidata genuinely doesn't have (ULINE-style, FAHR-style — though our spike of reconci.link found ULINE in Wikidata after all, just not via wbsearchentities).
+
+**WDQS health-check today (2026-05-10 03:55 UTC).** Out of 16 test queries against `query.wikidata.org/sparql`: 8 timeouts (30-60s), 5 × 502 Bad Gateway, 1 × 429, only 2 successes. Trivial liveness query (one rdfs:label fetch) timed out at 30s. We landed in the middle of WDQS migration weather (the team is migrating off Blazegraph to a different backend, with periodic multi-hour outages during the transition). Bulk SPARQL fetch is not viable today.
+
+**Reconciliation-API spike (2026-05-10 04:00 UTC).** 20 hard cases batched in 7.3s. Findings:
+- Better matching where wbsearchentities failed: ULINE → Uline (Q7879030, Wikidata DOES have it), BCG → Boston Consulting Group, BLACKSTONE GROUP → Blackstone Inc. via alias, CITADEL → Citadel LLC (no override needed), CITADEL INVESTMENT GROUP → same.
+- Sanity cases all pass (Goldman, Apple, Google, IBM, Pan Am Railways).
+- Still wrong: NEA → Newspaper Enterprise Association (defunct press agency) at top, same as wbsearchentities. Need irreducible override.
+- Still ambiguous: KKR cricket team + Kohlberg Kravis Roberts + Federation of Mutual Aid Assocs all score 100. Need sitelinks tiebreak.
+- Type filter is soft, not hard: STEYER → Steyr Austrian city scored 100 even with `type=Q43229`. Need client-side P31 verification using returned types.
+- Confidence threshold needed: FAHR → Deutz-Fahr at score 57 — fuzzy match on partial token, should be rejected.
+- `CORPORATION → IBM` at score 85 from fuzzy matching the literal word in descriptions — handled at normalization layer (existing `NON_EMPLOYERS`).
+- True not-founds: PRATT INDUSTRIES, ADELSON CLINIC, ADELSON DRUG CLINIC.
+
+**Decision.** Pivot to **reconciliation API as primary + OpenCorporates as fallback for not-founds**, with client-side scoring/threshold/tiebreak.
+
+- Phase 1: Thin client around `wikidata.reconci.link` (batch up to 50 names per request).
+- Phase 2: Resolver that filters returned candidates by P31 corporate whitelist, applies confidence threshold, fetches sitelinks for tiebreak when multiple score-100 candidates survive.
+- Phase 3: OpenCorporates lookup as second-layer fallback for names where reconci.link returned no acceptable candidate (gated by daily-budget on the 500-req/day free tier; cache results aggressively).
+- Phase 4: Wire into asset, replace `_resolve_company_rest` body.
+- Phase 5: Validation harness — diff old vs new on 5K employers, categorize improved/regressed/unchanged, spot-check regressions.
+- Phase 6: Delete obsolete band-aids. Targets: `_NON_CORPORATE_P31`, `_GENERIC_DESCRIPTION_PATTERNS`, `_GOVERNMENT_DESCRIPTION_PATTERNS`, `_RETRY_SUFFIX_TOKENS`, `_alternate_employer_forms`, most of `_EMPLOYER_OVERRIDES`, `_resolve_company_one_query`. Move surviving ~3-5 overrides + `EMPLOYER_FAMILY_ALIASES` to YAML data files with rationale fields.
+
+**Pre-commit acceptance metrics.** Verify the architectural improvement is real, not feel-good:
+1. Lines of "filter-shaped" code in `src/rag/`: today ~250. After: 0 in code, OK to have ≤30 lines of declarative scoring/threshold logic.
+2. Hardcoded Q-id mappings: today ~12 across `_EMPLOYER_OVERRIDES` + `EMPLOYER_FAMILY_ALIASES`. After: 0 in code, ≤5 in `data_gaps.yaml` with verified rationale per entry.
+3. No regressions on validation harness for the previously-correct ~3,000 wikidata-resolved employers.
+4. Hit-rate same or higher than current 60%.
+
+**Why not bulk-fetch + local index.** Considered as the primary architecture but two factors flipped the choice:
+- WDQS is currently down for the migration — blocking. The reconciliation API runs on separate infrastructure (ElasticSearch) and is healthy.
+- Reconciliation API gives the same architectural property (typed candidate space, ranked results with scores) on demand without the 100MB local file or quarterly maintenance.
+- If reconci.link becomes flaky in production, falling back to bulk-fetch is still available — the local-index plan stays in this decisions log as a documented fallback architecture.
+
+**Trade-offs accepted.**
+- Third-party dependency on `wikidata.reconci.link` (single maintainer; if it goes down, fall back to bulk-fetch + local index).
+- OpenCorporates 500-reqs/day free-tier ceiling means we can't bulk-resolve all 5K employers via OpenCorporates — only the ~10-20% that reconci.link doesn't cover. Acceptable.
+- Per-name HTTP round-trip cost (~365ms in batched mode = ~30 min for 5K names). Same as today, no regression.
+
+**Open follow-ups.**
+- Sitelinks tiebreak requires entity-data fetch per ambiguous candidate — adds a few hundred more REST calls. Acceptable.
+- OpenCorporates parent-company resolution — not free on the free tier, deferred.
+- For lobbying integration (separate effort, see `docs/lobbying-integration.md`), the same reconciliation infrastructure will resolve LDA client names — keep this layer reusable.
+
+---
+
 ## 2026-05-08 — Bulk validation against FEC weball + unitemized grassroots gap
 
 After parsing FEC's `weball`/`webl`/`webk` summary files (per-candidate / per-PAC totals from FEC's own aggregation), wrote `scripts/validation_report.py` to cross-reference our `direct_funding` against `weball.TTL_RECEIPTS` for every candidate. The bulk validation revealed a systematic undercount for grassroots-heavy candidates.

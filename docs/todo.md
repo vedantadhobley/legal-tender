@@ -52,7 +52,19 @@ This file is editable by both humans and the agent during sessions. Append-frien
     - top-N candidate filtering (wbsearchentities limit=5) + P31 instance-of blacklist (`_NON_CORPORATE_P31`: humans Q5, films Q11424, books Q571, vaccines, magazines, countries, languages, given names, submarines, Creative Commons licenses, etc.)
   - ~~Suffix variations splitting families (BLACKSTONE GROUP vs BLACKSTONE)~~ → `_alternate_employer_forms` retries with one suffix stripped (GROUP/HOLDINGS/PARTNERS/INVESTMENTS/CAPITAL/etc.). Verified: BLACKSTONE GROUP → Blackstone Inc., CITADEL INVESTMENT GROUP → Citadel Enterprise Americas LLC, BRIDGEWATER ASSOCIATES → Bridgewater Associates.
 
-- [ ] **Remaining hit-rate residuals:**
+- [ ] **Wikidata resolution architectural overhaul** — IN PROGRESS 2026-05-10. See `docs/decisions.md` entry of same date for full context. Replacing the current ~250 lines of band-aid filter code (P31 blacklists, description patterns, suffix retries, hardcoded overrides) with a structurally-correct two-layer resolver: `wikidata.reconci.link` (typed candidate space + ranked scoring) as primary, OpenCorporates as fallback for not-founds. Acceptance metrics committed in decisions.md:
+  1. Filter-shaped code lines: 250 → 0 in code (≤30 declarative scoring lines OK)
+  2. Hardcoded Q-id mappings: 12 → 0 in code (≤5 in YAML with rationale)
+  3. No regressions on validation harness for currently-resolved ~3,000 employers
+  4. Hit-rate ≥ current 60%
+  - [ ] Phase 1: thin reconciliation API client (`src/rag/wikidata_reconci.py`, batch up to 50/request)
+  - [ ] Phase 2: resolver with P31 whitelist + confidence threshold + sitelinks tiebreak
+  - [ ] Phase 3: OpenCorporates fallback layer for reconci-not-founds (free tier, 500/day budget)
+  - [ ] Phase 4: wire into wikidata_corporate_resolution asset, replace `_resolve_company_rest`
+  - [ ] Phase 5: validation harness — diff old vs new on 5K employers
+  - [ ] Phase 6: delete band-aids (`_NON_CORPORATE_P31`, `_GENERIC_DESCRIPTION_PATTERNS`, `_GOVERNMENT_DESCRIPTION_PATTERNS`, `_RETRY_SUFFIX_TOKENS`, `_alternate_employer_forms`, most of `_EMPLOYER_OVERRIDES`, `_resolve_company_one_query`); move surviving overrides to YAML
+
+- [ ] **Remaining hit-rate residuals (subsumed by overhaul above, kept for reference):**
   - Some corporate families that should be merged remain split: ADELSON DRUG CLINIC vs ADELSON CLINIC (different Q-ids in Wikidata or one not_found), Pan Am Systems vs Pan Am Railways (different real entities owned by Mellon). Need follow-up: SPARQL parent-resolution would catch most of these via P749 once SPARQL endpoint is healthy.
   - KKR HOLDINGS suffix-strips to KKR which still ranks Kolkata Knight Riders (cricket team Q1156894, P31=Q12973014) above Kohlberg Kravis Roberts (Q1570773, real KKR private equity). Add Q12973014 (cricket team) and other sport-team P31 Q-ids to `_NON_CORPORATE_P31` so the cricket team gets skipped and the real KKR is picked from top-N.
   - FEC name format vs Wikidata search ranking: "SIMONS, JAMES H" → "James Simons" → top hit is 19th-century lawyer Confederate general (Q109713137), not Jim Simons hedge fund mathematician (Q560847). "Jim Simons" gets the right hit but the FEC normalization doesn't always produce that form. Hard to fix without per-name disambiguation hints.
