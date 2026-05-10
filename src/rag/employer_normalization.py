@@ -84,6 +84,13 @@ NON_EMPLOYERS = {
     'ENTREPRENEUR', 'INVESTOR', 'PRIVATE INVESTOR', 'PHILANTHROPIST',
     'BUSINESSMAN', 'BUSINESSWOMAN', 'CONSULTANT', 'ATTORNEY', 'LAWYER',
     'PHYSICIAN', 'DOCTOR', 'EXECUTIVE', 'CEO', 'OWNER',
+    # Generic legal/business words appearing as the entire employer
+    # field, with no actual company name. Surfaced via $57M attributed
+    # to "Corporation" the 1988 video game when donors typed
+    # "CORPORATION" alone in the FEC employer field.
+    'CORPORATION', 'COMPANY', 'BUSINESS', 'CORP', 'INC',
+    'INCORPORATED', 'LLC', 'LP', 'LLP', 'LIMITED', 'LTD',
+    'EMPLOYED', 'EMPLOYEE', 'EMPLOYER',
 }
 
 

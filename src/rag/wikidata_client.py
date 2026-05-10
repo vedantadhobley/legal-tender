@@ -502,6 +502,32 @@ _NON_CORPORATE_P31 = {
     "Q713623",  # clade
     # Other generic-noise types surfaced via FEC abbreviations
     "Q936518",  # aerospace manufacturer (caught a defunct German aircraft co for "LFG")
+    # Concept / media abstraction (catches "CORPORATION" → "Corporation"
+    # the 1988 video game)
+    "Q7889",  # video game
+    # Municipality variants (catches "FAHR" → "Fahrenzhausen", a German
+    # municipality, when looking up donor employers)
+    "Q116457956",  # municipality without town privileges in Germany
+    "Q15284",  # municipality
+    "Q1799794",  # administrative division of Bavaria
+    "Q4790",  # municipality of the Czech Republic
+    "Q5124673",  # commune of Italy
+    # Cities and settlements (catches "STEYER" → "Steyr", "GS" → other cities)
+    "Q667509",  # district of Austria
+    "Q13539802",  # statutory city of Austria
+    "Q262882",  # city in Austria
+    "Q871419",  # statutory city
+    "Q41176",  # building (some entities mis-classified)
+    "Q3957",  # town
+    "Q532",  # village
+    "Q486972",  # human settlement
+    # Units of measurement (catches "FAHR" → degree Fahrenheit)
+    "Q68723978",  # unit of temperature
+    "Q82047057",  # unit derived from a base SI unit (?)
+    "Q21684377",  # imperial unit
+    "Q47574",  # unit of measurement
+    # Tractor brands and equipment classes
+    "Q98579904",  # tractor brand
 }
 
 
@@ -614,6 +640,25 @@ def _alternate_employer_forms(name: str) -> List[str]:
     return []
 
 
+# Hardcoded overrides for FEC employer name → Wikidata Q-id when the
+# default search ranking gets the wrong answer.
+#
+# Use sparingly. Each entry should:
+# 1. Be a real Wikidata entity (verified Q-id)
+# 2. Be the *intended* corporate identity for the FEC string in context,
+#    not just a literal-match
+# 3. Be common enough to justify a hardcode (significant $ at stake)
+#
+# Surfaced via spot-checks: "NEA" wbsearchentities ranks the defunct
+# Newspaper Enterprise Association above the National Education
+# Association teachers union, even though the union is the
+# overwhelming intent for FEC donors listing "NEA" as employer.
+_EMPLOYER_OVERRIDES: Dict[str, str] = {
+    # FEC name (normalized, uppercase)  →  Wikidata Q-id
+    "NEA": "Q3111510",  # National Education Association (teachers union)
+}
+
+
 def _resolve_company_one_query(name: str, search_limit: int = 5) -> Dict[str, Any]:
     """Single-shot REST lookup for one literal name. Pulls top-N candidates
     from wbsearchentities, filters generic + government matches, then
@@ -632,6 +677,27 @@ def _resolve_company_one_query(name: str, search_limit: int = 5) -> Dict[str, An
         'parent_id': None,
         'source': 'not_found',
     }
+
+    # Hardcoded override path. Skips the wbsearchentities top-N step
+    # and directly fetches the intended entity. Returns the override's
+    # canonical label (or input name if entity-data fetch failed).
+    override_qid = _EMPLOYER_OVERRIDES.get(name.upper().strip())
+    if override_qid:
+        ent = _entity_data(override_qid)
+        if ent is not None:
+            label = ent.get('labels', {}).get('en', {}).get('value') or name
+            return {
+                'canonical': label,
+                'original': name,
+                'relationship': 'parent',
+                'wikidata_id': override_qid,
+                'parent_id': None,
+                'source': 'wikidata',
+            }
+        # Override fetch failed (network blip etc.) — fall through to
+        # normal search rather than returning error, so the override
+        # doesn't silently turn into not_found.
+
     hits = _wbsearchentities(name, limit=search_limit)
     if hits is None:
         # Distinguish 'not_found' (search returned nothing) from 'error'
