@@ -158,6 +158,23 @@ Dominance heuristic (max_record / total > 50%) reliably flags fragmentation: top
 
 - [ ] **Wikidata-keyed donor canonicalization (gated on Wikidata being run).** The clean fix uses `wikidata_id` from `whale_corporate_links` as the merge key (not name). Name-search normalization in `_whale_name_to_search` strips middle initials so cross-name variants resolve to the same Q-id. Implementation: new `donor_canonical` collection mapping each donor_key → canonical_donor record with merged totals; soft-merge so it's reversible. candidate_funding's lookup follows the indirection. Doesn't touch raw `donors` / `contributed_to`.
 
+### Employer canonicalization audit (2026-05-09)
+
+`canonical_employers` has 100,372 entries (1,312 above $1M aggregate, 95 above $10M). Top entries surface clear fragmentation:
+
+- **Google/Alphabet split into 5**: `ALPHABET ($1M, 47 donors)`, `GOOGLE ($1M, 3)`, `GOOGLE CLIENT SERVICES ($0.5M, 11)`, `GOOGLE FIBER ($0.3M, 6)`, `GOOGLE VENTURES ($0.5M, 7)`. Same parent company.
+- **Blackstone split**: `BLACKSTONE ($118M, 349 donors)` + `BLACKSTONE GROUP ($46M, 144)` = $164M actual. Same firm.
+- **Citadel split**: `CITADEL INVESTMENT GROUP ($124M, 4)` + `CITADEL ASSET MANAGEMENT ($71M, 5)` — Ken Griffin's empire.
+- **Adelson Clinic split**: `ADELSON DRUG CLINIC ($201M, 5)` + `ADELSON CLINIC ($109M, 5)` — same Miriam Adelson clinic.
+- **Suspicious "CORPORATION"** ($57M, 2 donors) — generic word as employer.
+
+Current `employer_normalization.py` handles legal suffixes (LLC/INC/CORP/LP/LLP) and abbreviation expansion (INTL→INTERNATIONAL), but NOT:
+- Generic business suffixes (GROUP, HOLDINGS, MANAGEMENT, PARTNERS) — risky to add ("Group Health" is its own entity)
+- Parent-company resolution (Google → Alphabet) — fundamentally needs Wikidata
+- Same-family sub-entities (Citadel Investment vs Citadel Asset Management)
+
+- [ ] **Wikidata-driven corporate-family consolidation** is what fixes most of this. Once `wikidata_corporate_resolution` runs successfully, the `corporate_families` collection rolls these up. This audit reinforces Wikidata's importance — without it, the corporate attribution model is structurally degraded by name fragmentation that no rule-based approach can fix.
+
 ### Terminal-classification audit (2026-05-09)
 
 - [x] ~~**CMTE_TP=I/E unclassified.**~~ FIXED 2026-05-09 (commit `60461c4`). 993 IE-only entities (Reid Hoffman, SEIU PEAF, AFL-CIO COPE Treasury, Worker Power, etc.) moved from `unknown` → `super_pac_unclassified`. Trace now routes upstream through them.
