@@ -43,10 +43,20 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
   Trade-offs accepted in REST path: doesn't capture inverse relations (founder is stored on the company side as P112, REST can't query inverse cheaply), so e.g. KOUM, JAN doesn't link to WhatsApp via "founder" relationship — only via P108 employer (which lists Yahoo as his prior employer). SPARQL UNION query handled this; REST does not. Acceptable miss; can be revisited when SPARQL is healthy.
 
-- [ ] **Quirks to follow up:**
-  - "ENTREPRENEUR" appears as a "company" ($1.09M for Trump). Wikidata resolved the literal string "Entrepreneur" to its Q-id. Add to NON_EMPLOYERS in `employer_normalization.py`.
-  - "Federal Government of the United States" $62K via Kelly Craft (former US Ambassador). Wikidata's P108 (employer) for her is "United States federal government" — technically correct but weird in this context. Could blacklist Q-ids for governments.
-  - Some corporate families that should be merged remain split: ADELSON DRUG CLINIC vs ADELSON CLINIC (different Q-ids in Wikidata or one not_found), Pan Am Systems vs Pan Am Railways (different real entities owned by Mellon). Need follow-up: SPARQL parent-resolution would catch most of these via P749.
+- [x] ~~**Quirks to follow up:**~~ Resolved 2026-05-10 across two hit-rate-improvement passes (commits `12c04d0`, `a795735`, `815675c`):
+  - ~~"ENTREPRENEUR" / "INVESTOR" / "PHILANTHROPIST" leaking through as employers~~ → expanded `NON_EMPLOYERS` in `employer_normalization.py`. Also added `CAMPAIGN_COMMITTEE_MARKERS` to filter "FOR CONGRESS" / "FOR SENATE" / "VICTORY FUND" leakage from self-funder donors who list their own committee in the employer field.
+  - ~~"Federal Government of the United States" via Kelly Craft~~ → added `_is_government_entity` filter in `wikidata_client.py` rejecting descriptions matching "federal government", "government of", "sovereign state", "ministry of". Wired into both company and person resolution paths. Catches Kelly Craft's P108-target step.
+  - ~~Generic-concept abbreviation matches (SIG → "advocacy group", ATT → "lawyer", BCG → "brightest cluster galaxy", BUSINESS → "business" Q-id, etc.)~~ → three-layer fix:
+    - description-keyword blacklist (`_GENERIC_DESCRIPTION_PATTERNS`)
+    - lowercase-label heuristic (real entities are title-cased)
+    - top-N candidate filtering (wbsearchentities limit=5) + P31 instance-of blacklist (`_NON_CORPORATE_P31`: humans Q5, films Q11424, books Q571, vaccines, magazines, countries, languages, given names, submarines, Creative Commons licenses, etc.)
+  - ~~Suffix variations splitting families (BLACKSTONE GROUP vs BLACKSTONE)~~ → `_alternate_employer_forms` retries with one suffix stripped (GROUP/HOLDINGS/PARTNERS/INVESTMENTS/CAPITAL/etc.). Verified: BLACKSTONE GROUP → Blackstone Inc., CITADEL INVESTMENT GROUP → Citadel Enterprise Americas LLC, BRIDGEWATER ASSOCIATES → Bridgewater Associates.
+
+- [ ] **Remaining hit-rate residuals:**
+  - Some corporate families that should be merged remain split: ADELSON DRUG CLINIC vs ADELSON CLINIC (different Q-ids in Wikidata or one not_found), Pan Am Systems vs Pan Am Railways (different real entities owned by Mellon). Need follow-up: SPARQL parent-resolution would catch most of these via P749 once SPARQL endpoint is healthy.
+  - KKR HOLDINGS suffix-strips to KKR which still ranks Kolkata Knight Riders (cricket team Q1156894, P31=Q12973014) above Kohlberg Kravis Roberts (Q1570773, real KKR private equity). Add Q12973014 (cricket team) and other sport-team P31 Q-ids to `_NON_CORPORATE_P31` so the cricket team gets skipped and the real KKR is picked from top-N.
+  - FEC name format vs Wikidata search ranking: "SIMONS, JAMES H" → "James Simons" → top hit is 19th-century lawyer Confederate general (Q109713137), not Jim Simons hedge fund mathematician (Q560847). "Jim Simons" gets the right hit but the FEC normalization doesn't always produce that form. Hard to fix without per-name disambiguation hints.
+  - Moskovitz-shaped gaps: founders are listed on the company side (P112) not the person side, so REST path can't follow that edge cheaply. Acceptable miss; deferred until SPARQL is healthy enough to do the inverse query.
 
 ### Configuration centralization
 
