@@ -175,6 +175,15 @@ Current `employer_normalization.py` handles legal suffixes (LLC/INC/CORP/LP/LLP)
 
 - [ ] **Wikidata-driven corporate-family consolidation** is what fixes most of this. Once `wikidata_corporate_resolution` runs successfully, the `corporate_families` collection rolls these up. This audit reinforces Wikidata's importance — without it, the corporate attribution model is structurally degraded by name fragmentation that no rule-based approach can fix.
 
+### Audits that surfaced no real issues (2026-05-09)
+
+These were items in the "honest sequence" of things that might be wrong; spot-checking confirmed they're fine. Logging so future audits know they're not load-bearing.
+
+- [x] **Cycle assignment.** indiv.TRANSACTION_DT distribution within each fec_YYYY shows 99%+ of records dated within the cycle's expected 2-year window (fec_2020 has 99% in 2019-2020, fec_2022 has 99% in 2021-2022, etc). Tail of cross-cycle dates (~0.5% of records) are amendments/corrections; small enough to be noise. FEC's bulk-file boundaries align with cycle conventions — no cycle-mis-assignment bug.
+- [x] **JFC passthrough accounting.** TEAM SCALISE 2022 spot-check: received $28.2M from individuals (matches FEC webk.INDV_CONTRIB exactly), transferred $12M to SCALISE FOR CONGRESS. Trace multiplier = 12/28.2 = 42.5% — correct passthrough math. JFCs work.
+- [x] **spent_on support/oppose classification.** Top 2024 edges look correct: FF PAC supports Harris/Biden, AMERICA PAC supports Trump (Musk's PAC), MAGA Inc supports Trump AND opposes Harris (same PAC doing both, correctly tagged), WINSENATE/SLF oppose opposing-party Senate candidates. $10.3B 2024 IE volume matches reality.
+- [x] **Conduit filter coverage.** `WINRED|ACTBLUE|EARMARK|CONDUIT|UNITEMIZED` catches the major aggregator donor names. Top "donors" with org-shaped names are mostly candidate self-funders (`ISSA - PERSONAL FUNDS, DARRELL`, `STEEL - PERSONAL FUNDS, MICHELLE`) or one-off org-as-IND filings (`NEA ADVOCACY FUND`) — not missed conduits. No expansion needed.
+
 ### Terminal-classification audit (2026-05-09)
 
 - [x] ~~**CMTE_TP=I/E unclassified.**~~ FIXED 2026-05-09 (commit `60461c4`). 993 IE-only entities (Reid Hoffman, SEIU PEAF, AFL-CIO COPE Treasury, Worker Power, etc.) moved from `unknown` → `super_pac_unclassified`. Trace now routes upstream through them.
