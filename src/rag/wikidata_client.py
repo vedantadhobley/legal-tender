@@ -35,7 +35,8 @@ logger = logging.getLogger(__name__)
 
 WIKIDATA_SPARQL_ENDPOINT = "https://query.wikidata.org/sparql"
 USER_AGENT = "LegalTender/1.0 (https://github.com/vedantadhobley/legal-tender)"
-REQUEST_TIMEOUT = 60  # batched queries are heavier than single-name queries
+REQUEST_TIMEOUT = 180  # batched queries with P279* ontology walks can be slow
+                       # on Wikidata's public endpoint, especially under load
 RATE_LIMIT_DELAY = 1.0  # base inter-request sleep
 MAX_BACKOFF = 60.0
 MAX_RETRIES = 3
@@ -126,20 +127,28 @@ def _execute_sparql(query: str) -> Optional[Dict[str, Any]]:
 def _build_company_batch_query(names: List[str]) -> str:
     """SPARQL query to resolve N company names in one round-trip.
 
-    For each input name, returns the matched company entity (case-insensitive
-    label match against the business-entity ontology) plus its parent (P749)
-    if any. Names with no match simply don't appear in the result rows.
+    For each input name, returns any entity with a matching English label
+    plus its parent organization (P749) if any. Names with no match simply
+    don't appear in the result rows.
+
+    Originally constrained to business entities via `wdt:P31/wdt:P279*
+    wd:Q4830453` (instance-of-or-subclass-of business). Dropped because
+    that transitive ontology walk made batched queries time out on
+    Wikidata's public endpoint. False-positive matches (e.g. people who
+    happen to share a corporate name) won't have a P749 parent and are
+    effectively ignored downstream — `_resolve_company` only consumes
+    canonical/parent fields.
     """
     values = " ".join(f'"{_escape_sparql_literal(n)}"' for n in names)
     return f"""
     SELECT ?inputName ?company ?companyLabel ?parent ?parentLabel WHERE {{
       VALUES ?inputName {{ {values} }}
-      ?company wdt:P31/wdt:P279* wd:Q4830453 .
       ?company rdfs:label ?label .
       FILTER(LANG(?label) = "en" && LCASE(STR(?label)) = LCASE(STR(?inputName)))
       OPTIONAL {{ ?company wdt:P749 ?parent . }}
       SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
     }}
+    LIMIT 5000
     """
 
 

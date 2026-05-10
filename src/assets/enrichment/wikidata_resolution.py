@@ -176,12 +176,16 @@ class WikidataResolutionConfig(Config):
         description="Whether to make live Wikidata queries for cache misses",
     )
     employer_chunk_size: int = Field(
-        default=50,
-        description="Names per SPARQL VALUES batch for employers",
+        default=20,
+        description="Names per SPARQL VALUES batch for employers. Smaller = "
+                    "more requests but each completes faster on Wikidata's "
+                    "public endpoint. 20 keeps each batch under ~30s.",
     )
     whale_chunk_size: int = Field(
-        default=25,
-        description="Names per SPARQL VALUES batch for people",
+        default=15,
+        description="Names per SPARQL VALUES batch for people. Smaller than "
+                    "employer because the UNION-of-5-properties query is "
+                    "heavier per name.",
     )
 
 
