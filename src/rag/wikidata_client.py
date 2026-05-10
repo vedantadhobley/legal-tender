@@ -458,6 +458,17 @@ _NON_CORPORATE_P31 = {
     # Astronomy
     "Q17444909",  # galaxy classification
     "Q850950",  # astronomical catalog
+    # Sport teams (3-4 letter abbreviations frequently match these)
+    "Q12973014",  # cricket team (Kolkata Knight Riders for "KKR")
+    "Q476028",  # association football club
+    "Q847017",  # sports club
+    "Q4438121",  # sports organization
+    "Q15944511",  # sports team
+    "Q53538476",  # sports team season
+    "Q14435",  # baseball team
+    "Q15873",  # basketball team
+    "Q15976457",  # American football team
+    "Q1078541",  # ice hockey club
 }
 
 
