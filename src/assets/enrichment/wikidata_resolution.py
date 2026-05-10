@@ -49,7 +49,9 @@ from src.rag.employer_normalization import NON_EMPLOYERS, normalize_employer_nam
 from src.rag.wikidata_client import (
     reset_circuit_breaker,
     resolve_companies,
+    resolve_companies_rest,
     resolve_people,
+    resolve_people_rest,
 )
 from src.resources.arango import ArangoDBResource
 from src.utils.storage import get_cache_dir
@@ -175,6 +177,12 @@ class WikidataResolutionConfig(Config):
         default=True,
         description="Whether to make live Wikidata queries for cache misses",
     )
+    resolution_path: str = Field(
+        default="rest",
+        description="'rest' (per-name MediaWiki REST API — reliable, ~0.2s/name) "
+                    "or 'sparql' (SPARQL VALUES batches — faster when working "
+                    "but the public endpoint has been intermittently flaky).",
+    )
     employer_chunk_size: int = Field(
         default=20,
         description="Names per SPARQL VALUES batch for employers. Smaller = "
@@ -294,24 +302,35 @@ def wikidata_corporate_resolution(
         )
 
         if config.live_queries and names_to_query:
-            context.log.info(
-                f"Phase 1b: Batched Wikidata resolution "
-                f"({len(names_to_query):,} names, chunk={config.employer_chunk_size})..."
-            )
-            # Resolve into a temporary keyed-by-normalized-name dict,
-            # then fan back out to raw-name keys in employer_cache.
-            normalized_results: Dict[str, Any] = {}
+            use_rest = config.resolution_path == "rest"
+            if use_rest:
+                # REST path: per-name lookups, batch into "report-progress
+                # groups" of 50 for cache-flush cadence. Each name takes
+                # ~0.2-0.5s.
+                progress_chunk = 50
+                context.log.info(
+                    f"Phase 1b: REST Wikidata resolution "
+                    f"({len(names_to_query):,} names, ~{len(names_to_query)//4:,}s estimated)..."
+                )
+            else:
+                progress_chunk = config.employer_chunk_size
+                context.log.info(
+                    f"Phase 1b: Batched SPARQL Wikidata resolution "
+                    f"({len(names_to_query):,} names, chunk={config.employer_chunk_size})..."
+                )
             n_done = 0
             n_chunks = 0
-            for start in range(0, len(names_to_query), config.employer_chunk_size):
-                chunk = names_to_query[start:start + config.employer_chunk_size]
-                results = resolve_companies(chunk, chunk_size=config.employer_chunk_size)
-                normalized_results.update(results)
+            for start in range(0, len(names_to_query), progress_chunk):
+                chunk = names_to_query[start:start + progress_chunk]
+                if use_rest:
+                    results = resolve_companies_rest(chunk)
+                else:
+                    results = resolve_companies(chunk, chunk_size=config.employer_chunk_size)
                 n_done += len(chunk)
                 n_chunks += 1
                 if n_chunks % 5 == 0 or n_done == len(names_to_query):
                     context.log.info(f"  resolved {n_done:,}/{len(names_to_query):,}")
-                # Persist incrementally
+                # Persist incrementally — cache by raw employer name.
                 ts = datetime.utcnow().isoformat()
                 for emp in eligible_employers:
                     raw = emp['name']
@@ -321,7 +340,6 @@ def wikidata_corporate_resolution(
                     r = results[norm]
                     if r.get('source') == 'error':
                         continue
-                    # Cache by raw employer name (what we look up by)
                     employer_cache[raw] = {**r, 'cached_at': ts}
                     if r['source'] == 'wikidata':
                         stats['employers_live_resolved'] += 1
@@ -426,15 +444,26 @@ def wikidata_corporate_resolution(
             )
 
             if config.live_queries and whale_names_to_query:
-                context.log.info(
-                    f"Phase 3b: Batched Wikidata resolution "
-                    f"({len(whale_names_to_query):,} names, chunk={config.whale_chunk_size})..."
-                )
+                use_rest_w = config.resolution_path == "rest"
+                progress_chunk = 25 if use_rest_w else config.whale_chunk_size
+                if use_rest_w:
+                    context.log.info(
+                        f"Phase 3b: REST Wikidata resolution "
+                        f"({len(whale_names_to_query):,} names, ~{len(whale_names_to_query)//3:,}s estimated)..."
+                    )
+                else:
+                    context.log.info(
+                        f"Phase 3b: Batched SPARQL Wikidata resolution "
+                        f"({len(whale_names_to_query):,} names, chunk={config.whale_chunk_size})..."
+                    )
                 n_done = 0
                 n_chunks = 0
-                for start in range(0, len(whale_names_to_query), config.whale_chunk_size):
-                    chunk = whale_names_to_query[start:start + config.whale_chunk_size]
-                    results = resolve_people(chunk, chunk_size=config.whale_chunk_size)
+                for start in range(0, len(whale_names_to_query), progress_chunk):
+                    chunk = whale_names_to_query[start:start + progress_chunk]
+                    if use_rest_w:
+                        results = resolve_people_rest(chunk)
+                    else:
+                        results = resolve_people(chunk, chunk_size=config.whale_chunk_size)
                     n_done += len(chunk)
                     n_chunks += 1
                     if n_chunks % 4 == 0 or n_done == len(whale_names_to_query):
