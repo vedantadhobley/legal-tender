@@ -26,8 +26,14 @@ selection rather than a growing list of negative-pattern filters.
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+
+try:
+    import yaml  # type: ignore
+except ImportError:  # pragma: no cover
+    yaml = None  # YAML overrides become no-ops if pyyaml is missing
 
 from src.rag.wikidata_client import _entity_data, _claim_qid
 from src.rag.wikidata_reconci import (
@@ -37,6 +43,7 @@ from src.rag.wikidata_reconci import (
 )
 from src.rag.wikidata_ontology import (
     is_employer_type,
+    prewalk_common_types as ontology_prewalk_common,
     prewarm as ontology_prewarm,
     save_cache as save_ontology_cache,
 )
@@ -93,6 +100,12 @@ def _candidate_passes_type_filter(c: ReconciCandidate) -> bool:
 #   - < 50 = noise
 # Threshold of 70 keeps strong matches and rejects partial-token noise.
 CONFIDENCE_THRESHOLD = 70.0
+# Lower band: accept score 40-69 only if candidate label starts with
+# the FEC name. See _select_best_candidate.
+# Threshold 40 chosen to catch "AKIN GUMP" → "Akin Gump Strauss Hauer
+# & Feld" at score 49 (long Wikidata label drives down the simple
+# input-vs-label ratio score even though the prefix is exact).
+CONFIDENCE_LOW_THRESHOLD = 40.0
 
 
 # ---------------------------------------------------------------------------
@@ -199,16 +212,130 @@ def _resolve_parent_label(qid: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
+# YAML-driven overrides (data, not code)
+# ---------------------------------------------------------------------------
+#
+# Loaded from config/wikidata_overrides.yaml. Two kinds of entry:
+#   force_qid: FEC name → specific Wikidata Q-id (when search ranks
+#              the right entity below the wrong one — NEA, CITADEL,
+#              etc.)
+#   alias_to:  FEC name → another FEC name (forces canonical merging
+#              for cases where Wikidata lacks the cross-alias)
+#
+# This file is the ONLY place hardcoded resolution decisions live;
+# the resolver itself contains no per-name special cases.
+
+_OVERRIDES_PATH = os.environ.get(
+    "WIKIDATA_OVERRIDES_PATH",
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "config",
+        "wikidata_overrides.yaml",
+    ),
+)
+
+_force_qid_map: Optional[Dict[str, str]] = None
+_alias_to_map: Optional[Dict[str, str]] = None
+
+
+def _load_overrides() -> None:
+    """Lazily load wikidata_overrides.yaml. Idempotent — only reads once."""
+    global _force_qid_map, _alias_to_map
+    if _force_qid_map is not None:
+        return
+    _force_qid_map = {}
+    _alias_to_map = {}
+    if yaml is None:
+        return
+    if not os.path.exists(_OVERRIDES_PATH):
+        logger.info("Overrides file not found at %s; resolver runs without overrides", _OVERRIDES_PATH)
+        return
+    try:
+        with open(_OVERRIDES_PATH) as f:
+            data = yaml.safe_load(f) or {}
+    except (OSError, yaml.YAMLError) as e:
+        logger.warning("Could not load overrides %s: %s", _OVERRIDES_PATH, e)
+        return
+    for entry in (data.get("force_qid") or []):
+        fec = (entry.get("fec_name") or "").upper().strip()
+        qid = entry.get("wikidata_id")
+        if fec and qid:
+            _force_qid_map[fec] = qid
+    for entry in (data.get("alias_to") or []):
+        fec = (entry.get("fec_name") or "").upper().strip()
+        canon = (entry.get("canonical") or "").upper().strip()
+        if fec and canon:
+            _alias_to_map[fec] = canon
+    logger.info(
+        "Loaded wikidata overrides: %d force_qid + %d alias_to entries",
+        len(_force_qid_map), len(_alias_to_map),
+    )
+
+
+def _force_qid_for(name: str) -> Optional[str]:
+    _load_overrides()
+    return (_force_qid_map or {}).get(name.upper().strip())
+
+
+def _alias_target_for(name: str) -> Optional[str]:
+    _load_overrides()
+    return (_alias_to_map or {}).get(name.upper().strip())
+
+
+def _build_override_result(
+    fec_name: str, qid: str, types_alts: List[Dict[str, Any]]
+) -> Optional[ResolutionResult]:
+    """Construct a ResolutionResult from a force_qid override. Fetches
+    the entity's English label for canonical_name. Returns None on
+    fetch failure (caller falls back to normal resolution path)."""
+    entity = _entity_data(qid)
+    if entity is None:
+        return None
+    label = entity.get("labels", {}).get("en", {}).get("value")
+    if not label:
+        return None
+    # P749 parent rollup, same logic as primary path.
+    parent_label = _resolve_parent_label(qid)
+    canonical = parent_label or label
+    relationship = "subsidiary_of" if parent_label else "parent"
+    return ResolutionResult(
+        original=fec_name,
+        canonical=canonical,
+        wikidata_id=qid,
+        parent_id=None,
+        relationship=relationship,
+        source="wikidata",
+        method="yaml_override_force_qid",
+        confidence=100.0,
+        alternatives=types_alts,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Per-name resolution
 # ---------------------------------------------------------------------------
 
 
+def _label_starts_with_fec_name(fec_name: str, label: str) -> bool:
+    """Cheap signal that a low-score reconci candidate is actually a
+    real match: its label starts with the FEC string (case-insensitive,
+    post-suffix-normalization). Catches "AKIN GUMP" → "Akin Gump
+    Strauss Hauer & Feld" while rejecting fuzzy stem matches like
+    "FAHR" → "Deutz-Fahr"."""
+    if not fec_name or not label:
+        return False
+    fec_lower = fec_name.lower().strip()
+    label_lower = label.lower().strip()
+    return label_lower.startswith(fec_lower)
+
+
 def _select_best_candidate(
     candidates: List[ReconciCandidate],
+    fec_name: Optional[str] = None,
 ) -> Optional[ReconciCandidate]:
     """Pick the best candidate from a ranked list:
-      1. Filter by client-side P31 type whitelist
-      2. Filter by confidence threshold
+      1. Filter by client-side ontology-based type filter
+      2. Filter by confidence threshold (with label-prefix relaxation)
       3. If multiple survive at the top score → sitelinks tiebreak
       4. Otherwise → highest score wins
     Returns None if nothing passes filters."""
@@ -216,11 +343,24 @@ def _select_best_candidate(
     if not candidates:
         return None
 
-    # 1+2: type + confidence filters
-    eligible = [
-        c for c in candidates
-        if c.score >= CONFIDENCE_THRESHOLD and _candidate_passes_type_filter(c)
-    ]
+    # 1+2: type + confidence filters. Two acceptance bands:
+    #   ≥ CONFIDENCE_THRESHOLD (=70): always accept if type-eligible
+    #   ≥ CONFIDENCE_LOW_THRESHOLD (=50): accept if type-eligible AND
+    #       the candidate's label starts with the FEC string
+    #       (case-insensitive). This catches names like "GREYLOCK"
+    #       (→ "Greylock Partners" at score 64) and "AKIN GUMP"
+    #       (→ "Akin Gump Strauss Hauer & Feld" at score 49) without
+    #       admitting fuzzy stem-similarity matches.
+    eligible = []
+    for c in candidates:
+        if not _candidate_passes_type_filter(c):
+            continue
+        if c.score >= CONFIDENCE_THRESHOLD:
+            eligible.append(c)
+        elif c.score >= CONFIDENCE_LOW_THRESHOLD and fec_name and \
+                _label_starts_with_fec_name(fec_name, c.name):
+            eligible.append(c)
+
     if not eligible:
         return None
 
@@ -268,7 +408,18 @@ def resolve_one(
         for c in raw_candidates[:5]
     ]
 
-    chosen = _select_best_candidate(raw_candidates)
+    # YAML overrides — force_qid path. If the FEC name is in the
+    # overrides table, fetch the forced Q-id directly. Skip the
+    # search-rank-then-filter path entirely for these — they're
+    # explicit decisions backed by reviewed rationale.
+    forced_qid = _force_qid_for(name)
+    if forced_qid:
+        forced_result = _build_override_result(name, forced_qid, alts)
+        if forced_result is not None:
+            return forced_result
+        # else: fall through to normal resolution if entity-fetch failed
+
+    chosen = _select_best_candidate(raw_candidates, fec_name=name)
     if chosen is None:
         return ResolutionResult(
             original=name, canonical=name, wikidata_id=None, parent_id=None,
@@ -337,18 +488,82 @@ def _gleif_to_resolution(name: str, g: GleifResolution) -> ResolutionResult:
     )
 
 
+# Trailing tokens that often appear on FEC employer names but are
+# absent (or differently-cased) on the canonical Wikidata entry.
+# Surfaced by the validation diff (2026-05-10): "BAUPOST GROUP" /
+# "MEDLEY PARTNERS" / "SEQUOIA HOLDINGS" / "AKIN GUMP" / "MOUNTAIRE"
+# all failed via reconci.link directly but resolve cleanly via the
+# suffix-stripped form ("BAUPOST" → "Baupost Group" via alias).
+#
+# This list is reference data — finite legal-form / corporate-decoration
+# suffixes — not a band-aid. Adding a new suffix is a small documented
+# data change, not a code-shaped exception.
+_RETRY_SUFFIX_TOKENS = (
+    "GROUP",
+    "HOLDINGS",
+    "HOLDING",
+    "PARTNERS",
+    "INVESTMENTS",
+    "INVESTMENT",
+    "CAPITAL",
+    "ENTERPRISES",
+    "ASSOCIATES",
+    "COMPANIES",
+    "INDUSTRIES",
+    "VENTURES",
+    "ADVISORS",
+    "LLC",
+    "INC",
+    "CORP",
+    "CO",
+    "LP",
+    "LLP",
+    "MANAGEMENT",
+)
+
+
+def _suffix_stripped_alternates(name: str) -> List[str]:
+    """Return up to one suffix-stripped variant of `name` for retry.
+    Conservative — emits at most one candidate, and only if stripping
+    leaves a meaningful (≥3-char) remainder."""
+    tokens = name.split()
+    if len(tokens) < 2:
+        return []
+    last = tokens[-1].upper().rstrip(",.;:")
+    if last in _RETRY_SUFFIX_TOKENS:
+        candidate = " ".join(tokens[:-1]).strip()
+        if len(candidate) >= 3:
+            return [candidate]
+    return []
+
+
 def resolve_batch(
     names: List[str],
     use_gleif_fallback: bool = True,
+    use_suffix_retry: bool = True,
 ) -> Dict[str, ResolutionResult]:
     """Resolve many FEC names through the two-layer pipeline:
-       Layer 1: Wikidata via reconci.link (typed candidate space)
-       Layer 2: GLEIF (LEI registry) as fallback for not_found
+       Layer 1:    Wikidata via reconci.link (typed candidate space)
+       Layer 1.5:  Wikidata retry on suffix-stripped form for not_found
+       Layer 2:    GLEIF (LEI registry) as fallback for remaining not_found
 
-    GLEIF is gated by `use_gleif_fallback`. Disable for tests / dry-runs.
+    Each layer's result must pass the same ontology + confidence + tiebreak
+    filters. The suffix-retry result, in particular, can't sneak in a
+    wrong-corporate match — it goes through resolve_one() exactly like
+    the primary path. So "PRATT INDUSTRIES" → strip → "PRATT" → reconci
+    might return Pratt Institute, but Pratt Institute won't pass the
+    corporate-type filter (it's a university — would pass; on second
+    thought we keep it because universities ARE legitimate employers in
+    our model). The point is: the gates are uniform across layers.
     """
     if not names:
         return {}
+
+    # One-time pre-walk of common employer-type Q-ids. Idempotent —
+    # cache-hit-fast on subsequent calls. First call costs ~30s of
+    # parallel REST traffic; eliminates the per-chunk in-line walk
+    # cost for the most frequent type Q-ids.
+    ontology_prewalk_common()
 
     # Layer 1: Wikidata via reconci.link.
     candidates_by_name = reconcile_batch(names)
@@ -368,37 +583,88 @@ def resolve_batch(
         ontology_prewarm(all_type_ids)
         save_ontology_cache()
 
-    layer1: Dict[str, ResolutionResult] = {
+    out: Dict[str, ResolutionResult] = {
         name: resolve_one(name, candidates_by_name) for name in names
     }
 
-    if not use_gleif_fallback:
-        return layer1
+    # ----------------------------------------------------------------
+    # Layer 2: GLEIF strict-match for remaining not_founds.
+    # Run BEFORE suffix retry because GLEIF is high-precision (exact
+    # post-suffix-strip equality required), while suffix retry uses
+    # reconci's fuzzy ranking which can match wrong corporate entities
+    # (e.g. PRATT INDUSTRIES → suffix retry would land on "Pratt
+    # Institute" school; GLEIF correctly matches "PRATT INDUSTRIES, INC.").
+    # ----------------------------------------------------------------
+    if use_gleif_fallback:
+        gleif_input = [name for name, r in out.items() if r.source == "not_found"]
+        if gleif_input:
+            logger.info(
+                "Wikidata resolved %d/%d names; trying GLEIF fallback on %d not-founds",
+                len(names) - len(gleif_input), len(names), len(gleif_input),
+            )
+            gleif_results = gleif_resolve_batch(gleif_input)
+            for name in gleif_input:
+                g = gleif_results.get(name)
+                if g is None:
+                    continue
+                if g.source == "gleif":
+                    out[name] = _gleif_to_resolution(name, g)
+                # else: keep the not_found (with Wikidata-side
+                # alternatives provenance)
 
-    # Layer 2: for names that came back not_found from Wikidata,
-    # try GLEIF. Only the not-found subset is queried — GLEIF should
-    # never override a confident Wikidata match.
-    gleif_input = [name for name, r in layer1.items() if r.source == "not_found"]
-    if not gleif_input:
-        return layer1
+    # ----------------------------------------------------------------
+    # Layer 3 (last resort): suffix-retry on still-not_found names.
+    # Reconci's fuzzy matching plus same ontology filter — same
+    # gates as Layer 1, applied to a stripped form of the FEC name.
+    # Lowest precision tier; runs only after GLEIF passes.
+    # ----------------------------------------------------------------
+    if use_suffix_retry:
+        retry_pairs = []  # [(original_name, alternate_form), ...]
+        for name, r in out.items():
+            if r.source != "not_found":
+                continue
+            for alt in _suffix_stripped_alternates(name):
+                retry_pairs.append((name, alt))
+                break  # at most one alternate per name
 
-    logger.info(
-        "Wikidata resolved %d/%d names; trying GLEIF fallback on %d not-founds",
-        len(names) - len(gleif_input), len(names), len(gleif_input),
-    )
-    gleif_results = gleif_resolve_batch(gleif_input)
+        if retry_pairs:
+            logger.info("Layer 3: suffix-retry on %d remaining not-founds", len(retry_pairs))
+            alt_names = list({alt for _, alt in retry_pairs})
+            alt_candidates = reconcile_batch(alt_names)
 
-    # Merge: GLEIF result OVERRIDES the layer1 not_found if and only if
-    # GLEIF actually matched.
-    out: Dict[str, ResolutionResult] = dict(layer1)
-    for name in gleif_input:
-        g = gleif_results.get(name)
-        if g is None:
-            continue
-        if g.source == "gleif":
-            out[name] = _gleif_to_resolution(name, g)
-        # else: keep the layer1 not_found (with its more-detailed
-        # Wikidata-side alternatives provenance)
+            # Pre-warm the ontology cache for the new types from retry results.
+            retry_type_ids = [
+                t.get("id", "")
+                for cands in alt_candidates.values()
+                for c in cands
+                for t in (c.types or [])
+                if t.get("id")
+            ]
+            if retry_type_ids:
+                ontology_prewarm(retry_type_ids)
+                save_ontology_cache()
+
+            for original, alt in retry_pairs:
+                retry_result = resolve_one(alt, alt_candidates)
+                # Only accept Layer-3 retries at FULL confidence (≥70).
+                # Suffix-retry runs reconci's fuzzy-match against a
+                # truncated form of the FEC name, which can land on
+                # famous-but-wrong entities ("BALLMER" → Ballmer
+                # Institute the school, "MEDLEY" → Medley Records) that
+                # pass the ontology filter (institutes/labels are
+                # legitimate organizations) but aren't what the FEC
+                # donor meant. High-confidence retry hits are
+                # legitimate canonicalization (Greylock → Greylock
+                # Partners via alias); low-confidence retry hits are
+                # mostly noise.
+                if (
+                    retry_result.source == "wikidata"
+                    and retry_result.confidence >= CONFIDENCE_THRESHOLD
+                ):
+                    retry_result.original = original
+                    retry_result.method = f"suffix_retry_{retry_result.method}"
+                    out[original] = retry_result
+
     return out
 
 
