@@ -1,13 +1,14 @@
 # Production Docker Compose for Legal Tender
 #
-# Port allocation: legal-tender uses 3300-3309 (production)
-#   3300: Dagster UI
-#   3301: ArangoDB Web UI
-#   3302: (reserved)
+# HTTP services reachable via Caddy on the workspace `proxy` network:
+#   legal-tender-prod-webserver.luv   → dagster-webserver:3000
+#   legal-tender-prod-arango.luv      → arangodb:8529
+# See deploy/INFRA-NOTES.md for the Caddyfile entries on luv.
 #
-# Internal ports (not exposed to host):
+# Internal ports (not exposed to host; reachable on luv-prod / legal-tender-prod):
 #   - postgres:5432 (Dagster metadata)
 #   - arangodb:8529 (Graph database)
+#   - dagster-webserver:3000
 #
 # External services (via Tailscale FQDN — bare hostname won't resolve in Docker):
 #   - <llm-host>:3101 (LLM chat/thinking API — Qwen3.5-35B-A3B)
@@ -31,8 +32,6 @@ services:
     image: legal-tender:latest
     container_name: legal-tender-prod-webserver
     command: dagster-webserver -h 0.0.0.0 -p 3000 -w /app/workspace.yaml
-    ports:
-      - "3300:3000"  # Dagster UI
     env_file:
       - .env
     environment:
@@ -72,6 +71,7 @@ services:
     networks:
       - legal-tender-prod
       - luv-prod
+      - proxy
 
   # DAGSTER DAEMON - Schedules and sensors
   dagster-daemon:
@@ -135,8 +135,6 @@ services:
   arangodb:
     image: arangodb:3.11
     container_name: legal-tender-prod-arango
-    ports:
-      - "3301:8529"  # ArangoDB Web UI
     environment:
       ARANGO_ROOT_PASSWORD: ltpass
       # Memory budget for ArangoDB. LLMs run on joi, leaving this 128GB
@@ -181,6 +179,7 @@ services:
     networks:
       - legal-tender-prod
       - luv-prod
+      - proxy
 
 volumes:
   legal-tender-prod-postgres-data:
@@ -203,4 +202,10 @@ networks:
   
   # Shared network - cross-project communication
   luv-prod:
+    external: true
+
+  # Caddy reverse proxy fronts HTTP services here.
+  # See deploy/INFRA-NOTES.md and ~/workspace/proxy/caddy/caddy.d/legal-tender.caddy.
+  proxy:
+    name: proxy
     external: true

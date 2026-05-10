@@ -1,12 +1,14 @@
 # Development Docker Compose for Legal Tender
 #
-# Port allocation: legal-tender uses 4300-4309 (dev)
-#   4300: Dagster UI
-#   4301: ArangoDB Web UI
+# HTTP services reachable via Caddy on the workspace `proxy` network:
+#   legal-tender-dev-webserver.luv   → dagster-webserver:3000
+#   legal-tender-dev-arango.luv      → arangodb:8529
+# See deploy/INFRA-NOTES.md for the Caddyfile entries on luv.
 #
-# Internal ports (not exposed to host):
+# Internal ports (not exposed to host; reachable on luv-dev / legal-tender-dev):
 #   - postgres:5432 (Dagster metadata)
 #   - arangodb:8529 (Graph database)
+#   - dagster-webserver:3000
 #
 # External services (via Tailscale FQDN — bare hostname won't resolve in Docker):
 #   - <llm-host>:3101 (LLM chat/thinking API — Qwen3.5-35B-A3B)
@@ -29,8 +31,6 @@ services:
       dockerfile: Dockerfile.dev
     container_name: legal-tender-dev-webserver
     command: dagster dev -h 0.0.0.0 -p 3000 -w /workspace/workspace.yaml
-    ports:
-      - "4300:3000"  # Dagster UI
     env_file:
       - .env
     environment:
@@ -72,6 +72,7 @@ services:
     networks:
       - legal-tender-dev
       - luv-dev
+      - proxy
 
   # NOTE: dagster dev (in webserver) already runs the daemon internally,
   # so we don't need a separate daemon container for development.
@@ -103,8 +104,6 @@ services:
   arangodb:
     image: arangodb:3.11
     container_name: legal-tender-dev-arango
-    ports:
-      - "4301:8529"  # ArangoDB Web UI
     environment:
       ARANGO_ROOT_PASSWORD: ltpass
       # Memory budget for ArangoDB. LLMs run on joi, leaving this 128GB
@@ -156,6 +155,7 @@ services:
     networks:
       - legal-tender-dev
       - luv-dev  # Allow cross-project access if needed
+      - proxy
 
 volumes:
   legal-tender-dev-postgres-data:
@@ -178,4 +178,10 @@ networks:
   
   # Shared network - cross-project communication
   luv-dev:
+    external: true
+
+  # Caddy reverse proxy fronts HTTP services here.
+  # See deploy/INFRA-NOTES.md and ~/workspace/proxy/caddy/caddy.d/legal-tender.caddy.
+  proxy:
+    name: proxy
     external: true
