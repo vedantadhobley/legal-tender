@@ -343,6 +343,146 @@ def _merge_named_list(lists: List[List[Dict[str, Any]]], n: Optional[int], min_a
     return result[:n] if n else result
 
 
+def load_lookup_data(db) -> Dict[str, Any]:
+    """Load all the in-memory lookup state candidate_funding needs to
+    process candidates: committee info per cycle, donor info, employer
+    and whale → corporate-family mappings, transfer/contrib/IE edges
+    per cycle.
+
+    Returns a dict with these keys (each is what its name suggests):
+        cmte_info_by_cycle
+        employer_to_company
+        whale_to_company
+        donor_info
+        transfer_edges_by_cycle
+        contrib_edges_by_cycle
+        ie_by_cycle
+
+    No light side effects beyond the obvious DB reads. Caller logs
+    counts after each step using the returned dict's sizes.
+    """
+    # Committee info with terminal_type and per-cycle receipts
+    cmte_info: Dict[str, Dict[str, Any]] = {}
+    for c in db.aql.execute("""
+        FOR c IN committees
+        RETURN {
+            _key: c._key,
+            name: c.CMTE_NM,
+            terminal_type: c.terminal_type,
+            total_receipts: c.total_receipts || 0,
+            total_from_individuals: c.total_from_individuals || 0,
+            total_from_committees: c.total_from_committees || 0,
+            small_donor_total: c.small_donor_total || 0,
+            self_funding_total: c.self_funding_total || 0,
+            receipts_by_cycle: c.receipts_by_cycle || {}
+        }
+    """):
+        cmte_info[c['_key']] = c
+
+    # Per-cycle slices of committee state — used as the per-candidate
+    # cycle_cmte_info argument to compute_funding_channels.
+    cmte_info_by_cycle: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    for cycle in CYCLES:
+        cycle_info: Dict[str, Dict[str, Any]] = {}
+        for cmte_id, info in cmte_info.items():
+            cycle_data = info.get('receipts_by_cycle', {}).get(cycle, {})
+            cycle_info[cmte_id] = {
+                '_key': cmte_id,
+                'name': info['name'],
+                'terminal_type': info['terminal_type'],
+                'total_receipts': cycle_data.get('total_receipts', 0) or 0,
+                'total_from_individuals': cycle_data.get('total_from_individuals', 0) or 0,
+                'total_from_committees': cycle_data.get('total_from_committees', 0) or 0,
+                'small_donor_total': cycle_data.get('small_donor_total', 0) or 0,
+                'self_funding_total': cycle_data.get('self_funding_total', 0) or 0,
+            }
+        cmte_info_by_cycle[cycle] = cycle_info
+
+    # Employer → canonical corporate family. Built by the
+    # canonical_employers + wikidata_corporate_resolution assets.
+    employer_to_company: Dict[str, str] = {}
+    if db.has_collection('employer_canonical_mapping'):
+        for m in db.aql.execute(
+            "FOR m IN employer_canonical_mapping RETURN { employer: m.employer_name, company: m.canonical_name }"
+        ):
+            employer_to_company[m['employer']] = m['company']
+
+    # Whale donor name → corporate family (founder/owner/CEO links).
+    whale_to_company: Dict[str, str] = {}
+    if db.has_collection('whale_corporate_links'):
+        for link in db.aql.execute(
+            "FOR l IN whale_corporate_links RETURN { donor: l.donor_name, company: l.canonical_name }"
+        ):
+            whale_to_company[link['donor']] = link['company']
+
+    # Whale donor info (≥$10K aggregate, deduped per (name, employer)).
+    donor_info: Dict[str, Dict[str, Any]] = {}
+    for d in db.aql.execute("""
+        FOR d IN donors
+        FILTER d.total_amount >= 10000
+        RETURN {
+            _key: d._key,
+            name: d.canonical_name,
+            employer: d.canonical_employer,
+            total: d.total_amount
+        }
+    """):
+        donor_info[d['_key']] = d
+
+    # Transfer + contribution + IE edges, partitioned by cycle.
+    transfer_edges_by_cycle: Dict[str, Dict[str, List]] = {c: defaultdict(list) for c in CYCLES}
+    for e in db.aql.execute("FOR e IN transferred_to RETURN e"):
+        to_cmte = e['_to'].split('/')[1]
+        from_cmte = e['_from'].split('/')[1]
+        amount = e.get('total_amount', 0) or 0
+        cycle = e.get('cycle', '2024')
+        if cycle in CYCLES:
+            transfer_edges_by_cycle[cycle][to_cmte].append((from_cmte, amount))
+
+    contrib_edges_by_cycle: Dict[str, Dict[str, List]] = {c: defaultdict(list) for c in CYCLES}
+    for e in db.aql.execute("FOR e IN contributed_to RETURN e"):
+        to_cmte = e['_to'].split('/')[1]
+        donor_key = e['_from'].split('/')[1]
+        amount = e.get('total_amount', 0) or 0
+        cycle = e.get('cycle', '2024')
+        if cycle in CYCLES:
+            contrib_edges_by_cycle[cycle][to_cmte].append((donor_key, amount))
+
+    ie_by_cycle: Dict[str, Dict[str, Dict[str, List]]] = {
+        c: defaultdict(lambda: {'support': [], 'oppose': []}) for c in CYCLES
+    }
+    for e in db.aql.execute("""
+        FOR e IN spent_on
+        RETURN {
+            cand_id: SPLIT(e._to, '/')[1],
+            cmte_id: SPLIT(e._from, '/')[1],
+            amount: e.total_amount,
+            support_oppose: e.support_oppose,
+            cycle: e.cycle
+        }
+    """):
+        cand_id = e['cand_id']
+        cmte_id = e['cmte_id']
+        amount = e['amount'] or 0
+        cycle = e.get('cycle', '2024')
+        if cycle not in CYCLES:
+            continue
+        if e['support_oppose'] == 'S':
+            ie_by_cycle[cycle][cand_id]['support'].append((cmte_id, amount))
+        else:
+            ie_by_cycle[cycle][cand_id]['oppose'].append((cmte_id, amount))
+
+    return {
+        'cmte_info_by_cycle': cmte_info_by_cycle,
+        'employer_to_company': employer_to_company,
+        'whale_to_company': whale_to_company,
+        'donor_info': donor_info,
+        'transfer_edges_by_cycle': transfer_edges_by_cycle,
+        'contrib_edges_by_cycle': contrib_edges_by_cycle,
+        'ie_by_cycle': ie_by_cycle,
+    }
+
+
 def merge_funding_channels(cycle_results: Dict[str, Dict], config: 'CandidateFundingConfig') -> Optional[Dict[str, Any]]:
     """Merge per-cycle funding_channels dicts into a single aggregate.
 
@@ -879,145 +1019,20 @@ def candidate_funding_asset(
         # PHASE 1: Load lookup data into memory
         # ================================================================
         context.log.info("Phase 1: Loading lookup data...")
-        
-        # Committee info with terminal_type and per-cycle receipts
-        cmte_info = {}
-        for c in db.aql.execute("""
-            FOR c IN committees
-            RETURN {
-                _key: c._key,
-                name: c.CMTE_NM,
-                terminal_type: c.terminal_type,
-                total_receipts: c.total_receipts || 0,
-                total_from_individuals: c.total_from_individuals || 0,
-                total_from_committees: c.total_from_committees || 0,
-                small_donor_total: c.small_donor_total || 0,
-                self_funding_total: c.self_funding_total || 0,
-                receipts_by_cycle: c.receipts_by_cycle || {}
-            }
-        """):
-            cmte_info[c['_key']] = c
-        context.log.info(f"   Loaded {len(cmte_info):,} committees")
+        lookups = load_lookup_data(db)
+        cmte_info_by_cycle = lookups["cmte_info_by_cycle"]
+        employer_to_company = lookups["employer_to_company"]
+        whale_to_company = lookups["whale_to_company"]
+        donor_info = lookups["donor_info"]
+        transfer_edges_by_cycle = lookups["transfer_edges_by_cycle"]
+        contrib_edges_by_cycle = lookups["contrib_edges_by_cycle"]
+        ie_by_cycle = lookups["ie_by_cycle"]
+        context.log.info(
+            f"   Loaded {len(cmte_info_by_cycle[CYCLES[0]]):,} committees, "
+            f"{len(donor_info):,} whales, {len(employer_to_company):,} employer mappings, "
+            f"{len(whale_to_company):,} whale-corporate links"
+        )
 
-        # Build per-cycle cmte_info dicts (per-cycle receipts for correct multipliers)
-        cmte_info_by_cycle = {}
-        for cycle in CYCLES:
-            cycle_info = {}
-            for cmte_id, info in cmte_info.items():
-                cycle_data = info.get('receipts_by_cycle', {}).get(cycle, {})
-                cycle_info[cmte_id] = {
-                    '_key': cmte_id,
-                    'name': info['name'],
-                    'terminal_type': info['terminal_type'],
-                    'total_receipts': cycle_data.get('total_receipts', 0) or 0,
-                    'total_from_individuals': cycle_data.get('total_from_individuals', 0) or 0,
-                    'total_from_committees': cycle_data.get('total_from_committees', 0) or 0,
-                    'small_donor_total': cycle_data.get('small_donor_total', 0) or 0,
-                    'self_funding_total': cycle_data.get('self_funding_total', 0) or 0,
-                }
-            cmte_info_by_cycle[cycle] = cycle_info
-        context.log.info(f"   Built per-cycle cmte_info dicts")
-        
-        # Corporate families for employer -> company mapping
-        employer_to_company = {}
-        if db.has_collection('employer_canonical_mapping'):
-            for m in db.aql.execute("""
-                FOR m IN employer_canonical_mapping
-                RETURN {employer: m.employer_name, company: m.canonical_name}
-            """):
-                employer_to_company[m['employer']] = m['company']
-        context.log.info(f"   Loaded {len(employer_to_company):,} employer mappings")
-        
-        # Corporate families with totals
-        corporate_families = {}
-        if db.has_collection('corporate_families'):
-            for f in db.aql.execute("""
-                FOR f IN corporate_families
-                RETURN {
-                    name: f.canonical_name,
-                    employee_total: f.total_from_employees,
-                    whale_total: f.total_from_whales,
-                    wikidata_id: f.wikidata_id
-                }
-            """):
-                corporate_families[f['name']] = f
-        context.log.info(f"   Loaded {len(corporate_families):,} corporate families")
-        
-        # Whale corporate links (billionaires -> companies)
-        whale_to_company = {}
-        if db.has_collection('whale_corporate_links'):
-            for link in db.aql.execute("""
-                FOR l IN whale_corporate_links
-                RETURN {donor: l.donor_name, company: l.canonical_name}
-            """):
-                whale_to_company[link['donor']] = link['company']
-        context.log.info(f"   Loaded {len(whale_to_company):,} whale-corporate links")
-        
-        # Donor info for whale lookups
-        donor_info = {}
-        for d in db.aql.execute("""
-            FOR d IN donors
-            FILTER d.total_amount >= 10000
-            RETURN {
-                _key: d._key,
-                name: d.canonical_name,
-                employer: d.canonical_employer,
-                total: d.total_amount
-            }
-        """):
-            donor_info[d['_key']] = d
-        context.log.info(f"   Loaded {len(donor_info):,} whale donors ($10K+)")
-        
-        # Transfer edges BY CYCLE: cycle -> to_cmte -> [(from_cmte, amount), ...]
-        transfer_edges_by_cycle = {cycle: defaultdict(list) for cycle in CYCLES}
-        for e in db.aql.execute("FOR e IN transferred_to RETURN e"):
-            to_cmte = e['_to'].split('/')[1]
-            from_cmte = e['_from'].split('/')[1]
-            amount = e.get('total_amount', 0) or 0
-            cycle = e.get('cycle', '2024')
-            if cycle in CYCLES:
-                transfer_edges_by_cycle[cycle][to_cmte].append((from_cmte, amount))
-        context.log.info(f"   Loaded transfer edges by cycle: " +
-                        ", ".join(f"{c}={sum(len(v) for v in transfer_edges_by_cycle[c].values()):,}" for c in CYCLES))
-        
-        # Contribution edges BY CYCLE: cycle -> cmte -> [(donor_key, amount), ...]
-        contrib_edges_by_cycle = {cycle: defaultdict(list) for cycle in CYCLES}
-        for e in db.aql.execute("FOR e IN contributed_to RETURN e"):
-            to_cmte = e['_to'].split('/')[1]
-            donor_key = e['_from'].split('/')[1]
-            amount = e.get('total_amount', 0) or 0
-            cycle = e.get('cycle', '2024')
-            if cycle in CYCLES:
-                contrib_edges_by_cycle[cycle][to_cmte].append((donor_key, amount))
-        context.log.info(f"   Loaded contribution edges by cycle: " +
-                        ", ".join(f"{c}={sum(len(v) for v in contrib_edges_by_cycle[c].values()):,}" for c in CYCLES))
-        
-        # IE spending BY CYCLE: cycle -> candidate -> {support: [(cmte, amount)], oppose: [(cmte, amount)]}
-        ie_by_cycle = {cycle: defaultdict(lambda: {'support': [], 'oppose': []}) for cycle in CYCLES}
-        for e in db.aql.execute("""
-            FOR e IN spent_on
-            RETURN {
-                cand_id: SPLIT(e._to, '/')[1],
-                cmte_id: SPLIT(e._from, '/')[1],
-                amount: e.total_amount,
-                support_oppose: e.support_oppose,
-                cycle: e.cycle
-            }
-        """):
-            cand_id = e['cand_id']
-            cmte_id = e['cmte_id']
-            amount = e['amount'] or 0
-            cycle = e.get('cycle', '2024')
-
-            if e['support_oppose'] == 'S':
-                if cycle in CYCLES:
-                    ie_by_cycle[cycle][cand_id]['support'].append((cmte_id, amount))
-            else:
-                if cycle in CYCLES:
-                    ie_by_cycle[cycle][cand_id]['oppose'].append((cmte_id, amount))
-        context.log.info(f"   Loaded IE data by cycle: " +
-                        ", ".join(f"{c}={len(ie_by_cycle[c]):,} cands" for c in CYCLES))
-        
         # ================================================================
         # PHASE 2-3: Per-candidate computation (uses module-level helpers
         # trace_committee_sources / trace_ie_sources lifted above)
