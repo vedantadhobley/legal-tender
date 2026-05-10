@@ -35,186 +35,50 @@ from src.rag.wikidata_reconci import (
     ReconciCandidate,
     reconcile_batch,
 )
+from src.rag.wikidata_ontology import (
+    is_employer_type,
+    prewarm as ontology_prewarm,
+    save_cache as save_ontology_cache,
+)
 from src.rag.gleif import resolve_batch as gleif_resolve_batch, GleifResolution
 
 logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Client-side type verification
+# Client-side type verification — backed by Wikidata's own ontology
 # ---------------------------------------------------------------------------
 #
 # The reconci.link `type` parameter is a soft preference, not a strict
 # filter — the server can return entities whose own P31 isn't actually
-# a subclass of Q43229 (organization). We therefore re-check using the
-# `type` list the API already returned per candidate (no extra REST
-# call needed). Any candidate that DOES NOT have at least one
-# corporate-shaped Q-id in its returned types is rejected.
+# a subclass of Q43229 (organization). We re-check by walking each
+# returned type's `wdt:P279*` (subclass-of) chain via
+# `wikidata_ontology.is_employer_type`. The walk decides membership
+# from Wikidata's own subclass tree rather than from a hand-curated
+# Q-id list or English keyword guesses.
 #
-# This is a short whitelist of specific Q-ids. It's narrower than
-# "anything subclass of Q43229" because Wikidata's organization tree
-# includes municipalities, sovereign states, and other things that
-# aren't employers. The whitelist captures the actual employer shapes
-# we care about.
-
-_STRICT_CORPORATE_QIDS = frozenset({
-    "Q43229",  # organization (broad fallback)
-    "Q4830453",  # business
-    "Q6881511",  # enterprise
-    "Q167037",  # corporation
-    "Q891723",  # public company
-    "Q161726",  # multinational corporation
-    "Q740752",  # limited liability company
-    "Q3558581",  # joint-stock company
-    "Q22687",  # bank
-    "Q1331793",  # media company / financial institution
-    "Q319845",  # investment bank
-    "Q7257717",  # financial services company
-    "Q1361353",  # consulting firm
-    "Q11691",  # stock exchange
-    "Q15911314",  # association
-    "Q163740",  # nonprofit organization
-    "Q178790",  # trade union
-    "Q11707",  # restaurant
-    "Q210167",  # video game developer
-    "Q15265344",  # broadcasting company
-    "Q45776",  # holding company
-    "Q3918",  # university
-    "Q38723",  # higher education institution
-    "Q16917",  # hospital
-    "Q4287745",  # medical organization
-    "Q327333",  # government agency
-    "Q249556",  # railway company
-    "Q46970",  # airline
-    "Q10689397",  # asset management company
-    "Q837171",  # private equity firm
-    "Q7258079",  # company (very broad)
-    "Q783794",  # company
-    "Q5621421",  # hedge fund
-    "Q1137319",  # capital markets firm
-    "Q41691",  # food manufacturer
-    "Q210167",  # video game developer
-    "Q860572",  # photo agency
-    "Q192283",  # press agency / news agency
-    "Q43501",  # zoo
-})
-
-
-# Type-name substrings that indicate a corporate-shaped entity. Used in
-# ADDITION to the Q-id whitelist because the long tail of corporate
-# subclass Q-ids is large and we don't want to maintain it by hand.
-# Wikidata's English type labels are reliably descriptive — a Q-id
-# named "X consulting firm" or "X manufacturer" is by definition an
-# employer.
-_CORPORATE_TYPE_NAME_SUBSTRINGS = (
-    "company",
-    "corporation",
-    "enterprise",
-    "business",
-    "firm",
-    "manufacturer",
-    "bank",
-    "fund",
-    "association",
-    "society",  # for "professional society"; risk: "secret society" — minor
-    "institute",
-    "agency",  # press agency, news agency, etc.
-    "studio",
-    "publisher",
-    "publishing",
-    "broadcaster",
-    "carrier",
-    "operator",
-    "syndicate",
-    "consortium",
-    "league",  # professional leagues
-    "guild",
-    "union",
-    "cooperative",
-    "nonprofit",
-    "ngo",
-    "foundation",
-    "university",
-    "college",
-    "school",
-    "hospital",
-    "clinic",
-    "ministry",  # gov agencies — yes, employers in our model
-    "department of",
-    "office of",
-    "bureau",
-    "commission",  # regulatory commissions
-    "authority",
-)
-
-# Type-name substrings that indicate the candidate is NOT employer-shaped
-# even if Q43229 or another organization Q-id appears in its types.
-# Wikidata's organization tree is broad; some subclasses (municipalities,
-# countries, language families) shouldn't count as employers in our model.
-_NON_EMPLOYER_TYPE_NAME_SUBSTRINGS = (
-    "municipality",
-    "country",
-    "sovereign state",
-    "city",
-    "town",
-    "village",
-    "settlement",
-    "language",
-    "ethnic group",
-    "human settlement",
-    "given name",
-    "family name",
-    "video game",
-    "song",
-    "album",
-    "film",
-    "novel",
-    "book",
-    "vaccine",
-    "chemical compound",
-    "gene",
-    "protein",
-    "submarine",
-)
-
-
-def _type_name_contains_corporate_keyword(type_name: str) -> bool:
-    n = (type_name or "").lower()
-    return any(s in n for s in _CORPORATE_TYPE_NAME_SUBSTRINGS)
-
-
-def _type_name_contains_non_employer_keyword(type_name: str) -> bool:
-    n = (type_name or "").lower()
-    return any(s in n for s in _NON_EMPLOYER_TYPE_NAME_SUBSTRINGS)
+# This replaces three earlier band-aid lists deleted in this commit:
+#   _STRICT_CORPORATE_QIDS         (~40 hand-curated org Q-ids)
+#   _CORPORATE_TYPE_NAME_SUBSTRINGS (~35 corporate-keyword strings)
+#   _NON_EMPLOYER_TYPE_NAME_SUBSTRINGS (~20 non-employer keyword strings)
 
 
 def _candidate_passes_type_filter(c: ReconciCandidate) -> bool:
-    """Two-stage filter:
-      1. Reject if ANY type is a known non-employer (municipality, country,
-         video game, song, given name, etc.) — protects against the soft
-         type=Q43229 hint occasionally letting non-orgs through.
-      2. Accept if any type is in the strict Q-id whitelist OR its English
-         label contains a corporate keyword (company, firm, university,
-         etc.). The keyword check covers the long tail without a fixed
-         Q-id list to maintain.
+    """Returns True iff the candidate's P31 type list represents an
+    employer per Wikidata's own ontology.
+
+    Walks `wdt:P279*` (subclass-of) from each type Q-id via
+    `wikidata_ontology.is_employer_type`. The walk hits ORG_ROOTS
+    (rooted at Q43229 organization) → accept; or NON_EMPLOYER_ROOTS
+    (territorial entities, creative works, languages, etc.) → reject.
+    Cached after first walk per Q-id.
+
+    No hand-maintained Q-id whitelist or keyword lists. The
+    classification comes from Wikidata's own subclass relationships,
+    not our guesses about what "looks corporate."
     """
-    type_ids = [t.get("id", "") for t in c.types]
-    type_names = [t.get("name", "") for t in c.types]
-
-    # Stage 1: hard reject on non-employer type
-    for n in type_names:
-        if _type_name_contains_non_employer_keyword(n):
-            return False
-
-    # Stage 2: accept on Q-id whitelist hit
-    if any(qid in _STRICT_CORPORATE_QIDS for qid in type_ids):
-        return True
-
-    # Stage 2 fallback: accept on type-name keyword
-    if any(_type_name_contains_corporate_keyword(n) for n in type_names):
-        return True
-
-    return False
+    type_ids = [t.get("id", "") for t in c.types if t.get("id")]
+    return is_employer_type(type_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -488,6 +352,22 @@ def resolve_batch(
 
     # Layer 1: Wikidata via reconci.link.
     candidates_by_name = reconcile_batch(names)
+
+    # Pre-warm ontology cache for every type Q-id we're about to filter
+    # on. Without this, _candidate_passes_type_filter pays serial
+    # network latency on each cache miss. With pre-warm, the per-name
+    # filter is a sequence of cache hits.
+    all_type_ids = [
+        t.get("id", "")
+        for cands in candidates_by_name.values()
+        for c in cands
+        for t in (c.types or [])
+        if t.get("id")
+    ]
+    if all_type_ids:
+        ontology_prewarm(all_type_ids)
+        save_ontology_cache()
+
     layer1: Dict[str, ResolutionResult] = {
         name: resolve_one(name, candidates_by_name) for name in names
     }
