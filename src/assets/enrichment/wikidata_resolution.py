@@ -62,10 +62,11 @@ def _apply_family_alias(canonical: str) -> str:
 from src.rag.wikidata_client import (
     reset_circuit_breaker,
     resolve_companies,
-    resolve_companies_rest,
+    resolve_companies_rest,  # legacy fallback; new path uses wikidata_resolver
     resolve_people,
     resolve_people_rest,
 )
+from src.rag.wikidata_resolver import resolve_batch as resolver_resolve_batch
 from src.resources.arango import ArangoDBResource
 from src.utils.storage import get_cache_dir
 
@@ -147,7 +148,7 @@ def _is_cache_hit(entry: Optional[Dict[str, Any]]) -> bool:
     intentionally NOT cached, so they'll never be cache hits."""
     if not entry:
         return False
-    return entry.get('source') in ('wikidata', 'not_found')
+    return entry.get('source') in ('wikidata', 'gleif', 'not_found')
 
 
 # Suffix tokens to strip from FEC-format names ("MR.", "JR.", "II", etc).
@@ -235,10 +236,16 @@ class WikidataResolutionConfig(Config):
         description="Whether to make live Wikidata queries for cache misses",
     )
     resolution_path: str = Field(
-        default="rest",
-        description="'rest' (per-name MediaWiki REST API — reliable, ~0.2s/name) "
-                    "or 'sparql' (SPARQL VALUES batches — faster when working "
-                    "but the public endpoint has been intermittently flaky).",
+        default="resolver",
+        description="'resolver' (new two-layer pipeline: wikidata.reconci.link "
+                    "+ ontology-based type filter + GLEIF Layer-2 fallback for "
+                    "not-founds; replaces the wbsearchentities + filter-chain "
+                    "band-aid layer per docs/decisions.md 2026-05-10), "
+                    "'rest' (legacy per-name wbsearchentities — fallback if the "
+                    "resolver pipeline has issues), "
+                    "or 'sparql' (legacy SPARQL VALUES batches — fastest when "
+                    "the WDQS endpoint is healthy, but currently unreliable due "
+                    "to migration weather).",
     )
     employer_chunk_size: int = Field(
         default=20,
@@ -359,14 +366,24 @@ def wikidata_corporate_resolution(
         )
 
         if config.live_queries and names_to_query:
+            use_resolver = config.resolution_path == "resolver"
             use_rest = config.resolution_path == "rest"
-            if use_rest:
-                # REST path: per-name lookups, batch into "report-progress
-                # groups" of 50 for cache-flush cadence. Each name takes
-                # ~0.2-0.5s.
+            if use_resolver:
+                # New two-layer resolver path: reconci.link (typed
+                # candidate space + ontology filter + scoring + sitelinks
+                # tiebreak + P749 rollup) → GLEIF fallback for not-founds.
+                # Batched up to 50/request internally; pre-warms the
+                # ontology cache for the unique type Q-ids in each chunk.
                 progress_chunk = 50
                 context.log.info(
-                    f"Phase 1b: REST Wikidata resolution "
+                    f"Phase 1b: Resolver pipeline (reconci.link + GLEIF) "
+                    f"({len(names_to_query):,} names)..."
+                )
+            elif use_rest:
+                # Legacy REST path: per-name wbsearchentities + filter chain.
+                progress_chunk = 50
+                context.log.info(
+                    f"Phase 1b: Legacy REST Wikidata resolution "
                     f"({len(names_to_query):,} names, ~{len(names_to_query)//4:,}s estimated)..."
                 )
             else:
@@ -379,7 +396,14 @@ def wikidata_corporate_resolution(
             n_chunks = 0
             for start in range(0, len(names_to_query), progress_chunk):
                 chunk = names_to_query[start:start + progress_chunk]
-                if use_rest:
+                if use_resolver:
+                    rr_dict = resolver_resolve_batch(chunk)
+                    # Normalize ResolutionResult shape to the existing
+                    # cache schema. The cache reader downstream (and the
+                    # existing Phase 2/3/4 logic) only consults
+                    # canonical, wikidata_id, relationship, source.
+                    results = {name: rr.to_cache_dict() for name, rr in rr_dict.items()}
+                elif use_rest:
                     results = resolve_companies_rest(chunk)
                 else:
                     results = resolve_companies(chunk, chunk_size=config.employer_chunk_size)
@@ -398,7 +422,9 @@ def wikidata_corporate_resolution(
                     if r.get('source') == 'error':
                         continue
                     employer_cache[raw] = {**r, 'cached_at': ts}
-                    if r['source'] == 'wikidata':
+                    # Both 'wikidata' (Layer 1: reconci.link) and 'gleif'
+                    # (Layer 2: LEI registry fallback) count as resolved.
+                    if r['source'] in ('wikidata', 'gleif'):
                         stats['employers_live_resolved'] += 1
                     else:
                         stats['employers_live_not_found'] += 1
@@ -414,9 +440,13 @@ def wikidata_corporate_resolution(
             name = emp['name']
             normalized = emp['normalized']
             cached = employer_cache.get(name)
-            if cached and cached.get('source') == 'wikidata':
+            if cached and cached.get('source') in ('wikidata', 'gleif'):
                 canonical = cached.get('canonical', normalized)
                 relationship = cached.get('relationship', 'self')
+                # wikidata_id is None for source='gleif' results; that's
+                # expected. The LEI from GLEIF lives in cached['external_id'];
+                # downstream Phase 4 doesn't currently consult it but it's
+                # preserved in cache for future use.
                 wikidata_id = cached.get('wikidata_id')
             else:
                 # not_found OR cache miss + live disabled OR error
