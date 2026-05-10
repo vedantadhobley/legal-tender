@@ -252,6 +252,65 @@ P_OWNED_BY = "P127"
 P_SUBSIDIARY_OF = "P361"  # part-of (broader than just corporate parent)
 
 
+# Description-keyword blacklist for filtering generic-concept matches.
+#
+# Abbreviation employer names (ACS, ADM, ATT, BCG, SIG, BIO, etc.) often
+# hit Wikidata's generic-concept Q-ids ("acute coronary syndrome",
+# "automated decision-making", "lawyer", etc.) instead of the actual
+# corporation. These patterns flag the wrong matches so we don't
+# attribute corporate money to abstract concepts.
+#
+# Conservative — false negatives (rejecting a legit company whose
+# description happens to contain "type of") are acceptable; false
+# positives ("advocacy group" in by_organization) are not.
+_GENERIC_DESCRIPTION_PATTERNS = (
+    "type of ",
+    "given name",
+    "family name",
+    "surname",
+    "wikimedia category",
+    "wikimedia disambiguation",
+    "wikimedia list article",
+    "branch of",
+    "field of",
+    "scientific theory",
+    "concept of",
+    "fictional",
+    "abbreviation",
+    "language",
+    "may refer to",
+    "groups using advocacy",  # specifically catches Q431603 = "advocacy group"
+)
+
+
+def _is_generic_match(label: Optional[str], description: Optional[str]) -> bool:
+    """Heuristic: reject Wikidata matches that look like generic concepts
+    rather than specific entities (companies/people).
+
+    Rules:
+    1. label starts with a lowercase letter — e.g. "advocacy group",
+       "business", "lawyer", "asset management". Real entities are
+       title-cased ("Apple Inc.", "Pan Am Railways").
+    2. description contains a known generic-concept phrase from
+       _GENERIC_DESCRIPTION_PATTERNS.
+
+    False-negative tradeoff: a legit company whose label happens to
+    start lowercase (e.g. "iPhone" — but iPhone isn't a company) might
+    be wrongly rejected. Acceptable because our use case is corporate
+    attribution; we'd rather miss than misattribute.
+    """
+    if not label:
+        return False
+    if label[0].islower():
+        return True
+    if description:
+        d = description.lower()
+        for pattern in _GENERIC_DESCRIPTION_PATTERNS:
+            if pattern in d:
+                return True
+    return False
+
+
 def _resolve_company_rest(name: str) -> Dict[str, Any]:
     """Look up one company name via REST. Returns the same dict shape as
     `resolve_companies` per-name results.
@@ -281,6 +340,12 @@ def _resolve_company_rest(name: str) -> Dict[str, Any]:
     if not qid:
         return base
     label = hit.get('label') or name
+
+    # Reject generic-concept matches (e.g. "SIG" → "advocacy group",
+    # "ATT" → "lawyer"). Better to mark not_found than to attribute
+    # corporate money to an abstract concept.
+    if _is_generic_match(label, hit.get('description')):
+        return base
 
     entity = _entity_data(qid)
     if entity is None:
@@ -383,6 +448,11 @@ def _resolve_person_rest(name: str) -> Dict[str, Any]:
         return base
     qid = hit.get('id')
     if not qid:
+        return base
+
+    # Reject generic-concept matches for people too — e.g. some surnames
+    # match "Wikimedia disambiguation page" or generic-concept Q-ids.
+    if _is_generic_match(hit.get('label'), hit.get('description')):
         return base
 
     entity = _entity_data(qid)
