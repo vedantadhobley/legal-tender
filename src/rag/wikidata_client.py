@@ -110,13 +110,18 @@ def _execute_rest(url: str, params: Dict[str, Any], timeout: float = REST_TIMEOU
     return None
 
 
-def _wbsearchentities(name: str, type_filter: str = "item") -> Optional[Dict[str, Any]]:
-    """Look up a name via MediaWiki's wbsearchentities API. Returns the
-    top match dict ({id, label, description, ...}) or None.
+def _wbsearchentities(name: str, type_filter: str = "item", limit: int = 1) -> Optional[List[Dict[str, Any]]]:
+    """Look up a name via MediaWiki's wbsearchentities API. Returns a list
+    of match dicts ({id, label, description, ...}) up to `limit`, or None
+    on request failure.
 
     `type_filter` can narrow to 'property', 'item' (default — entities,
     which includes companies, people, and everything else), 'lexeme',
-    'form', 'sense'."""
+    'form', 'sense'.
+
+    Top-N (limit > 1) lets callers filter generic-concept and
+    government-entity matches that often outrank the real corporation
+    for short or ambiguous names (e.g. "SIG", "ATT")."""
     response = _execute_rest(
         WIKIDATA_API_ENDPOINT,
         {
@@ -124,14 +129,13 @@ def _wbsearchentities(name: str, type_filter: str = "item") -> Optional[Dict[str
             "search": name,
             "language": "en",
             "format": "json",
-            "limit": 1,
+            "limit": limit,
             "type": type_filter,
         },
     )
     if not response:
         return None
-    results = response.get("search", [])
-    return results[0] if results else None
+    return response.get("search", []) or []
 
 
 def _entity_data(qid: str) -> Optional[Dict[str, Any]]:
@@ -280,6 +284,19 @@ _GENERIC_DESCRIPTION_PATTERNS = (
     "language",
     "may refer to",
     "groups using advocacy",  # specifically catches Q431603 = "advocacy group"
+    # Description-only patterns for hits whose P31 wasn't blacklist-matched:
+    "vaccine ",
+    "creative commons license",
+    "chemical compound",
+    "biographical database",  # "Biografisch Portaal"-style aggregators
+    "biographical work",
+    "online database",
+    "british overseas territory",
+    "commune in",
+    "administrative territorial",
+    "academic discipline",
+    "scholarly database",
+    "social science",
 )
 
 
@@ -311,13 +328,208 @@ def _is_generic_match(label: Optional[str], description: Optional[str]) -> bool:
     return False
 
 
-def _resolve_company_rest(name: str) -> Dict[str, Any]:
-    """Look up one company name via REST. Returns the same dict shape as
-    `resolve_companies` per-name results.
+# Description-keyword patterns for government / sovereign-entity filtering.
+#
+# Surfaced via the Kelly Craft whale case: her Wikidata P108 (employer)
+# resolves to "United States federal government", which is a real entity
+# but not a corporation. Including it as a corporate-family poisons the
+# `by_organization` cross-cut with non-corporate dollars.
+#
+# Conservative — we filter only entities described as governments,
+# countries, or sovereign-entity instances. Universities, NGOs, and
+# trade unions are NOT filtered (they're legit donor employers with a
+# "company-like" relationship for attribution purposes).
+_GOVERNMENT_DESCRIPTION_PATTERNS = (
+    "federal government",
+    "government of the",
+    "government of a",
+    "national government",
+    "sovereign state",
+    "country in ",
+    "country located",
+    "country bordering",
+    "head of state",
+    "head of government",
+    "ministry of",
+)
 
-    Two-step: wbsearchentities for label match → Special:EntityData for
-    parent claims. If parent (P749 or P127) exists, resolve to parent's
-    label; else canonical = the entity itself.
+
+def _is_government_entity(label: Optional[str], description: Optional[str]) -> bool:
+    """Heuristic: reject Wikidata matches that resolve to government /
+    sovereign entities rather than corporations.
+
+    Triggered when description matches a known government-pattern phrase.
+    Label-based detection is intentionally avoided — many legit company
+    names contain the word "America" / "United" / "National".
+    """
+    if not description:
+        return False
+    d = description.lower()
+    for pattern in _GOVERNMENT_DESCRIPTION_PATTERNS:
+        if pattern in d:
+            return True
+    return False
+
+
+def _should_reject_match(label: Optional[str], description: Optional[str]) -> bool:
+    """Combined filter: reject if generic-concept OR government entity."""
+    return _is_generic_match(label, description) or _is_government_entity(label, description)
+
+
+# P31 (instance of) Q-ids that disqualify a Wikidata entity from being
+# treated as a corporation/employer. Walking the ontology to derive this
+# automatically (via P279* subclass) is too expensive for our REST-only
+# code path, so we maintain an explicit blacklist of common bad matches.
+#
+# Surfaced via abbreviation resolution: 3-4-letter employer names like
+# "SIG", "ATT", "BCG", "BIO", "GS" rank a song / license / vaccine / book /
+# country above the real corporation. Filtering by P31 (instance-of)
+# keeps the corporate hit when it exists in the top-N.
+_NON_CORPORATE_P31 = {
+    "Q5",  # human
+    "Q4167410",  # Wikimedia disambiguation page
+    "Q4167836",  # Wikimedia category
+    "Q13406463",  # Wikimedia list article
+    # Written works
+    "Q571",  # book
+    "Q11424",  # film
+    "Q482994",  # album
+    "Q7725634",  # literary work
+    "Q15239622",  # literary work (alt)
+    "Q47461344",  # written work
+    "Q5398426",  # television series
+    "Q24856",  # film series
+    "Q277759",  # book series
+    "Q41298",  # magazine
+    "Q108381",  # book series (alt)
+    "Q19479619",  # bibliographic database
+    # Music
+    "Q134556",  # single (music)
+    "Q7366",  # song
+    "Q386724",  # work of art
+    # Geography / sovereignty
+    "Q6256",  # country
+    "Q3624078",  # sovereign state
+    "Q15634554",  # state with limited recognition
+    "Q56061",  # administrative territorial entity
+    "Q46395",  # British Overseas Territory
+    "Q484170",  # commune of France
+    "Q727",  # capital
+    "Q515",  # city
+    "Q23397",  # lake
+    "Q4022",  # river
+    "Q486972",  # human settlement
+    "Q3957",  # town
+    "Q532",  # village
+    # Languages / categorical
+    "Q34770",  # language
+    "Q33829",  # natural language
+    "Q133327",  # life form
+    "Q284465",  # ethnic group
+    "Q41710",  # ethnic group (alt)
+    # Chemistry / medicine
+    "Q134808",  # vaccine
+    "Q105967696",  # vaccine subclass
+    "Q12140",  # medication
+    "Q11173",  # chemical compound
+    "Q113145171",  # chemical compound (alt)
+    # Names / labels
+    "Q11879003",  # given name
+    "Q11879590",  # female given name
+    "Q12308941",  # male given name
+    "Q3409032",  # unisex given name
+    "Q101352",  # family name
+    # Concepts / abstracts
+    "Q205663",  # process
+    "Q1190554",  # occurrence
+    "Q11862829",  # academic discipline
+    # Vehicles (frequently match abbreviations)
+    "Q2811",  # submarine
+    "Q11446",  # ship
+    "Q170382",  # warship
+    # Licenses
+    "Q177682",  # license
+    "Q207621",  # software license
+    "Q284742",  # Creative Commons license
+    # Roles / professions (job titles match abbreviations)
+    "Q15987302",  # legal profession
+    "Q189533",  # academic discipline (used for "lawyer" too)
+    "Q4611891",  # association football position
+    # Astronomy
+    "Q17444909",  # galaxy classification
+    "Q850950",  # astronomical catalog
+}
+
+
+def _entity_has_non_corporate_p31(entity: Dict[str, Any]) -> bool:
+    """True if any P31 (instance of) on the entity is in the non-corporate
+    blacklist. Used to reject Wikidata hits that aren't companies — books,
+    films, vaccines, countries, songs, people — for employer resolution.
+    """
+    claims = entity.get('claims', {})
+    for claim in claims.get('P31', []):
+        if _claim_qid(claim) in _NON_CORPORATE_P31:
+            return True
+    return False
+
+
+# Suffix tokens that often appear on FEC employer names but are absent
+# (or differently-cased) on the canonical Wikidata entry. If the full
+# name fails to resolve, retry with these stripped — captures cases like
+# "BLACKSTONE GROUP" → "Blackstone Inc." (Wikidata) and
+# "CITADEL INVESTMENT GROUP" → "Citadel LLC".
+#
+# Conservative: we only retry the longest single suffix-stripped form
+# once, not every combinatorial variation. Risk of a false positive
+# match (stripping "PARTNERS" turns a unique name into a common one) is
+# the reason for the conservative single-retry approach.
+_RETRY_SUFFIX_TOKENS = (
+    "GROUP",
+    "HOLDINGS",
+    "MANAGEMENT",
+    "PARTNERS",
+    "INVESTMENTS",
+    "INVESTMENT",
+    "CAPITAL",
+    "ENTERPRISES",
+    "ASSOCIATES",
+    "COMPANIES",
+    "INDUSTRIES",
+    "VENTURES",
+    "ADVISORS",
+)
+
+
+def _alternate_employer_forms(name: str) -> List[str]:
+    """Generate up to a small number of alternate forms of an employer
+    name to retry against Wikidata when the literal name didn't resolve.
+
+    Currently emits at most one alternate: the input with one of the
+    well-known generic suffixes stripped (e.g. "BLACKSTONE GROUP" →
+    "BLACKSTONE"). Returns [] if the name has none of the suffixes or
+    if stripping would leave fewer than two tokens.
+    """
+    tokens = name.split()
+    if len(tokens) < 2:
+        return []
+    last_upper = tokens[-1].upper().rstrip(",.;:")
+    if last_upper in _RETRY_SUFFIX_TOKENS:
+        candidate = " ".join(tokens[:-1])
+        # Don't return a single-token alternate that's too generic.
+        if len(candidate.split()) >= 1 and len(candidate) >= 3:
+            return [candidate]
+    return []
+
+
+def _resolve_company_one_query(name: str, search_limit: int = 5) -> Dict[str, Any]:
+    """Single-shot REST lookup for one literal name. Pulls top-N candidates
+    from wbsearchentities, filters generic + government matches, then
+    fetches entity data for the first surviving hit and walks P749 to
+    find its parent.
+
+    Returns a result dict shaped like `_resolve_company_rest`'s output.
+    Source is 'not_found' when search returns nothing OR all hits were
+    filtered; 'error' on circuit-open / network failure.
     """
     base = {
         'canonical': name,
@@ -327,8 +539,8 @@ def _resolve_company_rest(name: str) -> Dict[str, Any]:
         'parent_id': None,
         'source': 'not_found',
     }
-    hit = _wbsearchentities(name)
-    if hit is None:
+    hits = _wbsearchentities(name, limit=search_limit)
+    if hits is None:
         # Distinguish 'not_found' (search returned nothing) from 'error'
         # (request failed). _execute_rest returns None on both, so we
         # check circuit state to disambiguate.
@@ -336,31 +548,49 @@ def _resolve_company_rest(name: str) -> Dict[str, Any]:
             return {**base, 'source': 'error'}
         return base
 
-    qid = hit.get('id')
-    if not qid:
-        return base
-    label = hit.get('label') or name
-
-    # Reject generic-concept matches (e.g. "SIG" → "advocacy group",
-    # "ATT" → "lawyer"). Better to mark not_found than to attribute
-    # corporate money to an abstract concept.
-    if _is_generic_match(label, hit.get('description')):
+    if not hits:
         return base
 
-    entity = _entity_data(qid)
-    if entity is None:
-        # Got the search hit but couldn't fetch full entity. Mark as
-        # wikidata-found but with no parent — partial-success so it's
-        # still cacheable.
-        return {
-            'canonical': label,
-            'original': name,
-            'relationship': 'parent',
-            'wikidata_id': qid,
-            'parent_id': None,
-            'source': 'wikidata',
-        }
+    # Walk through hits in rank order. Reject generic concepts /
+    # governments by description, then fetch entity data and reject any
+    # P31=Q5 (human) — abbreviation employer names like "SIG" rank
+    # Sigmund Freud above Susquehanna International Group; humans
+    # aren't employers, so we keep going.
+    chosen_qid: Optional[str] = None
+    chosen_label: Optional[str] = None
+    chosen_entity: Optional[Dict[str, Any]] = None
+    for hit in hits:
+        if _should_reject_match(hit.get('label'), hit.get('description')):
+            continue
+        qid_h = hit.get('id')
+        if not qid_h:
+            continue
+        ent = _entity_data(qid_h)
+        if ent is None:
+            # Couldn't fetch full entity. Accept the hit (cacheable
+            # partial-success) without further P31 inspection rather
+            # than skipping entirely — circuit may have just opened.
+            return {
+                'canonical': hit.get('label') or name,
+                'original': name,
+                'relationship': 'parent',
+                'wikidata_id': qid_h,
+                'parent_id': None,
+                'source': 'wikidata',
+            }
+        if _entity_has_non_corporate_p31(ent):
+            continue  # human / book / film / country / vaccine — try next hit
+        chosen_qid = qid_h
+        chosen_label = hit.get('label') or name
+        chosen_entity = ent
+        break
 
+    if chosen_qid is None or chosen_entity is None:
+        return base  # all hits filtered → not_found
+
+    qid = chosen_qid
+    label = chosen_label or name
+    entity = chosen_entity
     claims = entity.get('claims', {})
     parent_qid = None
     # Only P749 (parent organization). P127 (owned by) was tempting as
@@ -385,8 +615,10 @@ def _resolve_company_rest(name: str) -> Dict[str, Any]:
     # Resolve parent's label
     parent_entity = _entity_data(parent_qid)
     parent_label = None
+    parent_desc = None
     if parent_entity:
         parent_label = parent_entity.get('labels', {}).get('en', {}).get('value')
+        parent_desc = parent_entity.get('descriptions', {}).get('en', {}).get('value')
     if not parent_label:
         # Couldn't get parent label — keep canonical as self with parent_id
         # for future re-resolution.
@@ -399,6 +631,19 @@ def _resolve_company_rest(name: str) -> Dict[str, Any]:
             'source': 'wikidata',
         }
 
+    # If the parent itself is a government / generic concept, don't roll
+    # the subsidiary up — keep the subsidiary's own label as canonical.
+    # Example: a subsidiary whose P749 points at a government ministry.
+    if _should_reject_match(parent_label, parent_desc):
+        return {
+            'canonical': label,
+            'original': name,
+            'relationship': 'parent',
+            'wikidata_id': qid,
+            'parent_id': None,
+            'source': 'wikidata',
+        }
+
     return {
         'canonical': parent_label,
         'original': name,
@@ -407,6 +652,32 @@ def _resolve_company_rest(name: str) -> Dict[str, Any]:
         'parent_id': parent_qid,
         'source': 'wikidata',
     }
+
+
+def _resolve_company_rest(name: str) -> Dict[str, Any]:
+    """Look up one company name via REST. Returns the same dict shape as
+    `resolve_companies` per-name results.
+
+    First tries the literal name with top-5 candidate filtering. If that
+    returns not_found, generates a small set of alternate forms (suffix
+    stripping) and retries each once. The first form that resolves wins.
+    """
+    result = _resolve_company_one_query(name)
+    if result['source'] in ('wikidata', 'error'):
+        return result
+
+    # Retry with alternate forms (e.g. "BLACKSTONE GROUP" → "BLACKSTONE").
+    for alt in _alternate_employer_forms(name):
+        retry = _resolve_company_one_query(alt)
+        if retry['source'] == 'wikidata':
+            # Preserve the original query name in `original`; the canonical
+            # / wikidata_id come from the alternate-form match.
+            retry['original'] = name
+            return retry
+        if retry['source'] == 'error':
+            return retry  # circuit just opened — don't keep retrying
+
+    return result  # all forms returned not_found
 
 
 def resolve_companies_rest(names: List[str]) -> Dict[str, Dict[str, Any]]:
@@ -441,19 +712,28 @@ def _resolve_person_rest(name: str) -> Dict[str, Any]:
     """
     base = {'person': name, 'companies': [], 'primary_company': None, 'source': 'not_found'}
 
-    hit = _wbsearchentities(name)
-    if hit is None:
+    hits = _wbsearchentities(name, limit=5)
+    if hits is None:
         if _circuit_open:
             return {**base, 'source': 'error'}
         return base
-    qid = hit.get('id')
-    if not qid:
+    if not hits:
         return base
 
-    # Reject generic-concept matches for people too — e.g. some surnames
-    # match "Wikimedia disambiguation page" or generic-concept Q-ids.
-    if _is_generic_match(hit.get('label'), hit.get('description')):
+    # Pick the first hit that isn't a generic concept / government /
+    # disambiguation page. Without top-N, short whale surnames like "WALL"
+    # or "BANK" often hit a Wikimedia disambiguation page and never
+    # resolve a real person.
+    hit: Optional[Dict[str, Any]] = None
+    for h in hits:
+        if _should_reject_match(h.get('label'), h.get('description')):
+            continue
+        if h.get('id'):
+            hit = h
+            break
+    if hit is None:
         return base
+    qid = hit['id']
 
     entity = _entity_data(qid)
     if entity is None:
@@ -508,6 +788,14 @@ def _resolve_person_rest(name: str) -> Dict[str, Any]:
             continue
         clabel = ce.get('labels', {}).get('en', {}).get('value')
         if not clabel:
+            continue
+        # Filter government / generic-concept entities at the
+        # employer-target step. Catches cases like a public official
+        # whose P108 (employer) is "United States federal government"
+        # or "Government of the United Kingdom" — real Wikidata data
+        # but not corporate attribution.
+        cdesc = ce.get('descriptions', {}).get('en', {}).get('value')
+        if _should_reject_match(clabel, cdesc):
             continue
         enriched.append({'name': clabel, 'wikidata_id': cqid, 'relationship': c['relationship']})
 
