@@ -55,6 +55,9 @@ Source: aggregation graph (committees, donors, edges)
 Target: candidates collection updated with 'funding_channels' field.
 """
 
+import os
+import multiprocessing as _mp
+from concurrent.futures import ProcessPoolExecutor
 from typing import Dict, Any, List, Set, Optional
 from datetime import datetime
 from collections import defaultdict
@@ -341,6 +344,83 @@ def _merge_named_list(lists: List[List[Dict[str, Any]]], n: Optional[int], min_a
         key=lambda x: -x['amount'],
     )
     return result[:n] if n else result
+
+
+# ----------------------------------------------------------------------------
+# Per-candidate computation + ProcessPool worker
+# ----------------------------------------------------------------------------
+#
+# `_WORKER_LOOKUPS` and `_WORKER_CONFIG` are set in the parent process
+# *before* the ProcessPool is created. On Linux (Python's default
+# ProcessPoolExecutor uses fork), the worker processes inherit the
+# parent's memory copy-on-write — so workers can read these globals
+# without any of the lookup state ever being pickled. Only the small
+# per-candidate `cand` dict gets pickled across the boundary per task.
+# Without this trick, passing ~hundreds of MB of edges-by-cycle dicts
+# to each of 24 workers via initargs would dominate runtime.
+
+_WORKER_LOOKUPS: Optional[Dict[str, Any]] = None
+_WORKER_CONFIG: Optional['CandidateFundingConfig'] = None
+
+
+def _compute_for_candidate(
+    cand: Dict[str, Any],
+    lookups: Dict[str, Any],
+    config: 'CandidateFundingConfig',
+) -> Optional[Dict[str, Any]]:
+    """Pure function: compute the upsert doc for one candidate.
+
+    Returns `{'_key': cand_key, 'funding_channels': {...}}` if the
+    candidate has any funding in any cycle, else None. Used by both
+    the in-process serial path and the ProcessPool worker.
+    """
+    cand_key = cand['_key']
+    cmtes_by_cycle = {item['cycle']: item['cmte_ids'] for item in cand['cmtes_by_cycle']}
+
+    funding_by_cycle: Dict[str, Dict[str, Any]] = {}
+    for cycle in CYCLES:
+        cycle_cmte_ids = cmtes_by_cycle.get(cycle, [])
+        if not cycle_cmte_ids:
+            continue
+        cycle_ie = lookups['ie_by_cycle'][cycle].get(cand_key, {'support': [], 'oppose': []})
+        cycle_channels = compute_funding_channels(
+            cmte_ids=cycle_cmte_ids,
+            cand_key=cand_key,
+            contrib_edges=lookups['contrib_edges_by_cycle'][cycle],
+            transfer_edges=lookups['transfer_edges_by_cycle'][cycle],
+            ie_data=cycle_ie,
+            cycle_cmte_info=lookups['cmte_info_by_cycle'][cycle],
+            donor_info=lookups['donor_info'],
+            whale_to_company=lookups['whale_to_company'],
+            employer_to_company=lookups['employer_to_company'],
+            config=config,
+        )
+        if cycle_channels:
+            funding_by_cycle[cycle] = cycle_channels
+
+    if not funding_by_cycle:
+        return None
+
+    funding_aggregate = merge_funding_channels(funding_by_cycle, config)
+    funding_channels = {
+        'by_cycle': funding_by_cycle,
+        'aggregate': funding_aggregate,
+        'total_funding': funding_aggregate['total_funding'] if funding_aggregate else 0,
+        'direct_funding': funding_aggregate['direct_funding'] if funding_aggregate else 0,
+        'ie_support': funding_aggregate['ie_support'] if funding_aggregate else 0,
+        'ie_oppose': funding_aggregate['ie_oppose'] if funding_aggregate else 0,
+        'by_organization': funding_aggregate['by_organization'] if funding_aggregate else [],
+        'computed_at': datetime.now().isoformat(),
+        'cycles_available': list(funding_by_cycle.keys()),
+    }
+    return {'_key': cand_key, 'funding_channels': funding_channels}
+
+
+def _process_one_candidate(cand: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """ProcessPool worker entry point. Reads parent-set module globals
+    (avoids pickling shared state per task) and delegates to
+    _compute_for_candidate."""
+    return _compute_for_candidate(cand, _WORKER_LOOKUPS, _WORKER_CONFIG)
 
 
 def load_lookup_data(db) -> Dict[str, Any]:
@@ -1071,86 +1151,54 @@ def candidate_funding_asset(
             'candidates_with_funding': 0,
         }
 
-        batch_updates = []
+        batch_updates: List[Dict[str, Any]] = []
 
-        for cand in candidates:
-            cand_key = cand['_key']
-            cmtes_by_cycle = {
-                item['cycle']: item['cmte_ids']
-                for item in cand['cmtes_by_cycle']
-            }
+        # ProcessPool the candidate loop. Each candidate's funding_channels
+        # computation is independent (~3 min total for 14K candidates serial
+        # → ~10-30s parallel on a 24-core box). Set lookup state into module
+        # globals BEFORE creating the pool so workers see it via Linux fork
+        # copy-on-write — avoids pickling the ~hundreds of MB of edges-by-
+        # cycle dicts to each worker via initargs.
+        global _WORKER_LOOKUPS, _WORKER_CONFIG
+        _WORKER_LOOKUPS = lookups
+        _WORKER_CONFIG = config
 
-            # Compute per cycle (with cycle-specific committees and receipts)
-            funding_by_cycle = {}
+        max_workers = int(os.environ.get('LT_MAX_WORKERS') or max(2, (os.cpu_count() or 4) - 2))
+        max_workers = min(max_workers, len(candidates))
+        context.log.info(f"   Computing funding_channels with {max_workers} worker processes...")
 
-            for cycle in CYCLES:
-                cycle_cmte_ids = cmtes_by_cycle.get(cycle, [])
-                if not cycle_cmte_ids:
-                    continue
+        # Force fork start method explicitly — Dagster's executor may set the
+        # default to 'spawn' which doesn't inherit parent globals, defeating
+        # the copy-on-write trick. fork is Linux-only; this asset is
+        # container-scoped to Linux so that's fine.
+        fork_ctx = _mp.get_context('fork')
 
-                cycle_ie = ie_by_cycle[cycle].get(cand_key, {'support': [], 'oppose': []})
-                cycle_channels = compute_funding_channels(
-                    cmte_ids=cycle_cmte_ids,
-                    cand_key=cand_key,
-                    contrib_edges=contrib_edges_by_cycle[cycle],
-                    transfer_edges=transfer_edges_by_cycle[cycle],
-                    ie_data=cycle_ie,
-                    cycle_cmte_info=cmte_info_by_cycle[cycle],
-                    donor_info=donor_info,
-                    whale_to_company=whale_to_company,
-                    employer_to_company=employer_to_company,
-                    config=config,
+        try:
+            with ProcessPoolExecutor(max_workers=max_workers, mp_context=fork_ctx) as pool:
+                # chunksize batches tasks to amortize pool overhead. 50 is a
+                # reasonable balance for ~14K candidates / 24 workers.
+                for result in pool.map(_process_one_candidate, candidates, chunksize=50):
+                    stats['candidates_processed'] += 1
+                    if result is None:
+                        continue
+                    stats['candidates_with_funding'] += 1
+                    batch_updates.append(result)
+                    if len(batch_updates) >= 500:
+                        db.aql.execute(
+                            "FOR doc IN @batch UPDATE doc._key WITH { funding_channels: doc.funding_channels } IN candidates",
+                            bind_vars={"batch": batch_updates},
+                        )
+                        context.log.info(f"   Updated {stats['candidates_processed']:,} candidates...")
+                        batch_updates = []
+            if batch_updates:
+                db.aql.execute(
+                    "FOR doc IN @batch UPDATE doc._key WITH { funding_channels: doc.funding_channels } IN candidates",
+                    bind_vars={"batch": batch_updates},
                 )
-                if cycle_channels:
-                    funding_by_cycle[cycle] = cycle_channels
-
-            if not funding_by_cycle:
-                stats['candidates_processed'] += 1
-                continue
-
-            # Aggregate = merge per-cycle results (not independent computation)
-            funding_aggregate = merge_funding_channels(funding_by_cycle, config)
-
-            stats['candidates_with_funding'] += 1
-
-            funding_channels = {
-                'by_cycle': funding_by_cycle,
-                'aggregate': funding_aggregate,
-
-                # Convenience top-level fields from aggregate
-                'total_funding': funding_aggregate['total_funding'] if funding_aggregate else 0,
-                'direct_funding': funding_aggregate['direct_funding'] if funding_aggregate else 0,
-                'ie_support': funding_aggregate['ie_support'] if funding_aggregate else 0,
-                'ie_oppose': funding_aggregate['ie_oppose'] if funding_aggregate else 0,
-
-                # Top-level by_organization (from aggregate)
-                'by_organization': funding_aggregate['by_organization'] if funding_aggregate else [],
-
-                'computed_at': datetime.now().isoformat(),
-                'cycles_available': list(funding_by_cycle.keys()),
-            }
-
-            batch_updates.append({
-                '_key': cand_key,
-                'funding_channels': funding_channels,
-            })
-
-            stats['candidates_processed'] += 1
-
-            if len(batch_updates) >= 500:
-                db.aql.execute("""
-                    FOR doc IN @batch
-                        UPDATE doc._key WITH { funding_channels: doc.funding_channels } IN candidates
-                """, bind_vars={"batch": batch_updates})
-                context.log.info(f"   Updated {stats['candidates_processed']:,} candidates...")
-                batch_updates = []
-        
-        # Final batch
-        if batch_updates:
-            db.aql.execute("""
-                FOR doc IN @batch
-                    UPDATE doc._key WITH { funding_channels: doc.funding_channels } IN candidates
-            """, bind_vars={"batch": batch_updates})
+        finally:
+            # Release the worker-shared state so the GC can collect it.
+            _WORKER_LOOKUPS = None
+            _WORKER_CONFIG = None
         
         # ================================================================
         # PHASE 5: Validation
