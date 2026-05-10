@@ -21,6 +21,12 @@ Classification priority (CMTE_TP checked FIRST for certain types):
 
 3. THIRD: Remaining CMTE_TP (when no ORG_TP):
    O, U = Super PAC (no ORG_TP) → terminal_type: "super_pac_unclassified"
+   I = Independent Expenditure Filer (people/groups filing 24-/48-hr IE
+       notices, e.g. HOFFMAN REID, AFL-CIO COPE Treasury, SEIU PEAF) →
+       terminal_type: "super_pac_unclassified" (IE-only spenders, route
+       through trace as passthroughs to find their funders)
+   E = Electioneering Communications Filer → terminal_type:
+       "super_pac_unclassified" (similar shape to type I)
    N, Q = PAC (no ORG_TP) → terminal_type: "passthrough" (likely JFC/leadership)
 
 Note: Party committees (X, Y, Z) are always passthrough even if they incorrectly
@@ -92,7 +98,7 @@ def committee_classification_asset(
                 terminal_type = 'corporation'
             elif org_tp == 'V':
                 terminal_type = 'cooperative'
-            elif cmte_tp in ('O', 'U'):
+            elif cmte_tp in ('O', 'U', 'I', 'E'):
                 terminal_type = 'super_pac_unclassified'
             elif cmte_tp in ('N', 'Q', 'W'):
                 terminal_type = 'passthrough'
@@ -119,7 +125,12 @@ def committee_classification_asset(
                 c.ORG_TP == "W" ? "corporation" :
                 c.ORG_TP == "V" ? "cooperative" :
                 // THIRD: Remaining CMTE_TP (no ORG_TP)
-                c.CMTE_TP IN ["O", "U"] ? "super_pac_unclassified" :
+                // I = Independent Expenditure Filer (24-/48-hr IE notices,
+                //     e.g. HOFFMAN REID, AFL-CIO COPE Treasury, SEIU PEAF)
+                // E = Electioneering Communications Filer
+                // Both functionally IE-only spenders → route through as
+                // passthroughs so the trace finds their funders.
+                c.CMTE_TP IN ["O", "U", "I", "E"] ? "super_pac_unclassified" :
                 c.CMTE_TP IN ["N", "Q", "W"] ? "passthrough" :
                 "unknown"
             )
