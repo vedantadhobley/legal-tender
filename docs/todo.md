@@ -150,6 +150,21 @@ Ran `scripts/output_check.py` against BWC, Cruz, Trump, Sanders, Bloomberg, Pelo
 
 - [ ] **Donor records split by trailing-period in name.** `BIGELOW, ROBERT T` and `BIGELOW, ROBERT T.` appear as two distinct donor entries — same person, different normalizations. Same likely true for many "MR." / "MR" / "JR." / "JR" suffixes, and for variations like `T` vs `T.` (with period). Donor canonicalization in `donors.py` AQL doesn't strip trailing punctuation. Fix in the AQL: `LTRIM(RTRIM(REGEX_REPLACE(name, '\\.+$', '')))` or a Python normalization step. Watch out for over-normalization (`SMITH, J. R.` should stay distinct from `SMITH, J R`).
 
+### Donor fragmentation at scale (audit 2026-05-09)
+
+47 of the top 50 megadonors by aggregate $ have multiple donor records — both within-name fragmentation (KOUM JAN: 7 records across RETIRED/SELF-EMPLOYED/WHATSAPP/MANZANITA/etc.) and cross-name (BLOOMBERG MICHAEL vs BLOOMBERG MICHAEL R., STEYER TOM vs THOMAS F., GRIFFIN KENNETH C. vs KENNETH C. MR., ADELSON SHELDON / SHELDON G. / MIRIAM / MIRIAM DR.).
+
+Dominance heuristic (max_record / total > 50%) reliably flags fragmentation: top whales 38-100% (mostly 60-100%), common-name controls (SMITH MICHAEL with 70 records of distinct people) at 17-24%. But raw name-based merging is risky for common names — SMITH MICHAEL has $7.8M of one notable Megadonor Smith mixed with $4.9M of 69 distinct small Michael Smiths.
+
+- [ ] **Wikidata-keyed donor canonicalization (gated on Wikidata being run).** The clean fix uses `wikidata_id` from `whale_corporate_links` as the merge key (not name). Name-search normalization in `_whale_name_to_search` strips middle initials so cross-name variants resolve to the same Q-id. Implementation: new `donor_canonical` collection mapping each donor_key → canonical_donor record with merged totals; soft-merge so it's reversible. candidate_funding's lookup follows the indirection. Doesn't touch raw `donors` / `contributed_to`.
+
+### Terminal-classification audit (2026-05-09)
+
+- [x] ~~**CMTE_TP=I/E unclassified.**~~ FIXED 2026-05-09 (commit `60461c4`). 993 IE-only entities (Reid Hoffman, SEIU PEAF, AFL-CIO COPE Treasury, Worker Power, etc.) moved from `unknown` → `super_pac_unclassified`. Trace now routes upstream through them.
+- [ ] **Professional/trade associations classified as `ideological`.** `NATIONAL ASSOCIATION OF REALTORS PAC` ($63M), `AMERICAN ASSOCIATION FOR JUSTICE PAC` ($24M, trial lawyers), `COUNCIL OF INSURANCE AGENTS & BROKERS PAC` ($17M), AICPA ($12M), ADA ($8M), AOA ($8M), AANA ($7M) all classified `ideological` because their FEC `ORG_TP=M` ("Membership organization") spans both single-issue advocacy AND profession-of-X societies. Could refine with name-pattern heuristics ("ASSOCIATION OF [profession]", "ACADEMY OF X", "COUNCIL OF X PROFESSIONALS") but these get subjective fast. Document as known semantic limitation OR adopt a high-precision heuristic.
+- [ ] **`DEMOCRACY ENGINE, INC., PAC` ($46M) classified as `corporation`.** Functionally a payment-processor conduit for Dem small-dollar money. Single-entity edge case. Manual override in committee_classification or `CONDUIT_PATTERNS` extension would handle it.
+- [ ] **Phantom committees in `unknown`** with `$50M`, `$61M`, `$100M` totals — bogus FEC filings (e.g. DODO GOVERNMENT $100M from a single record with txn_tp=19). They don't connect to any candidate's funding_channels via affiliated_with so they're cosmetic noise in the committees collection, not affecting outputs. Could filter them at `committee_receipts` parse time if any are detected via "donation_count == 1 && total_receipts > $5M" heuristic.
+
 ## Performance / iteration speed (2026-05-09)
 
 - [x] ~~**Cycle-level parallelism via threads.**~~ Done in commit `2542b86`. Added `src/utils/parallel.py` with `parallel_cycles` (threads, I/O-bound) and `parallel_map` (processes, CPU-bound, reserved for future use). Wired into `committee_receipts` Phases 3+3.5, `donors`, `transferred_to`. `committee_receipts` ~12min → ~6min (2× — Amdahl-limited because Phases 1, 2, 4 are still sequential single AQL queries / single UPSERT loop). `indiv`, `pas2`, `oth` were already parallel.
