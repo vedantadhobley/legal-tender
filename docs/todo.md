@@ -27,7 +27,26 @@ This file is editable by both humans and the agent during sessions. Append-frien
 - [x] ~~**Exponential backoff + circuit breaker.**~~ Done in commit `fc0d2a3`. 1s base delay doubling to 60s cap; 3 retries per query; circuit trips after 3 consecutive global failures (asset returns empty results rather than hanging for hours). `reset_circuit_breaker()` re-arms between runs.
 - [x] ~~**Incremental cache flush.**~~ Done in commit `9ac4321`. Cache saved after every 5 employer batches and 4 whale batches plus a final flush.
 - [x] ~~**Make cache path configurable via storage helpers.**~~ Done in commit `9ac4321`. Now `<cache_dir>/wikidata.json` via `get_cache_dir()`. Legacy `/workspace/wikidata_cache.json` read as one-time migration fallback.
-- [ ] **End-to-end live validation.** Pending — Wikidata's public SPARQL endpoint is currently returning 502/timeouts (verified with direct curl 2026-05-09). Re-run `wikidata_corporate_resolution` when their service recovers and confirm the new batched path actually pulls corporate-family data at scale. Cache file already at `~/workspace/data/legal-tender/cache/wikidata.json` with 27 employer entries from prior run as starting point.
+- [x] ~~**End-to-end live validation.**~~ DONE 2026-05-10. Wikidata's SPARQL endpoint stayed unreachable across multiple retry attempts (timeouts, 429s, 502/500s). Switched primary path to MediaWiki's REST API (`wbsearchentities` + `Special:EntityData`) which is on different infrastructure and consistently fast (~0.7s/name). Asset gained a `resolution_path` config knob ('rest' default, 'sparql' kept as fallback for when their query service recovers).
+
+  Run results (run id `66b60add-fc0f-45e2-b190-9ec29ac5f49c`, 45 min total):
+  - **employers**: 4,999 processed → 2,281 wikidata-resolved + 2,201 not_found + 517 cache hits
+  - **whales**: 1,964 processed → 1,098 wikidata-resolved + 845 not_found + 43 cache hits
+  - **corporate_families**: 5 → **4,941**
+  - **whale_corporate_links**: 5 → **352**
+  - **employer_canonical_mapping**: 0 → **4,999**
+  - **whale money attributed to corporate identities**: ~$50M → **$851.9M**
+
+  Trump's `whale.corporate_connected` went from empty to $8.26M of real connections (Beal Bank, Anduril Industries, Allegiance Health, etc.). `by_organization` cross-cut now shows: Department of Government Efficiency $81.5M via Musk, Pan Am Railways $20M via Mellon, ULINE $4.9M via 3 Uihlein siblings consolidated, Marvel via Perlmutter, etc.
+
+  Cruz's `corporate_connected`: BGR Group via Rogers/Rzepka/Eisner, Winklevoss Capital via the Twins, GeoSouthern Energy, Holland & Knight, PACK AUTO GROUP, etc. — real Texas + lobbying connections.
+
+  Trade-offs accepted in REST path: doesn't capture inverse relations (founder is stored on the company side as P112, REST can't query inverse cheaply), so e.g. KOUM, JAN doesn't link to WhatsApp via "founder" relationship — only via P108 employer (which lists Yahoo as his prior employer). SPARQL UNION query handled this; REST does not. Acceptable miss; can be revisited when SPARQL is healthy.
+
+- [ ] **Quirks to follow up:**
+  - "ENTREPRENEUR" appears as a "company" ($1.09M for Trump). Wikidata resolved the literal string "Entrepreneur" to its Q-id. Add to NON_EMPLOYERS in `employer_normalization.py`.
+  - "Federal Government of the United States" $62K via Kelly Craft (former US Ambassador). Wikidata's P108 (employer) for her is "United States federal government" — technically correct but weird in this context. Could blacklist Q-ids for governments.
+  - Some corporate families that should be merged remain split: ADELSON DRUG CLINIC vs ADELSON CLINIC (different Q-ids in Wikidata or one not_found), Pan Am Systems vs Pan Am Railways (different real entities owned by Mellon). Need follow-up: SPARQL parent-resolution would catch most of these via P749.
 
 ### Configuration centralization
 
