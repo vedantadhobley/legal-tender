@@ -52,6 +52,12 @@ This file is editable by both humans and the agent during sessions. Append-frien
     - top-N candidate filtering (wbsearchentities limit=5) + P31 instance-of blacklist (`_NON_CORPORATE_P31`: humans Q5, films Q11424, books Q571, vaccines, magazines, countries, languages, given names, submarines, Creative Commons licenses, etc.)
   - ~~Suffix variations splitting families (BLACKSTONE GROUP vs BLACKSTONE)~~ → `_alternate_employer_forms` retries with one suffix stripped (GROUP/HOLDINGS/PARTNERS/INVESTMENTS/CAPITAL/etc.). Verified: BLACKSTONE GROUP → Blackstone Inc., CITADEL INVESTMENT GROUP → Citadel Enterprise Americas LLC, BRIDGEWATER ASSOCIATES → Bridgewater Associates.
 
+- [ ] **Cache TTL enforcement (Phase 5b)** — surfaced 2026-05-10 during the wikidata-resolver pivot. Currently `_is_cache_hit()` treats any non-error source as permanent. Should be tiered:
+  - `wikidata.json` per-name resolutions: **30-day TTL** (Wikidata adds entities + fixes aliases periodically; not-founds particularly drift)
+  - `wikidata_ontology.json` Q-id → org-class: **365-day TTL** (P279 hierarchy is structurally stable)
+  - GLEIF results (split into separate cache file): **7-day TTL** (corporate `status` field flips on dissolution / restructure)
+  Implementation: extend `_is_cache_hit()` to inspect `cached_at`, configurable per-source via Pydantic config or constants. Bookmarked, not blocking Phase 5/6.
+
 - [ ] **Wikidata resolution architectural overhaul** — IN PROGRESS 2026-05-10. See `docs/decisions.md` entry of same date for full context. Replacing the current ~250 lines of band-aid filter code (P31 blacklists, description patterns, suffix retries, hardcoded overrides) with a structurally-correct two-layer resolver: `wikidata.reconci.link` (typed candidate space + ranked scoring) as primary, OpenCorporates as fallback for not-founds. Acceptance metrics committed in decisions.md:
   1. Filter-shaped code lines: 250 → 0 in code (≤30 declarative scoring lines OK)
   2. Hardcoded Q-id mappings: 12 → 0 in code (≤5 in YAML with rationale)

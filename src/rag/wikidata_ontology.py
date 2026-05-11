@@ -51,6 +51,11 @@ logger = logging.getLogger(__name__)
 # club, and ~5-10K other organization-shaped Q-ids.
 ORG_ROOTS: Set[str] = {
     "Q43229",  # organization
+    # Stock exchange — both a marketplace (territorial-flavored) AND a
+    # real organization that employs people (NYSE, NASDAQ). Anchored
+    # as an ORG root because for FEC employer attribution the org
+    # identity matters more than the place-of-trading flavor.
+    "Q11691",  # stock exchange
 }
 
 # Subtree roots: reaching one of these means the entity is NOT an
@@ -72,6 +77,17 @@ NON_EMPLOYER_ROOTS: Set[str] = {
                    # municipalities, cities, towns, villages, districts)
     "Q56061",  # administrative territorial entity (alternate)
     "Q486972",  # human settlement
+    # Municipality / village subtree roots — anchored explicitly
+    # because their P279 chains in Wikidata cross BOTH territorial and
+    # "government organization" ancestors. Without anchoring as roots,
+    # walks are cache-order-dependent (test flakiness). These are
+    # unambiguously territorial in our employer-attribution model.
+    "Q532",  # village
+    "Q3957",  # town
+    "Q15284",  # municipality (general)
+    "Q262166",  # municipality in Germany
+    "Q116457956",  # German municipality without town privileges
+    "Q1799794",  # administrative division of Bavaria
     "Q23397",  # lake
     "Q4022",  # river
     # Creative works
