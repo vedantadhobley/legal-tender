@@ -7,9 +7,8 @@ This is a library of name-resolution helpers wrapping external services:
 - wikidata_reconci.py — Wikidata reconciliation API client (Layer 1)
 - gleif.py — GLEIF LEI registry client (Layer 2)
 - wikidata_resolver.py — layered fallback orchestration (Wikidata + GLEIF)
-- wikidata_client.py — low-level Wikidata REST client; whale (person→company)
-  resolution still lives here pending the same simplification employer
-  resolution received in May 2026
+- wikidata_client.py — low-level Wikidata REST client (transport + entity-data fetch)
+- whale_resolver.py — person→company resolution (parallels wikidata_resolver)
 
 These utilities are imported by Dagster assets (not standalone scripts).
 Example: `wikidata_resolution.py` imports `resolve_batch` from `wikidata_resolver`.
@@ -23,12 +22,9 @@ from src.rag.employer_normalization import (
     find_potential_matches,
     normalize_employer_name,
 )
-from src.rag.wikidata_client import (
-    WikidataCircuitOpen,
-    reset_circuit_breaker,
-    resolve_people_rest,
-)
+from src.rag.wikidata_client import WikidataCircuitOpen, reset_circuit_breaker
 from src.rag.wikidata_resolver import resolve_batch
+from src.rag.whale_resolver import resolve_people_batch
 
 __all__ = [
     # Employer normalization
@@ -38,9 +34,8 @@ __all__ = [
     "NON_EMPLOYERS",
     # Resolution pipeline
     "resolve_batch",
-    # Whale path (person → company; pre-simplification, still uses
-    # filter chain in wikidata_client)
-    "resolve_people_rest",
+    # Whale path (person → company)
+    "resolve_people_batch",
     # Circuit breaker control
     "reset_circuit_breaker",
     "WikidataCircuitOpen",

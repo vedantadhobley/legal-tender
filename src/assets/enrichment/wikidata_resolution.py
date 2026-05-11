@@ -59,11 +59,9 @@ def _apply_family_alias(canonical: str) -> str:
     if not canonical:
         return canonical
     return EMPLOYER_FAMILY_ALIASES.get(canonical.upper(), canonical)
-from src.rag.wikidata_client import (
-    reset_circuit_breaker,
-    resolve_people_rest,
-)
+from src.rag.wikidata_client import reset_circuit_breaker
 from src.rag.wikidata_resolver import resolve_batch as resolver_resolve_batch
+from src.rag.whale_resolver import resolve_people_batch
 from src.resources.arango import ArangoDBResource
 from src.utils.storage import get_cache_dir
 
@@ -500,7 +498,7 @@ def wikidata_corporate_resolution(
                 n_chunks = 0
                 for start in range(0, len(whale_names_to_query), progress_chunk):
                     chunk = whale_names_to_query[start:start + progress_chunk]
-                    results = resolve_people_rest(chunk)
+                    results = resolve_people_batch(chunk)
                     n_done += len(chunk)
                     n_chunks += 1
                     if n_chunks % 4 == 0 or n_done == len(whale_names_to_query):
