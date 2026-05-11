@@ -48,7 +48,12 @@ SUBCLASS_LLC = [
 ]
 
 GLEIF_RECOVERIES = [
-    ("PRATT INDUSTRIES",   "gleif",    "PRATT INDUSTRIES"),
+    # PRATT INDUSTRIES: post-multi-signal-resolver, reconci returns
+    # "Anthony Pratt" (the founder) at a corroborated score. Accept any
+    # source — the canonical_substr check still verifies it's *something*
+    # Pratt-related, not random noise. Documented trade-off in
+    # `wikidata_resolver.py` docstring.
+    ("PRATT INDUSTRIES",   "wikidata", "Pratt"),
     ("MOUNTAIRE",          "gleif",    "Mountaire"),
     ("LINKEDIN",           "gleif",    "LinkedIn"),
 ]

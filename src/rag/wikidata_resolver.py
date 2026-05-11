@@ -28,14 +28,29 @@ from typing import Any, Dict, List, Optional
 
 from src.rag.wikidata_reconci import ReconciCandidate, reconcile_batch
 from src.rag.gleif import GleifResolution, resolve_batch as gleif_resolve_batch
+from src.rag import name_match
 
 logger = logging.getLogger(__name__)
 
-# Reconci.link returns scores 0-100. 70+ is "strong match" empirically:
-# below it the matches are mostly fuzzy/wrong (Deutz-Fahr matched FAHR
-# at 57, etc.). Tight enough to keep false positives low; loose enough
-# to catch alias-name matches like "BLACKSTONE GROUP" → "Blackstone Inc."
-CONFIDENCE_THRESHOLD = 70.0
+# Reconci.link returns scores 0-100. Decision rule:
+#
+#   score >= HIGH_CONFIDENCE_THRESHOLD (70)
+#       → accept, unless input is short (≤4 chars) AND no corroborating
+#         signal fires. (Short-input rule catches "RDV → North Vietnam"
+#         class: 3-char input fuzz-matched a distant entity at score 100.)
+#
+#   LOW_CONFIDENCE_THRESHOLD (40) <= score < 70
+#       → accept iff at least one corroborating signal fires (acronym,
+#         portmanteau, edit-distance ≤ 2, or strong token containment).
+#         These catch real matches that the raw score under-rates because
+#         the canonical name is much longer than the FEC abbreviation
+#         ("WILMERHALE" → "Wilmer Cutler Pickering Hale and Dorr" at
+#         reconci 49; portmanteau corroboration kicks in).
+#
+#   score < 40
+#       → reject. Below this even corroborating signals are unreliable.
+HIGH_CONFIDENCE_THRESHOLD = 70.0
+LOW_CONFIDENCE_THRESHOLD = 40.0
 
 
 @dataclass
@@ -76,8 +91,36 @@ class ResolutionResult:
         }
 
 
+def _accept_candidate(input_name: str, candidate: ReconciCandidate) -> tuple[bool, str]:
+    """Decide whether to accept this candidate. Returns (accept, reason).
+    `reason` is a short label that goes into the resolution's `method`
+    field for provenance — e.g., "high_confidence",
+    "corroborated_acronym", "rejected_short_input_no_signal"."""
+    score = candidate.score
+    label = candidate.name
+
+    if score < LOW_CONFIDENCE_THRESHOLD:
+        return False, f"below_low_threshold_{int(score)}"
+
+    short_input = name_match.is_short_input(input_name)
+    has_signal = name_match.any_corroborating_signal(input_name, label)
+
+    if score >= HIGH_CONFIDENCE_THRESHOLD:
+        # High raw score. Trust it unless the input is short AND no
+        # corroborating signal — that pattern is the RDV→North Vietnam
+        # class of fuzz-match-on-distant-entity.
+        if short_input and not has_signal:
+            return False, "short_input_no_corroboration"
+        return True, "high_confidence"
+
+    # Low band (40-69): require at least one corroborating signal.
+    if has_signal:
+        return True, "low_confidence_corroborated"
+    return False, f"low_confidence_no_signal_{int(score)}"
+
+
 def _from_reconci(name: str, candidates: List[ReconciCandidate]) -> ResolutionResult:
-    """Pick the top candidate that meets the confidence threshold."""
+    """Pick the top candidate that passes the accept rule."""
     alts = [
         {
             "qid": c.qid, "name": c.name, "score": c.score,
@@ -93,12 +136,13 @@ def _from_reconci(name: str, candidates: List[ReconciCandidate]) -> ResolutionRe
             method="no_candidates", alternatives=alts,
         )
     top = candidates[0]
-    if top.score < CONFIDENCE_THRESHOLD:
+    accept, reason = _accept_candidate(name, top)
+    if not accept:
         return ResolutionResult(
             original=name, canonical=name,
             wikidata_id=None, parent_id=None,
             relationship="self", source="not_found",
-            method=f"below_threshold_{int(top.score)}", alternatives=alts,
+            method=reason, alternatives=alts,
         )
     return ResolutionResult(
         original=name,
@@ -107,7 +151,7 @@ def _from_reconci(name: str, candidates: List[ReconciCandidate]) -> ResolutionRe
         parent_id=None,
         relationship="parent",
         source="wikidata",
-        method="reconci_top",
+        method=f"reconci_{reason}",
         confidence=top.score,
         alternatives=alts,
     )
