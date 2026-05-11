@@ -6,6 +6,48 @@ When a non-obvious choice gets made, append a dated entry here with: what we dec
 
 ---
 
+## 2026-05-11 — Corporate-identity resolution: delete the filter layer, accept reconci-top + GLEIF
+
+**The 24-hour summary.** Spent a full day iterating through three increasingly elaborate filter architectures on top of the Wikidata reconciliation API:
+
+1. Q-id whitelist (`_STRICT_CORPORATE_QIDS`) + description-pattern blacklist + suffix-retry list. Grew with every wrong match.
+2. Ontology walker — replace the Q-id whitelist with a P279 (subclass-of) traversal that asks Wikidata itself "is this Q-id descended from an organization root, or from a non-employer root?" Required maintaining short subtree-root sets (ORG_ROOTS, NON_EMPLOYER_ROOTS) but grew the latter set each time a test exposed an ambiguous case (municipality, state, etc.).
+3. Test suite — built a 79-test pytest fixture to catch corruption in seconds instead of after 90-minute full runs. Caught real bugs (Q22687 bank misclassified, parallel-walk cache corruption, mixed-ancestry walks producing non-deterministic results across cache states).
+
+After all of this: the filter layer was fundamentally fighting Wikidata's classification. Wikidata thinks municipalities are organizations; our domain doesn't. Wikidata thinks the village of "Greylock" is at search-rank parity with the firm "Greylock Partners"; our domain wants the firm. Every new "fix" was a band-aid on top of a band-aid. We had several "this is the architectural fix" pivots in the same day, each one introducing new edge cases.
+
+**The actual fix: stop classifying.** Delete the entire filter layer. Replace with:
+
+1. Wikidata reconci.link top hit at `score >= 70` → accept
+2. GLEIF strict-match fallback for not-founds → accept
+3. Everything else → `not_found`
+
+That's it. No `_NON_CORPORATE_P31` (60 entries — deleted). No `_GENERIC_DESCRIPTION_PATTERNS` (25 entries — deleted). No `_GOVERNMENT_DESCRIPTION_PATTERNS` (deleted). No ontology walker (deleted entirely — `src/rag/wikidata_ontology.py` gone). No YAML overrides (`config/wikidata_overrides.yaml` deleted). No subtree-root sets, no P279 traversal, no cache-corruption-recovery scripts.
+
+Code: ~550 LOC of resolver → ~150 LOC. Tests stayed (~18 cases, 6 seconds). All 18 pass.
+
+**Trade-off accepted explicitly.** We will accept some bogus matches that Wikidata's data quality produces:
+
+- `RDV` → "North Vietnam" (score 100 fuzzy match)
+- `STEYER` → "Steyr" (Austrian city, score 100)
+- `CO-OWNER` → some unrelated entity
+
+These show up in downstream `by_organization` cross-cuts where they're inspectable. For the FEC-corporate-attribution use case, missing a corporation (false negative) is worse than misattributing one (false positive — visible and recoverable). The earlier filter chain was tuned for precision over recall and silently rejected real entities (`LINKEDIN`, `BAUPOST GROUP`, `BALLMER GROUP` — all returned at score 100 from reconci, all wrongly rejected by the type filter).
+
+**Architectural pattern documented**: `docs/corporate-resolution.md`. Layered fallback (knowledge graph → official registry → extension slots) with confidence threshold + provenance for review. Portable to other entity-resolution problems.
+
+**Hardcode audit shipped**: `docs/audit/hardcodes-2026-05-11.md`. Each remaining hardcoded data structure classified as legitimate reference data (legal-form suffixes, non-employer placeholders), calibrated parameter (confidence threshold), or dead code targeted for deletion (~600+ LOC of the old filter chain still sits in `wikidata_client.py` waiting for removal).
+
+**Open follow-ups deferred from earlier filter-era plans**:
+- ~~Cache TTL enforcement~~ — the new resolver doesn't have the same cache-corruption pressure; the cache is just a per-name resolution result. TTL still useful but lower priority.
+- ~~Re-walk False entries to fix corruption~~ — moot, ontology cache deleted.
+- ~~OpenCorporates as Layer 2~~ — still on the table as Layer 3 for coverage extension. ~200M companies including most US private LLCs. Free tier 500/day; paid for production scale.
+- LLM-based input normalization for garbled FEC names. Future Layer.
+
+**Acceptance metric for "no regression on resolver simplification"**: 18-test pytest suite green. Full 5K validation deferred — the elaborate filter layer it was meant to validate is gone, and the trade-off is now explicit.
+
+---
+
 ## 2026-05-10 — Wikidata corporate-identity resolution: pivoting from band-aid filters to reconciliation-API + OpenCorporates
 
 **Context.** Corporate identity resolution is structurally central to legal-tender — the whole project is "trace dollars to corporate origins," and without correct mapping from FEC employer strings to corporate identities, the `whale → corporation` claim that powers `by_organization` cross-cuts is unreliable. Over this session we pushed hit-rate from ~600 (pre-this-session, mostly via SPARQL UNION queries that the WDQS endpoint couldn't reliably serve) to ~3,049 wikidata-resolved out of 5,054 canonical employers (60% hit-rate) by switching the primary path from SPARQL to MediaWiki REST (`wbsearchentities` + `Special:EntityData`), then layering in:

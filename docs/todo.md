@@ -52,23 +52,24 @@ This file is editable by both humans and the agent during sessions. Append-frien
     - top-N candidate filtering (wbsearchentities limit=5) + P31 instance-of blacklist (`_NON_CORPORATE_P31`: humans Q5, films Q11424, books Q571, vaccines, magazines, countries, languages, given names, submarines, Creative Commons licenses, etc.)
   - ~~Suffix variations splitting families (BLACKSTONE GROUP vs BLACKSTONE)~~ → `_alternate_employer_forms` retries with one suffix stripped (GROUP/HOLDINGS/PARTNERS/INVESTMENTS/CAPITAL/etc.). Verified: BLACKSTONE GROUP → Blackstone Inc., CITADEL INVESTMENT GROUP → Citadel Enterprise Americas LLC, BRIDGEWATER ASSOCIATES → Bridgewater Associates.
 
-- [ ] **Cache TTL enforcement (Phase 5b)** — surfaced 2026-05-10 during the wikidata-resolver pivot. Currently `_is_cache_hit()` treats any non-error source as permanent. Should be tiered:
-  - `wikidata.json` per-name resolutions: **30-day TTL** (Wikidata adds entities + fixes aliases periodically; not-founds particularly drift)
-  - `wikidata_ontology.json` Q-id → org-class: **365-day TTL** (P279 hierarchy is structurally stable)
-  - GLEIF results (split into separate cache file): **7-day TTL** (corporate `status` field flips on dissolution / restructure)
-  Implementation: extend `_is_cache_hit()` to inspect `cached_at`, configurable per-source via Pydantic config or constants. Bookmarked, not blocking Phase 5/6.
+- [x] ~~**Wikidata resolution architectural overhaul**~~ — Completed in two phases. First pass (2026-05-10) added ontology walker + YAML overrides. Second pass (2026-05-11) deleted all of that and went minimal: reconci.link top-hit + GLEIF fallback. See `docs/decisions.md` 2026-05-11 entry for full context and `docs/corporate-resolution.md` for the portable architecture writeup.
 
-- [ ] **Wikidata resolution architectural overhaul** — IN PROGRESS 2026-05-10. See `docs/decisions.md` entry of same date for full context. Replacing the current ~250 lines of band-aid filter code (P31 blacklists, description patterns, suffix retries, hardcoded overrides) with a structurally-correct two-layer resolver: `wikidata.reconci.link` (typed candidate space + ranked scoring) as primary, OpenCorporates as fallback for not-founds. Acceptance metrics committed in decisions.md:
-  1. Filter-shaped code lines: 250 → 0 in code (≤30 declarative scoring lines OK)
-  2. Hardcoded Q-id mappings: 12 → 0 in code (≤5 in YAML with rationale)
-  3. No regressions on validation harness for currently-resolved ~3,000 employers
-  4. Hit-rate ≥ current 60%
-  - [ ] Phase 1: thin reconciliation API client (`src/rag/wikidata_reconci.py`, batch up to 50/request)
-  - [ ] Phase 2: resolver with P31 whitelist + confidence threshold + sitelinks tiebreak
-  - [ ] Phase 3: OpenCorporates fallback layer for reconci-not-founds (free tier, 500/day budget)
-  - [ ] Phase 4: wire into wikidata_corporate_resolution asset, replace `_resolve_company_rest`
-  - [ ] Phase 5: validation harness — diff old vs new on 5K employers
-  - [ ] Phase 6: delete band-aids (`_NON_CORPORATE_P31`, `_GENERIC_DESCRIPTION_PATTERNS`, `_GOVERNMENT_DESCRIPTION_PATTERNS`, `_RETRY_SUFFIX_TOKENS`, `_alternate_employer_forms`, most of `_EMPLOYER_OVERRIDES`, `_resolve_company_one_query`); move surviving overrides to YAML
+- [ ] **Delete dead code in `wikidata_client.py`** — per `docs/audit/hardcodes-2026-05-11.md`, ~600 LOC of legacy employer-resolution filter chain is no longer called. The new resolver path bypasses it entirely. Deletions:
+  - `resolve_companies`, `resolve_companies_rest`, `_resolve_company_safe`, `_resolve_company_rest`, `_resolve_company_one_query`
+  - `_alternate_employer_forms` + `_RETRY_SUFFIX_TOKENS`
+  - `_entity_has_strict_corporate_p31` + `_STRICT_CORPORATE_P31`
+  - `_build_company_batch_query`
+  - `_execute_sparql` + `resolve_company_to_canonical` (SPARQL fallback shim)
+  - `ORG_TYPE_QID` constant in `wikidata_reconci.py`
+  Asset's `wikidata_resolution.py` imports get trimmed. Net: file shrinks from 1309 → ~700 LOC.
+
+- [ ] **Apply resolver simplification to whale path** — `resolve_people_rest` in wikidata_client.py still uses the old filter chain (description patterns + non-corporate P31 + government filter) for person→company lookups. Same simplification as employer path: reconci-link top-hit at threshold, no filtering. Whales are P31=Q5 (human) so candidate space is naturally narrow. Net: ~400 more LOC removable from `wikidata_client.py`.
+
+- [ ] **OpenCorporates as Layer 3 for coverage extension** — current Wikidata+GLEIF combined hit rate is ~55-65%. OpenCorporates (~200M companies including most US small private LLCs) would close most of the long-tail "Wikidata gap" category per `docs/audit/coverage-gaps-2026-05-11.md` (pending). Free tier 500 reqs/day; paid tier for production. Implementation: thin client + strict-match acceptance similar to GLEIF, slotted between Layer 2 (GLEIF) and not-found in `wikidata_resolver.resolve_batch`.
+
+- [ ] **LLM-based input normalization for garbled FEC names** — typos, partial entries, malformed multi-word employer fields. ~20% of not-founds per the coverage-gap categorization. Cheap LLM call: "normalize this employer string to its canonical company name" before passing to the resolver. Use joi-hosted Qwen — no API costs. Layer above reconci.link.
+
+- [ ] **Cache TTL enforcement** — currently `_is_cache_hit()` treats any non-error source as permanent. Should be tiered: wikidata.json 30-day TTL; GLEIF results (split into separate cache file) 7-day TTL (corporate `status` field flips). Implementation: extend `_is_cache_hit()` to inspect `cached_at`. Lower priority now that the cache-corruption pressure from the old ontology walker is gone.
 
 - [ ] **Remaining hit-rate residuals (subsumed by overhaul above, kept for reference):**
   - Some corporate families that should be merged remain split: ADELSON DRUG CLINIC vs ADELSON CLINIC (different Q-ids in Wikidata or one not_found), Pan Am Systems vs Pan Am Railways (different real entities owned by Mellon). Need follow-up: SPARQL parent-resolution would catch most of these via P749 once SPARQL endpoint is healthy.
