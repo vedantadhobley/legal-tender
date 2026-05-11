@@ -239,3 +239,5 @@ src/flows/
 # re-introduction.
 /wikidata_cache.json
 /corporate_families.json
+*.bak
+.claude/scheduled_tasks.lock
