@@ -6,6 +6,69 @@ When a non-obvious choice gets made, append a dated entry here with: what we dec
 
 ---
 
+## 2026-05-11 PM — Multi-signal corroboration + whale-path simplification + audit-driven deletions
+
+Three commits this afternoon, building on the morning's resolver simplification.
+
+### Commit 1 — `feat(resolver): multi-signal corroboration for low-confidence reconci matches`
+
+Reconci.link returns a single 0-100 relevance score. Trusting only the high end (≥70) misses real matches that are under-scored because the FEC employer is a contraction or acronym of a much longer canonical name (WILMERHALE → "Wilmer Cutler Pickering Hale and Dorr" at reconci 49). Trusting the high end uncritically lets short-input fuzz matches through (RDV → "North Vietnam" at score 100, the poster-child false-positive).
+
+Built `src/rag/name_match.py` with four deterministic signals:
+- `acronym_match` (tries both with-and-without stopwords so "BCG" → "Boston Consulting Group" works AND "WH" → "Wilmer and Hale" works)
+- `token_subset_concat_match` (in-order subset concatenation for portmanteau cases)
+- `edit_distance_close` (Levenshtein ≤ 2 for typos)
+- `token_containment_score` (bidirectional substring coverage)
+
+Decision rule in `wikidata_resolver._accept_candidate`:
+- score ≥ 70 → accept, unless input is ≤4 chars AND no signal fires
+- 40 ≤ score < 70 → accept iff at least one signal fires
+- score < 40 → reject
+
+No LLM, no hardcoded case overrides — each signal is a general property of FEC-name variation. Live smoke: RDV correctly rejected via `short_input_no_corroboration`; WILMERHALE / GREYLOCK / BCG / BAUPOST GROUP all resolve. 42 unit tests added (microsecond-fast, no network).
+
+### Commit 2 — `feat(whale): minimal person→company resolver, drop legacy filter chain`
+
+The whale path (person-name → companies via P108/P1830/P39) was the last consumer of the pre-simplification filter chain in `wikidata_client.py`. Same architectural overhaul as the morning's employer path:
+
+1. Reconcile name via reconci.link (no type filter — empirically reliable for distinctive person names)
+2. Accept via the same HIGH/LOW threshold + corroboration rule used for employers
+3. Extract company Q-ids from a fixed set of corporate-relationship properties: P1830 (owner of), P112 (founder), P169 (CEO), P488 (chair), P1037 (manages), P3320 (board member), P108 (employer), and P39 (position held) with the P642 ("of") qualifier
+4. Fetch each company's English label via existing `_entity_data`
+
+**Adding P1830 was the key recovery.** Kenneth Griffin's connection to Citadel is stored there, not P108. Wikidata's coverage of US hedge-fund founders is uneven; P1830 catches Musk/Adelson/Griffin while P108 catches Koum/Mellon/Koch.
+
+`wikidata_client.py` shrank 416 → 150 LOC after deleting `_resolve_person_rest`, `_resolve_person_safe`, `resolve_people_rest`, `_should_reject_match`, `_is_generic_match`, `_is_government_entity`, the description-pattern constants, the 60-entry `_NON_CORPORATE_P31` set, and the parallel-worker helpers.
+
+**Disambiguation gap accepted explicitly.** "JOHN ARNOLD" and "PAUL SINGER" disambiguate to wrong-person Wikidata entries (historical/religious figures rank higher than the hedge-fund founders). Same disambiguation problem OpenCorporates Layer 3 would address; deferred until that ships.
+
+### Commit 3 — `chore: hardcode + dead-code audit, delete confirmed-dead modules`
+
+Audit doc `docs/audit/hardcodes-2026-05-11-pm.md` catalogs every remaining hardcoded constant in `src/rag/` with keep/trim/delete verdicts. Executed the safe deletions from section 7:
+
+- `src/resources/embedding.py` (320 LOC) — `EmbeddingResource` was registered in `Definitions(...)` but no asset declared it as a dep or called `embed_*`. Pure facade.
+- `src/api/election_api.py` (67 LOC) — placeholder, never wired.
+- `_wbsearchentities` in `wikidata_client.py` (20 LOC) — last caller was the legacy whale path deleted earlier in the session.
+- `WIKIDATA_API_ENDPOINT` constant — only used by the deleted `_wbsearchentities`.
+- `_FOUNDER_POSITION_QIDS` empty placeholder set in `whale_resolver.py`.
+- `ORG_TYPE_QID` constant + 18-line dead comment about the long-deleted `wikidata_ontology` module.
+
+~440 LOC net removed. 68 tests still pass.
+
+### Honest summary of where the day landed
+
+Three valid criticisms:
+- We spent a full day on infrastructure (resolver simplification, audit, dead-code purge) with zero user-visible feature progress.
+- Hit rate on corporate resolution sits ~55-65%. OpenCorporates Layer 3 + LLM input normalization would close most of the long-tail gap; both deferred.
+- `candidate_upstream.py` is still 1,263 LOC and `pies_v3.py` is still in the tree at 679 LOC.
+
+Three real wins:
+- The resolver pipeline is now ~500 LOC of principled code (`wikidata_resolver.py` + `whale_resolver.py` + `name_match.py`) instead of ~1,800 LOC of filter-chain band-aids.
+- Bulk validation median |delta| is 2.5%, 62% within ±5% of FEC published totals. The pipeline is more correct than it feels.
+- The next session has a concrete plan with validation gates (see `todo.md` "Next session"): extend the parent-org-inheritance pattern, stop treating `super_pac_unclassified` as terminal, and ship a thin CLI to actually look at `funding_channels.by_organization`.
+
+---
+
 ## 2026-05-11 — Corporate-identity resolution: delete the filter layer, accept reconci-top + GLEIF
 
 **The 24-hour summary.** Spent a full day iterating through three increasingly elaborate filter architectures on top of the Wikidata reconciliation API:

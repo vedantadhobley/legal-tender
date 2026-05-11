@@ -6,6 +6,47 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
 ---
 
+## Next session (queued 2026-05-11 PM)
+
+**Goal**: trust the terminal-node layer + make `funding_channels` viewable. Two sessions of work targeted before next weekend's UI work.
+
+### Validation contract (applies to every fix this week)
+
+Every commit goes through four gates:
+1. **Named-candidate diff**: print `funding_channels.by_organization` top-15 for Cruz / Trump / Harris / BWC / Sanders before and after. Flag any org that swings >20% or disappears.
+2. **Bulk median**: `scripts/validation_report.py` cross-references against FEC `weball.TTL_RECEIPTS`. Current median |delta| = 2.5%. Fix is rejected if it crosses 5%.
+3. **Target case**: each fix has one explicit pass/fail it's trying to flip. Stated up front. Fix isn't done until that case passes.
+4. **Pytest green**: all 68 tests stay passing.
+
+### Session 1 — Trust the terminal-node layer
+
+- [ ] **Capture baseline.** Run `validation_report.py` + named-candidate spot-checks + corporate_families top-50; commit output to `docs/audit/baseline-2026-05-12.md`. First action of the session — every subsequent fix diffs against this.
+- [ ] **Extend the May-9 parent-org inheritance.** Current logic only inherits when a `corporation`-typed cmte's `CONNECTED_ORG_NM` matches a labor-union/trade/ideological/cooperative cmte's `CMTE_NM`. Generalize: when N committees share a `CONNECTED_ORG_NM`, the most-specific terminal_type wins for all of them. Target cases (verified 2026-05-11 PM via direct ArangoDB query):
+  - NAR Congressional Fund: `super_pac_unclassified` → `trade_association` (inherits from NAR PAC's `trade_association` — currently `ideological`, also needs the M-org-tp → trade-assoc refinement)
+  - NRA Institute for Legislative Action: `super_pac_unclassified` → `ideological` (inherits from NRA Victory Fund)
+  - Club for Growth Action ($263.5M!): `super_pac_unclassified` → `ideological` (inherits from Club for Growth PAC)
+- [ ] **Stop treating `super_pac_unclassified` as terminal.** Currently 4,533 committees fall here and money stops tracing. They DO have `contributed_to` and `transferred_to` edges. Two options to decide between:
+  - (a) Continue tracing upstream (same logic as `passthrough`), attribute to whoever funded them
+  - (b) Keep them terminal but rolled-up under the inherited parent-org type from the previous fix
+  - Target case: Club for Growth Action's $263.5M moves from unaccounted to attributed.
+- [ ] **Re-validate**: bulk median should DROP or stay flat. By-organization for the named candidates should show NAR / NRA / Club for Growth amounts increasing (because half their split was previously unattributed).
+
+### Session 2 — Make funding_channels viewable
+
+- [ ] **`scripts/view_candidate.py`** — ~150 LOC. CLI: `python view_candidate.py "CRUZ, TED"`. Reads from `candidates.<doc>.funding_channels`. Renders:
+  - Header: total funding, channel breakdown with %
+  - Channel 1 table: top organizational sources by type (corp / trade / labor / ideological / cooperative)
+  - Channel 2/3 tables: top IE spenders + their upstream donors
+  - Channel 4: top whales (with `via_donors` employer attribution)
+  - Trace path: for top-N orgs, show the multiplier-weighted chain (e.g., "AIPAC → JFC1 → JFC2 → Cruz committee, mult=0.42, attributed $X")
+- [ ] **Sanity check** the top-attributed orgs for the named-candidate set. If Cruz's top-org isn't energy/finance-shaped, something's wrong upstream. This is the qualitative complement to the bulk-median check.
+
+### Then (UI session, target: next weekend)
+
+- [ ] Thinnest possible web view of the same data. Probably FastAPI + a single HTML template + Alpine.js. Reads from Arango directly. Same `by_organization` + trace-path render, clickable.
+
+---
+
 ## Phase 3 — Ready to execute (after Phase 2 brain integration)
 
 ### Critical bug fixes
@@ -54,16 +95,11 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
 - [x] ~~**Wikidata resolution architectural overhaul**~~ — Completed in two phases. First pass (2026-05-10) added ontology walker + YAML overrides. Second pass (2026-05-11) deleted all of that and went minimal: reconci.link top-hit + GLEIF fallback. See `docs/decisions.md` 2026-05-11 entry for full context and `docs/corporate-resolution.md` for the portable architecture writeup.
 
-- [ ] **Delete dead code in `wikidata_client.py`** — per `docs/audit/hardcodes-2026-05-11.md`, ~600 LOC of legacy employer-resolution filter chain is no longer called. The new resolver path bypasses it entirely. Deletions:
-  - `resolve_companies`, `resolve_companies_rest`, `_resolve_company_safe`, `_resolve_company_rest`, `_resolve_company_one_query`
-  - `_alternate_employer_forms` + `_RETRY_SUFFIX_TOKENS`
-  - `_entity_has_strict_corporate_p31` + `_STRICT_CORPORATE_P31`
-  - `_build_company_batch_query`
-  - `_execute_sparql` + `resolve_company_to_canonical` (SPARQL fallback shim)
-  - `ORG_TYPE_QID` constant in `wikidata_reconci.py`
-  Asset's `wikidata_resolution.py` imports get trimmed. Net: file shrinks from 1309 → ~700 LOC.
+- [x] ~~**Delete dead code in `wikidata_client.py`**~~ — DONE 2026-05-11 PM. `wikidata_client.py` shrank from 1309 → 150 LOC across two commits (resolver simplification + whale-path simplification + audit-driven purge). Deleted: entire employer-resolution legacy filter chain, all SPARQL paths, `_STRICT_CORPORATE_P31`, `_RETRY_SUFFIX_TOKENS`, `_alternate_employer_forms`, `_build_company_batch_query`, `_execute_sparql`, `resolve_company_to_canonical`, `ORG_TYPE_QID`, `_wbsearchentities`, the entire whale-path filter chain (`_should_reject_match`, `_NON_CORPORATE_P31`, `_GENERIC_DESCRIPTION_PATTERNS`, `_GOVERNMENT_DESCRIPTION_PATTERNS`, etc.), legacy worker helpers.
 
-- [ ] **Apply resolver simplification to whale path** — `resolve_people_rest` in wikidata_client.py still uses the old filter chain (description patterns + non-corporate P31 + government filter) for person→company lookups. Same simplification as employer path: reconci-link top-hit at threshold, no filtering. Whales are P31=Q5 (human) so candidate space is naturally narrow. Net: ~400 more LOC removable from `wikidata_client.py`.
+- [x] ~~**Apply resolver simplification to whale path**~~ — DONE 2026-05-11 PM. New `src/rag/whale_resolver.py` (~230 LOC) parallels `wikidata_resolver`: reconci.link → corroboration → entity-data → corporate-relationship property walk (P1830/P112/P169/P488/P1037/P3320/P108 + P39+P642). Adding P1830 was the key recovery — catches Griffin/Citadel which P108 doesn't. Disambiguation gap accepted explicitly (Arnold/Singer pick wrong Wikidata person; OpenCorporates Layer 3 would address).
+
+- [x] ~~**Multi-signal corroboration for low-confidence reconci**~~ — DONE 2026-05-11 PM. New `src/rag/name_match.py` adds four deterministic signals (acronym, in-order portmanteau, Levenshtein ≤2, bidirectional token containment) plus the short-input rule. Rejects the RDV→North-Vietnam class while recovering the WILMERHALE / BCG / BAUPOST class. 42 unit tests, microsecond-fast.
 
 - [ ] **OpenCorporates as Layer 3 for coverage extension** — current Wikidata+GLEIF combined hit rate is ~55-65%. OpenCorporates (~200M companies including most US small private LLCs) would close most of the long-tail "Wikidata gap" category per `docs/audit/coverage-gaps-2026-05-11.md` (pending). Free tier 500 reqs/day; paid tier for production. Implementation: thin client + strict-match acceptance similar to GLEIF, slotted between Layer 2 (GLEIF) and not-found in `wikidata_resolver.resolve_batch`.
 
@@ -79,7 +115,7 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
 ### Configuration centralization
 
-- [ ] **Single `ACTIVE_CYCLES` constant.** Currently hardcoded as `["2020", "2022", "2024", "2026"]` in **17 files**. Move to `src/config.py` (new module) and import everywhere. Source: @audit/codebase-inventory.md "Configuration sprawl".
+- [ ] **Single `ACTIVE_CYCLES` constant.** Currently hardcoded as `["2020", "2022", "2024", "2026"]` in **21 files** (re-counted 2026-05-11 PM, the count crept up from 17 since the original audit). Move to `src/config.py` (new module) and import everywhere. Source: @audit/codebase-inventory.md "Configuration sprawl".
 - [ ] **`PER_ELECTION_LIMITS` constant.** Currently lives in `src/assets/graph/donors.py:47-50`, referenced via comments in 4 other places. Move to `src/config.py`, import where needed.
 - [ ] **`TERMINAL_TYPES`, `PASSTHROUGH_TYPES`, `CONDUIT_PATTERNS`** in `candidate_upstream.py:67-74` — duplicated (with subtle divergence!) in `pies_v3.py:21-28`. Move to `src/config.py`.
 - [ ] **Progress logging interval constants.** `pas2.py:130` (% 250000), `contributed_to.py:272` (% 50000), `arango_dump.py:248` (% 500000) all use different intervals. Pick one (`LOG_PROGRESS_EVERY = 100_000`), use everywhere.
@@ -95,10 +131,14 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
 ### Dead code removal (verify before deleting)
 
+- [x] ~~**Delete `src/resources/embedding.py`**~~ (320 LOC) — DONE 2026-05-11 PM. Registered as a Dagster resource but no asset consumed it. Pure facade.
+- [x] ~~**Delete `src/api/election_api.py`**~~ (67 LOC) — DONE 2026-05-11 PM. Placeholder, never wired.
 - [ ] **Delete `src/cli/pies_v3.py`** (679 LOC). No callers; predates funding_channels. Verify no local workflow depends on it first. Source: @audit/code-quality-findings.md §2a.
 - [ ] **Delete `src/cli/check_funding.py`** (74 LOC) OR move to `scripts/`. No callers; CLI helper. Source: @audit/code-quality-findings.md §2b.
+- [ ] **Decide on `src/api/lobbying_api.py`** (63 LOC). Aspirational; keep if the lobbying-integration plan is live, delete otherwise.
 - [ ] **Move root-level dev scripts.** `test_download.py`, `test_fec_schema.py`, `validate_schemas.py` are not pytest tests; they're dev utilities. Move to `scripts/` (currently empty) and rename without `test_` prefix.
 - [ ] **Verify no orphan imports** for the 4 deleted enrichment files (`committee_financials.py`, `corporate_hierarchy.py`, `employer_cluster_integration.py`, `employer_clustering.py`). Source: @audit/code-quality-findings.md §2c.
+- [ ] **Verify `compute_normalized_key` / `find_potential_matches`** in `src/rag/employer_normalization.py` have zero external callers. If so, delete + drop their exports from `src/rag/__init__.py`. Per `hardcodes-2026-05-11-pm.md` section 3.
 
 ### Doc structure (Phase 1 stub → Phase 3 content)
 
