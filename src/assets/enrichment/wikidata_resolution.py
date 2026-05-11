@@ -61,9 +61,6 @@ def _apply_family_alias(canonical: str) -> str:
     return EMPLOYER_FAMILY_ALIASES.get(canonical.upper(), canonical)
 from src.rag.wikidata_client import (
     reset_circuit_breaker,
-    resolve_companies,
-    resolve_companies_rest,  # legacy fallback; new path uses wikidata_resolver
-    resolve_people,
     resolve_people_rest,
 )
 from src.rag.wikidata_resolver import resolve_batch as resolver_resolve_batch
@@ -235,29 +232,11 @@ class WikidataResolutionConfig(Config):
         default=True,
         description="Whether to make live Wikidata queries for cache misses",
     )
-    resolution_path: str = Field(
-        default="resolver",
-        description="'resolver' (new two-layer pipeline: wikidata.reconci.link "
-                    "+ ontology-based type filter + GLEIF Layer-2 fallback for "
-                    "not-founds; replaces the wbsearchentities + filter-chain "
-                    "band-aid layer per docs/decisions.md 2026-05-10), "
-                    "'rest' (legacy per-name wbsearchentities — fallback if the "
-                    "resolver pipeline has issues), "
-                    "or 'sparql' (legacy SPARQL VALUES batches — fastest when "
-                    "the WDQS endpoint is healthy, but currently unreliable due "
-                    "to migration weather).",
-    )
     employer_chunk_size: int = Field(
-        default=20,
-        description="Names per SPARQL VALUES batch for employers. Smaller = "
-                    "more requests but each completes faster on Wikidata's "
-                    "public endpoint. 20 keeps each batch under ~30s.",
-    )
-    whale_chunk_size: int = Field(
-        default=15,
-        description="Names per SPARQL VALUES batch for people. Smaller than "
-                    "employer because the UNION-of-5-properties query is "
-                    "heavier per name.",
+        default=50,
+        description="Names per reconci.link batch for employers. 50 is the "
+                    "default batch size in wikidata_reconci; this knob lets "
+                    "the asset shape progress-logging granularity.",
     )
 
 
@@ -366,47 +345,22 @@ def wikidata_corporate_resolution(
         )
 
         if config.live_queries and names_to_query:
-            use_resolver = config.resolution_path == "resolver"
-            use_rest = config.resolution_path == "rest"
-            if use_resolver:
-                # New two-layer resolver path: reconci.link (typed
-                # candidate space + ontology filter + scoring + sitelinks
-                # tiebreak + P749 rollup) → GLEIF fallback for not-founds.
-                # Batched up to 50/request internally; pre-warms the
-                # ontology cache for the unique type Q-ids in each chunk.
-                progress_chunk = 50
-                context.log.info(
-                    f"Phase 1b: Resolver pipeline (reconci.link + GLEIF) "
-                    f"({len(names_to_query):,} names)..."
-                )
-            elif use_rest:
-                # Legacy REST path: per-name wbsearchentities + filter chain.
-                progress_chunk = 50
-                context.log.info(
-                    f"Phase 1b: Legacy REST Wikidata resolution "
-                    f"({len(names_to_query):,} names, ~{len(names_to_query)//4:,}s estimated)..."
-                )
-            else:
-                progress_chunk = config.employer_chunk_size
-                context.log.info(
-                    f"Phase 1b: Batched SPARQL Wikidata resolution "
-                    f"({len(names_to_query):,} names, chunk={config.employer_chunk_size})..."
-                )
+            # Resolver pipeline: reconci.link top-hit at confidence ≥ 70,
+            # GLEIF strict-match fallback for not-founds. See
+            # `docs/corporate-resolution.md` for the architecture.
+            progress_chunk = config.employer_chunk_size
+            context.log.info(
+                f"Phase 1b: Resolver pipeline (reconci.link + GLEIF) "
+                f"({len(names_to_query):,} names)..."
+            )
             n_done = 0
             n_chunks = 0
             for start in range(0, len(names_to_query), progress_chunk):
                 chunk = names_to_query[start:start + progress_chunk]
-                if use_resolver:
-                    rr_dict = resolver_resolve_batch(chunk)
-                    # Normalize ResolutionResult shape to the existing
-                    # cache schema. The cache reader downstream (and the
-                    # existing Phase 2/3/4 logic) only consults
-                    # canonical, wikidata_id, relationship, source.
-                    results = {name: rr.to_cache_dict() for name, rr in rr_dict.items()}
-                elif use_rest:
-                    results = resolve_companies_rest(chunk)
-                else:
-                    results = resolve_companies(chunk, chunk_size=config.employer_chunk_size)
+                rr_dict = resolver_resolve_batch(chunk)
+                # Normalize ResolutionResult shape to the existing
+                # cache schema (canonical, wikidata_id, source, etc.).
+                results = {name: rr.to_cache_dict() for name, rr in rr_dict.items()}
                 n_done += len(chunk)
                 n_chunks += 1
                 if n_chunks % 5 == 0 or n_done == len(names_to_query):
@@ -536,26 +490,17 @@ def wikidata_corporate_resolution(
             )
 
             if config.live_queries and whale_names_to_query:
-                use_rest_w = config.resolution_path == "rest"
-                progress_chunk = 25 if use_rest_w else config.whale_chunk_size
-                if use_rest_w:
-                    context.log.info(
-                        f"Phase 3b: REST Wikidata resolution "
-                        f"({len(whale_names_to_query):,} names, ~{len(whale_names_to_query)//3:,}s estimated)..."
-                    )
-                else:
-                    context.log.info(
-                        f"Phase 3b: Batched SPARQL Wikidata resolution "
-                        f"({len(whale_names_to_query):,} names, chunk={config.whale_chunk_size})..."
-                    )
+                progress_chunk = 25
+                context.log.info(
+                    f"Phase 3b: REST Wikidata resolution "
+                    f"({len(whale_names_to_query):,} names, "
+                    f"~{len(whale_names_to_query)//3:,}s estimated)..."
+                )
                 n_done = 0
                 n_chunks = 0
                 for start in range(0, len(whale_names_to_query), progress_chunk):
                     chunk = whale_names_to_query[start:start + progress_chunk]
-                    if use_rest_w:
-                        results = resolve_people_rest(chunk)
-                    else:
-                        results = resolve_people(chunk, chunk_size=config.whale_chunk_size)
+                    results = resolve_people_rest(chunk)
                     n_done += len(chunk)
                     n_chunks += 1
                     if n_chunks % 4 == 0 or n_done == len(whale_names_to_query):
