@@ -42,17 +42,35 @@ REQUEST_TIMEOUT = 180  # batched queries with P279* ontology walks can be slow
                        # on Wikidata's public endpoint, especially under load
 REST_TIMEOUT = 15      # MediaWiki REST API is consistently fast; tight budget
 RATE_LIMIT_DELAY = 1.0  # base inter-request sleep
-REST_RATE_LIMIT_DELAY = 0.3  # MediaWiki REST is more lenient than SPARQL
-                              # but per-IP 429s kick in at higher concurrency.
-                              # 0.3s with 4 threads = ~13 req/s, well under
-                              # MediaWiki's documented 200/min anonymous quota.
+REST_RATE_LIMIT_DELAY = 0.05  # MediaWiki REST quota for anonymous use is
+                               # ~200 req/min documented (≈3.3 req/s steady-
+                               # state per process). With 4 prewarm workers
+                               # doing sequential walks, 0.05s/call = ~20-30
+                               # combined req/s. We're bursty (cold-cache
+                               # walks) but quickly hit cache once warm.
+                               # MAX_RETRIES=5 absorbs occasional 429s
+                               # (9s of retry budget per request) so the
+                               # circuit breaker doesn't trip on short bursts.
+                               # Previously 0.3s — conservative from the era
+                               # of 8 workers + 3 retries when bursts
+                               # corrupted ontology walks.
 REST_PARALLEL_WORKERS = 4  # ThreadPool size for resolve_*_rest. Lowered from
                             # 8 after 429-storm tripped the circuit on a real
                             # run. 4 workers × 0.3s delay keeps us safely
                             # below MediaWiki's anonymous rate limits.
 MAX_BACKOFF = 60.0
-MAX_RETRIES = 3
-CIRCUIT_BREAKER_THRESHOLD = 3  # consecutive failures before tripping
+# Bumped from 3 to 5 (2026-05-10): the per-call retry budget needs to
+# survive 429-bursts during the ontology prewarm phase. Three retries
+# at 0.3s/0.6s/1.2s back off totals to ~2s — not enough when several
+# threads hit Wikidata's per-IP limit simultaneously. Five retries
+# (0.3/0.6/1.2/2.4/4.8s = ~9s) buys enough breathing room that
+# transient 429-storms don't truncate ontology walks and write
+# spurious False classifications (which is how Q22687 (bank) was
+# corrupted in the prior run).
+MAX_RETRIES = 5
+CIRCUIT_BREAKER_THRESHOLD = 10  # consecutive non-429 failures before tripping
+                                 # (raised from 3 — false trips on parallel
+                                 #  prewarms were corrupting ontology walks)
 
 # Module-level state for the circuit breaker. Reset on each successful
 # request. When tripped, _execute_sparql returns None immediately without

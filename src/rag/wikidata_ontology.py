@@ -197,19 +197,20 @@ def save_cache() -> None:
 
 
 def _classify_walk(start_qid: str) -> Optional[bool]:
-    """Level-parallel BFS up the P279 chain from `start_qid`. First
-    root hit wins (BFS depth-order).
+    """Sequential BFS up the P279 chain from `start_qid`. First root
+    hit wins (BFS depth-order).
 
-    Within a single BFS level, fetch all parents' entity data in
-    parallel via ThreadPool — typically 5-10x faster than sequential
-    per-node fetches. Different LEVELS are still sequential (we need
-    level N's results before exploring level N+1), but within a
-    level the requests fly concurrently.
+    SEQUENTIAL within a single walk (no internal ThreadPool). Parallelism
+    happens at the prewarm layer (4 workers across different start
+    Q-ids). This avoids the 32-way-concurrent connection storm that
+    triggered cascading 429s and truncated walks in the prior design
+    (8 prewarm workers × 4 inner pool = 32; with MAX_RETRIES=3 some
+    chains exhausted retries and returned None, writing a spurious
+    False classification for the start Q-id — Q22687 (bank) corruption
+    incident, 2026-05-10).
 
     Returns: True / False / None per the docstring above.
     """
-    from concurrent.futures import ThreadPoolExecutor
-
     if start_qid in NON_EMPLOYER_ROOTS:
         return False
     if start_qid in ORG_ROOTS:
@@ -221,51 +222,68 @@ def _classify_walk(start_qid: str) -> Optional[bool]:
 
     while current_level and depth < MAX_WALK_DEPTH:
         # Check root membership for current level (BFS shallowest wins).
-        for qid in current_level:
-            if qid in ORG_ROOTS:
-                return True
-            if qid in NON_EMPLOYER_ROOTS:
-                return False
+        # When BOTH an ORG_ROOT and a NON_EMPLOYER_ROOT appear at the
+        # same depth, NON_EMPLOYER wins. Otherwise iteration order
+        # would non-deterministically pick the first encountered.
+        # Concrete case: a German municipality (Q116457956) walks up
+        # to BOTH Q43229 (organization, broad) AND Q15642541
+        # (administrative territorial entity, specific) at the same
+        # depth via different P279 chains. Territorial is the more
+        # specific classification for our employer-attribution use
+        # case; pick it.
+        if any(qid in NON_EMPLOYER_ROOTS for qid in current_level):
+            return False
+        if any(qid in ORG_ROOTS for qid in current_level):
+            return True
 
-        # Fetch entity data for the current level in parallel.
-        # is_org_subclass cache hits within the level are also useful —
-        # if any cached Q-id is True/False, we can early-return.
-        cached_results: Dict[str, Optional[bool]] = {}
-        uncached: List[str] = []
+        # Cache-hit shortcut at this BFS depth: aggregate ALL cached
+        # results before deciding. Same semantic as root membership
+        # above — at the same depth, NON_EMPLOYER wins over ORG.
+        # Reason: a Q-id like "municipality" subclasses to BOTH
+        # "government organization" (org) AND "administrative
+        # division" (non-employer). Without this rule, iteration
+        # order non-deterministically picks True for municipality-
+        # class types. Preferring False at same depth respects the
+        # more-specific territorial classification.
+        saw_true = False
+        saw_false = False
         with _cache_lock:
             for qid in current_level:
-                if qid in _cache:
-                    cached_results[qid] = _cache[qid]
-                else:
-                    uncached.append(qid)
-        # Cache-hit shortcuts: if any current-level Q-id is already
-        # classified True, we can return True (it's at this depth).
-        for qid, result in cached_results.items():
-            if result is True:
-                return True
-            if result is False:
-                # Don't immediately return False — another sibling at
-                # this level might be True. But mark this branch dead.
-                pass
-        # If ALL of the current level is cached and all False, we're
-        # done — no org root reachable from here.
-        if not uncached and all(r is False for r in cached_results.values()):
+                cached = _cache.get(qid)
+                if cached is False:
+                    saw_false = True
+                    visited.add(qid)  # don't re-fetch its P279
+                elif cached is True:
+                    saw_true = True
+        if saw_false:
             return False
+        if saw_true:
+            return True
 
-        # Fetch entity data for uncached nodes in parallel.
-        if uncached:
-            with ThreadPoolExecutor(max_workers=4) as ex:
-                entities = dict(zip(uncached, ex.map(_entity_data, uncached)))
-        else:
-            entities = {}
-
-        # Build the next level from P279 parents.
+        # Sequential entity_data fetches for uncached nodes.
+        # _entity_data has its own retry+backoff; if a transient 429
+        # is going to recover, it does so before we move on.
+        #
+        # CRITICAL: distinguish "fetch returned no P279" (genuinely no
+        # parents) from "fetch FAILED" (None returned). The latter
+        # must NOT be silently treated as no-parents — that's how
+        # transient 429s in parallel prewarm corrupted Q613142 (law
+        # firm) and Q22687 (bank) into False classifications.
         next_level: List[str] = []
+        any_fetch_failed = False
         for qid in current_level:
-            ent = entities.get(qid)
-            if ent is None:
+            with _cache_lock:
+                if _cache.get(qid) is False:
+                    continue  # already determined False; don't follow further
+            entity = _entity_data(qid)
+            if entity is None:
+                # Fetch FAILED (network / 429 storm / circuit). Mark the
+                # whole walk as inconclusive; the caller will not cache
+                # the result, so a subsequent (less-congested) call will
+                # re-walk and get a real answer.
+                any_fetch_failed = True
                 continue
-            for claim in ent.get("claims", {}).get("P279", []):
+            for claim in entity.get("claims", {}).get("P279", []):
                 parent_qid = _claim_qid(claim)
                 if parent_qid and parent_qid not in visited:
                     visited.add(parent_qid)
@@ -274,7 +292,13 @@ def _classify_walk(start_qid: str) -> Optional[bool]:
         current_level = next_level
         depth += 1
 
-    # No root reached within depth cap.
+    # No root reached within depth cap. If any fetch failed, the walk
+    # is INCONCLUSIVE — return None so caller knows not to cache (and
+    # is_employer_type defaults to rejecting None, but at least the
+    # next walk attempt gets a clean shot). Otherwise the walk really
+    # did exhaust without finding a root → False is correct.
+    if any_fetch_failed:
+        return None
     return False
 
 
@@ -311,10 +335,14 @@ def is_org_subclass(qid: str) -> Optional[bool]:
             if qid in _cache:
                 return _cache[qid]
         result = _classify_walk(qid)
-        with _cache_lock:
-            _cache[qid] = result
-        global _cache_dirty
-        _cache_dirty = True
+        # Only cache definitive results (True or False). None means the
+        # walk was inconclusive (fetch failed mid-walk) — DON'T cache it,
+        # so a subsequent call retries with fresh fetches.
+        if result is not None:
+            with _cache_lock:
+                _cache[qid] = result
+            global _cache_dirty
+            _cache_dirty = True
         return result
 
 
@@ -410,17 +438,24 @@ _COMMON_PREWALK_QIDS = (
 )
 
 
-def prewarm(qids: list, max_workers: int = 8) -> None:
-    """Resolve `is_org_subclass` for many Q-ids in parallel. Used to
-    populate the cache before per-candidate filtering so the filter
-    itself doesn't pay sequential network latency on cache misses.
+def prewarm(qids: list, max_workers: int = 4) -> None:
+    """Resolve `is_org_subclass` for many Q-ids in parallel.
 
-    Each Q-id triggers a P279 walk. Walks for different start Q-ids
-    are independent and parallelizable; per-Q-id locking ensures
-    no double-walking for the same Q-id.
-
-    8 workers is the sweet spot empirically — more triggers
-    intermittent 429s on Wikidata's REST endpoint.
+    Workers = 4 is the balance point empirically: enough parallelism
+    that ontology walks don't dominate per-chunk time (40-50 new Q-ids
+    × ~1.5s sequential = ~60s/chunk vs ~15s/chunk at 4-way parallel),
+    but few enough that Wikidata's REST 429 rate-limit absorbs the
+    spike. The earlier crash-and-corrupt case (Q22687 (bank) → False)
+    came from 8 prewarm workers each running a 4-way internal BFS
+    fetcher (= 32 concurrent connections), which triggered sustained
+    429s that exhausted the 3-retry budget per call. Two changes
+    prevent recurrence:
+      1. wikidata_client.MAX_RETRIES bumped 3 → 5 (more patience)
+      2. _classify_walk is now sequential within a walk (no nested
+         ThreadPool), so total concurrency = workers (not workers ×
+         inner-pool).
+    Net: ~4 concurrent connections steady-state, walks complete
+    without truncation.
     """
     from concurrent.futures import ThreadPoolExecutor
 
@@ -433,9 +468,14 @@ def prewarm(qids: list, max_workers: int = 8) -> None:
         return
     # Dedupe.
     missing = list(set(missing))
-    logger.info("Pre-warming ontology cache for %d unique Q-ids", len(missing))
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        list(ex.map(is_org_subclass, missing))
+    logger.info("Pre-warming ontology cache for %d unique Q-ids (workers=%d)",
+                len(missing), max_workers)
+    if max_workers <= 1:
+        for qid in missing:
+            is_org_subclass(qid)
+    else:
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            list(ex.map(is_org_subclass, missing))
 
 
 def prewalk_common_types() -> None:

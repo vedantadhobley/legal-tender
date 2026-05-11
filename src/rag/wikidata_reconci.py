@@ -50,9 +50,23 @@ USER_AGENT = "LegalTender/1.0 (https://github.com/vedantadhobley/legal-tender)"
 DEFAULT_BATCH_SIZE = 50
 
 # Org type Q-id used as the query-time `type` hint. Q43229 = organization.
-# The reconciliation service treats this as a soft boost, not a strict
-# filter; candidates whose own P31 doesn't include Q43229 (or a subclass)
-# can still appear if their name is a strong match.
+#
+# DEFAULT IS None — we do NOT pass `type` to reconci.link by default.
+#
+# Reason: reconci.link's `type` parameter is NOT a soft boost as the
+# docs suggest. Empirically (verified 2026-05-10) it REJECTS entities
+# whose P31 doesn't directly include Q43229, even if they P31 to a
+# subclass that walks to Q43229 via P279 (e.g. "limited liability
+# company"). This makes legitimate corporate matches disappear:
+#   BAUPOST GROUP: 1 hit at score 100 WITHOUT filter, 0 WITH filter
+#   LOEWS HOTELS:  returns 'Loews Hotels' (chain) at 100 without filter;
+#                  returns 'Loews Madison Hotel' (single hotel) at 71 with
+#
+# Our `wikidata_ontology` module walks P279 transitively from each
+# candidate's P31 types, so we don't need the soft hint — the ontology
+# walker provides the principled type filter. Keep this constant for
+# backward compatibility / explicit opt-in, but the default callers
+# pass type_qid=None.
 ORG_TYPE_QID = "Q43229"
 
 REQUEST_TIMEOUT = 30
@@ -132,8 +146,13 @@ def _chunked(items: List[str], size: int) -> Iterable[List[str]]:
 
 def reconcile_batch(
     names: List[str],
-    type_qid: str = ORG_TYPE_QID,
-    limit: int = 5,
+    type_qid: Optional[str] = None,
+    limit: int = 3,  # was 5 — reduced 2026-05-10. Each extra candidate
+                     # adds ~3 type Q-ids to walk in the ontology cache,
+                     # so 5→3 cuts per-chunk ontology workload by ~40%
+                     # with negligible loss of resolution quality
+                     # (we use top-1-2 in practice; the 4th-5th are
+                     # provenance-only).
     batch_size: int = DEFAULT_BATCH_SIZE,
     parallel_batches: int = 2,
 ) -> Dict[str, List[ReconciCandidate]]:
@@ -163,10 +182,14 @@ def reconcile_batch(
 
     def _process_chunk(chunk: List[str]) -> Dict[str, List[ReconciCandidate]]:
         # Build a queries dict keyed by index — we re-hydrate by position.
-        queries = {
-            f"q{i}": {"query": chunk[i], "type": type_qid, "limit": limit}
-            for i in range(len(chunk))
-        }
+        # Only include `type` when caller explicitly opted in.
+        def _build_query(name: str) -> Dict[str, Any]:
+            q: Dict[str, Any] = {"query": name, "limit": limit}
+            if type_qid:
+                q["type"] = type_qid
+            return q
+
+        queries = {f"q{i}": _build_query(chunk[i]) for i in range(len(chunk))}
         response = _post_batch(queries)
         if not response:
             # Request terminally failed; return empty for this chunk.
@@ -191,7 +214,7 @@ def reconcile_batch(
     return results
 
 
-def reconcile_one(name: str, type_qid: str = ORG_TYPE_QID, limit: int = 5) -> List[ReconciCandidate]:
+def reconcile_one(name: str, type_qid: Optional[str] = None, limit: int = 5) -> List[ReconciCandidate]:
     """Resolve one name. Convenience wrapper; batch via reconcile_batch
     for any non-trivial volume."""
     return reconcile_batch([name], type_qid=type_qid, limit=limit).get(name, [])
