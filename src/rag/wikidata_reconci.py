@@ -49,25 +49,13 @@ USER_AGENT = "LegalTender/1.0 (https://github.com/vedantadhobley/legal-tender)"
 # our query shapes and avoids triggering any per-batch limit.
 DEFAULT_BATCH_SIZE = 50
 
-# Org type Q-id used as the query-time `type` hint. Q43229 = organization.
-#
-# DEFAULT IS None — we do NOT pass `type` to reconci.link by default.
-#
-# Reason: reconci.link's `type` parameter is NOT a soft boost as the
-# docs suggest. Empirically (verified 2026-05-10) it REJECTS entities
-# whose P31 doesn't directly include Q43229, even if they P31 to a
-# subclass that walks to Q43229 via P279 (e.g. "limited liability
-# company"). This makes legitimate corporate matches disappear:
-#   BAUPOST GROUP: 1 hit at score 100 WITHOUT filter, 0 WITH filter
-#   LOEWS HOTELS:  returns 'Loews Hotels' (chain) at 100 without filter;
-#                  returns 'Loews Madison Hotel' (single hotel) at 71 with
-#
-# Our `wikidata_ontology` module walks P279 transitively from each
-# candidate's P31 types, so we don't need the soft hint — the ontology
-# walker provides the principled type filter. Keep this constant for
-# backward compatibility / explicit opt-in, but the default callers
-# pass type_qid=None.
-ORG_TYPE_QID = "Q43229"
+# We do NOT pass `type` to reconci.link. Empirically (2026-05-10) the
+# `type` parameter REJECTS entities whose P31 doesn't directly include
+# the target Q-id, even when P31 walks to it via P279 — so legitimate
+# corporate matches disappear (BAUPOST GROUP returns 1 hit without
+# filter, 0 with `type=Q43229`). Callers can opt back in by passing
+# `type_qid="Q43229"` explicitly, but every caller in the codebase
+# leaves it None.
 
 REQUEST_TIMEOUT = 30
 MAX_RETRIES = 3
@@ -166,7 +154,7 @@ def reconcile_batch(
 
     Parameters:
         names: input strings (unmodified case/spacing — pass FEC names as-is)
-        type_qid: type hint for ranking; default Q43229 (organization)
+        type_qid: type hint for ranking; default None (no type filter)
         limit: max candidates per query (the API caps lower than we'd
             ever want; 5 is plenty for typical disambiguation needs)
         batch_size: queries per HTTP request. Default 50.

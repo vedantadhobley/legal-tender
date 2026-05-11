@@ -88,19 +88,11 @@ _RELATIONSHIP_PRIORITY = {
 # ("of") qualifier on the same claim. Wikidata stores executive roles
 # this way rather than as direct P169-inverse, so without walking P39 we
 # miss founders/CEOs like Kenneth Griffin (Citadel) and John Arnold
-# (Centaurus Capital).
+# (Centaurus Capital). Anything else in a P39+P642 pair defaults to
+# the generic "manages" relationship.
 _CEO_POSITION_QIDS = {
     "Q484876",   # chief executive officer
     "Q3387717",  # CEO (alt)
-}
-
-# Position Q-ids that we treat as "founder of" the qualifier org.
-_FOUNDER_POSITION_QIDS = {
-    "Q43845",    # businessperson — no
-    "Q131524",   # entrepreneur — no
-    # Founder positions are usually expressed by the "founder of"
-    # qualifier directly rather than a position Q-id. P39 with no
-    # CEO match defaults to "manages" below.
 }
 
 

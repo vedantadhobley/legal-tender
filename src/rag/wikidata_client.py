@@ -2,19 +2,14 @@
 
 Thin transport layer. Provides:
   - HTTP transport with retry/backoff and a process-global circuit breaker
-  - `_wbsearchentities`: name → top Q-id candidate(s) (used by callers
-    that want raw label lookup; the simplified resolvers go through
-    reconci.link instead)
   - `_entity_data`: Q-id → full entity JSON (used by `whale_resolver` to
     follow corporate-relationship properties on person entities)
   - `_claim_qid`: extract a Q-id target from a Wikidata claim
 
 Used by:
-  - `wikidata_resolver` (indirectly — shares User-Agent and reliability patterns)
   - `whale_resolver` for entity-data fetches when following P108/P1830/P39
 
-Wikidata REST endpoints we hit:
-  - https://www.wikidata.org/w/api.php  (wbsearchentities)
+Endpoint:
   - https://www.wikidata.org/wiki/Special:EntityData/<Q-id>.json
 
 SPARQL query service (`query.wikidata.org/sparql`) was removed
@@ -39,7 +34,6 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-WIKIDATA_API_ENDPOINT = "https://www.wikidata.org/w/api.php"
 WIKIDATA_ENTITY_ENDPOINT = "https://www.wikidata.org/wiki/Special:EntityData"
 USER_AGENT = "LegalTender/1.0 (https://github.com/vedantadhobley/legal-tender)"
 
@@ -106,26 +100,6 @@ def _execute_rest(url: str, params: Dict[str, Any], timeout: float = REST_TIMEOU
             _circuit_open = True
             logger.error("Wikidata circuit breaker tripped: %s", last_exc)
     return None
-
-
-def _wbsearchentities(name: str, type_filter: str = "item", limit: int = 1) -> Optional[List[Dict[str, Any]]]:
-    """Look up a name via MediaWiki's wbsearchentities. Returns up to
-    `limit` candidate dicts ({id, label, description, ...}), or None
-    on request failure."""
-    response = _execute_rest(
-        WIKIDATA_API_ENDPOINT,
-        {
-            "action": "wbsearchentities",
-            "search": name,
-            "language": "en",
-            "format": "json",
-            "limit": limit,
-            "type": type_filter,
-        },
-    )
-    if not response:
-        return None
-    return response.get("search", []) or []
 
 
 def _entity_data(qid: str) -> Optional[Dict[str, Any]]:

@@ -69,7 +69,7 @@ from src.jobs import (
 from src.schedules import (
     weekly_pipeline_schedule,
 )
-from src.resources import arango_resource, EmbeddingResource
+from src.resources import arango_resource
 
 # Dagster Definitions
 defs = Definitions(
@@ -116,7 +116,6 @@ defs = Definitions(
     ],
     resources={
         "arango": arango_resource,
-        "embedding": EmbeddingResource(),
     },
     jobs=[
         fec_pipeline_job,
