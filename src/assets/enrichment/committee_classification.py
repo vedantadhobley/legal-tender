@@ -111,6 +111,7 @@ _NON_TRADE_HINT_QIDS = frozenset({
 # Keep this list conservative — over-eager stripping clusters unrelated
 # committees.
 _CMTE_NAME_SUFFIXES = (
+    " SEPARATE SEGREGATED FUND",  # FEC's legal term for the PAC arm of a corp/union
     " POLITICAL ACTION COMMITTEE",
     " POLITICAL VICTORY FUND",
     " POLITICAL FUND COMMITTEE",
@@ -176,7 +177,13 @@ def _strip_suffixes(name: str) -> str:
 
 def _pac_search_name(cmte_nm: str) -> str:
     """Derive a Wikidata-search-friendly name from a FEC CMTE_NM by
-    stripping PAC suffixes and parenthetical annotations.
+    stripping PAC suffixes, prefixes, parenthetical annotations, and
+    alternate-name appendages.
+
+    Handles three FEC naming patterns symmetrically:
+      - "[parent] POLITICAL ACTION COMMITTEE" → "[parent]"  (suffix form)
+      - "POLITICAL ACTION COMMITTEE OF [parent]" → "[parent]"  (prefix form)
+      - "[parent]--PAC OF X" → "[parent]"  (alternate-name appendage)
 
     Examples:
       'NATIONAL ASSOCIATION OF REALTORS POLITICAL ACTION COMMITTEE'
@@ -185,12 +192,25 @@ def _pac_search_name(cmte_nm: str) -> str:
         → 'NATIONAL RESTAURANT ASSOCIATION'
       'NATIONAL FEDERATION OF INDEPENDENT BUSINESS FEDERAL POLITICAL ACTION COMMITTEE'
         → 'NATIONAL FEDERATION OF INDEPENDENT BUSINESS'
+      'POLITICAL ACTION COMMITTEE OF THE AMERICAN ASSOCIATION OF ORTHOPAEDIC SURGEONS--PAC OF AAOS'
+        → 'AMERICAN ASSOCIATION OF ORTHOPAEDIC SURGEONS'
     """
     if not cmte_nm:
         return ""
-    # Strip parenthetical content
     import re
-    s = re.sub(r"\s*\([^)]*\)\s*", " ", cmte_nm).strip()
+    # Strip alternate-name appendage: "X--PAC OF Y" → "X" (FEC uses
+    # double-dash as a name/acronym separator in a handful of cases)
+    s = re.sub(r"--.*$", "", cmte_nm).strip()
+    # Strip parenthetical content
+    s = re.sub(r"\s*\([^)]*\)\s*", " ", s).strip()
+    # Strip leading "POLITICAL ACTION COMMITTEE OF (THE )?" or "PAC OF (THE )?"
+    # — symmetric to the suffix forms in _CMTE_NAME_SUFFIXES
+    s = re.sub(
+        r"^(POLITICAL ACTION COMMITTEE|PAC) OF (THE )?",
+        "",
+        s,
+        flags=re.IGNORECASE,
+    ).strip()
     # Strip known committee-form suffixes
     s = _strip_suffixes(s)
     # Strip trailing 'FEDERAL' / 'FEDERAL FUND' / 'AGFUND' (left over
@@ -312,6 +332,29 @@ def _apply_m_org_refinement(context, db) -> int:
 
     cache_path = get_cache_dir() / "trade_assoc_classification.json"
     cache = _load_trade_cache(cache_path)
+
+    # Clear stale provenance flags from any prior run. When
+    # _TRADE_CLASS_QIDS changes, some committees previously flipped may
+    # no longer qualify; their terminal_type gets reverted by Phase 1
+    # but the provenance fields persist on the document. Wipe them
+    # before recomputing so only this run's flips carry the flags.
+    cleared = list(db.aql.execute(
+        """
+        FOR c IN committees
+            FILTER c.terminal_type_refined_from_m_org_wikidata != null
+                OR c.terminal_type_wikidata_qid != null
+                OR c.terminal_type_wikidata_class != null
+            UPDATE c WITH {
+                terminal_type_refined_from_m_org_wikidata: null,
+                terminal_type_wikidata_qid: null,
+                terminal_type_wikidata_class: null
+            } IN committees OPTIONS { keepNull: false }
+            COLLECT WITH COUNT INTO n
+            RETURN n
+        """
+    ))
+    if cleared and cleared[0]:
+        context.log.info(f"  Phase 1b: cleared stale provenance from {cleared[0]:,} committees")
 
     all_ideo = list(db.aql.execute(
         "FOR c IN committees FILTER c.terminal_type == 'ideological' AND c.ORG_TP == 'M' "
@@ -549,17 +592,28 @@ def committee_classification_asset(
         # are "definitionally missing classification" rather than explicit
         # mis-classifications, so they're safe to upgrade.
         context.log.info("🔧 Phase 2a: parent-organization inheritance via CONNECTED_ORG_NM...")
+        # Two-step match:
+        #   (1) exact: parent.CMTE_NM == CONNECTED_ORG_NM
+        #   (2) prefix: parent.CMTE_NM starts with CONNECTED_ORG_NM
+        #       (with ≥10-char guardrail to avoid over-matching short
+        #       prefixes; covers cases like a Super PAC's CONNECTED
+        #       being 'UNITED FOOD AND COMMERCIAL WORKERS INTERNATIONAL
+        #       UNION' matching the parent labor cmte
+        #       'UNITED FOOD AND COMMERCIAL WORKERS INTERNATIONAL UNION
+        #       ACTIVE BALLOT CLUB')
         inheritance_aql = """
         FOR c IN committees
             FILTER c.terminal_type IN ["corporation", "super_pac_unclassified", "unknown"]
             FILTER c.CONNECTED_ORG_NM != null
                 AND c.CONNECTED_ORG_NM != ""
                 AND UPPER(c.CONNECTED_ORG_NM) != "NONE"
+            LET conn = UPPER(c.CONNECTED_ORG_NM)
             LET parent = FIRST(
                 FOR p IN committees
-                    FILTER UPPER(p.CMTE_NM) == UPPER(c.CONNECTED_ORG_NM)
                     FILTER p._key != c._key
                     FILTER p.terminal_type IN ["labor_union", "trade_association", "ideological", "cooperative"]
+                    FILTER UPPER(p.CMTE_NM) == conn
+                       OR (LENGTH(conn) >= 10 AND STARTS_WITH(UPPER(p.CMTE_NM), conn))
                     LIMIT 1
                     RETURN p.terminal_type
             )
