@@ -21,6 +21,16 @@ Validation contract: every fix runs the four gates in @docs/validation.md. Diff 
 
 ### This week (small, high-impact fixes)
 
+- [ ] **Audit-derived terminal-node cleanup** (per `docs/audit/terminal-node-classification-2026-05-13.md`):
+  - Add `" SEPARATE SEGREGATED FUND"` to `_CMTE_NAME_SUFFIXES` (catches AANA $6.7M + others). Target case after rerun: AANA flips to trade_association via Phase 2b name-cluster.
+  - Add prefix-stripping for `"POLITICAL ACTION COMMITTEE OF THE X"` / `"PAC OF X"` in `_pac_search_name` (catches AAOS $7.4M).
+  - Look up Wikidata "farm bureau" Q-id and add to `_TRADE_CLASS_QIDS` (catches Texas Farm Bureau $5.7M, Ohio Farm Bureau $1.2M).
+  - Add `"DEMOCRACY ENGINE"` to `CONDUIT_PATTERNS` in `candidate_upstream.py` (moves $46.3M from corporation to conduit-filtered; functionally a payment processor like WinRed/ActBlue).
+  - Add provenance-flag cleanup at the start of Phase 1b — clear stale `terminal_type_refined_from_m_org_wikidata` / `terminal_type_wikidata_*` flags from committees not currently flipped (cleanup IFW + ASIS stale flags).
+  - Relax Phase 2a CONNECTED-match from exact-string to prefix-match for super_pac_unclassified → labor_union inheritance (catches UFCW SPAC $20M, UNITE HERE PAC $27M, IUOE SPAC $20M, USW WORKS $9M, CA Nurses PAC $8M — ~$85M proper org-rollup).
+
+  Combined target case: re-run `view_candidate.py "BACON, DONALD J"` should show NAR PAC's $60K move from ideological to trade_association sub-table; ACOG / AANA / AAOS / Texas Farm Bureau dollars flow into trade. Bulk median gate stays ≤5% (this is reclassification, not re-attribution — total receipts unchanged).
+
 - [ ] **Generic-string rejection in `name_match.py`** — visible misresolutions in `by_organization`:
   - "TARGETED VICTORY" → corp (it's a digital ad agency)
   - "PRESIDENT" / "CEO" / "CONSULTANT" → corp (job titles donors typed as employer)
