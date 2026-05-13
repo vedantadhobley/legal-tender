@@ -30,6 +30,7 @@ docker compose -f docker-compose.dev.yml up -d
 - @docs/operations.md — runbook (how to do common ops tasks)
 - @docs/decisions.md — historical decision log (formerly PIPELINE_FIXES.md)
 - @docs/todo.md — active TODOs, open issues, deferred work
+- @docs/validation.md — validation methodology, four-gate contract, current numbers
 - @docs/second-brain.md — self-hosted second brain stack design
 - @docs/setup-currency.md — meta-tooling currency tracking
 - @docs/plan.md — the master plan for this professionalization effort
@@ -60,19 +61,30 @@ docker compose -f docker-compose.dev.yml up -d
 - **Branch**: `feature/professionalization`. Master plan at @docs/plan.md.
 - **Phase 0 audit**: complete. See @docs/audit/.
 - **Last full data sync**: 2026-05-07 (17.2 GB, 4 cycles, 215M individual contributions parsed).
-- **Last bulk validation**: median |delta| vs FEC `weball.TTL_RECEIPTS` = 2.4%; 65% within ±5%; 77% within ±10%. Run via `docker exec ... python3 /workspace/scripts/validation_report.py`.
+- **Last bulk validation**: median |Δ| vs FEC `weball.TTL_RECEIPTS` = 2.4%; 65% within ±5%; 77% within ±10%; 88% within ±25%. See @docs/validation.md for full methodology and current numbers.
 - **Inspect a candidate**: `docker exec -w /workspace legal-tender-dev-webserver python3 scripts/view_candidate.py "<name or CAND_ID>"`. Flags: `--cycle 2024`, `--top 15`. Renders all 5 channels + by_organization cross-cut with via-donor provenance. Sanity-check tool for output-quality.
-- **Next session plan** (queued, see @docs/todo.md "Next session"):
-  1. Capture baseline at `docs/audit/baseline-2026-05-12.md`
-  2. Extend May-9 parent-org inheritance: when N committees share `CONNECTED_ORG_NM`, most-specific terminal_type wins. Fixes NAR Congressional Fund (super_pac_unclassified → trade_association), NRA ILA, Club for Growth Action splits.
-  3. Stop treating `super_pac_unclassified` as terminal — trace through their `contributed_to` / `transferred_to` edges. Target case: Club for Growth Action's $263.5M moves from unaccounted to attributed.
-  4. Then: thinnest CLI `python view_candidate.py "CRUZ, TED"` rendering `funding_channels.by_organization` + trace path.
+- **Four-gate validation contract** (every fix touching data flow runs all four before commit):
+  1. Bulk median ≤5% — `scripts/validation_report.py`
+  2. Named-candidate diff for Cruz/Trump/Harris/Bacon/Sanders — `scripts/view_candidate.py "<id>"` vs `docs/audit/baseline-2026-05-12.md`
+  3. Target case — explicit per-fix pass/fail
+  4. Pytest 68/68 — `pytest tests/ -q`
+  See @docs/validation.md for thresholds and how-to.
+- **Recent completed work** (May 12-13):
+  - Phase 2a/2b parent-org inheritance generalization — 52 committees + $350M reclassified; CFG Action / NAR Cong Fund / NRA ILA targets hit
+  - Recursive IE trace through passthrough Super PACs — by_pac collapsed to ~0; by_corporation now captures 22% IE+ / 27% IE-
+  - `by_individual` surfacing in `ie.support/ie.oppose` output
+  - `scripts/view_candidate.py` — rich-based candidate-level renderer
+  - M-ORG_TP refinement via Wikidata P31 (replacing 50-entry token list) — 33 committees + $117M flipped from `ideological` to `trade_association` via reconci.link
+- **Next session targets** (see @docs/todo.md "Next session"):
+  - Generic-string rejection in `name_match.py` to fix "TARGETED VICTORY" / "PRESIDENT" / "State of X" / federal-agency leakage in `by_organization`
+  - Same-entity P749 (parent-organization) walk to merge Pan Am Systems/Railways, GREYLOCK/Greylock Partners, Adelson Drug Clinic/Adelson Clinic splits
+- **UI work** queued for next weekend — web view consuming the same `funding_channels.aggregate` shape the view tool already renders
 - **Known dead/orphan still in tree**:
   - `src/cli/pies_v3.py` (679 LOC) — confirmed no callers; delete in dedicated commit
   - `src/cli/check_funding.py` (74 LOC) — no callers; delete or move to `scripts/`
   - `src/api/lobbying_api.py` (63 LOC) — aspirational; keep if the lobbying-integration plan is live, delete otherwise
 
-See @docs/todo.md for the full priority list and @docs/audit/hardcodes-2026-05-11-pm.md for the latest hardcode/dead-code verdicts.
+See @docs/todo.md for the full priority list, @docs/validation.md for current validation state, and @docs/audit/hardcodes-2026-05-11-pm.md for the latest hardcode/dead-code verdicts.
 
 ## Memory model (for me, the agent)
 

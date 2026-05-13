@@ -6,6 +6,111 @@ When a non-obvious choice gets made, append a dated entry here with: what we dec
 
 ---
 
+## 2026-05-12 + 2026-05-13 — Terminal-node fixes + view tool + classification refinement
+
+Two-session arc focused on (a) making the terminal-node classification layer more trustworthy and (b) finally making the pipeline's output human-viewable. Validation methodology formalized in @docs/validation.md.
+
+### 2026-05-12 morning — Baseline snapshot
+
+`docs/audit/baseline-2026-05-12.md` captures the known-good comparison point every subsequent fix diffs against:
+
+- Bulk validation: 11,567 candidate-cycle comparisons, median |Δ| = 2.4%, 65% within ±5%, 77% within ±10% of FEC `weball.TTL_RECEIPTS`.
+- BWC sanity (Bacon NE-2) across all 4 cycles: -2.7% to -5.8%, consistent.
+- Named-candidate top-15 `by_organization` for Cruz, Trump, Harris, Bacon, Sanders.
+- terminal_type distribution: 16,587 campaign / 9,339 passthrough / 6,277 super_pac_unclassified / 2,179 corporation / 809 trade_association / 427 ideological / 394 labor_union / 57 cooperative / 31 unknown.
+- Top 20 `super_pac_unclassified` by receipts: SLF PAC $1.14B, SMP $1.11B, MAGA Inc $521M, FAIRSHAKE $358M, AMERICA PAC $311M, DEMOCRACY PAC $279M, Club for Growth Action $263M, AIPAC's UDP $209M, etc. Cumulative ~$6.3B+ that was previously terminating the trace at these committees.
+
+### 2026-05-12 — Phase 2a/2b parent-org inheritance generalization
+
+The May-9 NEA-Fund inheritance fix was narrow: `corporation`-typed committees inherit from a sibling matched by `CONNECTED_ORG_NM`. Generalized:
+
+- **Phase 2a**: source filter expanded to `corporation` OR `super_pac_unclassified` OR `unknown`. Same parent-lookup by `CONNECTED_ORG_NM`, with FEC's literal-string 'NONE' value treated as empty.
+- **Phase 2b (new)**: when CONNECTED is empty/NONE, derive a `root_name` by stripping known committee-form suffixes (POLITICAL ACTION COMMITTEE, CONGRESSIONAL FUND, VICTORY FUND, INSTITUTE FOR LEGISLATIVE ACTION, ACTION, PAC, OF AMERICA, etc.). Cluster by root_name. Within each cluster of ≥2 members, if any has a specific terminal_type, all loosely-typed siblings inherit. Conservative min_root_length=8 prevents stripping-to-junk over-clustering.
+
+52 committees ($350M in receipts) reclassified. Target cases all hit:
+- Club for Growth Action ($263.5M): super_pac_unclassified → ideological (cluster=CLUB FOR GROWTH)
+- NAR Congressional Fund ($60M): super_pac_unclassified → ideological (CONNECTED match)
+- NRA Institute for Legislative Action: super_pac_unclassified → ideological (cluster=NATIONAL RIFLE ASSOCIATION)
+- Communications Workers of America Working Voices ($35M): super_pac_unclassified → labor_union
+- No Labels Action ($3.5M), Gun Owners of America ($1.1M), Moms for Liberty Action ($500K), American Chemistry Council: smaller flips
+
+### 2026-05-12 — Recursive IE trace through passthrough Super PACs
+
+`trace_ie_sources` was single-level: walk one hop upstream of the spending PAC, attribute terminal-type committees to by_corporation, dump everything else (including passthrough PACs) into by_pac. Stopped at the first passthrough — and because the dominant funding pattern post-Citizens-United is Super PACs funded by other Super PACs (SLF Fund ← One Nation ← donors), the *actual* donors disappeared into by_pac as opaque line items.
+
+Made it recursive with the same Phase-1-propagate + Phase-2-attribute structure as `trace_committee_sources`. Same correctness guards (cycle break, per-edge fraction cap at 1.0, accumulated multiplier cap at 1.0). by_pac now only collects passthrough PACs whose receipts are zero/missing (rare — "trace ended here" signal rather than silently dropped attribution).
+
+Aggregate effect:
+- IE+ resolved to by_corporation: 22.3% (~$840M across all candidates)
+- IE+ stuck in by_pac: 0.0%
+- IE- resolved to by_corporation: 26.6% (~$1.73B)
+- IE- stuck in by_pac: 0.1%
+
+Also surfaced `by_individual` in the output (the recursive trace's individual attributions were happening internally but not written to the candidate document pre-fix). New `_top_individuals` helper preserves {name, amount, employer}; `_merge_individuals_list` for cross-cycle merge.
+
+### 2026-05-12 — `scripts/view_candidate.py`
+
+~470 LOC, `rich`-based terminal renderer. First time the pipeline's output is viewable by a human without writing an ad-hoc AQL query. CLI: `python view_candidate.py "<name or CAND_ID>" [--cycle YYYY] [--top N]`. Renders header, channels summary, Ch1 by type, Ch2/3 with top_pacs/by_corporation/by_individual/stuck-by_pac, Ch4 whale corp-connected + independent + grassroots, Ch5 unaccounted with breakdown, by_organization cross-cut with via_donors. Disambiguates name substrings to a CAND_ID list when ambiguous.
+
+Visible output-quality issues surfaced (not blockers; expected per the resolver's documented trade-offs):
+- "TARGETED VICTORY" misresolved as a corporation (it's a campaign-services firm)
+- "Asana Journal" instead of "Asana"
+- "PRESIDENT" / "United States Department of the Army" / "State of Nebraska" as org names (job-title / geographic leakage from FEC employer fields)
+
+These are documented in @docs/validation.md "What we haven't validated" and `docs/todo.md` "Session 2 follow-ups."
+
+### 2026-05-13 — M-ORG_TP refinement: token list → Wikidata P31
+
+Initial implementation used a 50-entry hand-curated `_TRADE_PROFESSION_TOKENS` list (REALTORS, BANKERS, MANUFACTURERS, DENTISTS, ...) to refine ORG_TP=M committees from the catch-all `ideological` bucket to `trade_association`. Worked ($215M flipped, including AAJ, Council of Insurance Agents) but Vedanta correctly identified it as the exact "growing hardcoded list" shape we've been removing all session.
+
+Considered alternatives:
+1. Keep the list as reference data (same shape as `_STOPWORDS` / `_LEGAL_SUFFIXES`)
+2. **Wikidata P31 lookup via reconci.link** ← chosen
+3. LLM-based classification via Qwen on joi
+4. Wikidata SPARQL with type filter (rejected — reintroduces the spaghetti we deleted on 2026-05-11)
+5. OpenCorporates' industry codes (rejected — paid tier, single-source)
+6. Collapse the distinction entirely
+
+Chose option 2 because:
+- Same infrastructure as employer/whale resolvers (no new dependency)
+- Deterministic (same input → same output)
+- Provenance is auditable (Q-id + class name stored per refined committee)
+- The "list" is ~10 Q-ids from Wikidata's own taxonomy of professional-org types, all empirically observed in our corpus — different shape from the eye-curated string list
+
+Implementation:
+- For each Phase-1-classified `ideological` ORG_TP=M committee, derive a search name by stripping parenthetical content + PAC suffixes
+- Reconcile via reconci.link, cached at `<cache_dir>/trade_assoc_classification.json` (schema-versioned: cache stores full P31 type list, `is_trade` derived at read-time so set evolution doesn't require cache invalidation)
+- Top candidate's P31 types checked against `_TRADE_CLASS_QIDS`. If any match → flip.
+
+`_TRADE_CLASS_QIDS` set (all empirically observed):
+- Q2178147 trade association
+- Q829080 professional association
+- Q10729872 medical association
+- Q4287745 medical organization
+- Q1865205 bar association
+- Q897399 chamber of commerce and industry
+- Q18325460 501(c)(6) organization (US tax code for business leagues)
+- Q16904718 agricultural organization
+- Q114301854 veterinary medical association
+- Q70363673 pharmaceutical societies
+
+Run result: **33 committees ($116.7M) refined**. Coverage is ~$50M smaller than the token-list approach was, because Wikidata classifies AAJ ($24M trial lawyers) and Council of Insurance Agents ($17M) as `advocacy group` (Q431603) rather than trade. Defensible — those orgs do as much advocacy as trade representation; deferring to Wikidata's judgment is more principled than my eye-curated list.
+
+Coverage gap accepted explicitly: AOPA / NFIB / BCBS Michigan / APTA / ACOG (~$30M total) — real trade orgs but Wikidata's P31 doesn't include any of our trade-class Q-ids. They stay ideological. Better default (under-flip rather than over-flip).
+
+### Validation methodology documented
+
+`docs/validation.md` written as the canonical reference for the four-gate validation contract:
+
+1. **Bulk median** vs FEC weball.TTL_RECEIPTS (≤5% threshold; currently 2.4%)
+2. **Named-candidate diff** for Cruz / Trump / Harris / Bacon / Sanders top-15 by_organization
+3. **Target case** explicit per-fix pass/fail
+4. **Pytest** 68/68
+
+Plus catalog of what we've validated, what we haven't, and how to run each gate. All five fixes in this two-session arc passed all four gates.
+
+---
+
 ## 2026-05-11 PM — Multi-signal corroboration + whale-path simplification + audit-driven deletions
 
 Three commits this afternoon, building on the morning's resolver simplification.

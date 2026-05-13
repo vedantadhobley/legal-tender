@@ -6,49 +6,55 @@ This file is editable by both humans and the agent during sessions. Append-frien
 
 ---
 
-## Next session (queued 2026-05-11 PM)
+## Next session (queued 2026-05-13)
 
-**Goal**: trust the terminal-node layer + make `funding_channels` viewable. Two sessions of work targeted before next weekend's UI work.
+Validation contract: every fix runs the four gates in @docs/validation.md. Diff against `docs/audit/baseline-2026-05-12.md`.
 
-### Validation contract (applies to every fix this week)
+### Done in the May 12-13 arc (cleared from queue)
 
-Every commit goes through four gates:
-1. **Named-candidate diff**: print `funding_channels.by_organization` top-15 for Cruz / Trump / Harris / BWC / Sanders before and after. Flag any org that swings >20% or disappears.
-2. **Bulk median**: `scripts/validation_report.py` cross-references against FEC `weball.TTL_RECEIPTS`. Current median |delta| = 2.5%. Fix is rejected if it crosses 5%.
-3. **Target case**: each fix has one explicit pass/fail it's trying to flip. Stated up front. Fix isn't done until that case passes.
-4. **Pytest green**: all 68 tests stay passing.
+- [x] ~~Capture baseline~~ — `docs/audit/baseline-2026-05-12.md` 2026-05-12.
+- [x] ~~Phase 2a/2b parent-org inheritance generalization~~ — 52 committees + $350M flipped 2026-05-12. CFG Action / NAR Cong Fund / NRA ILA target cases hit.
+- [x] ~~`super_pac_unclassified` trace-through~~ — already in `PASSTHROUGH_TYPES`; the actual fix was **recursive IE trace** through passthrough Super PACs. Done 2026-05-12. by_pac collapsed from catch-all to near-zero; by_corporation captures 22% IE+ / 27% IE- (~$2.5B attributed across all candidates).
+- [x] ~~Surface `by_individual` in IE output~~ — done 2026-05-12. Recursive-trace's individual attributions now visible in candidate document.
+- [x] ~~`scripts/view_candidate.py`~~ — ~470 LOC `rich`-based renderer shipped 2026-05-12. Sanity-checks pass on all 5 named candidates.
+- [x] ~~M-ORG_TP refinement via Wikidata P31~~ — 33 committees + $117M flipped 2026-05-13. Token-list approach replaced with reconci.link + 10-Q-id trade-class set.
 
-### Session 1 — Trust the terminal-node layer
+### This week (small, high-impact fixes)
 
-- [ ] **Capture baseline.** Run `validation_report.py` + named-candidate spot-checks + corporate_families top-50; commit output to `docs/audit/baseline-2026-05-12.md`. First action of the session — every subsequent fix diffs against this.
-- [ ] **Extend the May-9 parent-org inheritance.** Current logic only inherits when a `corporation`-typed cmte's `CONNECTED_ORG_NM` matches a labor-union/trade/ideological/cooperative cmte's `CMTE_NM`. Generalize: when N committees share a `CONNECTED_ORG_NM`, the most-specific terminal_type wins for all of them. Target cases (verified 2026-05-11 PM via direct ArangoDB query):
-  - NAR Congressional Fund: `super_pac_unclassified` → `trade_association` (inherits from NAR PAC's `trade_association` — currently `ideological`, also needs the M-org-tp → trade-assoc refinement)
-  - NRA Institute for Legislative Action: `super_pac_unclassified` → `ideological` (inherits from NRA Victory Fund)
-  - Club for Growth Action ($263.5M!): `super_pac_unclassified` → `ideological` (inherits from Club for Growth PAC)
-- [ ] **Stop treating `super_pac_unclassified` as terminal.** Currently 4,533 committees fall here and money stops tracing. They DO have `contributed_to` and `transferred_to` edges. Two options to decide between:
-  - (a) Continue tracing upstream (same logic as `passthrough`), attribute to whoever funded them
-  - (b) Keep them terminal but rolled-up under the inherited parent-org type from the previous fix
-  - Target case: Club for Growth Action's $263.5M moves from unaccounted to attributed.
-- [ ] **Re-validate**: bulk median should DROP or stay flat. By-organization for the named candidates should show NAR / NRA / Club for Growth amounts increasing (because half their split was previously unattributed).
+- [ ] **Generic-string rejection in `name_match.py`** — visible misresolutions in `by_organization`:
+  - "TARGETED VICTORY" → corp (it's a digital ad agency)
+  - "PRESIDENT" / "CEO" / "CONSULTANT" → corp (job titles donors typed as employer)
+  - "State of Illinois" / "State of Nebraska" / "United States Department of the Army" → corp (geographic / agency leakage)
+  - "Asana Journal" → corp (wrong Wikidata Q-id for a generic-word input)
 
-### Session 2 — Make funding_channels viewable
+  Implementation plan: extend `_accept_candidate` in `wikidata_resolver.py` with two principled signals — (a) reject if normalized input matches a US state name, "UNITED STATES" / "FEDERAL GOVERNMENT" / "DEPARTMENT OF X" / "STATE OF X" pattern; (b) reject if input is in a small set of common job titles donors type as employer (these are anti-values, similar shape to existing `NON_EMPLOYERS`).
 
-- [x] ~~**`scripts/view_candidate.py`**~~ — DONE 2026-05-12. ~470 LOC, `rich`-based CLI. Args: positional CAND_ID-or-substring + `--cycle YYYY` + `--top N`. Renders header, channels summary, Ch1 by type, Ch2/3 with top_pacs/by_corporation/by_individual/stuck-by_pac, Ch4 whale corp-connected + independent + grassroots, Ch5 unaccounted with breakdown, by_organization cross-cut with via_donors provenance. Disambiguates name substrings to a CAND_ID list when ambiguous. Reads `aggregation.candidates.<doc>.funding_channels` directly — no Dagster dep.
-  - Spot-checks pass: Cruz IE+ shows TARGETED VICTORY, NRA, Club for Growth, GOA Victory Fund — all sensible for a Texas Republican. Cruz IE- shows WINSENATE, NRDC, Crush MAGA — the Dem PACs ad-buying against him. Cruz whale corp-connected: BGR Group, Winklevoss Capital, Holland & Knight, GeoSouthern Energy. Trump top-15: DOGE (Musk), Pan Am Railways (Mellon), Uline (Uihlein), Marvel (Perlmutter), Cantor Fitzgerald (Lutnick), Pratt Industries (Pratt). Harris cycle 2024 shows $1.69B total.
-- [ ] **`scripts/view_candidate.py` v2 follow-ups** (deferred):
-  - `--show-path <ORG>` flag that walks the trace for a specific org and prints the multiplier-weighted chain
-  - Output renderer for "Asana Journal" / "PRESIDENT" / "United States Department of the Army" cases — these are visible Wikidata misresolutions worth flagging in the view rather than fixing upstream right now
-  - JSON output mode (`--json`) for piping to other tools / the eventual web UI
-  - Header: total funding, channel breakdown with %
-  - Channel 1 table: top organizational sources by type (corp / trade / labor / ideological / cooperative)
-  - Channel 2/3 tables: top IE spenders + their upstream donors
-  - Channel 4: top whales (with `via_donors` employer attribution)
-  - Trace path: for top-N orgs, show the multiplier-weighted chain (e.g., "AIPAC → JFC1 → JFC2 → Cruz committee, mult=0.42, attributed $X")
-- [ ] **Sanity check** the top-attributed orgs for the named-candidate set. If Cruz's top-org isn't energy/finance-shaped, something's wrong upstream. This is the qualitative complement to the bulk-median check.
+  Target case: Cruz's IE+ `by_corporation` no longer shows TARGETED VICTORY $1.22M; Trump's by_organization no longer shows "United States Department of the Army" / "State of Nebraska"; Harris's no longer shows "State of Illinois" $2.78M / "Afghanistan War Commission" $1.66M.
 
-### Then (UI session, target: next weekend)
+- [ ] **Same-entity P749 merge in `corporate_families`** — known splits:
+  - Pan Am Systems $615M + Pan Am Railways $308M = one Mellon entity
+  - GREYLOCK $32M + Greylock Partners $26M = same firm
+  - Adelson Drug Clinic $310M + Adelson Clinic = same Miriam Adelson clinic
 
-- [ ] Thinnest possible web view of the same data. Probably FastAPI + a single HTML template + Alpine.js. Reads from Arango directly. Same `by_organization` + trace-path render, clickable.
+  Implementation plan: post-resolution, walk each family's Q-id via Wikidata's P749 (parent organization). If two families' Q-ids share a parent, merge under the parent's canonical name. ~5K entity-data fetches, ~3-4 min runtime. Cache at `<cache_dir>/wikidata_parent_orgs.json`.
+
+  Target case: top of `corporate_families` no longer shows Pan Am Systems / Pan Am Railways as separate; Greylock collapses; Adelson clinics merge.
+
+- [ ] **Audit the 33 Wikidata-flipped trade_association classifications.** Eyeball cache + the 380 not-flipped for false-negatives (real trade orgs Wikidata didn't classify with our P31 set). Add `docs/audit/trade-class-2026-05-13.md`.
+
+### UI work (target: 2026-05-17 / next weekend)
+
+- [ ] **Web view consuming `funding_channels.aggregate`** — probably FastAPI + a single HTML template + Alpine.js. Reads Arango directly. Same `by_organization` + per-channel tables as the view tool, but rendered as clickable HTML.
+- [ ] **`scripts/view_candidate.py --json`** — output mode emitting tables as JSON. Used by the web UI's static fallback.
+- [ ] **`scripts/view_candidate.py --show-path <ORG>`** — walks the trace for a specific org, prints the multiplier-weighted chain ("AIPAC → JFC1 → JFC2 → candidate cmte, mult=0.42, attributed $X").
+
+### Later this month / next month
+
+- [ ] **OpenCorporates Layer 3** (waiting on API key approval). Would close ~40% of currently-not-found employer strings.
+- [ ] **Audit other UPSERT sites** for the `mergeObjects: false` stale-merge pattern beyond `committee_receipts`.
+- [ ] **Automated diff against baseline** — script that compares current state to `docs/audit/baseline-2026-05-12.md` and flags top-15 orgs that swing >20%. Currently the named-candidate gate is manual.
+- [ ] **Single-cycle dev mode** — `dagster job execute --config` recipe for one-cycle iteration runs. Cuts iteration loop from ~22 min to ~5 min.
+- [ ] **JSON-output mode for `validation_report.py`** for CI integration.
 
 ---
 
