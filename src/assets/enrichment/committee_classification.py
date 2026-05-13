@@ -43,6 +43,130 @@ from dagster import asset, AssetExecutionContext, MetadataValue, Output
 from src.resources.arango import ArangoDBResource
 
 
+# Suffixes stripped (longest-first within each group) from CMTE_NM when
+# computing the cluster root_name for Phase 2b. Each entry is the form
+# typical FEC committees use to distinguish affiliates of the same parent
+# organization (PAC vs Super PAC arm vs lobbying arm vs membership entity).
+# Keep this list conservative — over-eager stripping clusters unrelated
+# committees.
+_CMTE_NAME_SUFFIXES = (
+    " POLITICAL ACTION COMMITTEE",
+    " POLITICAL VICTORY FUND",
+    " POLITICAL FUND COMMITTEE",
+    " POLITICAL FUND",
+    " CONGRESSIONAL FUND",
+    " VICTORY FUND",
+    " FEDERAL FUND",
+    " INSTITUTE FOR LEGISLATIVE ACTION",
+    " ACTION COMMITTEE",
+    " ACTION INC",
+    " ACTION",
+    " INC.",
+    " INC",
+    " LLC",
+    " LTD",
+    " PAC",
+    " OF AMERICA",
+    " OF THE UNITED STATES",
+    " OF THE U.S.A.",
+    " OF U.S.A.",
+)
+
+# "Loose" types that may be upgraded by inheritance — these were either
+# wrong (corporation often is) or definitionally missing classification.
+_LOOSE_TYPES = ("corporation", "super_pac_unclassified", "unknown")
+
+# "Specific" types that may be inherited — never demote toward these
+# from a more-specific type.
+_SPECIFIC_TYPES = ("labor_union", "trade_association", "ideological", "cooperative")
+
+# Priority order for picking which specific type wins inside a cluster
+# that has multiple specific-type members (rare but possible). Earlier =
+# more specific.
+_SPECIFIC_TYPE_PRIORITY = {
+    "trade_association": 0,
+    "labor_union": 1,
+    "cooperative": 2,
+    "ideological": 3,
+}
+
+_MIN_ROOT_LENGTH = 8  # don't cluster on anything shorter than this
+
+
+def _strip_suffixes(name: str) -> str:
+    """Repeatedly strip known committee-form suffixes until none apply.
+    Used to compute a cluster key for inheriting terminal_type across
+    siblings of the same parent organization."""
+    if not name:
+        return ""
+    upper = name.upper().strip()
+    # Strip trailing punctuation/whitespace
+    upper = upper.rstrip(" .,;:-")
+    changed = True
+    while changed:
+        changed = False
+        for suffix in _CMTE_NAME_SUFFIXES:
+            if upper.endswith(suffix):
+                upper = upper[:-len(suffix)].rstrip(" .,;:-")
+                changed = True
+                break  # restart the suffix scan (longest-first by group)
+    return upper
+
+
+def _apply_name_cluster_inheritance(context, db) -> int:
+    """Phase 2b: cluster committees by stripped-name root, inherit the
+    most-specific terminal_type within each cluster. Returns the number
+    of committees updated."""
+    all_cmtes = list(db.aql.execute(
+        "FOR c IN committees RETURN { key: c._key, name: c.CMTE_NM, type: c.terminal_type }"
+    ))
+
+    # Cluster by stripped root name
+    clusters: Dict[str, List[Dict[str, Any]]] = {}
+    for c in all_cmtes:
+        root = _strip_suffixes(c.get("name") or "")
+        if len(root) < _MIN_ROOT_LENGTH:
+            continue
+        clusters.setdefault(root, []).append(c)
+
+    updates: List[Dict[str, Any]] = []
+    type_counts: Dict[str, int] = {}
+
+    for root, members in clusters.items():
+        if len(members) < 2:
+            continue
+        # Find specific-type members; pick the highest-priority type.
+        specific_members = [m for m in members if m["type"] in _SPECIFIC_TYPES]
+        if not specific_members:
+            continue
+        winning_type = min(
+            (m["type"] for m in specific_members),
+            key=lambda t: _SPECIFIC_TYPE_PRIORITY.get(t, 99),
+        )
+        # Upgrade loose members to the winning type
+        for m in members:
+            if m["type"] in _LOOSE_TYPES:
+                updates.append({
+                    "_key": m["key"],
+                    "terminal_type": winning_type,
+                    "terminal_type_inherited_from_name_cluster": True,
+                    "terminal_type_cluster_root": root,
+                })
+                type_counts[winning_type] = type_counts.get(winning_type, 0) + 1
+
+    if not updates:
+        context.log.info("  Phase 2b: no name-cluster corrections needed this run")
+        return 0
+
+    # Batch-update via UPDATE...IN with on_duplicate=replace style; the
+    # simplest path is import_bulk on_duplicate=update
+    coll = db.collection("committees")
+    coll.import_bulk(updates, on_duplicate="update")
+    for t, n in type_counts.items():
+        context.log.info(f"  Phase 2b inherited {n:,} → {t}")
+    return len(updates)
+
+
 @asset(
     name="committee_classification",
     description="Enriches committees with terminal_type for upstream traversal control.",
@@ -142,24 +266,27 @@ def committee_classification_asset(
         context.log.info("🔧 Updating committees with terminal_type...")
         result = list(agg_db.aql.execute(update_aql))
 
-        # Phase 2: parent-organization inheritance pass.
+        # Phase 2a: parent-organization inheritance via CONNECTED_ORG_NM.
         #
-        # FEC bulk data sometimes labels a PAC's ORG_TP as "C" (corporation)
-        # even when the connected parent is clearly a labor union, trade
-        # association, etc. Discovered via NEA Fund: ORG_TP="C" and parent
-        # NEA itself classified labor_union from its own ORG_TP="L" filing.
+        # FEC bulk data sometimes mis-labels a committee's ORG_TP — e.g.
+        # NEA Fund's ORG_TP=C (corporation) when the connected parent NEA
+        # is clearly a labor union. Same shape applies to many SuperPAC-
+        # shaped affiliates: NAR Congressional Fund (super_pac_unclassified,
+        # $60M) and NAR PAC (ideological, $63M) both have
+        # CONNECTED_ORG_NM='NATIONAL ASSOCIATION OF REALTORS' — the
+        # Congressional Fund inherits from the PAC sibling via the
+        # shared parent committee.
         #
-        # Fix: for each committee classified as "corporation" with a
-        # non-empty CONNECTED_ORG_NM, look up the parent committee by name
-        # match. If the parent has a more specific type (labor_union,
-        # trade_association, ideological, cooperative), inherit it.
-        # Self-extends as the corpus grows — no manual override list to
-        # maintain.
-        context.log.info("🔧 Phase 2: parent-organization inheritance for misclassified PACs...")
+        # Source filter includes super_pac_unclassified and unknown — these
+        # are "definitionally missing classification" rather than explicit
+        # mis-classifications, so they're safe to upgrade.
+        context.log.info("🔧 Phase 2a: parent-organization inheritance via CONNECTED_ORG_NM...")
         inheritance_aql = """
         FOR c IN committees
-            FILTER c.terminal_type == "corporation"
-            FILTER c.CONNECTED_ORG_NM != null AND c.CONNECTED_ORG_NM != ""
+            FILTER c.terminal_type IN ["corporation", "super_pac_unclassified", "unknown"]
+            FILTER c.CONNECTED_ORG_NM != null
+                AND c.CONNECTED_ORG_NM != ""
+                AND UPPER(c.CONNECTED_ORG_NM) != "NONE"
             LET parent = FIRST(
                 FOR p IN committees
                     FILTER UPPER(p.CMTE_NM) == UPPER(c.CONNECTED_ORG_NM)
@@ -173,17 +300,37 @@ def committee_classification_asset(
             COLLECT type = parent WITH COUNT INTO cnt
             RETURN { type, cnt }
         """
-        inh_result = list(agg_db.aql.execute(inheritance_aql))
-        if inh_result:
-            for r in inh_result:
-                context.log.info(f"  inherited {r['cnt']:,} → {r['type']}")
-            # Refresh stats since some 'corporation' counts moved
+        inh_a_result = list(agg_db.aql.execute(inheritance_aql))
+        if inh_a_result:
+            for r in inh_a_result:
+                context.log.info(f"  Phase 2a inherited {r['cnt']:,} → {r['type']}")
+        else:
+            context.log.info("  Phase 2a: no inheritance corrections needed this run")
+
+        # Phase 2b: name-cluster inheritance.
+        #
+        # Some affiliated committees lack a useful CONNECTED_ORG_NM (it's
+        # empty, or the literal string "NONE" — FEC's stand-in for "no
+        # connected org"). Catch them by stripping known committee-form
+        # suffixes from CMTE_NM and clustering by the resulting root.
+        # Examples this catches that Phase 2a misses:
+        #   CLUB FOR GROWTH ACTION       (super_pac_unclassified, $263.5M)
+        #     → root 'CLUB FOR GROWTH', cluster with CLUB FOR GROWTH PAC (ideological)
+        #   NATIONAL RIFLE ASSOCIATION INSTITUTE FOR LEGISLATIVE ACTION
+        #     → root 'NATIONAL RIFLE ASSOCIATION', cluster with NRA Victory Fund
+        #
+        # Conservative: minimum root length 8 chars, skip clusters with no
+        # specific-type member, never demote an already-specific type.
+        context.log.info("🔧 Phase 2b: name-cluster inheritance via stripped CMTE_NM...")
+        inh_b_count = _apply_name_cluster_inheritance(context, agg_db)
+
+        # Refresh stats since some counts moved in Phase 2a/2b
+        if inh_a_result or inh_b_count:
             refresh = list(agg_db.aql.execute(
                 "FOR c IN committees COLLECT t = c.terminal_type WITH COUNT INTO cnt RETURN { type: t, cnt }"
             ))
             stats = {r['type']: r['cnt'] for r in refresh}
         else:
-            context.log.info("  no inheritance corrections needed this run")
             stats = {r['type']: r['cnt'] for r in result}
 
         total = sum(stats.values())
