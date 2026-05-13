@@ -36,11 +36,72 @@ Source: aggregation.committees
 Target: aggregation.committees (adds terminal_type field)
 """
 
+import json
+import os
+from pathlib import Path
 from typing import Dict, Any, List
 
 from dagster import asset, AssetExecutionContext, MetadataValue, Output
 
 from src.resources.arango import ArangoDBResource
+
+
+# Wikidata class Q-ids that signal a "trade / professional association"
+# rather than ideological advocacy. Used in Phase 1b to refine committees
+# that the raw ORG_TP=M default classified as `ideological`.
+#
+# FEC's ORG_TP=M = "Membership organization" is a catch-all that
+# conflates two structurally distinct things:
+#   - Single-issue advocacy ("ideological") — NRA, AIPAC, Club for
+#     Growth, Sierra Club, J Street, Planned Parenthood, Citizens United
+#   - Trade / professional associations — NAR (realtors), ADA (dentists),
+#     AICPA (accountants), AVMA (vets), Restaurant Assoc, Gas Assoc, etc.
+#
+# Refinement strategy: for each Phase-1-classified `ideological` M-org-tp
+# committee, ask Wikidata (via reconci.link) what it thinks the org is.
+# If the top candidate's P31 (instance-of) values include any class
+# below, reclassify as trade_association. Otherwise stay ideological.
+#
+# This set is reference data tied to Wikidata's own ontology. Each Q-id
+# was either (a) seen empirically in M-org PAC reconciliation results
+# or (b) a top-level class in Wikidata's professional-organization
+# taxonomy. Growth shape: rare — only changes when Wikidata adds a new
+# top-level class. Not for per-PAC overrides.
+_TRADE_CLASS_QIDS = frozenset({
+    # Verified empirically against current FEC corpus (2026-05-13).
+    # Each Q-id was observed as a P31 value on a real PAC's parent
+    # organization. Add new entries only after verifying the Q-id's
+    # actual Wikidata label and that it semantically maps to
+    # "trade/professional/industry membership organization."
+    "Q2178147",     # trade association — NAR, Restaurant, Gas, IT Council
+    "Q829080",      # professional association — AICPA, AVMA, NATA
+    "Q10729872",    # medical association — ADA, AMA, Cardiology, Pathologists
+    "Q4287745",     # medical organization — ADA secondary
+    "Q1865205",     # bar association — ABA
+    "Q897399",      # chamber of commerce and industry — US Chamber
+    "Q18325460",    # 501(c)(6) organization — US tax code for business leagues
+    "Q16904718",    # agricultural organization — NMPF
+    "Q114301854",   # veterinary medical association (specialty)
+    "Q70363673",    # pharmaceutical societies (specialty)
+    # NOT included (deliberately):
+    # Q484652 "international organization" — formal-political-agreement
+    #   entity, NOT trade-shaped (ASIS / IFW edge cases).
+    # Q170691 "learned society", Q1059232 / Q7257717 (alternates) —
+    #   not observed in current corpus; add when first seen.
+})
+
+# Wikidata classes that *exclude* trade — if a candidate's top P31 set
+# is dominated by one of these without ANY trade-class hit, we don't flip.
+# Currently advisory only; the absence-of-trade-class check is the
+# primary mechanism, this is here for documentation of seen P31 values.
+_NON_TRADE_HINT_QIDS = frozenset({
+    "Q431603",      # advocacy group
+    "Q7210356",     # political organization
+    "Q18325483",    # 501(c)(4) organization (US social welfare / advocacy)
+    "Q1666019",     # pressure group
+    "Q1899015",     # conservation organization
+    "Q115197642",   # political donor
+})
 
 
 # Suffixes stripped (longest-first within each group) from CMTE_NM when
@@ -111,6 +172,194 @@ def _strip_suffixes(name: str) -> str:
                 changed = True
                 break  # restart the suffix scan (longest-first by group)
     return upper
+
+
+def _pac_search_name(cmte_nm: str) -> str:
+    """Derive a Wikidata-search-friendly name from a FEC CMTE_NM by
+    stripping PAC suffixes and parenthetical annotations.
+
+    Examples:
+      'NATIONAL ASSOCIATION OF REALTORS POLITICAL ACTION COMMITTEE'
+        → 'NATIONAL ASSOCIATION OF REALTORS'
+      'NATIONAL RESTAURANT ASSOCIATION PAC (RESTAURANT PAC)'
+        → 'NATIONAL RESTAURANT ASSOCIATION'
+      'NATIONAL FEDERATION OF INDEPENDENT BUSINESS FEDERAL POLITICAL ACTION COMMITTEE'
+        → 'NATIONAL FEDERATION OF INDEPENDENT BUSINESS'
+    """
+    if not cmte_nm:
+        return ""
+    # Strip parenthetical content
+    import re
+    s = re.sub(r"\s*\([^)]*\)\s*", " ", cmte_nm).strip()
+    # Strip known committee-form suffixes
+    s = _strip_suffixes(s)
+    # Strip trailing 'FEDERAL' / 'FEDERAL FUND' / 'AGFUND' (left over
+    # after a PAC suffix is removed in some FEC namings)
+    s = re.sub(r"\s+(FEDERAL FUND|FEDERAL|AGFUND)$", "", s, flags=re.IGNORECASE).strip()
+    return s
+
+
+def _trade_classify_via_wikidata(
+    names: List[str],
+    cache: Dict[str, Dict[str, Any]],
+    confidence_threshold: float = 70.0,
+) -> Dict[str, Dict[str, Any]]:
+    """Classify a list of (search_name) strings as trade vs ideological
+    via Wikidata reconci.link's P31 (instance-of) types.
+
+    Cache schema (one entry per search_name):
+        {
+            'qid':              Q-id of the top candidate, or None,
+            'wikidata_label':   English label of the top candidate,
+            'reconci_score':    float [0, 100],
+            'types':            list of {'id', 'name'} — the entity's P31 values,
+            'cached_at':        ISO timestamp,
+        }
+
+    is_trade is *derived at read time* from the live `_TRADE_CLASS_QIDS`
+    set, so changes to that set re-evaluate cached entries without
+    requiring cache invalidation.
+
+    Conservative: only flips to trade if the top reconci candidate scores
+    >= threshold AND has a P31 in _TRADE_CLASS_QIDS. False default
+    (stays ideological) for: not-in-Wikidata, low-confidence match,
+    no trade-class P31.
+    """
+    from datetime import datetime
+    from src.rag.wikidata_reconci import reconcile_batch
+
+    # Cache hit only if the entry uses the current schema (has 'types' key).
+    # Old-schema entries (pre-2026-05-13) are re-queried so they migrate.
+    to_query = [n for n in names if n and ("types" not in cache.get(n, {}))]
+    now = datetime.utcnow().isoformat()
+    if to_query:
+        candidates_by_name = reconcile_batch(to_query)
+        for name in to_query:
+            cands = candidates_by_name.get(name) or []
+            if not cands:
+                cache[name] = {
+                    "qid": None, "wikidata_label": None,
+                    "reconci_score": 0.0, "types": [],
+                    "cached_at": now,
+                }
+                continue
+            top = cands[0]
+            cache[name] = {
+                "qid": top.qid,
+                "wikidata_label": top.name,
+                "reconci_score": top.score,
+                "types": [{"id": t.get("id"), "name": t.get("name")} for t in top.types],
+                "cached_at": now,
+            }
+    # Derive per-name classification from the live trade-class set
+    out: Dict[str, Dict[str, Any]] = {}
+    for n in names:
+        entry = cache.get(n)
+        if not entry:
+            continue
+        score = entry.get("reconci_score", 0.0) or 0.0
+        types = entry.get("types") or []
+        matched = None
+        if score >= confidence_threshold:
+            for t in types:
+                if t.get("id") in _TRADE_CLASS_QIDS:
+                    matched = t
+                    break
+        out[n] = {
+            **entry,
+            "is_trade": matched is not None,
+            "matched_qid": (matched or {}).get("id"),
+            "matched_type": (matched or {}).get("name"),
+        }
+    return out
+
+
+def _load_trade_cache(path: Path) -> Dict[str, Dict[str, Any]]:
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except (json.JSONDecodeError, IOError):
+        return {}
+
+
+def _save_trade_cache(path: Path, cache: Dict[str, Dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    try:
+        tmp.write_text(json.dumps(cache, indent=2, sort_keys=True))
+        os.replace(tmp, path)
+    except IOError:
+        pass
+
+
+def _apply_m_org_refinement(context, db) -> int:
+    """Phase 1b: reclassify ORG_TP=M committees from `ideological` to
+    `trade_association` when Wikidata's P31 says so.
+
+    For each M-org-tp committee currently classified `ideological`:
+      1. Derive a Wikidata-search-friendly name from CMTE_NM
+      2. Reconcile via reconci.link (cached at
+         `<cache_dir>/trade_assoc_classification.json`)
+      3. If top candidate's P31 includes any _TRADE_CLASS_QIDS → flip
+
+    Provenance stored on each refined committee:
+      - terminal_type_refined_from_m_org_wikidata = True
+      - terminal_type_wikidata_qid = Q-id of the matched entity
+      - terminal_type_wikidata_class = matched P31 class name
+    """
+    from src.utils.storage import get_cache_dir
+
+    cache_path = get_cache_dir() / "trade_assoc_classification.json"
+    cache = _load_trade_cache(cache_path)
+
+    all_ideo = list(db.aql.execute(
+        "FOR c IN committees FILTER c.terminal_type == 'ideological' AND c.ORG_TP == 'M' "
+        "RETURN { key: c._key, name: c.CMTE_NM, receipts: c.total_receipts }"
+    ))
+    if not all_ideo:
+        context.log.info("  Phase 1b: no ORG_TP=M ideological committees to refine")
+        return 0
+
+    # Build (cmte → search_name) mapping; dedupe search_names for batched lookup
+    cmte_search = [(c, _pac_search_name(c["name"])) for c in all_ideo]
+    cmte_search = [(c, s) for c, s in cmte_search if len(s) >= 5]
+    unique_search = sorted({s for _, s in cmte_search})
+
+    n_before = len(cache)
+    classifications = _trade_classify_via_wikidata(unique_search, cache)
+    n_new = len(cache) - n_before
+    context.log.info(
+        f"  Phase 1b: reconci queries — {n_before} cached + {n_new} new = {len(cache)} total"
+    )
+
+    # Determine updates
+    updates: List[Dict[str, Any]] = []
+    total_receipts_flipped = 0.0
+    for c, s in cmte_search:
+        res = classifications.get(s) or {}
+        if res.get("is_trade"):
+            updates.append({
+                "_key": c["key"],
+                "terminal_type": "trade_association",
+                "terminal_type_refined_from_m_org_wikidata": True,
+                "terminal_type_wikidata_qid": res.get("qid"),
+                "terminal_type_wikidata_class": res.get("matched_type"),
+            })
+            total_receipts_flipped += (c.get("receipts") or 0)
+
+    # Persist cache regardless of whether we found flips (so next run skips)
+    _save_trade_cache(cache_path, cache)
+
+    if not updates:
+        context.log.info("  Phase 1b: no M-ORG_TP refinements needed this run")
+        return 0
+    db.collection("committees").import_bulk(updates, on_duplicate="update")
+    context.log.info(
+        f"  Phase 1b refined {len(updates):,} ORG_TP=M committees from ideological → trade_association "
+        f"(${total_receipts_flipped / 1e6:.1f}M of receipts reclassified via Wikidata P31)"
+    )
+    return len(updates)
 
 
 def _apply_name_cluster_inheritance(context, db) -> int:
@@ -265,6 +514,25 @@ def committee_classification_asset(
         
         context.log.info("🔧 Updating committees with terminal_type...")
         result = list(agg_db.aql.execute(update_aql))
+
+        # Phase 1b: M-ORG_TP refinement (ideological → trade_association
+        # for committees whose CMTE_NM contains a profession/industry
+        # token from `_TRADE_PROFESSION_TOKENS`).
+        #
+        # FEC's ORG_TP=M ("Membership organization") catch-all conflates
+        # single-issue advocacy ("ideological": NRA, AIPAC, Sierra Club,
+        # Club for Growth) with trade/professional associations (NAR
+        # realtors, ADA dentists, AAJ trial lawyers, AOPA pilots, AICPA
+        # accountants, etc.). The former is correctly "ideological"; the
+        # latter is structurally a "trade_association" but landed in the
+        # ideological bucket because Phase 1 sees only ORG_TP=M.
+        #
+        # Refinement: if a Phase-1-classified `ideological` committee's
+        # CMTE_NM contains any token in _TRADE_PROFESSION_TOKENS, flip
+        # to `trade_association`. Conservative — only acts on M-default
+        # `ideological`, never demotes truly-ideological committees.
+        context.log.info("🔧 Phase 1b: M-ORG_TP refinement (ideological → trade_association)...")
+        refine_count = _apply_m_org_refinement(context, agg_db)
 
         # Phase 2a: parent-organization inheritance via CONNECTED_ORG_NM.
         #
