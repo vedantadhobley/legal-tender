@@ -160,21 +160,90 @@ Phase 2a currently uses exact-string CMTE_NM match. These miss because the paren
 
 **Total visible misclassification: ~$140M** out of ~$62B classified (0.2% of total receipts). This is the same order of magnitude as our bulk-validation median |Δ| (2.4%).
 
-## Recommended fixes (ordered by impact-per-effort)
+## Recommended fixes (ordered by impact-per-effort, with hardcode-discipline check)
 
-1. **Extend `_CMTE_NAME_SUFFIXES`** with " SEPARATE SEGREGATED FUND" — catches AANA ($6.7M) and a handful of others. ~2-line code change. Re-run Phase 2b's name-cluster inheritance picks up these from siblings.
+Self-critical review per fix:
 
-2. **Add CMTE_NM prefix-stripping** for "POLITICAL ACTION COMMITTEE OF THE X" / "PAC OF X" — catches AAOS ($7.4M) and the misformed FEC namings. Small code change in `_pac_search_name`.
+| # | Fix | $ touched | Verdict | Notes |
+|---|---|---|---|---|
+| 1 | Extend `_CMTE_NAME_SUFFIXES` with `" SEPARATE SEGREGATED FUND"` | ~$10M | ✓ principled | SSF is FEC's own legal term for the PAC arm of a corp/union; this is recognizing FEC vocabulary, same shape as existing entries. |
+| 2 | Add prefix-stripping for `"POLITICAL ACTION COMMITTEE OF THE X"` / `"PAC OF X"` in `_pac_search_name` | ~$10M | ✓ principled | Symmetric to existing suffix-stripping. FEC has two equivalent naming patterns; we already strip one direction. |
+| 3 | Add "farm bureau" Q-id to `_TRADE_CLASS_QIDS` | ~$7M | ⚠️ marginal | Defensible (Wikidata HAS the class) but each addition is a step toward eye-curated growth. The principled alternative is a P279 subclass-of walk from Q2178147 / Q829080 roots — but that's the ontology walker we deleted on 2026-05-11 because of complexity / cache corruption. **Defer rather than do either today.** |
+| 4 | ~~Add `"DEMOCRACY ENGINE"` to `CONDUIT_PATTERNS`~~ | $46M | ❌ **arbitrary hardcode-creep** | `CONDUIT_PATTERNS = ["WINRED", "ACTBLUE", "EARMARK", "CONDUIT", "UNITEMIZED"]` is exactly the growing-list shape we've been avoiding. Replace with **structural detection: a committee where >X% of incoming `indiv` records have `EARMARKED FOR Y` in `MEMO_TEXT` is a conduit by behavior, regardless of CMTE_TP / ORG_TP. That's how FEC itself flags conduit flow.** Bigger code change — defer to its own session. |
+| 5 | Phase 1b stale-provenance cleanup | $0 | ✓ code hygiene | Clear stale `terminal_type_refined_from_m_org_wikidata` flags before recomputing. Not a list, just correctness. |
+| 6 | Phase 2a prefix-match for CONNECTED | ~$85M | ✓ algorithmic (with guardrail) | Direction matters: `parent.CMTE_NM.startswith(c.CONNECTED_ORG_NM)` is safe when `CONNECTED ≥ 10 chars` (matches UFCW SPAC ↔ UFCW International Union). The reverse direction or short prefixes would over-match. |
+| 7 | OpenCorporates Layer 3 | ~$30M no-Wikidata-hit gap | deferred | Waiting on API key. |
 
-3. **Add Wikidata "farm bureau" Q-id** to `_TRADE_CLASS_QIDS` (after looking up the actual Q-id) — catches Texas Farm Bureau ($5.7M) and similar state farm bureaus.
+**Shipping plan: fixes 1, 2, 5, 6 are clean and small. Fix 3 deferred (slope to curation). Fix 4 replaced with structural EARMARKED-memo detection (deferred to its own session). Fix 7 blocked.**
 
-4. **Filter DEMOCRACY ENGINE** in CONDUIT_PATTERNS — moves $46M from corporation to passthrough so it doesn't appear as a "corporate source" in by_organization. One-line addition.
+---
 
-5. **Add provenance-flag cleanup** at the start of Phase 1b — clear `terminal_type_refined_from_m_org_wikidata` and `terminal_type_wikidata_*` flags before re-deriving so stale flags don't accumulate when the trade-class set changes.
+## Broader hardcoded-data survey (every list / set / dict in `src/`)
 
-6. **Relax Phase 2a CONNECTED-match to prefix/startswith** for super_pac_unclassified → labor_union inheritance — picks up UFCW SPAC, UNITE HERE PAC, etc. (~$85M proper org-rollup).
+Cross-check that the rest of the codebase doesn't have the same band-aid-list shape. Categorized by whether each is reference data (clean), calibrated parameter (clean), configuration sprawl (known issue), or arbitrary growth-prone list (the problem).
 
-7. **Deferred (waiting on OpenCorporates API key)**: closes most of the remaining $30-40M no-Wikidata-hit coverage gap.
+### Reference data (clean — maps to real-world taxonomy)
+
+| Constant | File | Shape | Why it's principled |
+|---|---|---|---|
+| `_STOPWORDS` | `rag/name_match.py` | ~35 English/legal stopwords | Linguistic data; used for token-matching signal computation |
+| `_STRIP_SUFFIX_TOKENS` | `rag/gleif.py` | Legal-entity suffix tokens | Real-world legal-form vocabulary |
+| `_NUMERIC_FIELDS` | `assets/fec/weball.py`, `webl.py`, `webk.py` | FEC schema field names | Mirrors FEC's published bulk-file column specs |
+| `_CMTE_NAME_SUFFIXES` | `assets/enrichment/committee_classification.py` | ~20 FEC committee-form suffixes | FEC's own committee-naming vocabulary |
+| `_LOOSE_TYPES` / `_SPECIFIC_TYPES` / `_SPECIFIC_TYPE_PRIORITY` | same file | Bucket architecture | Names of our own terminal_type system |
+| `_RELATIONSHIP_PRIORITY` | `rag/whale_resolver.py` | 7 entries | Sort order for primary_company; architectural |
+| `_PERSON_TO_COMPANY_PROPS` | same file | 7 Wikidata property IDs | Wikidata's own person-to-org relationship ontology |
+| `_CEO_POSITION_QIDS` | same file | 2 Wikidata Q-ids | CEO position types per Wikidata |
+| `_NAME_SUFFIX_TOKENS` | `assets/enrichment/wikidata_resolution.py` | Legal suffix tokens | Same shape as `_STRIP_SUFFIX_TOKENS` |
+| `LEGAL_SUFFIXES` | `rag/employer_normalization.py` | ~28 regexes for LLC/INC/CORP/LP/etc | Legal-form vocabulary worldwide |
+| `ABBREVIATIONS` | same file | ~17 abbreviation expansions | Common abbreviations |
+| `NON_EMPLOYERS` | same file | ~40 placeholder strings | Things donors type when there's no real employer (RETIRED, SELF-EMPLOYED, INFORMATION REQUESTED, etc.) |
+| `CAMPAIGN_COMMITTEE_MARKERS` | same file | 8 patterns | "FOR CONGRESS" / "FOR SENATE" / etc. — FEC committee-name leakage into the employer field |
+| `PER_ELECTION_LIMITS` | `assets/graph/donors.py` | 4 entries (one per cycle) | FEC's published per-election contribution limits, biennial update |
+| `TERMINAL_TYPES` / `PASSTHROUGH_TYPES` / `TERMINAL_ORG_TYPES` | `assets/aggregation/*.py` | Bucket type system | Names of our own classification system |
+| `_TRADE_CLASS_QIDS` | `assets/enrichment/committee_classification.py` | 10 Wikidata Q-ids | Wikidata's own taxonomy of trade-shaped orgs; see "marginal" caveat above |
+
+### Calibrated parameters (clean — single numbers with documented rationale)
+
+| Constant | File | Value | Rationale |
+|---|---|---|---|
+| `HIGH_CONFIDENCE_THRESHOLD` / `LOW_CONFIDENCE_THRESHOLD` | `rag/wikidata_resolver.py` | 70.0 / 40.0 | reconci.link score thresholds, calibrated against the corroboration test cases |
+| `_MIN_ROOT_LENGTH` | `assets/enrichment/committee_classification.py` | 8 | Min length for name-cluster root; below this, over-clustering risk |
+| `_TRADE_CLASS confidence threshold` | same file | 70.0 | Below this reconci score, don't classify (defaults to ideological) |
+
+### Configuration sprawl (known issue, on todo.md)
+
+| Constant | File | Issue | Fix plan |
+|---|---|---|---|
+| `CYCLES = ["2020", "2022", "2024", "2026"]` | duplicated in 21 files | configuration drift | Centralize in `src/config.py` (one constant). Already on todo. |
+| Various `LOG_PROGRESS_EVERY` intervals | `pas2.py` % 250000, `contributed_to.py` % 50000, `arango_dump.py` % 500000 | inconsistent | Pick one, use everywhere. On todo. |
+
+### Arbitrary / growth-prone lists (the problematic shape)
+
+| Constant | File | Current size | Why it's problematic | Plan |
+|---|---|---|---|---|
+| `CONDUIT_PATTERNS` | `assets/aggregation/candidate_upstream.py` | 5 entries (WINRED, ACTBLUE, EARMARK, CONDUIT, UNITEMIZED) | Per-entity name list; grows one PAC at a time as new conduits surface (DEMOCRACY ENGINE was the 6th candidate today) | **Replace with EARMARKED-memo-share detection**: a committee where >X% of incoming `indiv` records have `EARMARKED FOR Y` in `MEMO_TEXT` is a conduit by behavior. That's FEC's own way of flagging conduit flow. Bigger code change — own session. |
+| `EMPLOYER_FAMILY_ALIASES` | `rag/employer_normalization.py` | 2 entries (ADELSON CLINIC, ULINE INDUSTRIES) | Per-entity hand-curated aliases | **Both fixed by the queued `corporate_families` P749 (parent organization) merge** — when we walk parent-org relationships in Wikidata, "ADELSON CLINIC" and "ADELSON DRUG CLINIC" merge under the parent. "ULINE INDUSTRIES" and "ULINE" same. EMPLOYER_FAMILY_ALIASES becomes obsolete and deletable after that ships. |
+| `_TRADE_CLASS_QIDS` | `assets/enrichment/committee_classification.py` | 10 Wikidata Q-ids | Defensible (each entry is a Wikidata class) but each addition is a step toward growth | Principled alternative: P279 (subclass-of) walk from Q2178147 + Q829080 roots. Deleted 2026-05-11 because of complexity. Acceptable to keep curated set as-is unless growth becomes a problem. Re-evaluate when 4th-5th entry is requested. |
+
+### Whale path filter chain — STILL GONE ✓
+
+Verified by grep: `_NON_CORPORATE_P31`, `_GENERIC_DESCRIPTION_PATTERNS`, `_GOVERNMENT_DESCRIPTION_PATTERNS`, `_RETRY_SUFFIX_TOKENS`, `_EMPLOYER_OVERRIDES` — all deleted in the May 11-12 simplification arc. Nothing remaining in `src/rag/`.
+
+### Dead code referencing old hardcodes
+
+`src/cli/pies_v3.py` still has stale copies of `TERMINAL_TYPES` / `PASSTHROUGH_TYPES` / `CONDUIT_PATTERNS`. File is on the delete list (679 LOC, confirmed no callers) — gets cleared when we ship the pies_v3.py deletion.
+
+### Summary
+
+| Category | Count | Action |
+|---|---|---|
+| Reference data | 17 | Keep |
+| Calibrated parameters | 3 | Keep |
+| Configuration sprawl | 2 | Centralize (on todo) |
+| Arbitrary / growth-prone | 3 | Plan documented above; 2 of 3 fixed by other queued work |
+
+Net assessment: **the codebase is in good shape on this axis.** The hardcoded structures left are overwhelmingly reference data (real-world vocabulary or our own architectural types). The three growth-prone lists are either small (CONDUIT_PATTERNS: 5 entries; EMPLOYER_FAMILY_ALIASES: 2) or already-defensible (_TRADE_CLASS_QIDS: 10 Wikidata classes). Each has a structural alternative documented.
 
 ## What this audit confirms
 

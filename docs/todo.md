@@ -21,15 +21,19 @@ Validation contract: every fix runs the four gates in @docs/validation.md. Diff 
 
 ### This week (small, high-impact fixes)
 
-- [ ] **Audit-derived terminal-node cleanup** (per `docs/audit/terminal-node-classification-2026-05-13.md`):
-  - Add `" SEPARATE SEGREGATED FUND"` to `_CMTE_NAME_SUFFIXES` (catches AANA $6.7M + others). Target case after rerun: AANA flips to trade_association via Phase 2b name-cluster.
-  - Add prefix-stripping for `"POLITICAL ACTION COMMITTEE OF THE X"` / `"PAC OF X"` in `_pac_search_name` (catches AAOS $7.4M).
-  - Look up Wikidata "farm bureau" Q-id and add to `_TRADE_CLASS_QIDS` (catches Texas Farm Bureau $5.7M, Ohio Farm Bureau $1.2M).
-  - Add `"DEMOCRACY ENGINE"` to `CONDUIT_PATTERNS` in `candidate_upstream.py` (moves $46.3M from corporation to conduit-filtered; functionally a payment processor like WinRed/ActBlue).
-  - Add provenance-flag cleanup at the start of Phase 1b — clear stale `terminal_type_refined_from_m_org_wikidata` / `terminal_type_wikidata_*` flags from committees not currently flipped (cleanup IFW + ASIS stale flags).
-  - Relax Phase 2a CONNECTED-match from exact-string to prefix-match for super_pac_unclassified → labor_union inheritance (catches UFCW SPAC $20M, UNITE HERE PAC $27M, IUOE SPAC $20M, USW WORKS $9M, CA Nurses PAC $8M — ~$85M proper org-rollup).
+- [ ] **Audit-derived terminal-node cleanup** (per `docs/audit/terminal-node-classification-2026-05-13.md` — corrected reading after hardcode-discipline self-check).
 
-  Combined target case: re-run `view_candidate.py "BACON, DONALD J"` should show NAR PAC's $60K move from ideological to trade_association sub-table; ACOG / AANA / AAOS / Texas Farm Bureau dollars flow into trade. Bulk median gate stays ≤5% (this is reclassification, not re-attribution — total receipts unchanged).
+  **Ship now (clean / principled):**
+  - Add `" SEPARATE SEGREGATED FUND"` to `_CMTE_NAME_SUFFIXES` (catches AANA $6.7M + others). SSF is FEC's own legal term for the PAC arm of a corp/union — recognizing FEC vocabulary, same shape as existing entries. Target case after rerun: AANA flips to trade_association via Phase 2b name-cluster.
+  - Add prefix-stripping for `"POLITICAL ACTION COMMITTEE OF THE X"` / `"PAC OF X"` in `_pac_search_name` (catches AAOS $7.4M). Symmetric to existing suffix-stripping; FEC has two equivalent naming conventions.
+  - Provenance-flag cleanup at the start of Phase 1b — clear stale `terminal_type_refined_from_m_org_wikidata` / `terminal_type_wikidata_*` flags before recomputing (cleans up IFW + ASIS stale flags).
+  - Relax Phase 2a CONNECTED-match to prefix-match for super_pac_unclassified → labor_union inheritance (catches UFCW SPAC $20M, UNITE HERE PAC $27M, IUOE SPAC $20M, USW WORKS $9M, CA Nurses PAC $8M — ~$85M proper org-rollup). Guardrail: require `CONNECTED ≥ 10 chars` to avoid over-matching short prefixes; direction is `parent.CMTE_NM.startswith(c.CONNECTED_ORG_NM)`.
+
+  **Deferred (slope to hardcode-creep or bigger scope):**
+  - ~~"farm bureau" Q-id to `_TRADE_CLASS_QIDS`~~ — defensible (Wikidata HAS the class) but each addition slopes toward eye-curated growth. Principled alternative is P279 walk from Q2178147 / Q829080 — but that's the ontology walker we deleted on 2026-05-11 for complexity / cache-corruption reasons. Defer until we have a third or fourth requested addition (then accept the curated-list shape OR re-introduce the walker with better safeguards). Today's cost of deferring: ~$7M (Texas Farm Bureau + Ohio Farm Bureau).
+  - ~~Add `"DEMOCRACY ENGINE"` to `CONDUIT_PATTERNS`~~ — **arbitrary hardcode-creep, not shipping**. Replace with: **EARMARKED-memo-share conduit detection**. A committee where >X% of incoming `indiv.MEMO_TEXT` records contain `"EARMARKED FOR Y"` is a conduit by behavior, regardless of CMTE_TP / ORG_TP. That's FEC's own way of flagging conduit flow. Implementation: compute `earmarked_share` per committee at parse time (probably in `committee_receipts`); if > 0.8 AND `total_receipts > $1M`, override terminal_type to `passthrough` regardless of ORG_TP. Removes the `CONDUIT_PATTERNS` list entirely (WinRed/ActBlue would be detected structurally, not by name). Bigger code change — own session.
+
+  Combined target case for the ship-now subset: re-run `view_candidate.py "BACON, DONALD J"` should show AANA / AAOS / other newly-trade committees in the trade_association sub-table; bulk median gate stays ≤5% (this is reclassification, not re-attribution — total receipts unchanged).
 
 - [ ] **Generic-string rejection in `name_match.py`** — visible misresolutions in `by_organization`:
   - "TARGETED VICTORY" → corp (it's a digital ad agency)
@@ -57,6 +61,36 @@ Validation contract: every fix runs the four gates in @docs/validation.md. Diff 
 - [ ] **Web view consuming `funding_channels.aggregate`** — probably FastAPI + a single HTML template + Alpine.js. Reads Arango directly. Same `by_organization` + per-channel tables as the view tool, but rendered as clickable HTML.
 - [ ] **`scripts/view_candidate.py --json`** — output mode emitting tables as JSON. Used by the web UI's static fallback.
 - [ ] **`scripts/view_candidate.py --show-path <ORG>`** — walks the trace for a specific org, prints the multiplier-weighted chain ("AIPAC → JFC1 → JFC2 → candidate cmte, mult=0.42, attributed $X").
+
+### Hardcoded data structures — survey + plans
+
+Comprehensive sweep of every list / set / dict in `src/` (full audit in `docs/audit/terminal-node-classification-2026-05-13.md`). Categorized as: reference data (clean), calibrated parameter (clean), configuration sprawl (centralize), or arbitrary growth-prone list (the problem).
+
+**Reference data — 17 entries, all clean.** Includes `_STOPWORDS`, `_CMTE_NAME_SUFFIXES`, `LEGAL_SUFFIXES`, `ABBREVIATIONS`, `NON_EMPLOYERS`, `CAMPAIGN_COMMITTEE_MARKERS`, `PER_ELECTION_LIMITS`, `_PERSON_TO_COMPANY_PROPS`, `_CEO_POSITION_QIDS`, FEC schema fields, our own bucket type system. Each maps to real-world taxonomy or our own architectural types. No action needed.
+
+**Calibrated parameters — 3 entries, all clean.** Includes the HIGH/LOW reconci confidence thresholds (70/40), the `_MIN_ROOT_LENGTH` for name clustering (8), the trade-class confidence threshold (70). Each is a single number with documented rationale.
+
+**Configuration sprawl — known issue, already on todo:**
+
+- [ ] **`CYCLES = ["2020", "2022", "2024", "2026"]`** duplicated in 21 files — centralize in `src/config.py`. Long-standing item.
+- [ ] **`LOG_PROGRESS_EVERY` intervals** — `pas2.py` % 250000, `contributed_to.py` % 50000, `arango_dump.py` % 500000. Pick one (probably `100_000`).
+
+**Arbitrary / growth-prone lists — 3 entries, all have structural fix plans:**
+
+- [ ] **`CONDUIT_PATTERNS`** in `assets/aggregation/candidate_upstream.py` (5 entries: WINRED, ACTBLUE, EARMARK, CONDUIT, UNITEMIZED). Today's DEMOCRACY ENGINE case revealed this is the wrong shape.
+  - **Fix**: EARMARKED-memo-share conduit detection. A committee where >X% of its incoming `indiv` records contain `"EARMARKED FOR Y"` in `MEMO_TEXT` is a conduit by behavior. Implementation: extend `committee_receipts` to compute `earmarked_share`; if > 0.8 AND `total_receipts > $1M`, override terminal_type to `passthrough` regardless of CMTE_TP/ORG_TP. **Removes the list entirely** — WinRed/ActBlue/Democracy Engine all detected structurally. Own session.
+
+- [ ] **`EMPLOYER_FAMILY_ALIASES`** in `rag/employer_normalization.py` (2 entries: ADELSON CLINIC, ULINE INDUSTRIES). Per-entity hand-curated aliases.
+  - **Fix**: ride along with the queued `corporate_families` P749 (parent organization) Wikidata walk (already on todo). When that ships, "ADELSON CLINIC" and "ADELSON DRUG CLINIC" merge under their shared P749 parent; same for "ULINE INDUSTRIES" → "ULINE". The dict becomes obsolete and deletable. No standalone work needed — just delete EMPLOYER_FAMILY_ALIASES + `_apply_family_alias` callers after P749 walk lands.
+
+- [ ] **`_TRADE_CLASS_QIDS`** in `assets/enrichment/committee_classification.py` (10 Wikidata Q-ids). Defensible (each entry IS a Wikidata class) but each addition slopes toward growth.
+  - **Two principled paths**:
+    1. **Keep curated** — accept the list as Wikidata-vocabulary reference data. Acceptable today; re-evaluate if it crosses ~20 entries.
+    2. **P279 subclass-of walk** — traverse Wikidata's subclass graph from Q2178147 / Q829080 roots. This is the ontology walker we deleted on 2026-05-11 because of complexity + cache corruption. Could be re-introduced with better safeguards (cache TTL, fail-closed-on-fetch-error, explicit subtree-root list maintained externally). Bigger change. Defer until the curated list crosses ~20 entries or gets requested more than every 2-3 months.
+
+**Whale path filter chain — VERIFIED GONE** (greppd 2026-05-13). `_NON_CORPORATE_P31`, `_GENERIC_DESCRIPTION_PATTERNS`, `_GOVERNMENT_DESCRIPTION_PATTERNS`, `_RETRY_SUFFIX_TOKENS`, `_EMPLOYER_OVERRIDES` — all deleted in the May 11-12 simplification arc.
+
+**Dead-code leftovers** — `src/cli/pies_v3.py` (679 LOC, on delete list) has stale copies of `TERMINAL_TYPES` / `PASSTHROUGH_TYPES` / `CONDUIT_PATTERNS`. Cleared when pies_v3.py is deleted (also on todo).
 
 ### Later this month / next month
 
