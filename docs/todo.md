@@ -33,7 +33,12 @@ Every commit goes through four gates:
 
 ### Session 2 — Make funding_channels viewable
 
-- [ ] **`scripts/view_candidate.py`** — ~150 LOC. CLI: `python view_candidate.py "CRUZ, TED"`. Reads from `candidates.<doc>.funding_channels`. Renders:
+- [x] ~~**`scripts/view_candidate.py`**~~ — DONE 2026-05-12. ~470 LOC, `rich`-based CLI. Args: positional CAND_ID-or-substring + `--cycle YYYY` + `--top N`. Renders header, channels summary, Ch1 by type, Ch2/3 with top_pacs/by_corporation/by_individual/stuck-by_pac, Ch4 whale corp-connected + independent + grassroots, Ch5 unaccounted with breakdown, by_organization cross-cut with via_donors provenance. Disambiguates name substrings to a CAND_ID list when ambiguous. Reads `aggregation.candidates.<doc>.funding_channels` directly — no Dagster dep.
+  - Spot-checks pass: Cruz IE+ shows TARGETED VICTORY, NRA, Club for Growth, GOA Victory Fund — all sensible for a Texas Republican. Cruz IE- shows WINSENATE, NRDC, Crush MAGA — the Dem PACs ad-buying against him. Cruz whale corp-connected: BGR Group, Winklevoss Capital, Holland & Knight, GeoSouthern Energy. Trump top-15: DOGE (Musk), Pan Am Railways (Mellon), Uline (Uihlein), Marvel (Perlmutter), Cantor Fitzgerald (Lutnick), Pratt Industries (Pratt). Harris cycle 2024 shows $1.69B total.
+- [ ] **`scripts/view_candidate.py` v2 follow-ups** (deferred):
+  - `--show-path <ORG>` flag that walks the trace for a specific org and prints the multiplier-weighted chain
+  - Output renderer for "Asana Journal" / "PRESIDENT" / "United States Department of the Army" cases — these are visible Wikidata misresolutions worth flagging in the view rather than fixing upstream right now
+  - JSON output mode (`--json`) for piping to other tools / the eventual web UI
   - Header: total funding, channel breakdown with %
   - Channel 1 table: top organizational sources by type (corp / trade / labor / ideological / cooperative)
   - Channel 2/3 tables: top IE spenders + their upstream donors

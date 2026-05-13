@@ -60,7 +60,8 @@ docker compose -f docker-compose.dev.yml up -d
 - **Branch**: `feature/professionalization`. Master plan at @docs/plan.md.
 - **Phase 0 audit**: complete. See @docs/audit/.
 - **Last full data sync**: 2026-05-07 (17.2 GB, 4 cycles, 215M individual contributions parsed).
-- **Last bulk validation**: median |delta| vs FEC `weball.TTL_RECEIPTS` = 2.5%; 62% within ±5%; 73% within ±10%. Run via `docker exec ... python scripts/validation_report.py`.
+- **Last bulk validation**: median |delta| vs FEC `weball.TTL_RECEIPTS` = 2.4%; 65% within ±5%; 77% within ±10%. Run via `docker exec ... python3 /workspace/scripts/validation_report.py`.
+- **Inspect a candidate**: `docker exec -w /workspace legal-tender-dev-webserver python3 scripts/view_candidate.py "<name or CAND_ID>"`. Flags: `--cycle 2024`, `--top 15`. Renders all 5 channels + by_organization cross-cut with via-donor provenance. Sanity-check tool for output-quality.
 - **Next session plan** (queued, see @docs/todo.md "Next session"):
   1. Capture baseline at `docs/audit/baseline-2026-05-12.md`
   2. Extend May-9 parent-org inheritance: when N committees share `CONNECTED_ORG_NM`, most-specific terminal_type wins. Fixes NAR Congressional Fund (super_pac_unclassified → trade_association), NRA ILA, Club for Growth Action splits.
