@@ -244,6 +244,18 @@ def _top_sources(d: Dict[str, float], n: int, min_amount: float) -> List[Dict[st
     return [{'name': k, 'amount': v} for k, v in sorted_items if v >= min_amount]
 
 
+def _top_individuals(d: Dict[str, Dict[str, Any]], n: int, min_amount: float) -> List[Dict[str, Any]]:
+    """Top-N {name, amount, employer} entries from a {name -> {amount, employer}}
+    dict, threshold-filtered. Used to surface IE donor attribution that
+    didn't resolve to a corporate family."""
+    sorted_items = sorted(d.items(), key=lambda x: -x[1].get('amount', 0))[:n]
+    return [
+        {'name': k, 'amount': v.get('amount', 0), 'employer': v.get('employer', '')}
+        for k, v in sorted_items
+        if v.get('amount', 0) >= min_amount
+    ]
+
+
 def _top_companies(d: Dict[str, Dict[str, Any]], n: int, min_amount: float) -> List[Dict[str, Any]]:
     """Top-N companies from a {company -> {amount, donors}} dict, with top-5
     donors per company, threshold-filtered."""
@@ -268,20 +280,36 @@ def trace_ie_sources(
     whale_to_company: Dict[str, str],
     employer_to_company: Dict[str, str],
     min_attr_amount: float = 100.0,
+    max_trace_depth: int = 8,
 ) -> Dict[str, Any]:
     """Trace IE spending back to its donors — who funded the Super PACs?
 
-    For each (spending_cmte, ie_amount) tuple, computes
-    `multiplier = min(ie_amount / cmte.total_receipts, 1.0)` and
-    attributes each donor to the PAC's spending in proportion to their
-    share. Whale donors mapped to a corporate family (via Wikidata or
-    employer canonical_name) accumulate at the company level; the rest
-    accumulate at the individual or PAC level.
+    For each (spending_cmte, ie_amount) tuple, walk *recursively* upstream
+    through passthrough committees (incl. super_pac_unclassified) until
+    hitting a terminal organizational PAC (corp / trade / labor / ideo /
+    coop) or running out of depth. At each visited committee, attribute
+    its individual donors proportionally (donor_amount × accumulated_mult).
+
+    Why recursive: many big Super PACs are funded primarily by *other*
+    Super PACs. Senate Leadership Fund ($1.14B) is funded by One Nation,
+    which is funded by individuals + other SPACs, etc. Single-level
+    attribution (the pre-2026-05-12 behavior) stopped at "One Nation"
+    and dumped the real donors into by_pac as one opaque line item.
+
+    Mirrors `trace_committee_sources` Phase-1 propagation + Phase-2
+    attribution structure. Same correctness guards (cycle break,
+    per-edge fraction cap at 1.0, accumulated multiplier cap at 1.0)
+    documented in decisions.md 2026-05-08.
 
     `by_corporation_via_donors[company][donor_name] = amount` carries
-    the donor names that produced the corporate attribution so
+    the donor names that produced each corporate attribution so
     `by_organization` can show "Pan Am Railways via MELLON, TIMOTHY"
     transparently rather than implying corporate spending.
+
+    `by_pac` collects passthrough PACs whose donor edges we couldn't
+    proportionally trace further (zero or missing total_receipts) —
+    a "trace ended here" signal that preserves the upstream PAC name
+    rather than silently dropping it.
     """
     results: Dict[str, Any] = {
         'by_corporation': defaultdict(float),
@@ -290,46 +318,105 @@ def trace_ie_sources(
         'by_pac': defaultdict(float),
     }
 
-    for cmte_id, ie_amount in ie_data:
-        cmte = cycle_cmte_info.get(cmte_id, {})
-        total_receipts = cmte.get('total_receipts', 0) or 0
+    for spending_cmte_id, ie_amount in ie_data:
+        spending_cmte = cycle_cmte_info.get(spending_cmte_id, {})
+        total_receipts = spending_cmte.get('total_receipts', 0) or 0
         if total_receipts <= 0 or ie_amount <= 0:
             continue
-        multiplier = min(ie_amount / total_receipts, 1.0)
+        initial_mult = min(ie_amount / total_receipts, 1.0)
 
-        for donor_key, amount in contrib_edges.get(cmte_id, []):
-            donor = donor_info.get(donor_key, {})
-            if not donor:
-                continue
-            name = donor.get('name', donor_key)
-            if is_conduit(name):
-                continue
-            attr_amount = amount * multiplier
-            if attr_amount < min_attr_amount:
-                continue
-            employer = donor.get('employer', '')
-            company = _resolve_company(name, employer, whale_to_company, employer_to_company)
-            if company:
-                results['by_corporation'][company] += attr_amount
-                results['by_corporation_via_donors'][company][name] += attr_amount
-            else:
-                if name not in results['by_individual']:
-                    results['by_individual'][name] = {'amount': 0, 'employer': employer}
-                results['by_individual'][name]['amount'] += attr_amount
+        # Phase 1: propagate multipliers level-by-level through the
+        # transfer-graph upstream of the spending committee. At each
+        # terminal-type hit, attribute directly to by_corporation.
+        all_mults: Dict[str, float] = defaultdict(float)
+        all_mults[spending_cmte_id] = initial_mult
+        current_level: Dict[str, float] = {spending_cmte_id: initial_mult}
+        propagated_from: Set[str] = {spending_cmte_id}
 
-        for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
-            from_cmte = cycle_cmte_info.get(from_cmte_id, {})
-            from_name = from_cmte.get('name', from_cmte_id)
-            term_type = from_cmte.get('terminal_type', 'unknown')
-            attr_amount = amount * multiplier
-            if attr_amount < min_attr_amount:
+        for _depth in range(max_trace_depth):
+            next_level: Dict[str, float] = defaultdict(float)
+            for cmte_id, mult in current_level.items():
+                if mult < 0.0001:
+                    continue
+                for from_cmte_id, amount in transfer_edges.get(cmte_id, []):
+                    from_cmte = cycle_cmte_info.get(from_cmte_id, {})
+                    from_name = from_cmte.get('name', from_cmte_id)
+                    term_type = from_cmte.get('terminal_type', 'unknown')
+                    attr_amount = amount * mult
+                    if attr_amount < min_attr_amount:
+                        continue
+
+                    if term_type in TERMINAL_TYPES:
+                        # Terminal org PAC → attribute and stop walking
+                        results['by_corporation'][from_name] += attr_amount
+                    elif term_type in PASSTHROUGH_TYPES or term_type == 'campaign':
+                        if from_cmte_id in propagated_from:
+                            continue
+                        from_receipts = from_cmte.get('total_receipts', 0) or 0
+                        if from_receipts <= 0:
+                            # Can't proportionally trace further. Record
+                            # as upstream PAC so the name surfaces in
+                            # by_pac instead of disappearing silently.
+                            results['by_pac'][from_name] += attr_amount
+                            continue
+                        edge_fraction = min(1.0, amount / from_receipts)
+                        new_mult = mult * edge_fraction
+                        if new_mult >= 0.0001:
+                            next_level[from_cmte_id] += new_mult
+                            all_mults[from_cmte_id] = min(
+                                1.0, all_mults[from_cmte_id] + new_mult
+                            )
+            if not next_level:
+                break
+            propagated_from.update(current_level.keys())
+            current_level = next_level
+
+        # Phase 2: at each visited committee (including the original
+        # spending committee), attribute its direct individual donors
+        # proportionally to the accumulated multiplier.
+        for cmte_id, mult in all_mults.items():
+            if mult < 0.0001:
                 continue
-            if term_type in TERMINAL_TYPES:
-                results['by_corporation'][from_name] += attr_amount
-            else:
-                results['by_pac'][from_name] += attr_amount
+            for donor_key, amount in contrib_edges.get(cmte_id, []):
+                donor = donor_info.get(donor_key, {})
+                if not donor:
+                    continue
+                name = donor.get('name', donor_key)
+                if is_conduit(name):
+                    continue
+                attr_amount = amount * mult
+                if attr_amount < min_attr_amount:
+                    continue
+                employer = donor.get('employer', '')
+                company = _resolve_company(name, employer, whale_to_company, employer_to_company)
+                if company:
+                    results['by_corporation'][company] += attr_amount
+                    results['by_corporation_via_donors'][company][name] += attr_amount
+                else:
+                    if name not in results['by_individual']:
+                        results['by_individual'][name] = {'amount': 0, 'employer': employer}
+                    results['by_individual'][name]['amount'] += attr_amount
 
     return results
+
+
+def _merge_individuals_list(lists: List[List[Dict[str, Any]]], n: Optional[int], min_amount: float) -> List[Dict[str, Any]]:
+    """Merge per-cycle lists of {name, amount, employer} dicts by name,
+    summing amounts and keeping the most recent non-empty employer."""
+    merged: Dict[str, Dict[str, Any]] = {}
+    for lst in lists:
+        for item in lst:
+            name = item['name']
+            if name not in merged:
+                merged[name] = {'name': name, 'amount': 0, 'employer': item.get('employer', '')}
+            merged[name]['amount'] += item.get('amount', 0)
+            if item.get('employer') and not merged[name].get('employer'):
+                merged[name]['employer'] = item['employer']
+    result = sorted(
+        [v for v in merged.values() if v['amount'] >= min_amount],
+        key=lambda x: -x['amount'],
+    )
+    return result[:n] if n else result
 
 
 def _merge_named_list(lists: List[List[Dict[str, Any]]], n: Optional[int], min_amount: float) -> List[Dict[str, Any]]:
@@ -601,6 +688,10 @@ def merge_funding_channels(cycle_results: Dict[str, Dict], config: 'CandidateFun
             [r['ie']['support'].get('by_corporation', []) for r in results],
             config.top_n_sources, config.min_amount,
         ),
+        'by_individual': _merge_individuals_list(
+            [r['ie']['support'].get('by_individual', []) for r in results],
+            config.top_n_individuals, config.min_amount,
+        ),
         'by_pac': _merge_named_list([r['ie']['support'].get('by_pac', []) for r in results], 10, config.min_amount),
     }
     ie_oppose = {
@@ -610,6 +701,10 @@ def merge_funding_channels(cycle_results: Dict[str, Dict], config: 'CandidateFun
         'by_corporation': _merge_named_list(
             [r['ie']['oppose'].get('by_corporation', []) for r in results],
             config.top_n_sources, config.min_amount,
+        ),
+        'by_individual': _merge_individuals_list(
+            [r['ie']['oppose'].get('by_individual', []) for r in results],
+            config.top_n_individuals, config.min_amount,
         ),
         'by_pac': _merge_named_list([r['ie']['oppose'].get('by_pac', []) for r in results], 10, config.min_amount),
     }
@@ -866,6 +961,7 @@ def compute_funding_channels(
         donor_info=donor_info,
         whale_to_company=whale_to_company,
         employer_to_company=employer_to_company,
+        max_trace_depth=config.max_trace_depth,
     )
     _empty_ie = {'by_corporation': {}, 'by_corporation_via_donors': {}, 'by_individual': {}, 'by_pac': {}}
     ie_support_sources = (
@@ -966,6 +1062,7 @@ def compute_funding_channels(
                     if amt >= config.min_amount
                 ],
                 'by_corporation': _top_sources(ie_support_sources['by_corporation'], config.top_n_sources, config.min_amount),
+                'by_individual': _top_individuals(ie_support_sources['by_individual'], config.top_n_individuals, config.min_amount),
                 'by_pac': _top_sources(ie_support_sources['by_pac'], 10, config.min_amount),
             },
             'oppose': {
@@ -977,6 +1074,7 @@ def compute_funding_channels(
                     if amt >= config.min_amount
                 ],
                 'by_corporation': _top_sources(ie_oppose_sources['by_corporation'], config.top_n_sources, config.min_amount),
+                'by_individual': _top_individuals(ie_oppose_sources['by_individual'], config.top_n_individuals, config.min_amount),
                 'by_pac': _top_sources(ie_oppose_sources['by_pac'], 10, config.min_amount),
             },
         },
