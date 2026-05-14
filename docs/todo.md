@@ -45,14 +45,15 @@ Validation contract: every fix runs the four gates in @docs/validation.md. Diff 
 
   Target case: Cruz's IE+ `by_corporation` no longer shows TARGETED VICTORY $1.22M; Trump's by_organization no longer shows "United States Department of the Army" / "State of Nebraska"; Harris's no longer shows "State of Illinois" $2.78M / "Afghanistan War Commission" $1.66M.
 
-- [ ] **Same-entity P749 merge in `corporate_families`** — known splits:
-  - Pan Am Systems $615M + Pan Am Railways $308M = one Mellon entity
-  - GREYLOCK $32M + Greylock Partners $26M = same firm
-  - Adelson Drug Clinic $310M + Adelson Clinic = same Miriam Adelson clinic
+- [x] ~~**Same-entity merge in `corporate_families`**~~ — DONE 2026-05-14 (commit `fd2c7d1`). Phase 3.5 in `wikidata_corporate_resolution` fetches each family's P112/P127/P749 upstream Q-ids; merges pairs sharing any upstream Q-id with guardrails: n=2 cluster only, shared name prefix ≥6 chars (post-legal-suffix-strip), edu-institution exclusion. Union-find handles transitive clusters.
 
-  Implementation plan: post-resolution, walk each family's Q-id via Wikidata's P749 (parent organization). If two families' Q-ids share a parent, merge under the parent's canonical name. ~5K entity-data fetches, ~3-4 min runtime. Cache at `<cache_dir>/wikidata_parent_orgs.json`.
+  **Results**: 11 merges. Headline: Pan Am Systems $616M + Pan Am Railways $308M → **$923M one Mellon entity**. Also merged: Bloomberg TV/Beta, Marvel Comics+Entertainment+Games (union-find), DreamWorks+Animation, Rocket Companies+Mortgage+Loans, Hilton, Coca-Cola, Capitol Records. Two minor false-positive corporate-subsidiary mergers accepted (Universal Music/TV ~$1M, Samsung Electronics/Heavy ~$1M).
 
-  Target case: top of `corporate_families` no longer shows Pan Am Systems / Pan Am Railways as separate; Greylock collapses; Adelson clinics merge.
+  Cache: `<cache_dir>/wikidata_upstream.json`. Provenance: surviving family docs record `merged_from: [{canonical_name, wikidata_id}, ...]`.
+
+  **NOT caught** (no shared upstream — name-only variants): GREYLOCK + Greylock Partners; Adelson Drug Clinic + Adelson Clinic. These remain handled by `EMPLOYER_FAMILY_ALIASES` hardcoded dict (so that table still has work). Future: name-similarity-only merger pass, OR delete EMPLOYER_FAMILY_ALIASES once Adelson/Uline get proper Wikidata Q-ids.
+
+  Four-gate validation passed: bulk median 2.4% unchanged, Pan Am consolidates on Trump's `by_organization` ($19.89M merged), pytest 65/65.
 
 - [ ] **Audit the 33 Wikidata-flipped trade_association classifications.** Eyeball cache + the 380 not-flipped for false-negatives (real trade orgs Wikidata didn't classify with our P31 set). Add `docs/audit/trade-class-2026-05-13.md`.
 
