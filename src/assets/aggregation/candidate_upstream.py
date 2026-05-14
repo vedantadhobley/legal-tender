@@ -64,6 +64,7 @@ from collections import defaultdict
 
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config
 
+from src.config import ACTIVE_CYCLES
 from src.resources.arango import ArangoDBResource
 
 
@@ -76,8 +77,10 @@ PASSTHROUGH_TYPES = {"passthrough", "unknown", "super_pac_unclassified"}
 # Conduit patterns to filter from individual donors
 CONDUIT_PATTERNS = ["WINRED", "ACTBLUE", "EARMARK", "CONDUIT", "UNITEMIZED"]
 
-# Election cycles to process
-CYCLES = ["2020", "2022", "2024", "2026"]
+# Election cycles to process — single source: src/config.ACTIVE_CYCLES.
+# Kept as module-local alias since this file uses CYCLES as a positional
+# constant in many list comprehensions (no behavior change vs literal).
+CYCLES = list(ACTIVE_CYCLES)
 
 # Map terminal_type to channel bucket name
 TERMINAL_TYPE_BUCKET = {

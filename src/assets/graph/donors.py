@@ -33,23 +33,18 @@ from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config
 
 from src.resources.arango import ArangoDBResource
 from src.utils.parallel import parallel_cycles
+from src.config import ACTIVE_CYCLES
 
 
 class DonorsConfig(Config):
     """Configuration for donors vertex asset."""
-    cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    cycles: List[str] = list(ACTIVE_CYCLES)
     batch_size: int = 5000  # Smaller batch for memory
 
 
-# FEC per-election individual contribution limits by cycle
-# Source: https://www.fec.gov/help-candidates-and-committees/candidate-taking-receipts/contribution-limits/
-# These are indexed for inflation every 2 years.
-PER_ELECTION_LIMITS = {
-    "2020": 2800,
-    "2022": 2900,
-    "2024": 3300,
-    "2026": 3500,
-}
+# PER_ELECTION_LIMITS moved to src/config.py. Re-exported here as a
+# module attribute so existing internal references stay working.
+from src.config import PER_ELECTION_LIMITS  # noqa: E402
 
 
 def normalize_name(name: str) -> str:

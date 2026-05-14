@@ -22,11 +22,12 @@ import gc
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config
 
 from src.resources.arango import ArangoDBResource
+from src.config import ACTIVE_CYCLES
 
 
 class ContributedToConfig(Config):
     """Configuration for contributed_to edge asset."""
-    cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    cycles: List[str] = list(ACTIVE_CYCLES)
     batch_size: int = 5000
 
 

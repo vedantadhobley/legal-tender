@@ -10,10 +10,11 @@ from src.data import get_repository
 from src.resources.arango import ArangoDBResource
 from src.utils.arango_dump import should_restore_from_dump, create_collection_dump, restore_collection_from_dump
 from src.utils.fec_schema import FECSchema
+from src.config import ACTIVE_CYCLES
 
 
 class CommitteesConfig(Config):
-    cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    cycles: List[str] = list(ACTIVE_CYCLES)
     force_refresh: bool = False
 
 

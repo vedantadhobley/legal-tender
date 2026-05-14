@@ -26,6 +26,7 @@ Structure:
         └── (future: embeddings)
 """
 
+from src.config import ACTIVE_CYCLES
 import os
 from pathlib import Path
 from typing import Optional
@@ -157,7 +158,7 @@ def ensure_storage_structure() -> dict:
     get_graph_dumps_dir().mkdir(parents=True, exist_ok=True)
 
     # Create cycle-specific directories
-    cycles = ["2020", "2022", "2024", "2026"]
+    cycles = list(ACTIVE_CYCLES)
     for cycle in cycles:
         cycle_raw = get_cycle_raw_dir(cycle)
         cycle_raw.mkdir(parents=True, exist_ok=True)

@@ -15,6 +15,7 @@ import requests
 from src.data import get_repository
 from src.data.repository import download_fec_file, FEC_FILE_MAPPING
 from src.api.congress_legislators import download_legislators_file, get_current_legislators, extract_fec_ids
+from src.config import ACTIVE_CYCLES
 
 
 class DataSyncConfig(Config):
@@ -23,7 +24,7 @@ class DataSyncConfig(Config):
     force_refresh: bool = False
     """Force re-download even if files are fresh"""
     
-    cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    cycles: List[str] = list(ACTIVE_CYCLES)
     """FEC cycles to sync (8 years of data)"""
     
     sync_legislators: bool = True

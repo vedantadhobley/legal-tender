@@ -45,6 +45,7 @@ from collections import defaultdict
 from dagster import asset, AssetExecutionContext, MetadataValue, Output, Config
 
 from src.resources.arango import ArangoDBResource
+from src.config import ACTIVE_CYCLES
 
 
 # Terminal organization types - these are the END of the money trail (organizational money)
@@ -53,7 +54,7 @@ TERMINAL_ORG_TYPES = {'corporation', 'labor_union', 'trade_association', 'cooper
 
 class CandidateSummariesConfig(Config):
     """Configuration for candidate summaries aggregation."""
-    cycles: List[str] = ["2020", "2022", "2024", "2026"]
+    cycles: List[str] = list(ACTIVE_CYCLES)
     top_n_donors: int = 10
     top_n_committees: int = 10
     batch_size: int = 100
