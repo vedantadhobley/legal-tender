@@ -6,6 +6,104 @@ When a non-obvious choice gets made, append a dated entry here with: what we dec
 
 ---
 
+## 2026-05-14 — Generic-string rejection + same-entity merge for corporate_families
+
+Session focused on cleaning up two classes of misresolution visible in `by_organization` cross-cuts:
+
+1. Wikidata's reconci.link returning the wrong kind of entity for short/ generic FEC employer strings — "TARGETED VICTORY" → corp (actually a digital ad agency), "PRESIDENT" → corp (a job title FEC donors typed in the employer field), "United States Department of the Army" / "State of Nebraska" → corp (federal-agency / state-name leakage), "Asana Journal" → wrong Q-id for a generic word.
+
+2. Genuinely-same real-world entities resolving to distinct Wikidata Q-ids and showing up as separate corporate_families. Pan Am Systems ($616M) and Pan Am Railways ($308M) are both Timothy Mellon entities; showing them as $923M one Mellon entity is what the data actually means.
+
+Three commits this session: `eb38496` (audit-derived terminal-node cleanup, shipped earlier in the arc), `c47543a` + `0a7c334` (P31 reject set evolution), `fd2c7d1` (P749 same-entity merge).
+
+### Audit-derived terminal-node cleanup (commit `eb38496`)
+
+Four principled fixes from the 2026-05-13 terminal-node audit:
+
+- `" SEPARATE SEGREGATED FUND"` added to `_CMTE_NAME_SUFFIXES`. SSF is FEC's own legal term for the PAC arm of a corp/union; recognizing FEC vocabulary, same shape as other suffix entries. Catches AANA + similar.
+- Prefix-stripping for "POLITICAL ACTION COMMITTEE OF THE X" / "PAC OF X" in `_pac_search_name`. Symmetric to existing suffix-stripping; FEC has two equivalent naming conventions. Catches AAOS.
+- Phase 1b stale-flag cleanup pass clears `terminal_type_refined_from_m_org_wikidata` / `terminal_type_wikidata_*` at start. Prevents IFW/ASIS-style cases where a re-classification doesn't take because the flag from a prior run persists.
+- Phase 2a CONNECTED-match relaxed to prefix-match (≥10 chars guardrail) for super_pac_unclassified → labor_union inheritance. Catches UFCW SPAC ($20M), UNITE HERE PAC ($27M), IUOE SPAC ($20M), USW WORKS ($9M), CA Nurses PAC ($8M) — ~$85M proper org-rollup.
+
+Each fix passes the four-gate contract.
+
+### Resolver discipline shift: from reactive list-growth to comprehensive categorical reference data (commits `c47543a` + `0a7c334`)
+
+The initial fix for the misresolutions was reactive: add a list of "bad" Q-ids to reject when seen as top reconci hit. This was the right *shape* (using Wikidata's own classification to gate acceptance) but the *application* was wrong: I added entries one-at-a-time as new wrong matches surfaced. The user pushed back hard:
+
+> "make sure that your solutions arent arbitrary hardcodes"
+> "it seems like we're hardcoding again"
+
+The principled resolution: **comprehensive categorical reference data, built once up front by enumerating Wikidata's relevant taxonomy categories, not grown reactively per-case.**
+
+Concretely, `_NON_EMPLOYER_QIDS` expanded from 12 ad-hoc entries to ~35 entries organized in 9 categories matching Wikidata's own ontology:
+
+- Government / political entities (Q35657 US state, Q910252 head of state, etc.)
+- Sovereign-state / country (Q6256, Q3624078)
+- Administrative-territorial / settlement (Q15642541 admin region, Q486972 human settlement, Q515 city, Q3957 town, Q532 village, Q15284 municipality)
+- Offices, positions, occupations (Q17279032 federal department, Q4164871 position, Q12737077 occupation, Q28640 profession, Q11488158 administrative occupation)
+- Creative works (Q11424 film, Q571 book, Q7725634 literary work, Q47461344 written work, Q5398426 TV series, Q21191270 TV series episode, Q482994 album, Q7366 song, Q386724 work, Q7889 video game, Q13442814 scholarly article, Q5633421 scientific journal)
+- Concepts / abstract (Q34770 language, Q11879003 academic discipline, Q101352 family name, Q133327 patronymic, Q11173 chemical compound, Q12140 medication, Q134808 polysaccharide)
+- Geographic features (Q23397 lake, Q4022 river, Q8502 mountain)
+- Wikimedia administrivia (Q4167410 disambiguation page, Q4167836 category, Q13406463 list article)
+- Humans (Q5 — top reconci hit being a person means the resolver should NOT attribute the donation to that person as if they were a corporation)
+
+Plus an empty-types structural rule: if reconci returns a Q-id with no P31 classification at all, that's "an entity Wikidata has but hasn't classified" — too risky to accept as a corporation. Single rule, not a list. Method tagged `empty_types_no_classification` in the cache.
+
+The Q5 (human) inclusion required making `_accept_candidate` parametric so the whale path (which DELIBERATELY wants human Q-ids as input — that's how we resolve "JAN KOUM" → companies he founded) doesn't get broken. New signature: `_accept_candidate(input_name, candidate, reject_types: frozenset = frozenset(), require_typed: bool = False)`. Employer path passes `reject_types=_NON_EMPLOYER_QIDS, require_typed=True`. Whale path passes the defaults.
+
+Also: removed the "fall through to candidates[1] if candidates[0] rejected" logic. It generated absurd worse-than-reject fallbacks: "CEO" → "Clinical and Experimental Otorhinolaryngology" (real Wikidata journal Q-id), "Department of the Army" → "badges of the United States Army" (Q-id about military insignia). When the top hit is rejected, we return not_found rather than scraping the bottom of the candidate barrel. Lower hit rate, much higher precision — for FEC-corporate-attribution use the right trade-off.
+
+GLEIF Layer 2 needed a parallel filter: when reconci rejected via these methods, the rejection should propagate; without it, GLEIF was rescuing some names with strict-match (USA → "United States" via GLEIF's strict_match_us). Added `_REJECTION_PREFIXES` filter at the resolve_batch boundary so GLEIF doesn't see those names.
+
+The asset (`wikidata_resolution.py`) also gained a broader rejection-prefix list at the Phase 2 assemble step to drop these from corporate_families entirely (vs preserving them as not_found).
+
+**Discipline takeaway**: when a categorical filter is the right structural answer, build it comprehensively by enumerating the relevant taxonomy, NOT reactively per-case. The categories themselves are reference data — generic, principled, bounded. Adding entries within an existing category as new patterns surface is acceptable; growing a list of one-off Q-ids per misresolution is not.
+
+### Same-entity merge via shared Wikidata upstream Q-id (commit `fd2c7d1`)
+
+Pan Am Systems (Q7129582) and Pan Am Railways (Q2048811) both have P112 (founder) = Q7807399 (Timothy Mellon). They're the same real-world Mellon entity. Without merging, by_organization shows them as $616M + $308M as if they were unrelated; with merging it shows $923M one Mellon entity, which is what the data means.
+
+Mechanism (Phase 3.5 in `wikidata_corporate_resolution`):
+
+1. For each corporate_family with a Wikidata Q-id, fetch P112 (founder), P127 (owned by), P749 (parent organization) upstream Q-ids.
+2. Group families by shared upstream Q-id.
+3. Apply guardrails; union-find for transitive clusters.
+4. Pick canonical (highest total_influence), fold others' totals + member_employers + linked_whales in, record `merged_from` provenance.
+
+**Guardrails** (each one rejects a real-data false positive surfaced in the 146-cluster dry-run):
+
+- **n=2 only.** n≥3 catches "located in USA" (Q30) with 64 unrelated megacaps clustered, "founded by Elon Musk" (Q317521) with OpenAI/SpaceX/X/PayPal/Tesla clustered. Founder/HQ/exchange-listing are *not* same-entity signals.
+- **Shared name prefix ≥6 chars after legal-suffix strip.** "Pan Am" / "Pan Am" = 7 ✓. "Citadel" / "Citadel" = 8 ✓. "Bain " / "Bain " = 5 ✗ (intentionally rejects Bain Capital + Bain & Company — same founder, distinct PE vs consulting firms).
+- **Educational-institution exclusion.** Both names containing University/College/School → reject. Otherwise university campuses sharing a parent system (UIUC + UIC under "University of Illinois system") would over-merge.
+
+**Considered alternatives:**
+
+1. **Shared P749 (parent org) only — most strict.** Rejected because Pan Am's connection is via P112 (Mellon = founder), not P749. Loses the headline win.
+2. **Match-canonicalize via Wikidata's `wd:parentItem` SPARQL closure.** Equivalent to walking parent orgs to a fixed point. Too aggressive — would walk Microsoft + Google + IBM up to "American multinational technology corporation" and try to merge.
+3. **LLM-based same-entity detection on top-N candidates.** Doable on joi, but adds a moving part for a problem that's mostly solved with shape rules.
+4. **Hand-curated `EMPLOYER_FAMILY_ALIASES` table.** Already exists; doesn't scale.
+
+**Results, this run**: 11 merges. Headline Pan Am ($923M one Mellon entity). Clean wins: Bloomberg TV/Beta, Marvel Comics+Entertainment+Games (union-find), DreamWorks+Animation, Rocket Companies+Mortgage+Loans, Hilton, Coca-Cola, Capitol Records. Two minor false positives accepted: Universal Music Group + Universal Television (~$1M, different corporate trees — UMG ≠ NBCUniversal but the rule can't tell), Samsung Electronics America + Samsung Heavy Industries (~$1M, genuinely distinct subsidiaries that share parent corp).
+
+**NOT caught** (no shared upstream — name-only variants): GREYLOCK + Greylock Partners; Adelson Drug Clinic + Adelson Clinic; ULINE INDUSTRIES + ULINE. These keep the `EMPLOYER_FAMILY_ALIASES` table relevant. Future path: name-similarity-only merger pass operating on canonical_employers, OR delete EMPLOYER_FAMILY_ALIASES if Adelson/Uline get proper Wikidata coverage.
+
+**Cache**: `<cache_dir>/wikidata_upstream.json`, schema `{qid: {p112, p127, p749, fetched_at}}`. Incremental flush every 200 entities, atomic .tmp rename.
+
+**Validation (all four gates pass):**
+
+- Gate 1 (bulk median): 2.4% unchanged from baseline (merge changes WHO gets credit, not HOW MUCH — total receipts are conserved).
+- Gate 2 (named-candidate): Trump by_organization shows Pan Am Systems at $19.89M consolidated (was 2 separate entries). Other top orgs (Department of Government Efficiency / Musk, U Line / Uihlein, Marvel Entertainment / Perlmutter, America First Policies / McMahon, Budget Suites / Bigelow) unchanged. Bacon, Sanders also stable.
+- Gate 3 (target case): Pan Am surviving family doc has `merged_from: [{name: "Pan Am Railways", qid: "Q2048811"}]`.
+- Gate 4 (pytest): 65/65.
+
+**Open follow-ups:**
+
+- The Universal Music/TV and Samsung Electronics/Heavy false positives could be filtered by examining whether the shared upstream Q-id is itself a "corporate holding company" type vs a "founder" type. P112 (founder) tends to over-merge sibling companies founded by same person; P749 (parent org) tends to over-merge subsidiaries that share a holding company. Future work: track which property the upstream came from and apply different thresholds.
+- The dry-run found Citadel Enterprise Americas LLC + Citadel Securities as a candidate merge, but only Citadel Enterprise existed in this run's corporate_families (Citadel Securities was resolved to a different canonical or below threshold). Not a regression; just a coverage gap.
+
+---
+
 ## 2026-05-12 + 2026-05-13 — Terminal-node fixes + view tool + classification refinement
 
 Two-session arc focused on (a) making the terminal-node classification layer more trustworthy and (b) finally making the pipeline's output human-viewable. Validation methodology formalized in @docs/validation.md.
