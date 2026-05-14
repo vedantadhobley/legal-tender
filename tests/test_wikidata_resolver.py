@@ -32,7 +32,11 @@ WELL_KNOWN = [
     ("IBM",                "wikidata", "IBM"),
     ("PFIZER",             "wikidata", "Pfizer"),
     ("BLACKROCK",          "wikidata", "BlackRock"),
-    ("TESLA",              "wikidata", "Tesla"),
+    # TESLA removed — reconci's top hit is Nikola Tesla (Q5 human),
+    # which the 2026-05-13 Q5-in-_NON_EMPLOYER_QIDS rule now rejects.
+    # Tesla Inc is at candidates[2] but we don't fall through past
+    # rejections (fall-through generated worse fallbacks). Documented
+    # known limitation; OpenCorporates Layer 3 should resolve it.
     ("COMCAST",            "wikidata", "Comcast"),
 ]
 
@@ -48,12 +52,11 @@ SUBCLASS_LLC = [
 ]
 
 GLEIF_RECOVERIES = [
-    # PRATT INDUSTRIES: post-multi-signal-resolver, reconci returns
-    # "Anthony Pratt" (the founder) at a corroborated score. Accept any
-    # source — the canonical_substr check still verifies it's *something*
-    # Pratt-related, not random noise. Documented trade-off in
-    # `wikidata_resolver.py` docstring.
-    ("PRATT INDUSTRIES",   "wikidata", "Pratt"),
+    # PRATT INDUSTRIES: reconci's top hit is Anthony Pratt (Q5 human,
+    # the founder). After 2026-05-13 added Q5 to _NON_EMPLOYER_QIDS,
+    # this gets rejected. Real Pratt Industries Inc isn't in
+    # Wikidata's top reconci hits. GLEIF also doesn't find it under
+    # this exact form. Documented limitation, same shape as TESLA.
     ("MOUNTAIRE",          "gleif",    "Mountaire"),
     ("LINKEDIN",           "gleif",    "LinkedIn"),
 ]

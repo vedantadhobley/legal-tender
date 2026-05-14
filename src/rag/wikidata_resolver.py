@@ -53,6 +53,51 @@ HIGH_CONFIDENCE_THRESHOLD = 70.0
 LOW_CONFIDENCE_THRESHOLD = 40.0
 
 
+# Wikidata P31 classes that disqualify a candidate from being treated as
+# an employer. Applied in `_accept_candidate` to reject top hits that
+# reconci returned at high score but that aren't organization-shaped.
+#
+# Same reference-data shape as `_TRADE_CLASS_QIDS` (in
+# committee_classification.py) but in the rejection direction. Each
+# entry maps to a Wikidata class empirically observed in our corpus as
+# a problematic top-hit for FEC employer strings. The set is finite
+# and stable: Wikidata's taxonomy of "thing that isn't an organization
+# that pays salaries to donors" doesn't grow per-case.
+#
+# Categories:
+#   - Government entities: state employees, federal department
+#     employees DO donate, but the entity isn't a corporate-money
+#     source in the funding-channels sense
+#   - Offices / positions / occupations: a donor typing a job title
+#     in the employer field shouldn't resolve to a "corporate source"
+#   - Mismatch entity types: a TV episode / person / book that
+#     reconci surfaced as a top hit for a corporate-looking name
+_NON_EMPLOYER_QIDS = frozenset({
+    # Government entities (observed: STATE OF X, UNITED STATES DEPT OF X)
+    "Q35657",        # U.S. state
+    "Q910252",       # United States federal executive department
+    "Q327333",       # government agency
+    "Q2366457",      # department (generic government department class)
+    # Sovereign-state / country (observed: "USA" → United States Q30)
+    "Q6256",         # country
+    "Q3624078",      # sovereign state
+    # Offices, positions, occupations (observed: PRESIDENT, CEO, CONSULTANT)
+    "Q17279032",     # elective office (President of the US, etc.)
+    "Q4164871",      # position (generic job position)
+    "Q12737077",     # occupation
+    "Q28640",        # profession
+    "Q11488158",     # corporate title (CEO, CFO, etc.)
+    # Entity-type mismatches (observed misresolutions)
+    "Q21191270",     # television series episode  (TARGETED VICTORY case)
+    "Q13442814",     # scholarly article  (SOUTHERN WASTE SYSTEMS case)
+    # Person — a human isn't an employer. Whale resolver is unaffected
+    # because it passes its own empty `reject_types` (it explicitly
+    # WANTS persons). Catches cases like PRATT INDUSTRIES resolving
+    # to Anthony Pratt the founder rather than Pratt Industries Inc.
+    "Q5",            # human
+})
+
+
 @dataclass
 class ResolutionResult:
     """Output of resolving one FEC employer string. Cache-schema
@@ -91,13 +136,36 @@ class ResolutionResult:
         }
 
 
-def _accept_candidate(input_name: str, candidate: ReconciCandidate) -> tuple[bool, str]:
+def _accept_candidate(
+    input_name: str,
+    candidate: ReconciCandidate,
+    reject_types: "frozenset[str]" = frozenset(),
+) -> tuple[bool, str]:
     """Decide whether to accept this candidate. Returns (accept, reason).
     `reason` is a short label that goes into the resolution's `method`
     field for provenance — e.g., "high_confidence",
-    "corroborated_acronym", "rejected_short_input_no_signal"."""
+    "corroborated_acronym", "rejected_short_input_no_signal".
+
+    `reject_types` is a per-caller set of Wikidata P31 Q-ids that
+    disqualify the candidate regardless of score. The employer path
+    passes `_NON_EMPLOYER_QIDS` (rejects governments, occupations,
+    persons, etc.); the whale path passes `frozenset()` because it
+    expects persons and shouldn't reject Q5=human.
+    """
     score = candidate.score
     label = candidate.name
+
+    # P31 rejection: reject regardless of score if the candidate's
+    # Wikidata classification is in the caller's reject set. Runs
+    # before score/corroboration because some of these (PRESIDENT →
+    # "President of the United States" at score 100; STATE OF ILLINOIS
+    # → "Illinois" at score 100) would otherwise be accepted by the
+    # high-confidence branch.
+    if reject_types:
+        type_ids = {t.get("id") for t in candidate.types if t.get("id")}
+        blocking = type_ids & reject_types
+        if blocking:
+            return False, f"reject_p31_{sorted(blocking)[0]}"
 
     if score < LOW_CONFIDENCE_THRESHOLD:
         return False, f"below_low_threshold_{int(score)}"
@@ -120,7 +188,14 @@ def _accept_candidate(input_name: str, candidate: ReconciCandidate) -> tuple[boo
 
 
 def _from_reconci(name: str, candidates: List[ReconciCandidate]) -> ResolutionResult:
-    """Pick the top candidate that passes the accept rule."""
+    """Accept the top candidate if it passes `_accept_candidate`.
+    Returns `not_found` if rejected.
+
+    Earlier iteration tried falling through to next candidates when top
+    was rejected, but the next hits in reconci's ranking were usually
+    just-as-wrong (CEO → 'Clinical and Experimental Otorhinolaryngology';
+    Dept of Army → 'badges of the United States Army'). Honest
+    not_found is better than weird fallback."""
     alts = [
         {
             "qid": c.qid, "name": c.name, "score": c.score,
@@ -136,7 +211,7 @@ def _from_reconci(name: str, candidates: List[ReconciCandidate]) -> ResolutionRe
             method="no_candidates", alternatives=alts,
         )
     top = candidates[0]
-    accept, reason = _accept_candidate(name, top)
+    accept, reason = _accept_candidate(name, top, reject_types=_NON_EMPLOYER_QIDS)
     if not accept:
         return ResolutionResult(
             original=name, canonical=name,
@@ -200,8 +275,26 @@ def resolve_batch(
     if not use_gleif_fallback:
         return out
 
-    # Layer 2: GLEIF strict-match for not-founds.
-    gleif_input = [name for name, r in out.items() if r.source == "not_found"]
+    # Layer 2: GLEIF strict-match for not-founds. Skip names the resolver
+    # actively rejected — those are either categorically not-employers
+    # (P31 in reject set) OR input too short/ambiguous to trust. Even
+    # if GLEIF has an LEI for them, we don't want a "rescue" because
+    # the reason reconci rejected applies regardless of source.
+    #
+    # Only names that genuinely weren't found (no candidates, score
+    # below low threshold) flow to GLEIF as legit "Wikidata doesn't
+    # know about this entity" cases.
+    _REJECTION_PREFIXES = (
+        "reject_p31_",
+        "short_input_no_corroboration",
+        "below_low_threshold_",
+        "low_confidence_no_signal_",
+    )
+    gleif_input = [
+        name for name, r in out.items()
+        if r.source == "not_found"
+        and not any(r.method.startswith(p) for p in _REJECTION_PREFIXES)
+    ]
     if not gleif_input:
         return out
 

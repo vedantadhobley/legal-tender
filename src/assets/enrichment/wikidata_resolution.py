@@ -388,10 +388,39 @@ def wikidata_corporate_resolution(
         # Phase 2: assemble employer_mappings + corporate_families
         # ================================================================
         context.log.info("Phase 2: Assembling employer mappings + corporate families...")
+        n_skipped_p31 = 0
         for emp in eligible_employers:
             name = emp['name']
             normalized = emp['normalized']
             cached = employer_cache.get(name)
+            # Skip canonical_employers that the resolver actively rejected
+            # (vs simply "not in Wikidata"). Rejection methods come from
+            # the resolver's `_accept_candidate` rules — they signal that
+            # the top reconci candidate matched a non-employer entity
+            # (state, country, office, occupation, TV episode), OR that
+            # the input was too short/ambiguous to trust (USA → United
+            # States at 100 score but only 3 chars).
+            #
+            # Dropping these means donor donations under those employer
+            # strings fall through to `by_individual` in the trace,
+            # rather than aggregating under "STATE OF ILLINOIS" / "USA" /
+            # "PRESIDENT" as if those were corporate sources.
+            #
+            # Distinction: `no_candidates` and `gleif_no_match` mean
+            # "Wikidata + GLEIF both didn't have this entity" — those
+            # are KEPT (canonical_employer preserved for legit small
+            # corps like PRATT INDUSTRIES not in Wikidata).
+            method = cached.get('method') if cached else None
+            rejection_prefixes = (
+                'reject_p31_',                  # P31 class blacklist hit
+                'short_input_no_corroboration', # short input, no signal
+                'below_low_threshold_',         # reconci score < 40
+                'low_confidence_no_signal_',    # 40-69 score, no signal
+            )
+            if cached and cached.get('source') == 'not_found' and method and \
+                    any(method.startswith(p) for p in rejection_prefixes):
+                n_skipped_p31 += 1
+                continue
             if cached and cached.get('source') in ('wikidata', 'gleif'):
                 canonical = cached.get('canonical', normalized)
                 relationship = cached.get('relationship', 'self')
@@ -431,6 +460,11 @@ def wikidata_corporate_resolution(
                 'wikidata_id': wikidata_id,
                 'amount': emp['total'],
             })
+        if n_skipped_p31:
+            context.log.info(
+                f"  Skipped {n_skipped_p31:,} canonical employers categorically "
+                f"rejected by Wikidata P31 (state, federal department, occupation, etc.)"
+            )
 
         # ================================================================
         # Phase 3: whale resolution
