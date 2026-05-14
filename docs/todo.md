@@ -91,7 +91,7 @@ Comprehensive sweep of every list / set / dict in `src/` (full audit in `docs/au
 
 **Whale path filter chain — VERIFIED GONE** (greppd 2026-05-13). `_NON_CORPORATE_P31`, `_GENERIC_DESCRIPTION_PATTERNS`, `_GOVERNMENT_DESCRIPTION_PATTERNS`, `_RETRY_SUFFIX_TOKENS`, `_EMPLOYER_OVERRIDES` — all deleted in the May 11-12 simplification arc.
 
-**Dead-code leftovers** — `src/cli/pies_v3.py` (679 LOC, on delete list) has stale copies of `TERMINAL_TYPES` / `PASSTHROUGH_TYPES` / `CONDUIT_PATTERNS`. Cleared when pies_v3.py is deleted (also on todo).
+**Dead-code leftovers** — ~~`src/cli/pies_v3.py` (679 LOC, on delete list) has stale copies of `TERMINAL_TYPES` / `PASSTHROUGH_TYPES` / `CONDUIT_PATTERNS`.~~ DELETED 2026-05-14 (commit `576bee0`) alongside `src/cli/check_funding.py` — 753 LOC removed, zero callers verified.
 
 ### Later this month / next month
 
@@ -173,7 +173,7 @@ Comprehensive sweep of every list / set / dict in `src/` (full audit in `docs/au
 
 - [ ] **Single `ACTIVE_CYCLES` constant.** Currently hardcoded as `["2020", "2022", "2024", "2026"]` in **21 files** (re-counted 2026-05-11 PM, the count crept up from 17 since the original audit). Move to `src/config.py` (new module) and import everywhere. Source: @audit/codebase-inventory.md "Configuration sprawl".
 - [ ] **`PER_ELECTION_LIMITS` constant.** Currently lives in `src/assets/graph/donors.py:47-50`, referenced via comments in 4 other places. Move to `src/config.py`, import where needed.
-- [ ] **`TERMINAL_TYPES`, `PASSTHROUGH_TYPES`, `CONDUIT_PATTERNS`** in `candidate_upstream.py:67-74` — duplicated (with subtle divergence!) in `pies_v3.py:21-28`. Move to `src/config.py`.
+- [ ] **`TERMINAL_TYPES`, `PASSTHROUGH_TYPES`, `CONDUIT_PATTERNS`** in `candidate_upstream.py:67-74` — ~~duplicated in `pies_v3.py:21-28`~~ (pies_v3.py deleted 2026-05-14). Still worth moving to `src/config.py` to remove the in-file definition.
 - [ ] **Progress logging interval constants.** `pas2.py:130` (% 250000), `contributed_to.py:272` (% 50000), `arango_dump.py:248` (% 500000) all use different intervals. Pick one (`LOG_PROGRESS_EVERY = 100_000`), use everywhere.
 
 ### Cache + data hygiene
@@ -189,8 +189,8 @@ Comprehensive sweep of every list / set / dict in `src/` (full audit in `docs/au
 
 - [x] ~~**Delete `src/resources/embedding.py`**~~ (320 LOC) — DONE 2026-05-11 PM. Registered as a Dagster resource but no asset consumed it. Pure facade.
 - [x] ~~**Delete `src/api/election_api.py`**~~ (67 LOC) — DONE 2026-05-11 PM. Placeholder, never wired.
-- [ ] **Delete `src/cli/pies_v3.py`** (679 LOC). No callers; predates funding_channels. Verify no local workflow depends on it first. Source: @audit/code-quality-findings.md §2a.
-- [ ] **Delete `src/cli/check_funding.py`** (74 LOC) OR move to `scripts/`. No callers; CLI helper. Source: @audit/code-quality-findings.md §2b.
+- [x] ~~**Delete `src/cli/pies_v3.py`** (679 LOC)~~. DONE 2026-05-14 (commit `576bee0`). Zero callers verified.
+- [x] ~~**Delete `src/cli/check_funding.py`** (74 LOC)~~. DONE 2026-05-14 (commit `576bee0`). Zero callers verified.
 - [ ] **Decide on `src/api/lobbying_api.py`** (63 LOC). Aspirational; keep if the lobbying-integration plan is live, delete otherwise.
 - [ ] **Move root-level dev scripts.** `test_download.py`, `test_fec_schema.py`, `validate_schemas.py` are not pytest tests; they're dev utilities. Move to `scripts/` (currently empty) and rename without `test_` prefix.
 - [ ] **Verify no orphan imports** for the 4 deleted enrichment files (`committee_financials.py`, `corporate_hierarchy.py`, `employer_cluster_integration.py`, `employer_clustering.py`). Source: @audit/code-quality-findings.md §2c.
