@@ -122,3 +122,25 @@ def _claim_qid(claim: Dict[str, Any]) -> Optional[str]:
     except (KeyError, TypeError):
         return None
 
+
+def fetch_upstream_qids(qid: str) -> Optional[Dict[str, List[str]]]:
+    """Fetch upstream relationship Q-ids for an entity:
+      - P112 founder
+      - P127 owned by
+      - P749 parent organization
+
+    Returns dict with keys 'p112', 'p127', 'p749' (each a list of Q-ids,
+    possibly empty). Returns None on fetch failure so the caller can
+    retry next run without poisoning the cache."""
+    entity = _entity_data(qid)
+    if not entity:
+        return None
+    claims = entity.get("claims", {})
+    out: Dict[str, List[str]] = {"p112": [], "p127": [], "p749": []}
+    for prop_key, out_key in (("P112", "p112"), ("P127", "p127"), ("P749", "p749")):
+        for claim in claims.get(prop_key, []):
+            target = _claim_qid(claim)
+            if target:
+                out[out_key].append(target)
+    return out
+

@@ -146,6 +146,252 @@ def _is_cache_hit(entry: Optional[Dict[str, Any]]) -> bool:
     return entry.get('source') in ('wikidata', 'gleif', 'not_found')
 
 
+# ---------------------------------------------------------------------------
+# Same-entity merge — Wikidata upstream Q-id shared between corporate_families
+# ---------------------------------------------------------------------------
+# Some corporate_families resolve to distinct Wikidata Q-ids but represent
+# the same real-world entity in FEC context: Pan Am Systems (Q7129582) and
+# Pan Am Railways (Q2048811) both have P112 (founder) = Q7807399 (Mellon).
+# Without merging, the data shows them as $616M + $308M instead of $923M
+# one Mellon entity.
+#
+# Mechanism: after corporate_families is built, fetch each family's
+# upstream Q-ids (P112 founder / P127 owned by / P749 parent org). Two
+# families that share any upstream Q-id are candidates to merge — but
+# only with guardrails. Without guardrails this fires false positives:
+#   - "located in USA" (Q30) puts 64 unrelated megacaps in one cluster
+#   - "founded by Elon Musk" (Q317521) clusters OpenAI/SpaceX/X/PayPal/Tesla
+#   - "founded by Bill Bain" (Q4908004) clusters Bain Capital (PE) with
+#     Bain & Company (consulting) — same founder, different companies.
+#
+# Guardrails that survived dry-run evaluation against 146 candidate clusters:
+#
+#   1. n=2 only. Clusters of ≥3 are almost always "famous founder /
+#      common HQ" megaclusters, not same-entity.
+#   2. Shared name prefix ≥6 chars after legal-suffix strip.
+#      "Pan Am" / "Pan Am" = 7 ✓. "Citadel" / "Citadel" = 8 ✓.
+#      "Bain " / "Bain " = 5 ✗ (intentionally rejects Bain false positive).
+#   3. Educational-institution exclusion: clusters where both names
+#      contain University/College/School are different campuses of one
+#      system (e.g. UIUC + UIC under "University of Illinois system")
+#      and remain distinct FEC employers.
+
+_EDU_NAME_PATTERN = re.compile(r"\b(University|College|School)\b", re.IGNORECASE)
+
+_LEGAL_SUFFIX_PATTERN = re.compile(
+    r"\s+(INC|LLC|LP|LLP|LTD|CORP|CORPORATION|COMPANY|CO|GROUP|HOLDINGS|"
+    r"PARTNERS|GMBH|SA|AG)\.?$",
+    re.IGNORECASE,
+)
+
+
+def _upstream_cache_path() -> Path:
+    """Separate cache file from name-resolution cache. Different data shape
+    (qid → upstream qids), different write cadence (fetched once per qid),
+    avoids bloating the name-keyed cache for every incremental flush."""
+    env = os.environ.get("WIKIDATA_UPSTREAM_CACHE_PATH")
+    if env:
+        return Path(env)
+    return get_cache_dir() / "wikidata_upstream.json"
+
+
+def _load_upstream_cache() -> Dict[str, Any]:
+    path = _upstream_cache_path()
+    if not path.exists():
+        return {}
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        logger.warning(f"Failed to load upstream cache from {path}: {e}")
+        return {}
+
+
+def _save_upstream_cache(cache: Dict[str, Any]) -> None:
+    path = _upstream_cache_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    try:
+        with open(tmp, "w") as f:
+            json.dump(cache, f, indent=2)
+        os.replace(tmp, path)
+    except IOError as e:
+        logger.warning(f"Failed to save upstream cache to {path}: {e}")
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
+def _normalize_for_prefix(name: str) -> str:
+    return _LEGAL_SUFFIX_PATTERN.sub("", name.strip()).upper()
+
+
+def _shared_prefix_chars(a: str, b: str) -> int:
+    na, nb = _normalize_for_prefix(a), _normalize_for_prefix(b)
+    n = 0
+    for ca, cb in zip(na, nb):
+        if ca != cb:
+            break
+        n += 1
+    return n
+
+
+def _compute_same_entity_remap(
+    context,
+    corporate_families: Dict[str, Dict[str, Any]],
+    upstream_cache: Dict[str, Any],
+    live_queries: bool,
+) -> Dict[str, str]:
+    """Return {loser_canonical_name: winner_canonical_name} for families
+    that should be merged. See module-level comment above for the rule
+    set. May trigger Wikidata REST fetches to populate upstream_cache
+    for Q-ids we haven't seen before; that cache persists to disk."""
+    # Each family's Wikidata Q-id, in dict-iteration (= insertion) order.
+    qid_to_family: Dict[str, str] = {}
+    for canonical, info in corporate_families.items():
+        qid = info.get("wikidata_id")
+        if qid:
+            qid_to_family[qid] = canonical
+
+    needs_fetch = [q for q in qid_to_family if q not in upstream_cache]
+    if needs_fetch:
+        if not live_queries:
+            context.log.info(
+                f"  {len(needs_fetch)} families lack cached upstream data "
+                f"(live_queries disabled — skipping merge phase)"
+            )
+            return {}
+        from src.rag.wikidata_client import fetch_upstream_qids
+        context.log.info(
+            f"  Fetching upstream Q-ids for {len(needs_fetch):,} families "
+            f"(P112/P127/P749, ~{len(needs_fetch)//4:,}s estimated)..."
+        )
+        ts = datetime.utcnow().isoformat()
+        for i, qid in enumerate(needs_fetch, 1):
+            data = fetch_upstream_qids(qid)
+            if data is None:
+                # Transient fetch failure — skip, retry next run.
+                continue
+            upstream_cache[qid] = {**data, "fetched_at": ts}
+            if i % 200 == 0:
+                context.log.info(f"    upstream fetch {i:,}/{len(needs_fetch):,}")
+                _save_upstream_cache(upstream_cache)
+        _save_upstream_cache(upstream_cache)
+
+    # Build {upstream_qid: [family_canonical_name, ...]} from cache.
+    upstream_to_families: Dict[str, List[str]] = defaultdict(list)
+    for qid, canonical in qid_to_family.items():
+        u = upstream_cache.get(qid)
+        if not u:
+            continue
+        for prop in ("p112", "p127", "p749"):
+            for target in u.get(prop, []):
+                upstream_to_families[target].append(canonical)
+
+    # Apply guardrails to derive merge pairs.
+    merge_pairs: List[tuple] = []
+    for upstream_qid, families in upstream_to_families.items():
+        unique = list(dict.fromkeys(families))  # preserve order, dedup
+        if len(unique) != 2:
+            continue
+        a, b = unique
+        if _shared_prefix_chars(a, b) < 6:
+            continue
+        if _EDU_NAME_PATTERN.search(a) and _EDU_NAME_PATTERN.search(b):
+            continue
+        merge_pairs.append((a, b))
+
+    if not merge_pairs:
+        return {}
+
+    # Union-find over merge pairs — handles transitively-connected
+    # clusters (Marvel Comics ↔ Marvel Entertainment ↔ Marvel Games).
+    parent: Dict[str, str] = {}
+
+    def find(x: str) -> str:
+        root = x
+        while parent.get(root, root) != root:
+            root = parent[root]
+        # Path compression
+        while parent.get(x, x) != root:
+            parent[x], x = root, parent[x]
+        return root
+
+    def union(x: str, y: str) -> None:
+        rx, ry = find(x), find(y)
+        if rx != ry:
+            parent[rx] = ry
+
+    for a, b in merge_pairs:
+        parent.setdefault(a, a)
+        parent.setdefault(b, b)
+        union(a, b)
+
+    groups: Dict[str, List[str]] = defaultdict(list)
+    for name in list(parent):
+        groups[find(name)].append(name)
+
+    def influence(n: str) -> int:
+        f = corporate_families.get(n, {})
+        return f.get("total_from_employees", 0) + f.get("total_from_whales", 0)
+
+    remap: Dict[str, str] = {}
+    for root, members in groups.items():
+        members = [m for m in members if m in corporate_families]
+        if len(members) < 2:
+            continue
+        target = max(members, key=influence)
+        for m in members:
+            if m != target:
+                remap[m] = target
+    return remap
+
+
+def _apply_same_entity_remap(
+    corporate_families: Dict[str, Dict[str, Any]],
+    employer_mappings: List[Dict[str, Any]],
+    whale_links: List[Dict[str, Any]],
+    remap: Dict[str, str],
+) -> None:
+    """Apply merge remap in-place: fold loser families into winners,
+    rewrite mapping records to point at winners."""
+    for loser, winner in remap.items():
+        if loser not in corporate_families or winner not in corporate_families:
+            continue
+        l_info = corporate_families.pop(loser)
+        w_info = corporate_families[winner]
+        w_info["member_employers"].extend(l_info.get("member_employers", []))
+        w_info["linked_whales"].extend(l_info.get("linked_whales", []))
+        w_info["total_from_employees"] += l_info.get("total_from_employees", 0)
+        w_info["total_from_whales"] += l_info.get("total_from_whales", 0)
+        merged_from = w_info.setdefault("merged_from", [])
+        merged_from.append({
+            "canonical_name": loser,
+            "wikidata_id": l_info.get("wikidata_id"),
+        })
+
+    for mapping in employer_mappings:
+        cn = mapping.get("canonical_name")
+        if cn in remap:
+            winner = remap[cn]
+            mapping["canonical_name"] = winner
+            w_info = corporate_families.get(winner)
+            if w_info:
+                mapping["wikidata_id"] = w_info.get("wikidata_id")
+
+    for link in whale_links:
+        cn = link.get("canonical_name")
+        if cn in remap:
+            winner = remap[cn]
+            link["canonical_name"] = winner
+            link["company_name"] = winner
+            w_info = corporate_families.get(winner)
+            if w_info:
+                link["wikidata_id"] = w_info.get("wikidata_id")
+
+
 # Suffix tokens to strip from FEC-format names ("MR.", "JR.", "II", etc).
 # Lower-cased here for case-insensitive matching against `.lower()` parts.
 _NAME_SUFFIX_TOKENS = {
@@ -289,6 +535,7 @@ def wikidata_corporate_resolution(
             'whales_live_resolved': 0,
             'whales_live_not_found': 0,
             'corporate_families_created': 0,
+            'families_merged': 0,
             'total_whale_money_attributed': 0,
         }
 
@@ -589,6 +836,28 @@ def wikidata_corporate_resolution(
                     family['total_from_whales'] += whale['total']
 
         # ================================================================
+        # Phase 3.5: Same-entity merge via shared Wikidata upstream Q-id
+        # ================================================================
+        # See module-level comment on `_compute_same_entity_remap` for the
+        # rule set and why each guardrail exists. Runs before Phase 4
+        # so the writes reflect the merged shape.
+        context.log.info("Phase 3.5: Same-entity merge (shared upstream Q-id)...")
+        upstream_cache = _load_upstream_cache()
+        remap = _compute_same_entity_remap(
+            context, corporate_families, upstream_cache, config.live_queries
+        )
+        if remap:
+            _apply_same_entity_remap(
+                corporate_families, employer_mappings, whale_links, remap
+            )
+            context.log.info(f"  Merged {len(remap)} families into same-entity targets")
+            for loser, winner in list(remap.items())[:20]:
+                context.log.info(f"    {loser!r} → {winner!r}")
+        else:
+            context.log.info("  No same-entity merges (no qualifying clusters)")
+        stats['families_merged'] = len(remap)
+
+        # ================================================================
         # Phase 4: write to ArangoDB
         # ================================================================
         context.log.info("Phase 4: Writing results to ArangoDB...")
@@ -597,7 +866,7 @@ def wikidata_corporate_resolution(
         family_docs: List[Dict[str, Any]] = []
         for canonical, info in corporate_families.items():
             total_influence = info['total_from_employees'] + info['total_from_whales']
-            family_docs.append({
+            doc = {
                 '_key': hashlib.md5(canonical.encode()).hexdigest()[:16],
                 'canonical_name': canonical,
                 'wikidata_id': info.get('wikidata_id'),
@@ -607,7 +876,10 @@ def wikidata_corporate_resolution(
                 'total_from_whales': info['total_from_whales'],
                 'total_influence': total_influence,
                 'created_at': datetime.utcnow().isoformat(),
-            })
+            }
+            if info.get('merged_from'):
+                doc['merged_from'] = info['merged_from']
+            family_docs.append(doc)
         corp_coll.import_bulk(family_docs, on_duplicate='replace')
         stats['corporate_families_created'] = len(family_docs)
         context.log.info(f"  {len(family_docs):,} corporate families")
@@ -644,7 +916,10 @@ def wikidata_corporate_resolution(
             f"live-resolved={stats['whales_live_resolved']:,} "
             f"live-not-found={stats['whales_live_not_found']:,}"
         )
-        context.log.info(f"Corporate families: {stats['corporate_families_created']:,}")
+        context.log.info(
+            f"Corporate families: {stats['corporate_families_created']:,} "
+            f"(merged {stats['families_merged']:,} same-entity dupes)"
+        )
         context.log.info(
             f"Whale money attributed: ${stats['total_whale_money_attributed']/1e6:.1f}M"
         )
@@ -658,6 +933,7 @@ def wikidata_corporate_resolution(
                 "whales_processed": MetadataValue.int(stats['whales_processed']),
                 "whales_live_resolved": MetadataValue.int(stats['whales_live_resolved']),
                 "corporate_families": MetadataValue.int(stats['corporate_families_created']),
+                "families_merged": MetadataValue.int(stats['families_merged']),
                 "whale_money_attributed": MetadataValue.float(float(stats['total_whale_money_attributed'])),
                 "cache_path": MetadataValue.text(str(_cache_path())),
             }
