@@ -12,8 +12,7 @@ the wikidata_corporate_resolution Dagster asset.
 """
 
 import re
-from typing import List, Tuple, Optional
-import hashlib
+from typing import Tuple
 
 
 # Common legal suffixes to remove
@@ -214,44 +213,6 @@ def _categorize_non_employer(name: str) -> str:
     if any(x in name for x in ['REQUESTED', 'REFUSED', 'N/A', 'NONE']):
         return 'not_provided'
     return 'other'
-
-
-def compute_normalized_key(name: str) -> str:
-    """
-    Compute a deterministic key for a normalized employer name.
-    Used for grouping variations together.
-    """
-    normalized, _ = normalize_employer_name(name)
-    # Create a hash for the normalized name
-    return hashlib.md5(normalized.encode()).hexdigest()[:16]
-
-
-def find_potential_matches(name: str, candidates: List[str], threshold: float = 0.8) -> List[Tuple[str, float]]:
-    """
-    Find potential matches for a name from a list of candidates.
-    Uses simple token overlap scoring (Tier 2 preview).
-    
-    For full Tier 2, we'll use embedding similarity.
-    """
-    normalized, _ = normalize_employer_name(name)
-    tokens = set(normalized.split())
-    
-    matches = []
-    for candidate in candidates:
-        cand_normalized, _ = normalize_employer_name(candidate)
-        cand_tokens = set(cand_normalized.split())
-        
-        # Jaccard similarity
-        if not tokens or not cand_tokens:
-            continue
-        intersection = tokens & cand_tokens
-        union = tokens | cand_tokens
-        similarity = len(intersection) / len(union)
-        
-        if similarity >= threshold:
-            matches.append((candidate, similarity))
-    
-    return sorted(matches, key=lambda x: -x[1])
 
 
 # NOTE: Corporate hierarchy (subsidiaries, parent companies) is resolved via Wikidata

@@ -18,8 +18,6 @@ The "rag" name is historical and should be read as "Resolution And Grouping".
 
 from src.rag.employer_normalization import (
     NON_EMPLOYERS,
-    compute_normalized_key,
-    find_potential_matches,
     normalize_employer_name,
 )
 from src.rag.wikidata_client import WikidataCircuitOpen, reset_circuit_breaker
@@ -29,8 +27,6 @@ from src.rag.whale_resolver import resolve_people_batch
 __all__ = [
     # Employer normalization
     "normalize_employer_name",
-    "compute_normalized_key",
-    "find_potential_matches",
     "NON_EMPLOYERS",
     # Resolution pipeline
     "resolve_batch",
