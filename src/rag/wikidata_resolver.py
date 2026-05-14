@@ -53,47 +53,96 @@ HIGH_CONFIDENCE_THRESHOLD = 70.0
 LOW_CONFIDENCE_THRESHOLD = 40.0
 
 
-# Wikidata P31 classes that disqualify a candidate from being treated as
-# an employer. Applied in `_accept_candidate` to reject top hits that
-# reconci returned at high score but that aren't organization-shaped.
+# Wikidata P31 classes that disqualify a candidate from being treated
+# as an employer. Used by `_accept_candidate` to reject top hits that
+# reconci returned at high score but that are categorically not
+# employer-shaped per Wikidata's own classification.
 #
-# Same reference-data shape as `_TRADE_CLASS_QIDS` (in
-# committee_classification.py) but in the rejection direction. Each
-# entry maps to a Wikidata class empirically observed in our corpus as
-# a problematic top-hit for FEC employer strings. The set is finite
-# and stable: Wikidata's taxonomy of "thing that isn't an organization
-# that pays salaries to donors" doesn't grow per-case.
+# Reference data, same shape as `LEGAL_SUFFIXES` / `_TRADE_CLASS_QIDS`
+# / `_PERSON_TO_COMPANY_PROPS` elsewhere in the codebase. Built
+# comprehensively up-front (not grown reactively per-case) by
+# enumerating the *categories* of Wikidata entities that FEC employer
+# strings might fuzz-match to. Each Q-id is a category root or
+# well-known instance; growth happens only when a new whole category
+# of misresolution is identified, not per-PAC.
 #
-# Categories:
-#   - Government entities: state employees, federal department
-#     employees DO donate, but the entity isn't a corporate-money
-#     source in the funding-channels sense
-#   - Offices / positions / occupations: a donor typing a job title
-#     in the employer field shouldn't resolve to a "corporate source"
-#   - Mismatch entity types: a TV episode / person / book that
-#     reconci surfaced as a top hit for a corporate-looking name
+# Decision rule: complete the categorization once; resist adding
+# entries one-at-a-time as new wrong matches surface. If a new entry
+# is requested, ask whether it represents a new category (add) or
+# just a new leaf in an existing category root (probably already
+# covered by a broader root; no add).
 _NON_EMPLOYER_QIDS = frozenset({
-    # Government entities (observed: STATE OF X, UNITED STATES DEPT OF X)
+    # ── Government / political entities ─────────────────────────
+    # FEC employer strings like "STATE OF X", "UNITED STATES DEPT
+    # OF X", "U.S. SENATE", "DEPARTMENT OF Y" reach these.
     "Q35657",        # U.S. state
     "Q910252",       # United States federal executive department
     "Q327333",       # government agency
     "Q2366457",      # department (generic government department class)
-    # Sovereign-state / country (observed: "USA" → United States Q30)
+    "Q11204",        # legislature (generic)
+    "Q110315658",    # elected legislative house (catches Senate, House)
+    "Q2570643",      # senate (upper house)
+    "Q189445",       # bicameral legislature (catches Congress)
+    "Q4358176",      # council (catches "City Council of X")
+    "Q41487",        # parliament
+    "Q1752346",      # ministry (covers "Ministry of X")
+    # ── Sovereign-state / country ──────────────────────────────
+    # FEC employer strings like "USA", "MEXICO", "JAPAN" reach these.
     "Q6256",         # country
     "Q3624078",      # sovereign state
-    # Offices, positions, occupations (observed: PRESIDENT, CEO, CONSULTANT)
+    # ── Administrative-territorial / settlement ────────────────
+    # Donors typing the name of a city/town/county as their employer.
+    "Q15642541",     # administrative territorial entity
+    "Q486972",       # human settlement
+    "Q515",          # city
+    "Q3957",         # town
+    "Q532",          # village
+    "Q15284",        # municipality (generic)
+    # ── Offices, positions, occupations ────────────────────────
+    # FEC employer strings like "PRESIDENT", "CEO", "ATTORNEY",
+    # "CONSULTANT" reach these — donors typed their job title in the
+    # employer field.
     "Q17279032",     # elective office (President of the US, etc.)
     "Q4164871",      # position (generic job position)
     "Q12737077",     # occupation
     "Q28640",        # profession
     "Q11488158",     # corporate title (CEO, CFO, etc.)
-    # Entity-type mismatches (observed misresolutions)
-    "Q21191270",     # television series episode  (TARGETED VICTORY case)
-    "Q13442814",     # scholarly article  (SOUTHERN WASTE SYSTEMS case)
-    # Person — a human isn't an employer. Whale resolver is unaffected
-    # because it passes its own empty `reject_types` (it explicitly
-    # WANTS persons). Catches cases like PRATT INDUSTRIES resolving
-    # to Anthony Pratt the founder rather than Pratt Industries Inc.
+    # ── Creative works ─────────────────────────────────────────
+    # Reconci sometimes fuzz-matches to film/book/song/TV titles
+    # that happen to share an FEC employer name.
+    "Q11424",        # film
+    "Q571",          # book
+    "Q7725634",      # literary work
+    "Q47461344",     # written work
+    "Q5398426",      # television series
+    "Q21191270",     # television series episode (TARGETED VICTORY case)
+    "Q482994",       # album
+    "Q7366",         # song
+    "Q386724",       # work of art
+    "Q7889",         # video game
+    "Q13442814",     # scholarly article (SOUTHERN WASTE SYSTEMS case)
+    "Q5633421",      # scientific journal
+    # ── Concepts / abstract ────────────────────────────────────
+    "Q34770",        # language
+    "Q11879003",     # given name
+    "Q101352",       # family name
+    "Q133327",       # taxon (biological classification)
+    "Q11173",        # chemical compound
+    "Q12140",        # medication
+    "Q134808",       # vaccine
+    # ── Geographic features ────────────────────────────────────
+    "Q23397",        # lake
+    "Q4022",         # river
+    "Q8502",         # mountain
+    # ── Wikimedia administrivia ────────────────────────────────
+    "Q4167410",      # Wikimedia disambiguation page
+    "Q4167836",      # Wikimedia category
+    "Q13406463",     # Wikimedia list article
+    # ── People ─────────────────────────────────────────────────
+    # Q5 (human). The whale resolver expects persons and passes its
+    # own empty `reject_types`; only the employer path applies this.
+    # Catches PRATT INDUSTRIES → Anthony Pratt, TESLA → Nikola
+    # Tesla, etc.
     "Q5",            # human
 })
 
@@ -140,6 +189,7 @@ def _accept_candidate(
     input_name: str,
     candidate: ReconciCandidate,
     reject_types: "frozenset[str]" = frozenset(),
+    require_typed: bool = False,
 ) -> tuple[bool, str]:
     """Decide whether to accept this candidate. Returns (accept, reason).
     `reason` is a short label that goes into the resolution's `method`
@@ -151,9 +201,19 @@ def _accept_candidate(
     passes `_NON_EMPLOYER_QIDS` (rejects governments, occupations,
     persons, etc.); the whale path passes `frozenset()` because it
     expects persons and shouldn't reject Q5=human.
+
+    `require_typed` enforces "candidate must have non-empty P31".
+    The structural fact: Wikidata-classified organizations have P31
+    claims; entities with empty P31 in reconci's response are usually
+    concepts (yoga poses, fruits, scholarly articles, government
+    commissions) — not organizations. The employer path passes True
+    because we only want org-shaped entities as employers. The whale
+    path passes False (default) because persons sometimes have
+    minimal P31 data.
     """
     score = candidate.score
     label = candidate.name
+    type_ids = {t.get("id") for t in candidate.types if t.get("id")}
 
     # P31 rejection: reject regardless of score if the candidate's
     # Wikidata classification is in the caller's reject set. Runs
@@ -162,10 +222,23 @@ def _accept_candidate(
     # → "Illinois" at score 100) would otherwise be accepted by the
     # high-confidence branch.
     if reject_types:
-        type_ids = {t.get("id") for t in candidate.types if t.get("id")}
         blocking = type_ids & reject_types
         if blocking:
             return False, f"reject_p31_{sorted(blocking)[0]}"
+
+    # Empty-types rejection: when the caller cares about org-shaped
+    # entities (employer path), require the candidate to have at least
+    # one P31 claim. Empty types is a strong "not a classified org"
+    # signal — catches yoga poses, fruits, scholarly articles,
+    # uncategorized Wikidata entries that happen to share a name with
+    # FEC employer strings (ASANA → yoga pose Q466797; CITADEL →
+    # fortification Q1764; "Afghanistan War Commission" Q111915137).
+    #
+    # Single rule, not a list. Replaces what would otherwise be an
+    # ever-growing enumeration of "concept" / "article" / "building"
+    # / "yoga pose" / etc. P31 classes.
+    if require_typed and not type_ids:
+        return False, "empty_types_no_classification"
 
     if score < LOW_CONFIDENCE_THRESHOLD:
         return False, f"below_low_threshold_{int(score)}"
@@ -211,7 +284,11 @@ def _from_reconci(name: str, candidates: List[ReconciCandidate]) -> ResolutionRe
             method="no_candidates", alternatives=alts,
         )
     top = candidates[0]
-    accept, reason = _accept_candidate(name, top, reject_types=_NON_EMPLOYER_QIDS)
+    accept, reason = _accept_candidate(
+        name, top,
+        reject_types=_NON_EMPLOYER_QIDS,
+        require_typed=True,
+    )
     if not accept:
         return ResolutionResult(
             original=name, canonical=name,
@@ -284,6 +361,11 @@ def resolve_batch(
     # Only names that genuinely weren't found (no candidates, score
     # below low threshold) flow to GLEIF as legit "Wikidata doesn't
     # know about this entity" cases.
+    # NOTE: empty_types_no_classification is deliberately NOT in this
+    # list. Its semantic is "Wikidata didn't classify this entity" —
+    # NOT "Wikidata classified as not-an-employer". GLEIF should still
+    # get a chance to find a legit LEI for the name (Apple Inc has
+    # an LEI even when reconci's top hit was the fruit).
     _REJECTION_PREFIXES = (
         "reject_p31_",
         "short_input_no_corroboration",

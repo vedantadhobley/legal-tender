@@ -416,6 +416,7 @@ def wikidata_corporate_resolution(
                 'short_input_no_corroboration', # short input, no signal
                 'below_low_threshold_',         # reconci score < 40
                 'low_confidence_no_signal_',    # 40-69 score, no signal
+                'empty_types_no_classification',# no P31 → not a classified org
             )
             if cached and cached.get('source') == 'not_found' and method and \
                     any(method.startswith(p) for p in rejection_prefixes):
