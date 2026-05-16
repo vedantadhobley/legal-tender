@@ -19,25 +19,31 @@ rather than left in main.
 
 Acceptance thresholds:
 
-- Gate 1 (bulk median |Δ|): must stay ≤ 5%. Currently 2.4%. Anything > 5% is rejected.
+- Gate 1 (bulk median |Δ|): must stay ≤ 5%. **Currently 2.3%** (was 2.4% pre-resync). Anything > 5% is rejected.
 - Gate 1 (BWC sanity across all 4 cycles): must stay within ±5% delta on each cycle. Currently -2.7% to -5.8%.
 - Gate 2 (named-candidate top-15): no organization should swing >20% without a documented reason. No organization should disappear from the top-15 entirely.
 - Gate 3: explicit pass/fail stated in the fix's commit message. Fix isn't done until target case passes.
-- Gate 4: 68/68 tests pass. Anything less is rejected.
+- Gate 4: 65/65 tests pass. Anything less is rejected.
 
-## Current validation state (2026-05-13)
+## ⚠ Validation methodology caveat
+
+The bulk-median gate compares our `funding_channels.total_funding` against FEC's `weball.TTL_RECEIPTS`. For candidates without itemized donor records (`individuals.data_quality.primary_source == 'fec_summary'`), our number IS FEC's number copied through via the `total_from_individuals_external` fallback in `committee_receipts`. The comparison is tautological for those cases — passing the gate doesn't validate that we have donor-level detail to back the total. See @docs/data-quality.md and the 2026-05-16 entry in @docs/decisions.md for the full critique. A follow-up gate "for candidates with N≥100 itemized records, the whale/grassroots split matches a direct ranking of those records" is queued.
+
+## Current validation state (2026-05-16 resync)
 
 ### Bulk validation vs FEC `weball.TTL_RECEIPTS`
 
-11,567 candidate-cycle comparisons across all 4 cycles. "delta" = (ours − FEC) / FEC.
+11,433 candidate-cycle comparisons across all 4 cycles. "delta" = (ours − FEC) / FEC.
 
-| Cycle | n | within ±1% | within ±5% | within ±10% | within ±25% | median \|Δ\| | p90 | p99 |
-|---|---|---|---|---|---|---|---|---|
-| 2020 | 2,958 | 33.6% | 65.0% | 76.2% | 86.5% | **2.6%** | 39.8% | 687.5% |
-| 2022 | 3,099 | 34.9% | 66.1% | 77.5% | 87.7% | **2.3%** | 33.5% | 1040.6% |
-| 2024 | 2,650 | 34.4% | 65.8% | 76.9% | 87.7% | **2.4%** | 36.3% | 1467.1% |
-| 2026 | 2,860 | 41.3% | 63.0% | 76.9% | 90.8% | **2.2%** | 23.5% | 234.6% |
-| **all** | **11,567** | — | **65.0%** | **76.9%** | **88.1%** | **2.4%** | — | — |
+| Metric (post-resync) | Value |
+|---|---|
+| total comparisons | 11,433 |
+| median \|Δ\| | **2.3%** |
+| within ±5% of FEC | 66.0% (was 65.0%) |
+| within ±10% of FEC | 78.2% (was 76.9%) |
+| within ±25% of FEC | 89.2% (was 88.1%) |
+
+All within-tolerance buckets improved by ~1 percentage point. Fresh Q1 2026 indiv records (esp. for newer candidates like Hamawy) shifted some candidates from `fec_summary` fallback to itemized detail.
 
 Healthy. The p99 number is dominated by one or two outlier records per cycle (data quirks like the "CHRISTINA CLEMENT LLC" 75,476% delta in 2024 — a different-candidate-with-same-name aliasing).
 
