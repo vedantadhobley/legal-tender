@@ -137,10 +137,16 @@ services:
     container_name: legal-tender-prod-arango
     environment:
       ARANGO_ROOT_PASSWORD: ltpass
-      # Memory budget for ArangoDB. LLMs run on joi, leaving this 128GB
-      # box with ~95GB available. Bumped to 64GB so any auto-tuned knobs
-      # we don't explicitly override get the larger budget too.
-      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "68719476736"  # 64GB
+      # Memory budget for ArangoDB. luv is shared with long-exposure +
+      # found-footy + dev tooling; the previous 64GB declaration assumed
+      # this project owned the host. See ~/.claude/CLAUDE.md "Host memory
+      # budget" for the host-wide split. Mirrors dev. Bump back up if
+      # real prod traversals start hitting cache-evict thrashing.
+      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "30064771072"  # 28GB
+    # Hard ceiling enforced by docker/kernel. If anything tries to grow
+    # past this, the kernel back-pressures (cache evictions, query
+    # rejections) rather than the host OOM-killing random processes.
+    mem_limit: 32g
     # Performance tuning for AMD Ryzen AI MAX+ 395 (16c/32t, 128GB)
     command:
       - arangod
@@ -149,23 +155,28 @@ services:
       - --server.maximal-threads=64
       - --server.minimal-threads=16
       - --server.io-threads=16
-      # Query engine: 32GB per-query ceiling for big traversals.
-      - --query.memory-limit=34359738368
+      # Query engine: 12GB per-query ceiling. Halved from 32GB after the
+      # shared-host retune. Previous config noted "8GB was getting close
+      # to limits" for multi-hop PAC chains; 12GB sits comfortably above
+      # that observation.
+      - --query.memory-limit=12884901888              # 12GB
       # RocksDB: parallel flush/compaction
       - --rocksdb.num-threads-priority-high=8
       - --rocksdb.num-threads-priority-low=8
       - --rocksdb.max-background-jobs=16
-      # RocksDB block cache: 32GB. Hot index pages resident → no disk
-      # hits on graph traversals. Primary read-perf lever.
-      - --rocksdb.block-cache-size=34359738368
-      # RocksDB write buffers: 1GB per memtable, 16GB total ceiling.
-      # Fewer SST flushes during bulk loads.
-      - --rocksdb.write-buffer-size=1073741824
+      # RocksDB block cache: 12GB (was 32GB). Primary read-perf lever.
+      # Trimmed alongside the 32GB docker mem_limit. Steady-state caches
+      # (block-cache + write-buffer + cache.size = 12+6+4 = 22GB) plus a
+      # transient 12GB query brings worst-case to ~34GB; if that pressures
+      # the 32GB cap, the kernel evicts cache rather than killing the host.
+      - --rocksdb.block-cache-size=12884901888        # 12GB
+      # RocksDB write buffers: trimmed in proportion with the block cache.
+      - --rocksdb.write-buffer-size=536870912         # 512MB per memtable
       - --rocksdb.max-write-buffer-number=8
-      - --rocksdb.total-write-buffer-size=17179869184
-      - --rocksdb.max-total-wal-size=2147483648
+      - --rocksdb.total-write-buffer-size=6442450944  # 6GB total
+      - --rocksdb.max-total-wal-size=2147483648       # 2GB WAL
       # ArangoDB's own edge/document cache (separate from block cache).
-      - --cache.size=17179869184
+      - --cache.size=4294967296                       # 4GB
     volumes:
       - legal-tender-prod-arango-data:/var/lib/arangodb3
       - legal-tender-prod-arango-apps:/var/lib/arangodb3-apps
