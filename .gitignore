@@ -215,6 +215,7 @@ compute_logs/
 storage/
 history/
 schedules/
+!src/schedules/
 logs/
 logs*/
 *.db

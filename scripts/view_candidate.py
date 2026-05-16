@@ -292,6 +292,19 @@ def render_individuals(console: Console, agg: Dict[str, Any], top_n: int) -> Non
     console.print()
     console.print(f"[bold]Channel 4 — Individuals[/]  ({fmt_money(total)})")
 
+    # Donor-detail coverage banner — print before the breakdown so the
+    # reader sees the caveat first when the breakdown is partly fake.
+    dq = indiv.get("data_quality") or {}
+    coverage = dq.get("detail_coverage")
+    summary_only = dq.get("individuals_summary_only", 0) or 0
+    if coverage is not None and coverage < 0.999 and total > 0:
+        primary = dq.get("primary_source", "unknown")
+        console.print(
+            f"[yellow]⚠ Donor-level detail covers {coverage*100:.0f}% of individual money "
+            f"({fmt_money(summary_only)} sourced from FEC summary, no itemized records). "
+            f"Whale/grassroots split below is partly a fallback — primary_source={primary}.[/]"
+        )
+
     summary = Table(show_header=True, header_style="bold")
     summary.add_column("Sub-channel")
     summary.add_column("Total", justify="right")

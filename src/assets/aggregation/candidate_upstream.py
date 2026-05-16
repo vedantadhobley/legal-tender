@@ -241,6 +241,42 @@ def _safe_pct(num: float, denom: float) -> float:
     return (num / denom * 100) if denom > 0 else 0
 
 
+def _merge_data_quality(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Aggregate per-cycle donor-detail-coverage into a candidate-aggregate.
+
+    Returns the same shape as the per-cycle `individuals.data_quality`
+    block (detail_coverage, individuals_itemized, individuals_summary_only,
+    primary_source). detail_coverage is the dollar-weighted average across
+    cycles. primary_source is `mixed` when cycles disagree, else the
+    common value.
+    """
+    itemized = sum(
+        (r.get('individuals', {}).get('data_quality', {}).get('individuals_itemized', 0) or 0)
+        for r in results
+    )
+    summary_only = sum(
+        (r.get('individuals', {}).get('data_quality', {}).get('individuals_summary_only', 0) or 0)
+        for r in results
+    )
+    total = itemized + summary_only
+    coverage = (itemized / total) if total > 0 else 1.0
+    sources = {
+        r.get('individuals', {}).get('data_quality', {}).get('primary_source')
+        for r in results
+    } - {None}
+    primary = (
+        'mixed' if len(sources) > 1
+        else next(iter(sources)) if sources
+        else 'unknown'
+    )
+    return {
+        'detail_coverage': coverage,
+        'individuals_itemized': itemized,
+        'individuals_summary_only': summary_only,
+        'primary_source': primary,
+    }
+
+
 def _top_sources(d: Dict[str, float], n: int, min_amount: float) -> List[Dict[str, Any]]:
     """Top-N {name, amount} entries from a {name -> amount} dict, threshold-filtered."""
     sorted_items = sorted(d.items(), key=lambda x: -x[1])[:n]
@@ -565,6 +601,16 @@ def load_lookup_data(db) -> Dict[str, Any]:
                 'total_from_committees': cycle_data.get('total_from_committees', 0) or 0,
                 'small_donor_total': cycle_data.get('small_donor_total', 0) or 0,
                 'self_funding_total': cycle_data.get('self_funding_total', 0) or 0,
+                # Data-quality provenance: did committee_receipts itemize
+                # this committee's individual money from indiv.zip records,
+                # or did it fall back to FEC's aggregate summary (webl/
+                # weball)? Carried through to the per-candidate output so
+                # consumers can tell whether the whale/grassroots breakdown
+                # is real or a summary-fed placeholder.
+                'total_from_individuals_source':
+                    cycle_data.get('total_from_individuals_source'),
+                'total_from_individuals_indiv_zip':
+                    cycle_data.get('total_from_individuals_indiv_zip', 0) or 0,
             }
         cmte_info_by_cycle[cycle] = cycle_info
 
@@ -821,6 +867,7 @@ def merge_funding_channels(cycle_results: Dict[str, Dict], config: 'CandidateFun
                 'total': self_funded_total,
                 'pct': _safe_pct(self_funded_total, total_funding),
             },
+            'data_quality': _merge_data_quality(results),
         },
         'unaccounted': {
             'total': unaccounted_total,
@@ -939,6 +986,34 @@ def compute_funding_channels(
     )
     cmte_total_from_committees = sum(
         (cycle_cmte_info.get(cid, {}).get('total_from_committees', 0) or 0) for cid in cmte_ids
+    )
+    # Donor-detail coverage: how much of the candidate's individual money
+    # is backed by itemized records (indiv.zip) vs how much came in via
+    # FEC's summary-file fallback. Critical for downstream consumers: a
+    # candidate whose individual money is summary-sourced has NO real
+    # whale/grassroots breakdown — the entire amount gets routed to
+    # grassroots by default, which would otherwise misrepresent who's
+    # funding them. We surface coverage so the UI can show "donor-level
+    # detail unknown for $X of $Y" instead of pretending.
+    cmte_individuals_itemized = sum(
+        (cycle_cmte_info.get(cid, {}).get('total_from_individuals_indiv_zip', 0) or 0)
+        for cid in cmte_ids
+    )
+    donor_detail_coverage = (
+        cmte_individuals_itemized / cmte_total_from_individuals
+        if cmte_total_from_individuals > 0 else 1.0
+    )
+    cmte_sources = [
+        cycle_cmte_info.get(cid, {}).get('total_from_individuals_source')
+        for cid in cmte_ids
+    ]
+    primary_source = (
+        'fec_summary'
+        if any(s == 'fec_summary' for s in cmte_sources)
+        and not any(s == 'indiv_zip' for s in cmte_sources)
+        else 'indiv_zip' if any(s == 'indiv_zip' for s in cmte_sources)
+        else 'mixed' if any(s for s in cmte_sources)
+        else 'unknown'
     )
     grassroots_direct = sum(
         (cycle_cmte_info.get(cid, {}).get('small_donor_total', 0) or 0) for cid in cmte_ids
@@ -1115,6 +1190,18 @@ def compute_funding_channels(
                 'total': self_funded_total,
                 'pct': _safe_pct(self_funded_total, total_funding),
             },
+            # Data-quality provenance — see compute_funding_channels for the
+            # rationale. When detail_coverage < 1.0, the whale/grassroots
+            # split above is partly (or entirely) made up of FEC summary
+            # totals routed to grassroots by default. Consumers should
+            # render this honestly rather than treating the breakdown as
+            # ground truth.
+            'data_quality': {
+                'detail_coverage': donor_detail_coverage,
+                'individuals_itemized': cmte_individuals_itemized,
+                'individuals_summary_only': max(0, cmte_total_from_individuals - cmte_individuals_itemized),
+                'primary_source': primary_source,
+            },
         },
 
         'unaccounted': {
@@ -1130,7 +1217,10 @@ def compute_funding_channels(
                 "True residual: committee trace loss through passthrough hops, "
                 "unitemized contributions (<$200 aggregate not in FEC indiv file), "
                 "and data gaps. Sub-$10K individual donors are accounted for "
-                "in the individuals.grassroots channel."
+                "in the individuals.grassroots channel. NOTE: if "
+                "individuals.data_quality.detail_coverage < 1.0, the "
+                "unaccounted figure understates uncertainty — donor-level "
+                "detail is missing for part of the individual money."
             ),
         },
 
