@@ -31,6 +31,7 @@ docker compose -f docker-compose.dev.yml up -d
 - @docs/decisions.md — historical decision log (formerly PIPELINE_FIXES.md)
 - @docs/todo.md — active TODOs, open issues, deferred work
 - @docs/validation.md — validation methodology, four-gate contract, current numbers
+- @docs/data-quality.md — how to read `individuals.data_quality` (detail_coverage, primary_source) and what it catches
 - @docs/second-brain.md — self-hosted second brain stack design
 - @docs/setup-currency.md — meta-tooling currency tracking
 - @docs/plan.md — the master plan for this professionalization effort
