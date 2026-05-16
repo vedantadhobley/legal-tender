@@ -6,6 +6,88 @@ When a non-obvious choice gets made, append a dated entry here with: what we dec
 
 ---
 
+## 2026-05-16 — The pipeline was confidently misrepresenting candidates with thin FEC data; weekly sync turned on; donor_detail_coverage now surfaced
+
+Session triggered by a user question: "what about Adam Hamawy in NJ-12, I think he's clean." The pipeline confidently reported Hamawy as `99.4% grassroots, 0.4% whale, 0% unaccounted, $544K direct funding`. **Every part of the breakdown was made up.** We had zero itemized donor records for him; the pipeline silently fell back to FEC's summary totals and dumped the whole amount into "grassroots" as if that were a real classification.
+
+### What we'd actually built vs what we'd actually shipped
+
+By the time this session started we had:
+
+- A working two-phase trace algorithm with cycle break + multiplier caps
+- A simplified Wikidata resolver (reconci.link → GLEIF) with comprehensive _NON_EMPLOYER_QIDS reject set
+- Phase 3.5 same-entity merge consolidating Pan Am Systems + Railways into one Mellon entity ($923M)
+- Trade-class P31 refinement, recursive IE trace, parent-org inheritance generalization
+- A four-gate validation contract (bulk median |Δ| 2.4%, named-candidate diff, target case, pytest)
+
+What we had NOT built:
+
+- A data-freshness mechanism that actually ran
+- Honest surfacing of when our donor-level detail is missing vs present
+- Validation that distinguishes "our totals match FEC's totals" from "we have donor detail to back our totals"
+
+The validation methodology had a hole. The bulk median |Δ| check compared our `funding_channels.total_funding` to FEC's `weball.TTL_RECEIPTS`. For candidates with no itemized records, our number literally *is* FEC's number copied through (via the `total_from_individuals_source='fec_summary'` fallback in `committee_receipts`). The check was tautological exactly for the cases that needed checking.
+
+### The three bugs
+
+**Bug 1 — Data was 5+ weeks stale.**
+
+Last sync 2026-05-07. Raw FEC files from 2026-05-06. `indiv.zip` in our DB only covered through 2025-12-31 (Q4 2025); Q1 2026 filings (deadline April 30) weren't ingested. The bug isn't that the FEC parser was wrong — the bug is that *nothing was scheduled to refresh the data*.
+
+Root cause: `src/schedules/__init__.py` had `default_status=STOPPED`. The original design said "manual start in dev, flip on in prod" — and no prod deployment ever happened. The schedule sat in STOPPED indefinitely.
+
+Compounding root cause: `src/schedules/` was being matched by the too-broad `.gitignore` pattern `schedules/` (intended to ignore Dagster's runtime schedule-storage directory). The source-of-truth schedule file was never tracked in git, never appeared in PR review, never got challenged. Nobody could see that STOPPED was the default because git was hiding the file.
+
+**Bug 2 — fec_summary fallback silently created fake whale/grassroots splits.**
+
+When `committee_receipts` doesn't have itemized indiv records for a committee, it falls back to FEC's webl/weball summary totals. That fallback is correct (the alternative is reporting $0 total receipts, which is worse). But:
+
+- `whale_donor_total = 0` (no records to identify whales from)
+- `small_donor_total = total_from_individuals` (entire amount → grassroots by default)
+- `donor_detail_coverage` was never computed or surfaced
+
+Downstream, `candidate_funding` produced output that looked identical for a candidate with full indiv detail vs a candidate with zero indiv records — same shape, same fields, same percentages. The output was structurally incapable of expressing the difference.
+
+Hamawy's case: $544K showed as "99% grassroots." Zero itemized records existed. The grassroots number was a relabeled summary.
+
+**Bug 3 — `unaccounted: 0.0%` lied.**
+
+Because total_receipts (from summary) matched total_accounted (the same number routed to grassroots), the unaccounted residual was 0 — implying perfect attribution. The actual uncertainty (we have no donor-level detail for the entire amount) wasn't anywhere in the output. `unaccounted` was reading the data-flow tautology as confidence.
+
+### Fixes shipped this session
+
+1. **Weekly schedule turned on by default.** `weekly_fec_refresh` now reads `DAGSTER_SCHEDULES_ENABLED` env (default RUNNING; opt-out via 0/false/off/no). Cron `0 2 * * 0` America/New_York. Goes live this Sunday 2 AM.
+
+2. **`.gitignore` exception for `src/schedules/`.** Force-added the file. Future schedule changes are PR-reviewable.
+
+3. **`individuals.data_quality` block in candidate_funding output.** Per-cycle and aggregate. Fields:
+   - `detail_coverage` — fraction of individuals total backed by itemized records
+   - `individuals_itemized` — dollars from indiv.zip
+   - `individuals_summary_only` — dollars from FEC summary fallback
+   - `primary_source` — `indiv_zip` | `fec_summary` | `mixed` | `unknown`
+
+4. **view_candidate.py warning banner** before Ch4 breakdown when coverage < 99.9%. Names the dollar amount that's summary-only and the primary source.
+
+5. **Manual sync kicked off.** `data_sync` re-ran 2026-05-16; got fresh `indiv.zip` (~60MB larger). FEC parsers re-materializing as this is written. Then candidate_funding + validation.
+
+### What's NOT yet fixed
+
+- The `unaccounted` field still says 0% for summary-only candidates. Should be expanded to include the `individuals_summary_only` dollars as "uncertain attribution" — but that's a follow-up; this commit focused on making the data quality visible, not yet on changing what `unaccounted` reports.
+
+- Validation methodology still compares totals to totals. Needs a separate gate: "for candidates with ≥N itemized records, our whale/grassroots breakdown matches the records." Otherwise the bulk-median gate continues to be tautological for thin-data candidates.
+
+- Per-candidate data freshness (max TRANSACTION_DT under each candidate) not surfaced. Currently you have to query the DB to find out which cycle's data is "current" for a given candidate.
+
+- The schedule turning on doesn't mean the pipeline succeeds. Need monitoring/alerting on the Sunday job: did data_sync complete, did indiv parse, did committee_receipts update? Otherwise we discover a stuck pipeline only when someone notices the data is stale again.
+
+### The non-code lesson
+
+This is the second time in the project history that "the validation passed" gave false confidence. The first was the trace algorithm producing $16T totals for House races (May 2026, fixed via cycle break + caps). Both times the validation methodology was missing the failure mode it was supposed to catch.
+
+When validation is too narrow, "passing" is worse than "failing" — it converts an open problem into a closed one in our heads, and we stop looking. Worth being more honest about what each validation gate actually proves (totals vs detail vs attribution vs coherence) instead of treating "all gates pass" as a synonym for "the system is correct."
+
+---
+
 ## 2026-05-14 — Generic-string rejection + same-entity merge for corporate_families
 
 Session focused on cleaning up two classes of misresolution visible in `by_organization` cross-cuts:
