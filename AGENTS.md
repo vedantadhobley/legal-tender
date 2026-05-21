@@ -61,31 +61,37 @@ docker compose -f docker-compose.dev.yml up -d
 
 - **Branch**: `feature/professionalization`. Master plan at @docs/plan.md.
 - **Phase 0 audit**: complete. See @docs/audit/.
-- **Last full data sync**: 2026-05-07 (17.2 GB, 4 cycles, 215M individual contributions parsed).
-- **Last bulk validation**: median |Δ| vs FEC `weball.TTL_RECEIPTS` = 2.4%; 65% within ±5%; 77% within ±10%; 88% within ±25%. See @docs/validation.md for full methodology and current numbers.
-- **Inspect a candidate**: `docker exec -w /workspace legal-tender-dev-webserver python3 scripts/view_candidate.py "<name or CAND_ID>"`. Flags: `--cycle 2024`, `--top 15`. Renders all 5 channels + by_organization cross-cut with via-donor provenance. Sanity-check tool for output-quality.
+- **Last full data sync**: 2026-05-16 (resync after the 2026-05-07 baseline; pulled Q1 2026 itemized records — `fec_2026.indiv` grew from 21M→27M). Weekly schedule (`weekly_fec_refresh`, default RUNNING since 2026-05-16) re-fires Sundays 2 AM Eastern.
+- **Last bulk validation** (post-resync 2026-05-16): median |Δ| vs FEC `weball.TTL_RECEIPTS` = **2.3%**; 66% within ±5%; 78% within ±10%; 89% within ±25%. ⚠ Tautological for fec_summary-fallback candidates — see @docs/validation.md "validation methodology caveat" and @docs/data-quality.md.
+- **Inspect a candidate**: `docker exec -w /workspace legal-tender-dev-webserver python3 scripts/view_candidate.py "<name or CAND_ID>"`. Flags: `--cycle 2024`, `--top 15`. Renders all 5 channels + by_organization + `data_quality` banner (when detail coverage < 100%).
+- **Deeper analysis scripts**:
+  - `scripts/donor_network_overlap.py <CAND_ID>` — surfaces top-K committees the candidate's whale pool also funds; cluster-naming is the reader's job. See @docs/data-quality.md.
+  - `scripts/race_signature.py --state NJ --district 12 --year 2026 --party DEM` — field-wide donor signatures for a race.
 - **Four-gate validation contract** (every fix touching data flow runs all four before commit):
   1. Bulk median ≤5% — `scripts/validation_report.py`
   2. Named-candidate diff for Cruz/Trump/Harris/Bacon/Sanders — `scripts/view_candidate.py "<id>"` vs `docs/audit/baseline-2026-05-12.md`
   3. Target case — explicit per-fix pass/fail
-  4. Pytest 68/68 — `pytest tests/ -q`
+  4. Pytest 65/65 — `pytest tests/ -q`
   See @docs/validation.md for thresholds and how-to.
-- **Recent completed work** (May 12-13):
-  - Phase 2a/2b parent-org inheritance generalization — 52 committees + $350M reclassified; CFG Action / NAR Cong Fund / NRA ILA targets hit
-  - Recursive IE trace through passthrough Super PACs — by_pac collapsed to ~0; by_corporation now captures 22% IE+ / 27% IE-
-  - `by_individual` surfacing in `ie.support/ie.oppose` output
-  - `scripts/view_candidate.py` — rich-based candidate-level renderer
-  - M-ORG_TP refinement via Wikidata P31 (replacing 50-entry token list) — 33 committees + $117M flipped from `ideological` to `trade_association` via reconci.link
-- **Next session targets** (see @docs/todo.md "Next session"):
-  - Generic-string rejection in `name_match.py` to fix "TARGETED VICTORY" / "PRESIDENT" / "State of X" / federal-agency leakage in `by_organization`
-  - Same-entity P749 (parent-organization) walk to merge Pan Am Systems/Railways, GREYLOCK/Greylock Partners, Adelson Drug Clinic/Adelson Clinic splits
-- **UI work** queued for next weekend — web view consuming the same `funding_channels.aggregate` shape the view tool already renders
+- **Recent completed work** (May 14-16):
+  - **Same-entity merge** for corporate_families (Phase 3.5 in `wikidata_corporate_resolution`) — Pan Am Systems + Railways → $923M one Mellon entity. Plus Bloomberg, Marvel trio (union-find), DreamWorks, Rocket, Hilton, Coca-Cola, Capitol. Commit `fd2c7d1`.
+  - **`donor_detail_coverage` + `primary_source`** in candidate_funding output. Surfaces when `fec_summary` fallback fired so consumers can't silently lie about whale/grassroots splits. Commit `160c1eb`.
+  - **Weekly schedule default-ON** (was STOPPED for 5+ weeks; gitignore was also hiding the schedule file from review). Commit `160c1eb`.
+  - **Resync 2026-05-16** — fresh Q1 2026 indiv records, esp. for newly-filed candidates like NJ-12's Hamawy who went from 0 records to 513.
+  - **Memory caps** on legal-tender-dev-arango (`32 GiB`) + RocksDB block-cache trim (`32→12 GiB`) — companion to long-exposure 347c8cd; the host had OOM-killed arangod at 40 GB on 2026-05-16. Commits `9b1fc65` + `a03ea8b`.
+  - **Centralized constants**: `ACTIVE_CYCLES` + `PER_ELECTION_LIMITS` → `src/config.py` (was duplicated across 21 files). Commit `2302859`.
+  - **Reusable scripts**: `donor_network_overlap.py` + `race_signature.py`.
+  - **Dead code removed**: `pies_v3.py` + `check_funding.py` (753 LOC, commit `576bee0`); `compute_normalized_key` + `find_potential_matches` (commit `7d6ae79`).
+- **Next session targets** (see @docs/todo.md "This week"):
+  - **EARMARKED-memo-share conduit detection** — replace the `CONDUIT_PATTERNS` substring list with a structural rule (committee's incoming indiv records >80% `EARMARKED FOR` → passthrough). Kills the last donor-name substring classifier. ~75-90 min including re-materialization.
+  - **Phase 1 rule for IE-only Super PACs without ORG_TP** → `super_pac_unclassified` regardless of name-cluster inheritance. Catches JDPAC which currently gets `passthrough`.
+  - **Audit script** for "same-shape committee classification disagreements" (committees with identical CMTE_TP / ORG_TP / connected-org but different terminal_types).
+  - **Generic-string rejection in `name_match.py`** for "TARGETED VICTORY" / "PRESIDENT" / federal-agency leakage in `by_organization`.
+- **UI work** queued for this/next weekend — web view consuming `funding_channels.aggregate`; the two CLI scripts above are the structural prototype.
 - **Known dead/orphan still in tree**:
-  - `src/cli/pies_v3.py` (679 LOC) — confirmed no callers; delete in dedicated commit
-  - `src/cli/check_funding.py` (74 LOC) — no callers; delete or move to `scripts/`
-  - `src/api/lobbying_api.py` (63 LOC) — aspirational; keep if the lobbying-integration plan is live, delete otherwise
+  - `src/api/lobbying_api.py` (63 LOC) — aspirational; keep if the lobbying-integration plan is live, delete otherwise. (pies_v3.py + check_funding.py + embedding.py + election_api.py all gone.)
 
-See @docs/todo.md for the full priority list, @docs/validation.md for current validation state, and @docs/audit/hardcodes-2026-05-11-pm.md for the latest hardcode/dead-code verdicts.
+See @docs/todo.md for the full priority list, @docs/validation.md for current validation state, @docs/data-quality.md for the data-coverage interpretation rules, and @docs/audit/hardcodes-2026-05-11-pm.md for the latest hardcode/dead-code verdicts.
 
 ## Memory model (for me, the agent)
 

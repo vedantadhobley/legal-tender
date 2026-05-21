@@ -6,6 +6,49 @@ When a non-obvious choice gets made, append a dated entry here with: what we dec
 
 ---
 
+## 2026-05-21 — Memory-cap discipline + JDPAC vs UDP classification inconsistency
+
+Two findings worth capturing while the context is fresh.
+
+### Memory caps as shared-host discipline (commits `9b1fc65`, `a03ea8b`; long-exposure companion `347c8cd`)
+
+The 2026-05-16 OOM event (kernel killed arangod mid-pipeline at 40 GB anon-rss; docker auto-restarted; data preserved on bind volume) had a structural root cause that goes beyond any single project: **luv is a 125 GB shared host, but every memory-hungry container was running without an explicit cap.** TimescaleDB in long-exposure auto-tuned shared_buffers to ~25% of host RAM (≈ 31 GB resident even idle); legal-tender's arangod advertised a 64 GB total budget assuming it owned the box; long-exposure's worker JVM was sized at -Xmx32g from a Sprint 2 OOM episode that was later refactored away.
+
+Discipline adopted across both projects:
+
+1. **Every container gets an explicit `mem_limit`.** Docker enforces it via cgroups; the kernel back-pressures (cache eviction, query rejection) instead of OOM-killing random host processes. A soft cap is not a cap.
+2. **Internal tuning is sized for the cap, not for host RAM.** ArangoDB's `ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: 28GB` tells it "you live in a 28 GB world" instead of letting it auto-tune for the 125 GB it can see. Same for RocksDB block-cache (12 GB), query memory-limit (12 GB), arango cache (4 GB). Worst-case: 12 + 6 + 4 = 22 GB steady + 12 GB transient query = 34 GB, slightly over the 32 GB cap, kernel evicts cache rather than killing the process.
+3. **Prod compose mirrors dev** even when prod isn't deployed. A foot-gun parked in `docker-compose.yml` will go off the day prod first runs.
+4. **Host-wide budget table** in `~/.claude/CLAUDE.md` (user-global) is the cross-project source of truth. Per-project compose files cite it.
+
+Net result: declared-cap sum across legal-tender + long-exposure dropped from 80+ GB observed peak to ~48 GB. Host went from 49 GB used / 75 GB avail to 20 GB used / 105 GB avail immediately after applying.
+
+**Discipline takeaway:** on a multi-tenant host, "the container will only use what it needs" is a lie that auto-tuned databases tell themselves. Every long-lived container needs (a) an explicit Docker `mem_limit`, (b) internal config sized for that limit, not for host RAM. Cgroups enforcement is the only honest budget mechanism.
+
+### JDPAC vs UDP classification inconsistency (deferred)
+
+Discovered while investigating Hamawy's donor network: Justice Democrats PAC (`C00630665`) is classified `terminal_type=passthrough`, but the AIPAC Super PAC United Democracy Project (`C00799031`) is classified `super_pac_unclassified`. Both are *the same shape* — CMTE_TP=W (Independent Expenditure-Only PAC), ORG_TP empty, CONNECTED_ORG_NM null. Both do massive IE spending ($14.9M and $209M total receipts respectively).
+
+The Phase 2a/2b parent-org / name-cluster inheritance rules (shipped 2026-05-12) put JDPAC into `passthrough` via some name-pattern path that UDP didn't match. Both classifications lead to "trace upstream" behavior in the algorithm, so the practical attribution result is similar — but the inconsistency is real and worth fixing.
+
+**Fix queued (not shipping today)**: a Phase 1 rule that handles IE-only Super PACs without industry classification before the Phase 2 inheritance gets a chance:
+
+```
+IF CMTE_TP = 'W' AND ORG_TP IS NULL/empty AND CONNECTED_ORG_NM IN (NULL, 'NONE')
+   → super_pac_unclassified
+```
+
+Catches JDPAC, brings it in line with UDP. Also exposes any other IE-only Super PACs we've miscategorized via name-pattern inheritance.
+
+**Companion audit script**: enumerate committees with identical (CMTE_TP, ORG_TP, CONNECTED_ORG_NM=NULL) that landed on different terminal_types. The output is the work-list for class-consistency cleanup. One-shot tool; could become a periodic gate.
+
+### Smaller things worth noting
+
+- **The "$0 amount on JDPAC edges" alarm was a script bug, not a data bug.** Edge collections store amounts under `total_amount`, not `amount`. The pipeline (`candidate_upstream.py:675`) reads the correct field. Investigation queries that used `e.amount` returned None and were misread as missing data. JDPAC's real IE: $1.35M for Bush, $946K for Bowman, $943K for Summer Lee. Mentioned here so the false alarm doesn't get re-investigated.
+- **Donor-name substring matching audit**: only one offender remains — `is_conduit()` / `CONDUIT_PATTERNS` in `candidate_upstream.py`. The committee-classification side moved off name substrings months ago; the resolver uses name as lookup key only. The conduit filter is the last hardcoded donor-name list and is queued for replacement by EARMARKED-memo-share structural detection. Employer-side substring matching (`RETIRED`, `SELF-EMPLOYED`, `HOMEMAKER`, etc. in `employer_normalization.py`) is defensible — FEC's `EMPLOYER` field is free-text human input with no structured taxonomy, so substring-detecting "what people type when they're not employed at a real company" is the only available signal.
+
+---
+
 ## 2026-05-16 — The pipeline was confidently misrepresenting candidates with thin FEC data; weekly sync turned on; donor_detail_coverage now surfaced
 
 Session triggered by a user question: "what about Adam Hamawy in NJ-12, I think he's clean." The pipeline confidently reported Hamawy as `99.4% grassroots, 0.4% whale, 0% unaccounted, $544K direct funding`. **Every part of the breakdown was made up.** We had zero itemized donor records for him; the pipeline silently fell back to FEC's summary totals and dumped the whole amount into "grassroots" as if that were a real classification.

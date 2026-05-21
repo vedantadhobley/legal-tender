@@ -57,6 +57,8 @@ Validation contract: every fix runs the four gates in @docs/validation.md. Diff 
 
 - [ ] **Audit the 33 Wikidata-flipped trade_association classifications.** Eyeball cache + the 380 not-flipped for false-negatives (real trade orgs Wikidata didn't classify with our P31 set). Add `docs/audit/trade-class-2026-05-13.md`.
 
+- [ ] **Phase 1 rule for IE-only Super PACs without ORG_TP** — JDPAC (`C00630665`) currently lands in `terminal_type=passthrough` while UDP (`C00799031`) lands in `super_pac_unclassified`; both are CMTE_TP=W Super PACs with empty ORG_TP and null CONNECTED_ORG_NM. Add a Phase 1 rule in `committee_classification` BEFORE Phase 2 inheritance: `CMTE_TP='W' AND (ORG_TP IS NULL OR ORG_TP = '') AND CONNECTED_ORG_NM IN (NULL, 'NONE', '') → super_pac_unclassified`. Companion: scripts/audit_classification_consistency.py that surfaces (CMTE_TP, ORG_TP, CONNECTED_ORG_NM) tuples landing on different terminal_types — work-list for class-consistency cleanup. Discovered 2026-05-21; see @docs/decisions.md.
+
 ### UI work (target: 2026-05-17 / next weekend)
 
 - [ ] **Web view consuming `funding_channels.aggregate`** — probably FastAPI + a single HTML template + Alpine.js. Reads Arango directly. Same `by_organization` + per-channel tables as the view tool, but rendered as clickable HTML.
