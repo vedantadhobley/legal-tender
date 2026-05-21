@@ -205,28 +205,53 @@ def contributed_to_asset(
             
             context.log.info(f"📊 Processing {cycle} contributions...")
             
-            # Aggregate by donor-committee on server
-            # Filter to individuals + candidate self-funding only.
-            # ORG/PAC/COM/CCM/PTY belong in transferred_to (via oth).
-            # CAN = candidate self-funding — still an individual contribution.
+            # Aggregate by donor-effective_recipient with earmark-aware
+            # re-attribution. Same algorithm as donors.py — see comments there
+            # for the full rationale. Briefly:
+            # - Records with MEMO_TEXT "EARMARKED FOR <X> (CXXXXXXXX)" attribute
+            #   the donation to the target X, not to the conduit (ActBlue/etc).
+            #   Critical for candidates whose own committees haven't yet filed
+            #   matching 15E receipts — without this they show $0 itemized
+            #   donations even when ActBlue has bundled $100K+ for them.
+            # - MAX(direct, earmark) per (donor, effective_recipient) dedupes
+            #   against recipients who HAVE filed matching 15E, so we don't
+            #   double-count.
+            # - The donor-NAME REGEX filter was deleted 2026-05-21: it was
+            #   matching only 9 records across 2026, all legitimate individuals
+            #   (McConduit, Conduitte). Conduits-as-donor have ENTITY_TP=COM
+            #   and are already excluded by the IND/CAN filter.
             aql = """
             FOR doc IN indiv
                 FILTER doc.ENTITY_TP IN ['IND', 'CAN']
                 FILTER doc.NAME != null AND doc.NAME != ""
                 FILTER doc.CMTE_ID != null
                 FILTER doc.TRANSACTION_AMT != null
-                FILTER NOT REGEX_TEST(doc.NAME, '(ACTBLUE|WINRED|EARMARK|CONDUIT)', true)
-                
-                COLLECT 
+
+                LET memo_upper = UPPER(doc.MEMO_TEXT || "")
+                LET earmark_match = REGEX_MATCHES(memo_upper, "\\\\(C\\\\d{8}\\\\)", false)
+                LET parsed_target = (
+                    CONTAINS(memo_upper, "EARMARKED FOR") AND LENGTH(earmark_match) > 0
+                    ? SUBSTRING(earmark_match[0], 1, 9)
+                    : null
+                )
+                LET effective_cmte = (parsed_target != null AND parsed_target != doc.CMTE_ID)
+                    ? parsed_target
+                    : doc.CMTE_ID
+                LET is_redirect = effective_cmte != doc.CMTE_ID
+
+                COLLECT
                     name = doc.NAME,
                     employer = (doc.EMPLOYER == null OR doc.EMPLOYER == "") ? "NOT EMPLOYED" : doc.EMPLOYER,
-                    cmte_id = doc.CMTE_ID
-                AGGREGATE 
-                    total_amount = SUM(TO_NUMBER(doc.TRANSACTION_AMT)),
+                    cmte_id = effective_cmte
+                AGGREGATE
+                    direct_total = SUM(is_redirect ? 0 : TO_NUMBER(doc.TRANSACTION_AMT)),
+                    earmark_total = SUM(is_redirect ? TO_NUMBER(doc.TRANSACTION_AMT) : 0),
                     transaction_count = COUNT(1)
-                
+
+                LET total_amount = direct_total > earmark_total ? direct_total : earmark_total
+
                 FILTER total_amount > 0
-                
+
                 RETURN {
                     name: name,
                     employer: employer,

@@ -138,7 +138,19 @@ def donors_asset(
             'total_donors_inserted': 0,
             'by_cycle': {}
         }
-        
+
+        # NOTE on the deleted donor-NAME substring filter:
+        # Previously this asset had `FILTER NOT REGEX_TEST(doc.NAME,
+        # '(ACTBLUE|WINRED|EARMARK|CONDUIT)', true)` intended to exclude
+        # conduit-as-donor records. Empirically that filter matched only
+        # 9 rows across 2026 — all of them legitimate individuals named
+        # McConduit or Conduitte. The intended targets (ActBlue/WinRed
+        # bulk transfers) don't appear here because they have
+        # ENTITY_TP=COM, already excluded by the IND/CAN filter below.
+        # Deleted 2026-05-21 — the filter was a hardcode that didn't
+        # achieve its stated purpose and was excluding real donors as a
+        # side effect.
+
         # Per-cycle worker. Each cycle reads its own fec_{cycle}.indiv (no
         # contention) and writes to aggregation.donors via per-document UPSERT,
         # which Arango serializes per-_key. Concurrent UPSERTs from different
@@ -156,45 +168,81 @@ def donors_asset(
             per_election_limit = PER_ELECTION_LIMITS.get(cycle, 3300)
             context.log.info(f"📊 Processing {cycle} - per-election limit: ${per_election_limit:,}...")
             
-            # Single-pass double-COLLECT aggregation:
-            # 1st COLLECT: group by (name, employer, cmte_id) → per-committee totals
-            # 2nd COLLECT: group by (name, employer) → overall totals + MAX per-committee
-            # FILTER: keep only donors whose max per-committee total >= limit
+            # Triple-COLLECT aggregation with earmark-aware re-attribution:
+            # 0. Per-record: derive effective_recipient from MEMO_TEXT when the
+            #    record is a conduit-side earmark forward. A record like
+            #    {CMTE_ID=ActBlue, MEMO="EARMARKED FOR <X> (CXXXXXXXX)"} gets
+            #    effective_recipient = CXXXXXXXX, i.e. the actual target. A
+            #    record without that memo pattern keeps effective_recipient =
+            #    CMTE_ID. This makes the donor visible to the target committee
+            #    when the target hasn't yet filed its own matching 15E receipts
+            #    (the data-void case — Sue Altman pre-Q1-receipt-matching).
+            # 1. COLLECT by (donor, effective_recipient, source) → split totals
+            #    into direct and earmark streams.
+            # 2. Per-(donor, effective_recipient): MAX(direct, earmark) — dedupes
+            #    against the case where the recipient HAS filed matching 15E
+            #    receipts for the same money. If direct >= earmark, the
+            #    recipient is fully matched; if direct < earmark (or = 0), the
+            #    earmark side has the more complete picture.
+            # 3. COLLECT by (donor) → roll up per-donor totals, track max
+            #    per-committee amount.
+            # 4. FILTER max_single_cmte >= per-election limit (whale threshold).
             #
-            # This is a single scan over indiv — no expensive re-join needed.
-            #
-            # Filter to individuals + candidate self-funding only.
-            # ORG/PAC/COM/CCM/PTY belong in transferred_to (via oth), not donors.
-            # CAN = candidate self-funding — still an individual contribution.
-            # Also exclude conduits (ActBlue, WinRed) which are earmark aggregators.
+            # Notes:
+            # - The "EARMARKED FOR" pattern distinguishes conduit-side forwards
+            #   from recipient-side receipts (which say "EARMARKED CONTRIBUTION:
+            #   SEE BELOW"). Only forwards have a parenthetical CMTE_ID target.
+            # - transaction_count is approximate (may slightly over-count when
+            #   earmark and direct paths exist for the same donor-recipient
+            #   pair); not load-bearing.
+            # - Filter to IND/CAN entities only — ORG/PAC/COM/CCM/PTY belong
+            #   in transferred_to, not donors.
             aql = """
             FOR doc IN indiv
                 FILTER doc.ENTITY_TP IN ['IND', 'CAN']
                 FILTER doc.NAME != null AND doc.NAME != ""
                 FILTER doc.TRANSACTION_AMT != null
-                FILTER NOT REGEX_TEST(doc.NAME, '(ACTBLUE|WINRED|EARMARK|CONDUIT)', true)
-                
-                /* First COLLECT: per donor-committee totals */
-                COLLECT 
+
+                /* Parse earmark target CMTE_ID from MEMO_TEXT when present */
+                LET memo_upper = UPPER(doc.MEMO_TEXT || "")
+                LET earmark_match = REGEX_MATCHES(memo_upper, "\\\\(C\\\\d{8}\\\\)", false)
+                LET parsed_target = (
+                    CONTAINS(memo_upper, "EARMARKED FOR") AND LENGTH(earmark_match) > 0
+                    ? SUBSTRING(earmark_match[0], 1, 9)
+                    : null
+                )
+                LET effective_cmte = (parsed_target != null AND parsed_target != doc.CMTE_ID)
+                    ? parsed_target
+                    : doc.CMTE_ID
+                LET is_redirect = effective_cmte != doc.CMTE_ID
+
+                /* First COLLECT: per (donor, effective_recipient) totals split
+                   by attribution source */
+                COLLECT
                     name = doc.NAME,
                     employer = (doc.EMPLOYER == null OR doc.EMPLOYER == "") ? "NOT EMPLOYED" : doc.EMPLOYER,
-                    cmte_id = doc.CMTE_ID
-                AGGREGATE 
-                    cmte_total = SUM(TO_NUMBER(doc.TRANSACTION_AMT)),
-                    cmte_count = COUNT(1)
-                
+                    eff_cmte = effective_cmte
+                AGGREGATE
+                    direct_total = SUM(is_redirect ? 0 : TO_NUMBER(doc.TRANSACTION_AMT)),
+                    earmark_total = SUM(is_redirect ? TO_NUMBER(doc.TRANSACTION_AMT) : 0),
+                    pair_count = COUNT(1)
+
+                /* MAX dedup: the recipient may have filed matching 15E receipts
+                   for the same money — taking MAX avoids double-counting */
+                LET cmte_total = direct_total > earmark_total ? direct_total : earmark_total
+
                 /* Second COLLECT: roll up to per-donor totals, track max committee */
-                COLLECT 
+                COLLECT
                     d_name = name,
                     d_employer = employer
-                AGGREGATE 
+                AGGREGATE
                     total_amount = SUM(cmte_total),
-                    transaction_count = SUM(cmte_count),
+                    transaction_count = SUM(pair_count),
                     max_single_cmte = MAX(cmte_total)
-                
+
                 /* Only keep donors who maxed out to at least one committee */
                 FILTER max_single_cmte >= @limit
-                
+
                 RETURN {
                     name: d_name,
                     employer: d_employer,

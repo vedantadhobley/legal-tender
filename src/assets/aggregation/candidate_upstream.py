@@ -74,8 +74,13 @@ TERMINAL_TYPES = {"corporation", "trade_association", "labor_union", "ideologica
 # Passthrough types - trace THROUGH these to find real sources
 PASSTHROUGH_TYPES = {"passthrough", "unknown", "super_pac_unclassified"}
 
-# Conduit patterns to filter from individual donors
-CONDUIT_PATTERNS = ["WINRED", "ACTBLUE", "EARMARK", "CONDUIT", "UNITEMIZED"]
+# CONDUIT_PATTERNS / is_conduit() removed 2026-05-21.
+# Conduit detection moved to committee_classification (Phase 1c, behavior-
+# based via earmarked_share > 0.8). The trace already walks through
+# committees with terminal_type=passthrough, so no donor-side filter is
+# needed during trace. The earmark-aware re-attribution in donors.py and
+# contributed_to.py also means earmarked donations are routed to their
+# named target rather than the conduit at graph-build time.
 
 # Election cycles to process — single source: src/config.ACTIVE_CYCLES.
 # Kept as module-local alias since this file uses CYCLES as a positional
@@ -98,16 +103,6 @@ class CandidateFundingConfig(Config):
     top_n_individuals: int = 50
     max_trace_depth: int = 8
     min_amount: float = 1000  # Minimum to include in top lists
-
-
-def is_conduit(name: str) -> bool:
-    """Whether a donor name represents a conduit (WinRed, ActBlue, etc.) —
-    aggregator pseudo-donors that pass through earmarked individual money.
-    Filtered out so we don't double-count individuals via the conduit."""
-    if not name:
-        return False
-    name_upper = name.upper()
-    return any(p in name_upper for p in CONDUIT_PATTERNS)
 
 
 def _resolve_company(name: str, employer: str,
@@ -213,8 +208,6 @@ def trace_committee_sources(
         for donor_key, amount in contrib_edges.get(cmte_id, []):
             donor = donor_info.get(donor_key, {})
             name = donor.get('name', donor_key)
-            if is_conduit(name):
-                continue
             attr_amount = amount * mult
             traced_total += attr_amount
             employer = donor.get('employer', '')
@@ -421,8 +414,6 @@ def trace_ie_sources(
                 if not donor:
                     continue
                 name = donor.get('name', donor_key)
-                if is_conduit(name):
-                    continue
                 attr_amount = amount * mult
                 if attr_amount < min_attr_amount:
                     continue

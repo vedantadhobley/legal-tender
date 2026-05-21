@@ -153,21 +153,42 @@ def committee_receipts_asset(
             n_can = 0
 
             if cycle_db.has_collection("indiv"):
+                # `earmark_*` tracks records where MEMO_TEXT contains
+                # "EARMARKED FOR" — these are the CONDUIT side of a bundled
+                # donation (ActBlue/WinRed/etc forwarding earmarked dollars
+                # to a target candidate, with the target's name + cmte_id
+                # in the memo). Distinct from the RECEIVING side's
+                # "EARMARKED CONTRIBUTION: SEE BELOW" pattern on the
+                # target committee's own 15E records — we only want to
+                # detect committees that DO the forwarding, not those
+                # that receive. Used downstream by committee_classification
+                # to mark high-earmark-share committees as passthrough by
+                # behavior (replaces the hardcoded ACTBLUE|WINRED list).
                 cursor = cycle_db.aql.execute("""
                     FOR d IN indiv
                         FILTER d.CMTE_ID != null
                         FILTER d.TRANSACTION_AMT != null
+                        LET is_earmark_forward = CONTAINS(UPPER(d.MEMO_TEXT||""), "EARMARKED FOR")
                         COLLECT cmte_id = d.CMTE_ID
                         AGGREGATE
                             total = SUM(TO_NUMBER(d.TRANSACTION_AMT)),
-                            count = COUNT(1)
-                        RETURN { cmte_id, total, count }
+                            count = COUNT(1),
+                            earmark_count = SUM(is_earmark_forward ? 1 : 0),
+                            earmark_amt = SUM(is_earmark_forward ? TO_NUMBER(d.TRANSACTION_AMT) : 0)
+                        RETURN { cmte_id, total, count, earmark_count, earmark_amt }
                 """, ttl=14400, batch_size=5000, stream=True)
                 for row in cursor:
                     cmte_id = row['cmte_id']
                     total = row['total'] or 0
                     count = row['count'] or 0
-                    indiv_map[cmte_id] = {'total': total, 'count': count}
+                    earmark_count = row['earmark_count'] or 0
+                    earmark_amt = row['earmark_amt'] or 0
+                    indiv_map[cmte_id] = {
+                        'total': total,
+                        'count': count,
+                        'earmark_count': earmark_count,
+                        'earmark_amt': earmark_amt,
+                    }
                     cycle_total += total
                     cycle_cmtes += 1
 
@@ -390,6 +411,9 @@ def committee_receipts_asset(
                 whale_total = whale.get('total', 0)
                 whale_count = whale.get('count', 0)
                 donation_count = indiv.get('count', 0)
+                # Earmark-forwarding signal — see _phase3_for_cycle comment.
+                earmark_count = indiv.get('earmark_count', 0)
+                earmark_amt = indiv.get('earmark_amt', 0)
                 self_funding = self_funding_by_cycle[cycle].get(cmte_id, 0)
                 can_overlap = can_indiv_by_cycle[cycle].get(cmte_id, 0)
 
@@ -422,6 +446,19 @@ def committee_receipts_asset(
                 total_receipts = total_individuals + transfer
 
                 if total_individuals > 0 or transfer > 0 or whale_total > 0:
+                    # earmarked_share = fraction of incoming indiv records where
+                    # MEMO_TEXT says "EARMARKED FOR <target>" — i.e. this
+                    # committee is FORWARDING money to a named target. High
+                    # values (close to 1.0) are the structural fingerprint of
+                    # a conduit (ActBlue, WinRed, NEXTGEN CLIMATE ACTION, etc).
+                    # committee_classification consumes this as the
+                    # behavior-based rule that replaces the hardcoded
+                    # CONDUIT_PATTERNS name list. None when there are no
+                    # indiv records to base the ratio on.
+                    earmarked_share = (
+                        earmark_count / donation_count
+                        if donation_count > 0 else None
+                    )
                     receipts_by_cycle[cycle] = {
                         'total_from_individuals': total_individuals,
                         'total_from_individuals_source': indiv_source,
@@ -432,6 +469,9 @@ def committee_receipts_asset(
                         'whale_donor_total': whale_total,
                         'whale_donor_count': whale_count,
                         'donation_count': donation_count,
+                        'earmark_count': earmark_count,
+                        'earmark_amt': earmark_amt,
+                        'earmarked_share': earmarked_share,
                         'total_from_committees': transfer,
                         'total_receipts': total_receipts,
                     }
@@ -445,9 +485,15 @@ def committee_receipts_asset(
             agg_whale_total = sum(r.get('whale_donor_total', 0) for r in receipts_by_cycle.values())
             agg_whale_count = sum(r.get('whale_donor_count', 0) for r in receipts_by_cycle.values())
             agg_donation_count = sum(r.get('donation_count', 0) for r in receipts_by_cycle.values())
+            agg_earmark_count = sum(r.get('earmark_count', 0) for r in receipts_by_cycle.values())
+            agg_earmark_amt = sum(r.get('earmark_amt', 0) for r in receipts_by_cycle.values())
             agg_transfer = sum(r.get('total_from_committees', 0) for r in receipts_by_cycle.values())
             agg_small_total = max(0, agg_individuals_external - agg_whale_total)
             agg_total_receipts = agg_total_individuals + agg_transfer
+            agg_earmarked_share = (
+                agg_earmark_count / agg_donation_count
+                if agg_donation_count > 0 else None
+            )
 
             return {
                 '_doc': {
@@ -460,6 +506,9 @@ def committee_receipts_asset(
                     'whale_donor_total': agg_whale_total,
                     'whale_donor_count': agg_whale_count,
                     'donation_count': agg_donation_count,
+                    'earmark_count': agg_earmark_count,
+                    'earmark_amt': agg_earmark_amt,
+                    'earmarked_share': agg_earmarked_share,
                     'total_from_committees': agg_transfer,
                     'total_receipts': agg_total_receipts,
                     'receipts_updated_at': datetime.now().isoformat(),

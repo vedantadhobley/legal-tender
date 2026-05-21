@@ -577,6 +577,48 @@ def committee_classification_asset(
         context.log.info("🔧 Phase 1b: M-ORG_TP refinement (ideological → trade_association)...")
         refine_count = _apply_m_org_refinement(context, agg_db)
 
+        # Phase 1c: behavior-based conduit detection via earmarked_share.
+        #
+        # Replaces the old donor-name substring list
+        # (ACTBLUE|WINRED|EARMARK|CONDUIT) that lived in candidate_upstream's
+        # CONDUIT_PATTERNS. A committee that FORWARDS earmarked donations is
+        # a conduit by behavior — every record with MEMO_TEXT containing
+        # "EARMARKED FOR <target> (CXXXXXXXX)" is a forwarding action.
+        # committee_receipts computes earmarked_share = earmark records /
+        # total records per committee; this rule consumes it.
+        #
+        # Threshold: earmarked_share > 0.8 AND total_receipts > $1M. The
+        # share guards against committees that occasionally mention
+        # "earmarked" in a non-forwarding context; the receipts threshold
+        # excludes tiny one-off shell committees where the share is
+        # noise-prone.
+        #
+        # The override is unconditional — even committees previously
+        # classified as `corporation` or `ideological` get flipped to
+        # `passthrough` here because forwarding behavior is what matters
+        # for the trace algorithm. ActBlue, WinRed, Democracy Engine and
+        # any future conduit get detected without needing a name list.
+        context.log.info("🔧 Phase 1c: behavior-based conduit detection (earmarked_share > 0.8)...")
+        conduit_detect_aql = """
+        FOR c IN committees
+            FILTER c.earmarked_share != null
+                AND c.earmarked_share > 0.8
+                AND (c.total_receipts != null AND c.total_receipts > 1000000)
+            UPDATE c WITH {
+                terminal_type: "passthrough",
+                terminal_type_conduit_by_behavior: true,
+                terminal_type_conduit_earmarked_share: c.earmarked_share
+            } IN committees
+            COLLECT WITH COUNT INTO cnt
+            RETURN cnt
+        """
+        conduit_result = list(agg_db.aql.execute(conduit_detect_aql))
+        n_conduits = conduit_result[0] if conduit_result else 0
+        context.log.info(
+            f"  Phase 1c: {n_conduits:,} committees re-classified as passthrough "
+            f"by behavior (earmarked_share > 0.8 and receipts > $1M)"
+        )
+
         # Phase 2a: parent-organization inheritance via CONNECTED_ORG_NM.
         #
         # FEC bulk data sometimes mis-labels a committee's ORG_TP — e.g.
