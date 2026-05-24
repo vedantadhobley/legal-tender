@@ -464,7 +464,11 @@ def _apply_name_cluster_inheritance(context, db) -> int:
     description="Enriches committees with terminal_type for upstream traversal control.",
     group_name="enrichment",
     compute_kind="enrichment",
-    deps=["contributed_to"],  # committees are created by contributed_to
+    # committees are created by contributed_to; committee_receipts populates
+    # earmarked_share which Phase 1c consumes. Without committee_receipts in
+    # the dep set, Dagster could schedule classification before receipts and
+    # Phase 1c would see earmarked_share=None on every committee.
+    deps=["contributed_to", "committee_receipts"],
 )
 def committee_classification_asset(
     context: AssetExecutionContext,
