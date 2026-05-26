@@ -88,17 +88,23 @@ def contributed_to_asset(
             agg_db.create_collection("contributed_to", edge=True)
             context.log.info("Created contributed_to edge collection")
         
-        # Ensure committees exists
+        # Ensure committees + candidates exist. Note: we DO NOT truncate
+        # here. committee_receipts and committee_classification write
+        # enrichment fields (terminal_type, earmarked_share, total_receipts,
+        # receipts_by_cycle, etc.) onto committees; truncating would wipe
+        # them whenever this asset re-materialized without a follow-up
+        # receipts/classification run.
+        #
+        # We refresh raw FEC fields (CMTE_NM, CMTE_TP, ORG_TP, etc.) via
+        # import_bulk(..., on_duplicate="update") below, which merges the
+        # new fields into existing docs preserving enrichment.
+        #
+        # If you need to nuke the collection (schema change, etc.) do it
+        # explicitly outside this asset.
         if not agg_db.has_collection("committees"):
             agg_db.create_collection("committees")
-        else:
-            agg_db.collection("committees").truncate()
-        
-        # Ensure candidates exists  
         if not agg_db.has_collection("candidates"):
             agg_db.create_collection("candidates")
-        else:
-            agg_db.collection("candidates").truncate()
         
         # Copy committees and candidates from FEC data
         context.log.info("📋 Copying committees & candidates...")
@@ -164,10 +170,10 @@ def contributed_to_asset(
         for doc in committees_dict.values():
             batch.append(doc)
             if len(batch) >= 5000:
-                agg_db.collection("committees").import_bulk(batch, on_duplicate="replace")
+                agg_db.collection("committees").import_bulk(batch, on_duplicate="update")
                 batch = []
         if batch:
-            agg_db.collection("committees").import_bulk(batch, on_duplicate="replace")
+            agg_db.collection("committees").import_bulk(batch, on_duplicate="update")
         gc.collect()
         
         # Write candidates in batches
@@ -176,10 +182,10 @@ def contributed_to_asset(
         for doc in candidates_dict.values():
             batch.append(doc)
             if len(batch) >= 5000:
-                agg_db.collection("candidates").import_bulk(batch, on_duplicate="replace")
+                agg_db.collection("candidates").import_bulk(batch, on_duplicate="update")
                 batch = []
         if batch:
-            agg_db.collection("candidates").import_bulk(batch, on_duplicate="replace")
+            agg_db.collection("candidates").import_bulk(batch, on_duplicate="update")
         gc.collect()
 
         
