@@ -139,6 +139,50 @@ def donors_asset(
             'by_cycle': {}
         }
 
+        # Build per-cycle committee name → CMTE_ID map for name-match earmark
+        # re-attribution. About 1% of earmark records in indiv have a memo
+        # like `EARMARKED FOR JON OSSOFF FOR SENATE` with no parenthetical
+        # CMTE_ID (or `(PENDING)`), so the AQL's primary regex-based parse
+        # can't recover the target. Falling back to a name lookup recovers
+        # ~80% of these (the remainder are ambiguous or have memo text that
+        # diverges from the canonical CMTE_NM — see `docs/data-quality.md`).
+        #
+        # Disambiguation: when two committees share the same CMTE_NM
+        # (e.g. "ALTMAN FOR CONGRESS" exists for both Susan Altman NJ-12
+        # 2026 and an unrelated NJ-7 Altman from prior cycles), prefer the
+        # committee whose `cycles` array contains the current cycle being
+        # processed. Falls back to "skip on ambiguity" if no cycle match.
+        context.log.info("📋 Loading committee name → CMTE_ID maps per cycle for earmark name-resolution...")
+        all_committees = list(agg_db.aql.execute(
+            "FOR cmte IN committees RETURN {key: cmte._key, name: cmte.CMTE_NM, cycles: cmte.cycles}"
+        ))
+        # name_maps_by_cycle[cycle] = {upper_committee_name: cmte_id}
+        # Prefers committees active in `cycle`; uses unique-only when no cycle preference resolves.
+        name_maps_by_cycle: Dict[str, Dict[str, str]] = {}
+        for cycle in config.cycles:
+            cmte_to_in_cycle: Dict[str, list] = {}
+            cmte_to_other: Dict[str, list] = {}
+            for c_doc in all_committees:
+                nm = (c_doc.get('name') or '').upper().strip()
+                if not nm:
+                    continue
+                cycs = c_doc.get('cycles') or []
+                if cycle in cycs:
+                    cmte_to_in_cycle.setdefault(nm, []).append(c_doc['key'])
+                else:
+                    cmte_to_other.setdefault(nm, []).append(c_doc['key'])
+            cycle_map: Dict[str, str] = {}
+            for nm in set(list(cmte_to_in_cycle.keys()) + list(cmte_to_other.keys())):
+                in_cyc = cmte_to_in_cycle.get(nm, [])
+                other = cmte_to_other.get(nm, [])
+                if len(in_cyc) == 1:
+                    cycle_map[nm] = in_cyc[0]
+                elif len(in_cyc) == 0 and len(other) == 1:
+                    cycle_map[nm] = other[0]
+                # else: ambiguous → skip
+            name_maps_by_cycle[cycle] = cycle_map
+            context.log.info(f"  {cycle}: {len(cycle_map):,} unique committee names resolvable")
+
         # NOTE on the deleted donor-NAME substring filter:
         # Previously this asset had `FILTER NOT REGEX_TEST(doc.NAME,
         # '(ACTBLUE|WINRED|EARMARK|CONDUIT)', true)` intended to exclude
@@ -203,14 +247,37 @@ def donors_asset(
                 FILTER doc.NAME != null AND doc.NAME != ""
                 FILTER doc.TRANSACTION_AMT != null
 
-                /* Parse earmark target CMTE_ID from MEMO_TEXT when present */
+                /* Parse earmark target CMTE_ID from MEMO_TEXT.
+                   Primary: parenthetical CMTE_ID like (C00937730) — 99% of
+                   earmark records.
+                   Fallback: name-match against @name_map for the ~1% of
+                   earmark records that have memos like
+                   "EARMARKED FOR JON OSSOFF FOR SENATE" (no CMTE_ID parens)
+                   or "EARMARKED FOR ALTMAN FOR CONGRESS (PENDING)".
+                   The name extracted is whatever follows "EARMARKED FOR ",
+                   trimmed of trailing parens/whitespace.
+                */
                 LET memo_upper = UPPER(doc.MEMO_TEXT || "")
+                LET has_earmark = CONTAINS(memo_upper, "EARMARKED FOR")
                 LET earmark_match = REGEX_MATCHES(memo_upper, "\\\\(C\\\\d{8}\\\\)", false)
-                LET parsed_target = (
-                    CONTAINS(memo_upper, "EARMARKED FOR") AND LENGTH(earmark_match) > 0
+                LET parsed_target_by_id = (
+                    has_earmark AND LENGTH(earmark_match) > 0
                     ? SUBSTRING(earmark_match[0], 1, 9)
                     : null
                 )
+                LET earmark_pos = POSITION(memo_upper, "EARMARKED FOR ")
+                LET after_earmark = (has_earmark AND parsed_target_by_id == null)
+                    ? SUBSTRING(memo_upper, earmark_pos + 14)
+                    : null
+                LET name_only = after_earmark != null
+                    ? TRIM(REGEX_REPLACE(after_earmark, "\\\\s*\\\\(.*$", ""))
+                    : null
+                LET parsed_target_by_name = name_only != null
+                    ? @name_map[name_only]
+                    : null
+                LET parsed_target = parsed_target_by_id != null
+                    ? parsed_target_by_id
+                    : parsed_target_by_name
                 LET effective_cmte = (parsed_target != null AND parsed_target != doc.CMTE_ID)
                     ? parsed_target
                     : doc.CMTE_ID
@@ -253,7 +320,10 @@ def donors_asset(
             
             cursor = cycle_db.aql.execute(
                 aql,
-                bind_vars={"limit": per_election_limit},
+                bind_vars={
+                    "limit": per_election_limit,
+                    "name_map": name_maps_by_cycle.get(cycle, {}),
+                },
                 ttl=14400,  # 4 hours - double COLLECT is heavier than single
                 batch_size=config.batch_size,
                 stream=True

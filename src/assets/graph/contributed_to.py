@@ -190,7 +190,37 @@ def contributed_to_asset(
         for key in cursor:
             donor_keys.add(key)
         context.log.info(f"  {len(donor_keys):,} donors to match")
-        
+
+        # Per-cycle committee name → CMTE_ID map for name-match earmark
+        # re-attribution. Mirrors donors.py logic. See that file for
+        # the disambiguation rules.
+        context.log.info("📋 Loading committee name → CMTE_ID maps per cycle...")
+        all_committees = list(agg_db.aql.execute(
+            "FOR cmte IN committees RETURN {key: cmte._key, name: cmte.CMTE_NM, cycles: cmte.cycles}"
+        ))
+        name_maps_by_cycle: Dict[str, Dict[str, str]] = {}
+        for cycle in config.cycles:
+            cmte_to_in_cycle: Dict[str, list] = {}
+            cmte_to_other: Dict[str, list] = {}
+            for c_doc in all_committees:
+                nm = (c_doc.get('name') or '').upper().strip()
+                if not nm:
+                    continue
+                cycs = c_doc.get('cycles') or []
+                if cycle in cycs:
+                    cmte_to_in_cycle.setdefault(nm, []).append(c_doc['key'])
+                else:
+                    cmte_to_other.setdefault(nm, []).append(c_doc['key'])
+            cycle_map: Dict[str, str] = {}
+            for nm in set(list(cmte_to_in_cycle.keys()) + list(cmte_to_other.keys())):
+                in_cyc = cmte_to_in_cycle.get(nm, [])
+                other = cmte_to_other.get(nm, [])
+                if len(in_cyc) == 1:
+                    cycle_map[nm] = in_cyc[0]
+                elif len(in_cyc) == 0 and len(other) == 1:
+                    cycle_map[nm] = other[0]
+            name_maps_by_cycle[cycle] = cycle_map
+
         stats = {'edges_created': 0, 'by_cycle': {}}
         
         # Process each cycle
@@ -228,12 +258,26 @@ def contributed_to_asset(
                 FILTER doc.TRANSACTION_AMT != null
 
                 LET memo_upper = UPPER(doc.MEMO_TEXT || "")
+                LET has_earmark = CONTAINS(memo_upper, "EARMARKED FOR")
                 LET earmark_match = REGEX_MATCHES(memo_upper, "\\\\(C\\\\d{8}\\\\)", false)
-                LET parsed_target = (
-                    CONTAINS(memo_upper, "EARMARKED FOR") AND LENGTH(earmark_match) > 0
+                LET parsed_target_by_id = (
+                    has_earmark AND LENGTH(earmark_match) > 0
                     ? SUBSTRING(earmark_match[0], 1, 9)
                     : null
                 )
+                LET earmark_pos = POSITION(memo_upper, "EARMARKED FOR ")
+                LET after_earmark = (has_earmark AND parsed_target_by_id == null)
+                    ? SUBSTRING(memo_upper, earmark_pos + 14)
+                    : null
+                LET name_only = after_earmark != null
+                    ? TRIM(REGEX_REPLACE(after_earmark, "\\\\s*\\\\(.*$", ""))
+                    : null
+                LET parsed_target_by_name = name_only != null
+                    ? @name_map[name_only]
+                    : null
+                LET parsed_target = parsed_target_by_id != null
+                    ? parsed_target_by_id
+                    : parsed_target_by_name
                 LET effective_cmte = (parsed_target != null AND parsed_target != doc.CMTE_ID)
                     ? parsed_target
                     : doc.CMTE_ID
@@ -262,7 +306,9 @@ def contributed_to_asset(
             """
             
             cursor = cycle_db.aql.execute(
-                aql, ttl=7200, batch_size=config.batch_size, stream=True
+                aql,
+                bind_vars={"name_map": name_maps_by_cycle.get(cycle, {})},
+                ttl=7200, batch_size=config.batch_size, stream=True
             )
             
             cycle_edges = 0
