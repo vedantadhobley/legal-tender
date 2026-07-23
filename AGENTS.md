@@ -4,6 +4,17 @@ Political campaign finance tracing pipeline. Dagster + ArangoDB. Traces money fr
 
 This file is your front door. Read it first; follow the imports below for deeper detail.
 
+## Cross-cutting context
+
+Workspace-wide rules, node topology, and cross-project decisions live in [`~/workspace/vedanta-dhobley/`](../../vedanta-dhobley/). Every agent session reads its global `AGENTS.md` automatically via symlinks (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md`); this pointer exists so anyone browsing the repo sees the pattern.
+
+- [`AGENTS.md`](../../vedanta-dhobley/AGENTS.md) — operating model, commit conventions, Docker-first policy, host-port scheme, `mem_limit` rules, tailnet FQDN rule, privacy preferences
+- [`docs/topology.md`](../../vedanta-dhobley/docs/topology.md) — aerial view of nodes, services, routing, messaging, roadmap
+- [`docs/decisions.md`](../../vedanta-dhobley/docs/decisions.md) — timestamped rationale for locked-in choices (joi model swap affects this project's LLM endpoints)
+- [`docs/plans/`](../../vedanta-dhobley/docs/plans/) — active time-bounded plans
+
+**Where things belong:** if a decision in this project turns out to be cross-project, raise it in dhobley — do not duplicate it here.
+
 ## Run
 
 ```bash
@@ -39,12 +50,11 @@ docker compose -f docker-compose.dev.yml up -d
 
 ## Conventions
 
-- **Commits**: no `Co-Authored-By: Claude` trailer. Lowercase prefix style (`chore:`, `fix:`, `feat:`, `docs:`, `perf:`).
 - **Active election cycles**: `["2020", "2022", "2024", "2026"]`. Currently hardcoded across 21 files; centralize when touching this area (see @docs/todo.md).
 - **Per-election limits** (FEC): `{2020: 2800, 2022: 2900, 2024: 3300, 2026: 3500}`. Lives in `src/assets/graph/donors.py:47-50`.
 - **Funding channel terminology**: "funding channels" — NOT "Five Pies" (deprecated terminology, occasional residual references in deleted/orphan code).
 - **Storage paths**: bind-mounted at `/storage` inside containers, mapped from `~/workspace/data/legal-tender/`. Subdirs `raw/` (FEC zips), `dumps/` (Arango JSONL), `cache/` (regeneratable).
-- **Tailnet identifier**: do NOT commit it to public docs or example files. `.env` is gitignored; `.env.example` uses `<host>.<your-tailnet>.ts.net` placeholder.
+- **Tailnet identifier**: `.env` is gitignored; `.env.example` uses `<host>.<your-tailnet>.ts.net` placeholder per the workspace tailnet-FQDN rule.
 - **Print vs log**: use `context.log.<level>` inside Dagster assets, `logger.<level>` (stdlib `logging`) elsewhere. Avoid bare `print()` — many existing call sites are anti-patterns to fix during Phase 3.
 
 ## Things to check before doing X
