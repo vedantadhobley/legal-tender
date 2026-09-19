@@ -1,0 +1,43 @@
+{
+  "candidate_id": "H0AA00005",
+  "cycle": "2024",
+  "linkages": [
+    {
+      "fact_id": "link-1",
+      "state": "valid",
+      "candidate_id": "H0AA00005",
+      "committee_id": "C00000005",
+      "designation_code": "A"
+    }
+  ],
+  "receipts": [
+    {
+      "fact_id": "receipt-1",
+      "committee_id": "C00000005",
+      "publisher_classed_individual": true,
+      "memoed_subtotal": false,
+      "amount_minor_units": "100",
+      "received_on": "2024-01-15"
+    }
+  ],
+  "summaries": [
+    {
+      "fact_id": "summary-1",
+      "fact_type": "fec.candidate_summary_all.v1",
+      "dataset": "all-candidates-summary",
+      "candidate_id": "H0AA00005",
+      "coverage_through": "2024-12-31",
+      "total_individual_contributions": {
+        "raw_value": "2.50",
+        "reported_minor_units": "250",
+        "observation_state": "reported_value"
+      },
+      "total_receipts": {
+        "raw_value": "10.00",
+        "reported_minor_units": "1000",
+        "observation_state": "reported_value"
+      }
+    }
+  ]
+}
+

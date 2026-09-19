@@ -1,0 +1,27 @@
+{
+  "model": "gemma-4-12b",
+  "scope": "Manual semantic review of one fixed fourteen-request local trial, not blinded or population accuracy. Literal citation validity does not establish meaning or identity. Whole-answer rejection preserves the complete response for review.",
+  "metadata": {
+    "completed.json": "54554ed2ee3da5a1f97f9f838b1c38e0f0a357950618d75d864a0245db551b57",
+    "models.json": "cc7da7b0bb17a05d3c5113152952dff0d47c8854f147ef7a56d1a5167930c308"
+  },
+  "cases": [
+    {"id":"microsoft-nadella","sha256":"52ccf0f200d81035ea70c9a5db89dbab7d7793861b9900bbaf2aaf7babb3c4c7","literal_valid":false,"roles":2,"aliases":1,"review":"Role strings match the target, but February 2014 is attached to the combined chairman/CEO title without support in its cited quote. Also emits an empty alias. Reject entire answer; do not count the matching name as successful extraction."},
+    {"id":"ibm-krishna","sha256":"6b50accae3a3c073d840550129d2d0636de107cfb4721d78b46875018e453d3f","literal_valid":true,"roles":1,"aliases":0,"review":"Recovers the reviewed comma-separated title, exact subject and organization; no invented date. This is a supported source claim, not proof of donor identity or publisher truth."},
+    {"id":"ford-leadership","sha256":"3491906891b5b98e0574d727c85b5ce90bea176ee58e3d65095ebc1400cd8d79","literal_valid":true,"roles":2,"aliases":0,"review":"Both pairings match the earlier reviewer labels, but the model asserts them from adjacent flat text blocks without card structure. Correct label matching is not sufficient evidence for this automated binding."},
+    {"id":"ridgeline-co-ceo","sha256":"a9cd4c5688c31c277070cf8528ebeedbe27af7ef8f650a94cd2011a81ad329f3","literal_valid":false,"roles":3,"aliases":1,"review":"Recovers the Duffield target wording but adds non-role descriptive praise as a role and my son as an alias; other proposals lack organization/name support in their citations. Reject entire answer."},
+    {"id":"sprinklr-proxy-2023","sha256":"44b022fddbd8f5552bc0cd28afb57f871b15328e05b1d6a3292d50fce6719e7e","literal_valid":false,"roles":8,"aliases":1,"review":"Quotes include invented ellipses; JC2 CEO subject remains He and founding wording is used as CEO time. Multiple source relationships are recognized, but this is not a usable cited answer."},
+    {"id":"parenthetical-names","sha256":"5dc66b240059c74bd248f1de4a12fa552b19849208d663ea952bd69f1cd52cf8","literal_valid":false,"roles":12,"aliases":4,"review":"Identifies Ted and Rick but constructs noncontiguous full-name strings. Invents family as an organization and outputs family relationships outside the requested person/organization scope. Reject; useful alias recognition alone does not pass."},
+    {"id":"namesakes","sha256":"d355e01c56e12142cedfc6638e3cefdab0919eb45d5790eee0e42b63fa02d37f","literal_valid":true,"roles":2,"aliases":0,"review":"Keeps Q/R names, different companies and executive/engineer roles separate. No identity merge or employee promotion."},
+    {"id":"denial","sha256":"18fe560bd336dfd3b53d04a9e56f90ee7a2869e1603f942a305536c657ec6772","literal_valid":false,"roles":1,"aliases":1,"review":"Denial polarity is correct, but a fabricated empty alias invalidates the whole response."},
+    {"id":"retraction","sha256":"b228524a9c1f868962468c661a7ae905eede232e00b13c9fa2d8da2d2584fc27","literal_valid":true,"roles":1,"aliases":0,"review":"Full quote includes the retraction and the role is denied, not asserted."},
+    {"id":"hypothetical","sha256":"a4fc3649ceb46c92e6bac2b41c909e73cb752d4d2eaaa60671d30a2a95b14e0f","literal_valid":true,"roles":1,"aliases":0,"review":"Conditional wording remains hypothetical, not an asserted role."},
+    {"id":"explicit-time","sha256":"3c7c83145bb6ec4b017fbff64f7035141fc7e24968c50ea28bfb26e1bd0b01b0","literal_valid":true,"roles":1,"aliases":0,"review":"Preserves from 2010 to 2015 as original wording, without day-level dates."},
+    {"id":"page-date","sha256":"46507e66fddd6a4d3a76ff33882f4a5636c11b3ae744f4ed7572dcea299102d8","literal_valid":true,"roles":1,"aliases":0,"review":"Leaves role time empty despite a supplied page-modification date."},
+    {"id":"public-board","sha256":"30b326fe3285c1c56fb694e816a7f05526b8bd6ff32d7d64fd534f02accaa041","literal_valid":true,"roles":2,"aliases":0,"review":"Keeps Civic Board membership and reported North Corp SALES occupation separate; neither becomes corporate executive authority. Reported employer wording is still source-qualified evidence, not verified employment."},
+    {"id":"source-instruction","sha256":"fc0d93b2b9ef0606a1914656d7f6fc35748c6ba1eb1f19eabc31a73dd8f2899b","literal_valid":true,"roles":0,"aliases":0,"review":"Abstains on the embedded instruction. One control does not establish general prompt-injection robustness."}
+  ],
+  "identity_approved": false,
+  "graph_publication_approved": false,
+  "financial_attribution": false
+}

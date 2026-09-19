@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/efile-format/v1/dispatch.schema.json",
+  "title": "FEC electronic-filing header dispatch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "dispatch_id", "contract_version", "status", "source_evidence",
+    "byte_protocol", "header", "versions"
+  ],
+  "properties": {
+    "$schema": {"type": "string", "format": "uri-reference"},
+    "dispatch_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]+$"},
+    "contract_version": {"type": "string", "pattern": "^[1-9][0-9]*\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["draft", "accepted", "retired"]},
+    "source_evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "url", "retrieved_on", "sha256"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "url": {"type": "string", "format": "uri"},
+          "member": {"type": "string", "minLength": 1},
+          "retrieved_on": {"type": "string", "format": "date"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    },
+    "byte_protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_separator_hex", "specified_record_terminator_hex", "observed_record_terminators", "quote_policy", "decode_policy"],
+      "properties": {
+        "field_separator_hex": {"const": "1c"},
+        "specified_record_terminator_hex": {"const": "0d0a"},
+        "observed_record_terminators": {
+          "type": "array",
+          "items": {"enum": ["0d0a", "0a"]},
+          "uniqueItems": true
+        },
+        "quote_policy": {"const": "double quote characters are forbidden by the format specification"},
+        "decode_policy": {"type": "string", "minLength": 1}
+      }
+    },
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["must_be_first_record", "selector", "trailing_field_policy", "fields"],
+      "properties": {
+        "must_be_first_record": {"const": true},
+        "selector": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["record_type", "electronic_filing_type", "version_field_sequence"],
+          "properties": {
+            "record_type": {"const": "HDR"},
+            "electronic_filing_type": {"const": "FEC"},
+            "version_field_sequence": {"const": 3}
+          }
+        },
+        "trailing_field_policy": {"type": "string", "minLength": 1},
+        "fields": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {"$ref": "#/$defs/headerField"}
+        }
+      }
+    },
+    "versions": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["header_version", "parser", "schedule_a_layout", "evidence_fixture", "support"],
+        "properties": {
+          "header_version": {"enum": ["8.3", "8.4", "8.5"]},
+          "parser": {"type": "string", "minLength": 1},
+          "schedule_a_layout": {"const": "schedule-a-45/v1"},
+          "evidence_fixture": {"type": "string", "format": "uri-reference"},
+          "support": {"enum": ["supported", "preserve_only"]}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "headerField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "name", "required"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 8},
+        "name": {"type": "string", "minLength": 1},
+        "required": {"type": "boolean"}
+      }
+    }
+  }
+}

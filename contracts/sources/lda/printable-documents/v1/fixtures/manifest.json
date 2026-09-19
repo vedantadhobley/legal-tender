@@ -1,0 +1,173 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "lda/printable-documents@1.0.0",
+  "representation": "exact_bytes",
+  "transformation": "None. Each fixture is the exact HTTP response body retrieved from the publisher URL. HTTP response headers belong in runtime acquisition manifests and are not embedded in these files.",
+  "fixtures": [
+    {
+      "path": "registration.html",
+      "source_url": "https://lda.gov/filings/public/filing/7866327b-c892-4430-b9f0-1f0f679c58c6/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b8681bca9754d595693db94a2f0eb555e0cce8f91863a11e88c2c8bf4fbf8d97",
+      "scenarios": [
+        "LD-1 as-filed registrant and client fields",
+        "multiple issue codes sharing one form section",
+        "historical names differ from current API masters"
+      ]
+    },
+    {
+      "path": "quarterly-report.html",
+      "source_url": "https://lda.gov/filings/public/filing/467e4a97-6351-4902-8ffa-dd51632e156b/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "7d004a08ebeb0618295bfd6f09ea6ce440711f63c264874b819d468366e7cc26",
+      "scenarios": [
+        "ordinary LD-2 income and activity",
+        "exact API/document agreement"
+      ]
+    },
+    {
+      "path": "no-activity-with-income.html",
+      "source_url": "https://lda.gov/filings/public/filing/3e3453a3-0d92-4f65-883f-e2a13cfdb11f/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "cd90d0bca70a5cccc19eeec77df779d73ef9f49bd866dade147570ff7f48c515",
+      "scenarios": [
+        "no-lobbying-issue checkbox",
+        "non-zero income",
+        "empty activity section"
+      ]
+    },
+    {
+      "path": "termination-with-activity.html",
+      "source_url": "https://lda.gov/filings/public/filing/24aa3971-815e-40ca-a63f-455ff0090c03/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6f98c0a5d78979f1e9030fb9d79ac9c8bcfe682dcdfe91ac12e56794a1dbcf45",
+      "scenarios": [
+        "termination checkbox and date",
+        "reported expenses",
+        "activity retained"
+      ]
+    },
+    {
+      "path": "amendment-family-original.html",
+      "source_url": "https://lda.gov/filings/public/filing/d05eac1f-0651-48a8-b34f-d57b6d40cd06/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b2a67b33be51925928886c994c6d8221882ddd07afd88dc9694fd2c2361de006",
+      "scenarios": [
+        "LD-2 original in amendment family",
+        "under-threshold expense checkbox"
+      ]
+    },
+    {
+      "path": "amendment.html",
+      "source_url": "https://lda.gov/filings/public/filing/7466c7ee-8bd1-4496-94df-5d5322d25e2d/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "7ad89cef812d3b088aa43a6df97f55f9291afa5a88c3376e90ccfba679e374c4",
+      "scenarios": [
+        "LD-2 amendment checkbox",
+        "under-threshold expense absent from API amount",
+        "as-filed agency strings"
+      ]
+    },
+    {
+      "path": "amendment-family-second.html",
+      "source_url": "https://lda.gov/filings/public/filing/502bf3ec-6897-4d1e-a684-b1b7f578fa04/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "4e98026ca5d429523f3429ee020bc7fd6477f7e0dcbe19ea2d7794972b9ef803",
+      "scenarios": [
+        "later full-form LD-2 amendment",
+        "two activity sections"
+      ]
+    },
+    {
+      "path": "amendment-family-third.html",
+      "source_url": "https://lda.gov/filings/public/filing/ad68a692-6a5b-4562-b468-48262b8bcba0/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b5c360a6390dda63af0436c717391f02066d48ff0d550304e186a852d1519a28",
+      "scenarios": [
+        "latest sampled full-form LD-2 amendment",
+        "changed activity text"
+      ]
+    },
+    {
+      "path": "organization-no-contributions.html",
+      "source_url": "https://lda.gov/filings/public/contribution/b0510c89-2cfb-441b-8fe7-0b1c9cc1347c/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "adb1fa7efaf506cff7c443c95cf3ce2cf3e22b2ec018e42ac2286f17852958f8",
+      "scenarios": [
+        "LD-203 organization filer",
+        "explicit no-contributions checkbox"
+      ]
+    },
+    {
+      "path": "feca.html",
+      "source_url": "https://lda.gov/filings/public/contribution/7e49564c-a88e-4947-bc51-b243435491ec/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "686263bc16920c655d2f97c25eef7de2cf54148e1c0c4486410a6a2ecada1f54",
+      "scenarios": [
+        "LD-203 lobbyist filer",
+        "FECA item",
+        "reported item date and amount"
+      ]
+    },
+    {
+      "path": "honorary-expense.html",
+      "source_url": "https://lda.gov/filings/public/contribution/fbd99564-ca4b-47ca-95d8-4d941a9c90a4/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "9b6b33c8048a39008f583525801638c69f3b4f73c9be6d991c1f90f2376fa794",
+      "scenarios": [
+        "historical employer name differs from current API master",
+        "mixed honorary-expense and FECA items",
+        "source item order is not chronological"
+      ]
+    },
+    {
+      "path": "meeting-expense.html",
+      "source_url": "https://lda.gov/filings/public/contribution/285616b7-ce63-49f4-9957-40429ecce19b/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "10c992108445e8c36a273f9fab2887ccde7783d3715648a0abbd9b965a876321",
+      "scenarios": [
+        "meeting-expense item"
+      ]
+    },
+    {
+      "path": "presidential-library-expense.html",
+      "source_url": "https://lda.gov/filings/public/contribution/232ecd2c-3f5e-4917-9622-8a65d8087ddb/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6236171fa31fd06a138058ed1fda7569576db078958176264b6d310a2e63630a",
+      "scenarios": [
+        "presidential-library-expense item"
+      ]
+    },
+    {
+      "path": "inaugural-committee.html",
+      "source_url": "https://lda.gov/filings/public/contribution/ef5bb479-667c-4494-a310-a5eff2cfe1f0/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "d7d6e7837f5e46896587bac24d717f8c88ae52625067c74b1f1cd0188b8f097b",
+      "scenarios": [
+        "presidential-inaugural item",
+        "print label truncated relative to API constant",
+        "non-empty PAC list"
+      ]
+    },
+    {
+      "path": "ld203-amendment-family-original.html",
+      "source_url": "https://lda.gov/filings/public/contribution/78ed0d57-66eb-40bd-b596-f958d22dc52d/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "a40fe56e70170d5e151f69fb67a8ad038774ecc4040bd9a6f1bb589b4ee995ca",
+      "scenarios": [
+        "LD-203 original",
+        "no-contributions state"
+      ]
+    },
+    {
+      "path": "ld203-amendment-family-amendment.html",
+      "source_url": "https://lda.gov/filings/public/contribution/b3221ac3-0285-413d-bc85-4045984228cb/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "195bff9e21ed0ab22484a75f1509d1673348c540639ec053d4215e222e364be0",
+      "scenarios": [
+        "LD-203 amendment",
+        "printable form does not expose amendment status"
+      ]
+    }
+  ]
+}

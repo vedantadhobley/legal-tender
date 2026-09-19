@@ -1,0 +1,30 @@
+{
+  "$schema": "../schema.json",
+  "schema_version": "1.0.0",
+  "semantic_role": "resolved_itemized_receipt_subtotal",
+  "currency": "USD",
+  "amount": {
+    "state": "point",
+    "lower_minor_units": "20000",
+    "upper_minor_units": "20000",
+    "lower_inclusive": true,
+    "upper_inclusive": true
+  },
+  "measurement": {
+    "basis": "calculated",
+    "kind": "calculated_sum",
+    "observation_state": null,
+    "reported_minor_units": null,
+    "precision_increment_minor_units": null,
+    "accounting_method": null,
+    "source_rule_version": null
+  },
+  "uncertainty": {
+    "coverage": "partial",
+    "attribution": "direct",
+    "revision": "publisher_processed_snapshot",
+    "identity": "partial",
+    "evidence": "calculated"
+  },
+  "issues": ["fec.unresolved_signed_rows"]
+}

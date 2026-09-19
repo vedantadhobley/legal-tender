@@ -1,0 +1,112 @@
+{
+  "calculation_contract": "fec/efile-report-family",
+  "calculation_version": "1.0.0",
+  "observation_boundary": {
+    "listing_received_through_date": "2026-08-27",
+    "listing_pass_state": "converged",
+    "input_digests": [
+      "15411e7f7c103ec26c84cfead70abc15b43506550472968d87205f8d2fdd870d",
+      "23a9ec0d06c7d91d2e451964b73a22a141c1a2d1669f27875ac6d4acc96e5123",
+      "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+      "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce"
+    ]
+  },
+  "family_id": "fec:efile-report:1997074",
+  "root_file_number": 1997074,
+  "family_state": "complete",
+  "selection_state": "selected",
+  "effective_file_number": 2009982,
+  "nodes": [
+    {
+      "file_number": 1997074,
+      "role": "original",
+      "listing_fixture_sha256": "15411e7f7c103ec26c84cfead70abc15b43506550472968d87205f8d2fdd870d",
+      "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+      "listing_committee_id": "C00392928",
+      "cover_committee_id": "C00392928",
+      "base_form_type": "F3X",
+      "listing_form_type": "F3XN",
+      "cover_form_type": "F3XN",
+      "filing_disposition": "new",
+      "listing_coverage_start_date": "2026-05-14",
+      "listing_coverage_end_date": "2026-06-30",
+      "cover_coverage_start_date": "2026-05-14",
+      "cover_coverage_end_date": "2026-06-30",
+      "listing_amendment_number": 0,
+      "listing_amends_file": null,
+      "listing_amended_by": 2009982,
+      "listing_most_recent": false,
+      "listing_most_recent_filing": 2009982,
+      "header_format_version": "8.5",
+      "header_original_report_id": null,
+      "header_amendment_number": 0,
+      "document_state": "accepted"
+    },
+    {
+      "file_number": 2009982,
+      "role": "amendment",
+      "listing_fixture_sha256": "23a9ec0d06c7d91d2e451964b73a22a141c1a2d1669f27875ac6d4acc96e5123",
+      "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+      "listing_committee_id": "C00392928",
+      "cover_committee_id": "C00392928",
+      "base_form_type": "F3X",
+      "listing_form_type": "F3XA",
+      "cover_form_type": "F3XA",
+      "filing_disposition": "amendment",
+      "listing_coverage_start_date": "2026-05-14",
+      "listing_coverage_end_date": "2026-06-30",
+      "cover_coverage_start_date": "2026-05-14",
+      "cover_coverage_end_date": "2026-06-30",
+      "listing_amendment_number": 1,
+      "listing_amends_file": 1997074,
+      "listing_amended_by": null,
+      "listing_most_recent": true,
+      "listing_most_recent_filing": 2009982,
+      "header_format_version": "8.5",
+      "header_original_report_id": "FEC-1997074",
+      "header_amendment_number": 1,
+      "document_state": "accepted"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "immediate_predecessor",
+      "from_file_number": 1997074,
+      "to_file_number": 2009982,
+      "evidence": ["listing.1997074.amended_by", "listing.2009982.amends_file"]
+    },
+    {
+      "type": "root_reference",
+      "from_file_number": 1997074,
+      "to_file_number": 2009982,
+      "evidence": ["document.2009982.HDR.original_report_id"]
+    },
+    {
+      "type": "publisher_current_projection",
+      "from_file_number": 1997074,
+      "to_file_number": 2009982,
+      "evidence": [
+        "listing.1997074.most_recent_filing",
+        "listing.2009982.most_recent",
+        "listing.2009982.most_recent_filing"
+      ]
+    }
+  ],
+  "checks": [
+    {"id": "observation_closed", "state": "pass", "detail": "The received-through listing interval converged through 2026-08-27."},
+    {"id": "document_complete", "state": "pass", "detail": "Both referenced file numbers have accepted exact-byte documents."},
+    {"id": "unique_root", "state": "pass", "detail": "File 1997074 is the only node without a predecessor."},
+    {"id": "unique_leaf", "state": "pass", "detail": "File 2009982 is the only node without a successor."},
+    {"id": "amendment_sequence", "state": "pass", "detail": "Listing and HDR amendment numbers are continuous from 0 through 1."},
+    {"id": "report_compatibility", "state": "pass", "detail": "Committee, base form, and coverage interval agree across both filings."},
+    {"id": "publisher_projection", "state": "pass", "detail": "The listing current-filing assertions agree on file 2009982."}
+  ],
+  "issues": [
+    {
+      "code": "asymmetric_amendment_chain_projection",
+      "severity": "observe",
+      "detail": "The original listing exposes [1997074] while the amendment exposes [1997074, 2009982]; explicit predecessor and current-filing assertions still corroborate one family.",
+      "file_numbers": [1997074, 2009982]
+    }
+  ]
+}

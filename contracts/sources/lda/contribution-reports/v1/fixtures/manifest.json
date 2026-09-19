@@ -1,0 +1,89 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "lda/contribution-reports@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "The public API response was parsed as JSON and reserialized with sorted object keys and two-space indentation. Values and array order are unchanged; HTTP headers and original whitespace are not part of this fixture.",
+  "fixtures": [
+    {
+      "path": "organization-no-contributions.json",
+      "source_url": "https://lda.gov/api/v1/contributions/b0510c89-2cfb-441b-8fe7-0b1c9cc1347c/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "1adb3ca7a177892240f86d83c4398352a688bbad0cd5d741dd1433ec5ad42116",
+      "scenarios": [
+        "organization filer",
+        "null lobbyist",
+        "explicit no-contributions state"
+      ]
+    },
+    {
+      "path": "feca.json",
+      "source_url": "https://lda.gov/api/v1/contributions/7e49564c-a88e-4947-bc51-b243435491ec/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "ad017067be22246edb0c050bb68df5737ffc0049cd13f17b8332242533933709",
+      "scenarios": [
+        "lobbyist filer",
+        "FECA item",
+        "reported item date and decimal amount"
+      ]
+    },
+    {
+      "path": "honorary-expense.json",
+      "source_url": "https://lda.gov/api/v1/contributions/fbd99564-ca4b-47ca-95d8-4d941a9c90a4/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "a1e9c96850433b716110355d76dba0c60a06ba65b2fe5d4718394a69beaf9f3a",
+      "scenarios": [
+        "honorary-expense item",
+        "multiple contribution-item types"
+      ]
+    },
+    {
+      "path": "meeting-expense.json",
+      "source_url": "https://lda.gov/api/v1/contributions/285616b7-ce63-49f4-9957-40429ecce19b/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "a06908f72e46e3335b367bbff3066397f9e77d36ecc9360f2cb29ebeb2093f9a",
+      "scenarios": [
+        "meeting-expense item"
+      ]
+    },
+    {
+      "path": "presidential-library-expense.json",
+      "source_url": "https://lda.gov/api/v1/contributions/232ecd2c-3f5e-4917-9622-8a65d8087ddb/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "4e2d7dfb4c6c578711df1260f592b7d55cf2fa522d7e10247119a1a6d35dfb33",
+      "scenarios": [
+        "presidential-library-expense item"
+      ]
+    },
+    {
+      "path": "inaugural-committee.json",
+      "source_url": "https://lda.gov/api/v1/contributions/ef5bb479-667c-4494-a310-a5eff2cfe1f0/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "ffe264be952c482a690ca10c12556a51a02d1b4f09dd64cfdca35676c9afdf68",
+      "scenarios": [
+        "presidential-inaugural-committee item"
+      ]
+    },
+    {
+      "path": "ld203-amendment-family-original.json",
+      "source_url": "https://lda.gov/api/v1/contributions/78ed0d57-66eb-40bd-b596-f958d22dc52d/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "a31e8699e84b2cbfe3fe6fdd4668694d3e1af38995e4db86c48faf415da00545",
+      "scenarios": [
+        "LD-203 original in amendment family",
+        "API MM filing type",
+        "printable form has no amendment-status control"
+      ]
+    },
+    {
+      "path": "ld203-amendment-family-amendment.json",
+      "source_url": "https://lda.gov/api/v1/contributions/b3221ac3-0285-413d-bc85-4045984228cb/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "80b237e11614f75931e08b24cc2af7139d0175080844b92e740e4ccf4282cddd",
+      "scenarios": [
+        "LD-203 amendment in filing family",
+        "API MA filing type",
+        "printable form has no amendment-status control"
+      ]
+    }
+  ]
+}

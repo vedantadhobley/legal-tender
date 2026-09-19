@@ -1,0 +1,76 @@
+{
+  "$schema": "field-map.schema.json",
+  "mapping_id": "fec/schedule-a-raw-processed-fields",
+  "mapping_version": "1.0.0",
+  "raw_contract": "fec/efile-schedule-a@1.0.0",
+  "processed_contracts": ["fec/schedule-a-api@1.0.0", "fec/schedule-a@1.0.0"],
+  "comparators": [
+    {
+      "id": "source_text",
+      "rule": "Empty raw text and processed null or empty text are equal_absent. Equal text is equal_exact. Unicode case folding plus removal of leading and trailing ASCII space only is equal_representation. Raw absence with processed text is processed_enriched; raw text with processed absence is processed_omitted; every other pair is different. Source values remain unchanged."
+    },
+    {
+      "id": "source_date",
+      "rule": "A valid raw YYYYMMDD date and processed YYYY-MM-DD date are equal_representation when they name the same calendar day. Absence and invalid values use the source_text state rules without case folding."
+    },
+    {
+      "id": "source_decimal",
+      "rule": "Parse both non-empty values as arbitrary-precision decimal. Numerically equal values are equal_exact only when their source lexical forms agree and otherwise equal_representation. Invalid or unequal values are different; binary floating point is forbidden."
+    },
+    {
+      "id": "schedule_line",
+      "rule": "Concatenate processed schedule_type and line_number without punctuation and compare with raw form_type. Equality is exact; absence or disagreement is not repaired from filing_form."
+    },
+    {
+      "id": "unmapped",
+      "rule": "No processed API or relation field has accepted equivalent semantics. Preserve the raw field and exclude it from corroboration counts rather than treating absence as equality."
+    }
+  ],
+  "fields": [
+    {"raw_sequence": 1, "raw_field": "form_type", "processed_fields": ["schedule_type", "line_number"], "processed_relation_fields": ["schedule_type", "line_num"], "comparator": "schedule_line", "applicability": "always"},
+    {"raw_sequence": 2, "raw_field": "filer_committee_id_number", "processed_fields": ["committee_id"], "processed_relation_fields": ["cmte_id"], "comparator": "source_text", "applicability": "always; required identity signal"},
+    {"raw_sequence": 3, "raw_field": "transaction_id", "processed_fields": ["transaction_id"], "processed_relation_fields": ["tran_id"], "comparator": "source_text", "applicability": "always; required identity signal"},
+    {"raw_sequence": 4, "raw_field": "back_reference_transaction_id_number", "processed_fields": ["back_reference_transaction_id"], "processed_relation_fields": ["back_ref_tran_id"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 5, "raw_field": "back_reference_schedule_name", "processed_fields": ["back_reference_schedule_name"], "processed_relation_fields": ["back_ref_sched_nm"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 6, "raw_field": "entity_type", "processed_fields": ["entity_type"], "processed_relation_fields": ["entity_tp"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 7, "raw_field": "contributor_organization_name", "processed_fields": ["contributor_name"], "processed_relation_fields": ["contbr_nm"], "comparator": "source_text", "applicability": "only when raw entity_type is not IND or CAN"},
+    {"raw_sequence": 8, "raw_field": "contributor_last_name", "processed_fields": ["contributor_last_name"], "processed_relation_fields": ["contbr_nm_last"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 9, "raw_field": "contributor_first_name", "processed_fields": ["contributor_first_name"], "processed_relation_fields": ["contbr_nm_first"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 10, "raw_field": "contributor_middle_name", "processed_fields": ["contributor_middle_name"], "processed_relation_fields": ["contbr_m_nm"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 11, "raw_field": "contributor_prefix", "processed_fields": ["contributor_prefix"], "processed_relation_fields": ["contbr_prefix"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 12, "raw_field": "contributor_suffix", "processed_fields": ["contributor_suffix"], "processed_relation_fields": ["contbr_suffix"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 13, "raw_field": "contributor_street_1", "processed_fields": ["contributor_street_1"], "processed_relation_fields": ["contbr_st1"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 14, "raw_field": "contributor_street_2", "processed_fields": ["contributor_street_2"], "processed_relation_fields": ["contbr_st2"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 15, "raw_field": "contributor_city", "processed_fields": ["contributor_city"], "processed_relation_fields": ["contbr_city"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 16, "raw_field": "contributor_state", "processed_fields": ["contributor_state"], "processed_relation_fields": ["contbr_st"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 17, "raw_field": "contributor_zip", "processed_fields": ["contributor_zip"], "processed_relation_fields": ["contbr_zip"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 18, "raw_field": "election_code", "processed_fields": ["election_type"], "processed_relation_fields": ["election_tp"], "comparator": "source_text", "applicability": "always; processed coding can enrich an empty raw value"},
+    {"raw_sequence": 19, "raw_field": "election_other_description", "processed_fields": [], "processed_relation_fields": [], "comparator": "unmapped", "applicability": "no accepted processed equivalent"},
+    {"raw_sequence": 20, "raw_field": "contribution_date", "processed_fields": ["contribution_receipt_date"], "processed_relation_fields": ["contb_receipt_dt"], "comparator": "source_date", "applicability": "always"},
+    {"raw_sequence": 21, "raw_field": "contribution_amount", "processed_fields": ["contribution_receipt_amount"], "processed_relation_fields": ["contb_receipt_amt"], "comparator": "source_decimal", "applicability": "always"},
+    {"raw_sequence": 22, "raw_field": "contribution_aggregate", "processed_fields": ["contributor_aggregate_ytd"], "processed_relation_fields": ["contb_aggregate_ytd"], "comparator": "source_decimal", "applicability": "always; accumulator only"},
+    {"raw_sequence": 23, "raw_field": "contribution_purpose_description", "processed_fields": ["receipt_type_full"], "processed_relation_fields": ["receipt_desc"], "comparator": "source_text", "applicability": "always; processed receipt_type and descriptions remain separate enrichment fields"},
+    {"raw_sequence": 24, "raw_field": "contributor_employer", "processed_fields": ["contributor_employer"], "processed_relation_fields": ["contbr_employer"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 25, "raw_field": "contributor_occupation", "processed_fields": ["contributor_occupation"], "processed_relation_fields": ["contbr_occupation"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 26, "raw_field": "donor_committee_fec_id", "processed_fields": ["contributor_id"], "processed_relation_fields": ["contbr_id"], "comparator": "source_text", "applicability": "always; a processed value can be publisher-added conduit coding"},
+    {"raw_sequence": 27, "raw_field": "donor_committee_name", "processed_fields": ["donor_committee_name"], "processed_relation_fields": ["donor_cmte_nm"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 28, "raw_field": "donor_candidate_fec_id", "processed_fields": ["candidate_id"], "processed_relation_fields": ["cand_id"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 29, "raw_field": "donor_candidate_last_name", "processed_fields": ["candidate_last_name"], "processed_relation_fields": ["cand_nm_last"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 30, "raw_field": "donor_candidate_first_name", "processed_fields": ["candidate_first_name"], "processed_relation_fields": ["cand_nm_first"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 31, "raw_field": "donor_candidate_middle_name", "processed_fields": ["candidate_middle_name"], "processed_relation_fields": ["cand_m_nm"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 32, "raw_field": "donor_candidate_prefix", "processed_fields": ["candidate_prefix"], "processed_relation_fields": ["cand_prefix"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 33, "raw_field": "donor_candidate_suffix", "processed_fields": ["candidate_suffix"], "processed_relation_fields": ["cand_suffix"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 34, "raw_field": "donor_candidate_office", "processed_fields": ["candidate_office"], "processed_relation_fields": ["cand_office"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 35, "raw_field": "donor_candidate_state", "processed_fields": ["candidate_office_state"], "processed_relation_fields": ["cand_office_st"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 36, "raw_field": "donor_candidate_district", "processed_fields": ["candidate_office_district"], "processed_relation_fields": ["cand_office_district"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 37, "raw_field": "conduit_name", "processed_fields": ["conduit_committee_name"], "processed_relation_fields": ["conduit_cmte_nm"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 38, "raw_field": "conduit_street_1", "processed_fields": ["conduit_committee_street1"], "processed_relation_fields": ["conduit_cmte_st1"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 39, "raw_field": "conduit_street_2", "processed_fields": ["conduit_committee_street2"], "processed_relation_fields": ["conduit_cmte_st2"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 40, "raw_field": "conduit_city", "processed_fields": ["conduit_committee_city"], "processed_relation_fields": ["conduit_cmte_city"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 41, "raw_field": "conduit_state", "processed_fields": ["conduit_committee_state"], "processed_relation_fields": ["conduit_cmte_st"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 42, "raw_field": "conduit_zip", "processed_fields": ["conduit_committee_zip"], "processed_relation_fields": ["conduit_cmte_zip"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 43, "raw_field": "memo_code", "processed_fields": ["memo_code"], "processed_relation_fields": ["memo_cd"], "comparator": "source_text", "applicability": "always; memoed_subtotal remains a separate processed helper"},
+    {"raw_sequence": 44, "raw_field": "memo_text_description", "processed_fields": ["memo_text"], "processed_relation_fields": ["memo_text"], "comparator": "source_text", "applicability": "always"},
+    {"raw_sequence": 45, "raw_field": "account_system_code", "processed_fields": [], "processed_relation_fields": [], "comparator": "unmapped", "applicability": "no accepted processed equivalent"}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/candidate-master@1.0.0",
+  "representation": "exact_bytes",
+  "transformation": "Each file is one exact physical line copied from the 2024 cn.txt member, including its terminating LF byte. It is not re-encoded or delimited again.",
+  "fixtures": [
+    {"path": "current-candidate.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip", "retrieved_on": "2026-06-21", "sha256": "285cc1c955ff6aa42b84117817e9907b862f447b6c0c0f51005959a7ce66dc07", "scenarios": ["exact pipe-delimited candidate row", "15 fields", "terminating LF"]},
+    {"path": "partial-address.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip", "retrieved_on": "2026-06-21", "sha256": "60baa580f403a219139b4e296a51b62ea7b7ce473f5d6943369d8d662fd50ae9", "scenarios": ["exact empty physical fields", "15 fields", "terminating LF"]}
+  ]
+}

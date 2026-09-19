@@ -1,0 +1,308 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "lda/contribution-reports",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "lda",
+    "name": "Lobbying Disclosure Act public disclosure system",
+    "base_url": "https://lda.gov/"
+  },
+  "dataset": {
+    "id": "contribution-reports",
+    "name": "LD-203 contribution reports",
+    "semantic_domain": "federal_lobbying_contribution_disclosure",
+    "description": "Semiannual registrant and lobbyist reports with explicit zero-report state, PAC names, and contribution or expense items."
+  },
+  "authority": [
+    {
+      "kind": "api",
+      "url": "https://lda.gov/api/v1/contributions/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "openapi",
+      "url": "https://lda.gov/api/openapi/v1/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6c5f13c470bf1b4b09071db32d10df72372210fd2c2be921214e3c94f47dde8a"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://lda.gov/api/redoc/v1/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "terms",
+      "url": "https://lda.gov/api/tos/",
+      "retrieved_on": "2026-08-27"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "api_token",
+      "environment_variable": "LOBBYING_API_KEY",
+      "header": "Authorization",
+      "scheme": "Token"
+    },
+    "endpoints": [
+      {
+        "name": "list",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/contributions/",
+        "response_root": "results[]"
+      },
+      {
+        "name": "detail",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/contributions/{filing_uuid}/",
+        "response_root": "$"
+      }
+    ],
+    "pagination": "Offset pages reached through next URLs; accepted page size is 25; a query parameter is required beyond page one; partitions require a convergence pass.",
+    "rate_limit_per_minute": 120,
+    "partitions": [
+      {
+        "name": "filing_year",
+        "source": "filing_year query parameter",
+        "purpose": "Complete and reconciliation backfills."
+      },
+      {
+        "name": "posted_date",
+        "source": "dt_posted selected with strict before/after filters and filtered locally",
+        "purpose": "Overlapping incremental discovery only."
+      }
+    ],
+    "retry_policy": "Bound retries, honor Retry-After on 429, checkpoint complete pages, and never publish a failed page as an empty result."
+  },
+  "physical_schema": {
+    "media_type": "application/json",
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Preserve absent, explicit null, empty string, empty array, and invalid typed values as distinct states.",
+    "schema_fingerprint": "Sorted observed JSON paths with JSON kinds and array cardinality, plus this contract version and reviewed OpenAPI overrides."
+  },
+  "identity": {
+    "publisher_record_key": "filing_uuid",
+    "occurrence_locator": "snapshot digest + normalized request + page number + one-based results ordinal",
+    "record_version": "filing_uuid + SHA-256 of canonical record JSON",
+    "duplicate_policy": "Preserve every occurrence; conflicting content for one UUID creates separate versions and blocks the affected projection.",
+    "children": [
+      {
+        "object": "pac_name",
+        "locator": "filing_uuid + /pacs/{zero-based-index}",
+        "content_digest": true
+      },
+      {
+        "object": "contribution_item",
+        "locator": "filing_uuid + /contribution_items/{zero-based-index}",
+        "content_digest": true
+      }
+    ]
+  },
+  "semantics": {
+    "time_fields": [
+      {
+        "path": "filing_year + filing_period",
+        "meaning": "Publisher semiannual reporting interval."
+      },
+      {
+        "path": "dt_posted",
+        "meaning": "Publisher posting timestamp with source UTC offset."
+      },
+      {
+        "path": "contribution_items[].date",
+        "meaning": "Exact reported date for the disclosed contribution or expense item."
+      },
+      {
+        "path": "registrant.dt_updated",
+        "meaning": "Current nested registrant master update timestamp, not the item date."
+      }
+    ],
+    "money_fields": [
+      {
+        "path": "contribution_items[].amount",
+        "meaning": "Losslessly parsed amount reported for one LD-203 item.",
+        "unit": "USD reported decimal string"
+      }
+    ],
+    "code_fields": [
+      {
+        "path": "filing_type",
+        "meaning": "Original or amendment code for the semiannual period."
+      },
+      {
+        "path": "filer_type",
+        "meaning": "Organization or lobbyist conditional record shape."
+      },
+      {
+        "path": "contribution_items[].contribution_type",
+        "meaning": "FECA, honorary expense, meeting expense, presidential library expense, or inaugural committee code."
+      }
+    ],
+    "rules": [
+      "Treat no_contributions as tri-state; source null is not explicit false.",
+      "Organization filers have a null lobbyist; lobbyist filers retain both lobbyist and associated registrant.",
+      "Preserve historical employer and filer text from printable documents separately from nested current registrant and lobbyist masters.",
+      "PAC names and disclosed person or organization names remain unresolved source text.",
+      "Preserve contribution-item array and printable form order when assigning occurrence locators; do not sort by date first.",
+      "Retain API filing_type as amendment evidence because the sampled LD-203 printable amendment did not render amendment status.",
+      "Only feca items are FEC financial-reconciliation candidates.",
+      "A confirmed FEC match links disclosures of one activity and never duplicates the amount."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "Original mid-year/year-end reports and amendments have distinct filing UUIDs; no parent filing UUID is published.",
+    "effective_projection": "Blocked while draft. Preserve every version and validate inferred filer-period chains against printable documents."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "filing_uuid",
+        "severity": "block",
+        "rule": "Every normalized report has a valid non-null UUID."
+      },
+      {
+        "id": "filer_shape",
+        "severity": "block",
+        "rule": "Registrant and lobbyist presence matches an accepted filer_type conditional shape."
+      },
+      {
+        "id": "zero_report",
+        "severity": "block",
+        "rule": "Explicit no-contributions state and item-array cardinality remain consistent or publish an issue."
+      },
+      {
+        "id": "item_conservation",
+        "severity": "block",
+        "rule": "Every contribution item retains its JSON locator, raw values, and content digest."
+      },
+      {
+        "id": "exact_amount",
+        "severity": "block",
+        "rule": "Each non-null amount parses exactly without binary floating point."
+      },
+      {
+        "id": "document_comparison",
+        "severity": "partial",
+        "rule": "Missing documents and API/document differences publish as explicit unobserved, representation-only, normalized-difference, or conflict states."
+      },
+      {
+        "id": "unknown_item_type",
+        "severity": "partial",
+        "rule": "Unknown contribution types remain preserved but do not enter typed reconciliation."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/organization-no-contributions.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/contributions/b0510c89-2cfb-441b-8fe7-0b1c9cc1347c/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "1adb3ca7a177892240f86d83c4398352a688bbad0cd5d741dd1433ec5ad42116",
+      "scenarios": [
+        "organization filer",
+        "null lobbyist",
+        "explicit no-contributions state"
+      ]
+    },
+    {
+      "path": "fixtures/feca.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/contributions/7e49564c-a88e-4947-bc51-b243435491ec/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "ad017067be22246edb0c050bb68df5737ffc0049cd13f17b8332242533933709",
+      "scenarios": [
+        "lobbyist filer",
+        "FECA item",
+        "reported item date and decimal amount"
+      ]
+    },
+    {
+      "path": "fixtures/honorary-expense.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/contributions/fbd99564-ca4b-47ca-95d8-4d941a9c90a4/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "a1e9c96850433b716110355d76dba0c60a06ba65b2fe5d4718394a69beaf9f3a",
+      "scenarios": [
+        "honorary-expense item",
+        "multiple contribution-item types"
+      ]
+    },
+    {
+      "path": "fixtures/meeting-expense.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/contributions/285616b7-ce63-49f4-9957-40429ecce19b/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "a06908f72e46e3335b367bbff3066397f9e77d36ecc9360f2cb29ebeb2093f9a",
+      "scenarios": [
+        "meeting-expense item"
+      ]
+    },
+    {
+      "path": "fixtures/presidential-library-expense.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/contributions/232ecd2c-3f5e-4917-9622-8a65d8087ddb/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "4e2d7dfb4c6c578711df1260f592b7d55cf2fa522d7e10247119a1a6d35dfb33",
+      "scenarios": [
+        "presidential-library-expense item"
+      ]
+    },
+    {
+      "path": "fixtures/inaugural-committee.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/contributions/ef5bb479-667c-4494-a310-a5eff2cfe1f0/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "ffe264be952c482a690ca10c12556a51a02d1b4f09dd64cfdca35676c9afdf68",
+      "scenarios": [
+        "presidential-inaugural-committee item"
+      ]
+    },
+    {
+      "path": "fixtures/ld203-amendment-family-original.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/contributions/78ed0d57-66eb-40bd-b596-f958d22dc52d/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "a31e8699e84b2cbfe3fe6fdd4668694d3e1af38995e4db86c48faf415da00545",
+      "scenarios": [
+        "LD-203 original in amendment family",
+        "API MM filing type",
+        "printable form has no amendment-status control"
+      ]
+    },
+    {
+      "path": "fixtures/ld203-amendment-family-amendment.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/contributions/b3221ac3-0285-413d-bc85-4045984228cb/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "80b237e11614f75931e08b24cc2af7139d0175080844b92e740e4ccf4282cddd",
+      "scenarios": [
+        "LD-203 amendment in filing family",
+        "API MA filing type",
+        "printable form has no amendment-status control"
+      ]
+    }
+  ],
+  "use": {
+    "retention": "Preserve complete API responses, record occurrences, source documents selected by policy, and every accepted version indefinitely.",
+    "citation_date_required": true,
+    "disclaimer": "Senate Office of Public Records cannot vouch for the data or analyses derived from these data after the data have been retrieved from LDA.gov."
+  },
+  "outputs": {
+    "fact_types": [
+      "lda.contribution_report.v1",
+      "lda.contribution_item.v1",
+      "lda.pac_name_assertion.v1"
+    ],
+    "change_dimensions": [
+      "filing_uuid",
+      "filing_year",
+      "filing_period",
+      "filer_type",
+      "registrant_id",
+      "lobbyist_id",
+      "contribution_date"
+    ]
+  }
+}

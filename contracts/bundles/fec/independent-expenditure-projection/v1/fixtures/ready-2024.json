@@ -1,0 +1,51 @@
+{
+  "$schema": "manifest.schema.json",
+  "schema_version": "legal-tender.fec.independent-expenditure-projection-bundle.v1",
+  "bundle_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "bundle_type": "fec/independent-expenditure-projection",
+  "bundle_version": "1.0.0",
+  "publisher_version": "legal-tender.fec.independent-expenditure-projection-bundle-publisher.v1",
+  "cycle": "2024",
+  "source_release_id": "fec-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "input_calculation": {
+    "role": "effective_independent_expenditures",
+    "calculation": "fec/effective-independent-expenditures",
+    "calculation_version": "1.0.0",
+    "calculation_set_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "manifest_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "schedule_e_fact_set_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "schedule_e_manifest_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "input_fact_sets": [
+    {
+      "role": "candidate_master",
+      "dataset": "candidate-master",
+      "fact_type": "fec.candidate_assertion.v1",
+      "fact_set_id": "1111111111111111111111111111111111111111111111111111111111111111",
+      "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    {
+      "role": "committee_master",
+      "dataset": "committee-master",
+      "fact_type": "fec.committee_assertion.v1",
+      "fact_set_id": "3333333333333333333333333333333333333333333333333333333333333333",
+      "manifest_sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+    }
+  ],
+  "run_id": "fixture-ready-2024",
+  "state": "ready",
+  "published_at": "2026-08-31T20:00:00Z",
+  "counts": {
+    "calculation_results": 5495,
+    "candidate_facts": 9798,
+    "committee_facts": 20938
+  },
+  "checks": [
+    {"id": "exact_role_set", "passed": true, "severity": "block", "detail": "exact roles selected"},
+    {"id": "cycle_coherence", "passed": true, "severity": "block", "detail": "one cycle"},
+    {"id": "source_release_coherence", "passed": true, "severity": "block", "detail": "one release"},
+    {"id": "manifest_immutability", "passed": true, "severity": "block", "detail": "immutable manifests verified"},
+    {"id": "backing_integrity", "passed": true, "severity": "block", "detail": "backing artifacts verified"},
+    {"id": "projection_readiness", "passed": true, "severity": "block", "detail": "projection ready"}
+  ]
+}

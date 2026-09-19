@@ -1,0 +1,347 @@
+{
+  "contract": "wikimedia/organization-candidates@1.0.0",
+  "build_sha256": "1cb8fdb56840717d051d3e8104a94808332dfe9850e7446b3458feeb06decbb2",
+  "user_agent": "LegalTender/organization-evaluation (research; contact vedanta@local)",
+  "queries_sha256": "9150ee14df2ba7e6da512b3d728d0086c1bad346effe09f56d19985da11cba42",
+  "entries": [
+    {
+      "query_index": 0,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=1199+SEIU+UNITED+HEALTHCARE+WORKERS+EAST\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:12.457473722Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1170",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:12 GMT"
+        },
+        "bytes": 1170,
+        "sha256": "71051330142105644ac50b10e156a2586104396fe1aa7f46fb3e035cbee69df6",
+        "body": "71051330142105644ac50b10e156a2586104396fe1aa7f46fb3e035cbee69df6.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q1173530%7CQ12886512%7CQ16153248%7CQ3550308%7CQ4547697\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T08:13:13.935015462Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:14 GMT"
+        },
+        "bytes": 118509,
+        "sha256": "170c8d6855097ff0cf4f7fb613f0367151c58f18afedb465d8e8d1b53b45f209",
+        "body": "170c8d6855097ff0cf4f7fb613f0367151c58f18afedb465d8e8d1b53b45f209.body"
+      }
+    },
+    {
+      "query_index": 1,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=11TH+CONGRESSIONAL+DISTRICT+REPUBLICAN+PARTY\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:15.130095526Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1185",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:15 GMT"
+        },
+        "bytes": 1185,
+        "sha256": "a90286c798f41b08823267663ef2914acb04aad76bbb7c6f442ea7a2d7901091",
+        "body": "a90286c798f41b08823267663ef2914acb04aad76bbb7c6f442ea7a2d7901091.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q13858961%7CQ5461097%7CQ5547254%7CQ6837401%7CQ7934028\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T08:13:16.477173041Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:16 GMT"
+        },
+        "bytes": 37389,
+        "sha256": "5e71d89763cbfbcf8338e6fe4cd9040ef8cf54e27ad0254ca57b994a91a903ed",
+        "body": "5e71d89763cbfbcf8338e6fe4cd9040ef8cf54e27ad0254ca57b994a91a903ed.body"
+      }
+    },
+    {
+      "query_index": 2,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=1ST+SOURCE+CORPORATION\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:17.574085021Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1132",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:17 GMT"
+        },
+        "bytes": 1132,
+        "sha256": "28492ff3107d04d367174aefc7065293d69b4328dc5361d349f53d81b775f406",
+        "body": "28492ff3107d04d367174aefc7065293d69b4328dc5361d349f53d81b775f406.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q113884461%7CQ209078%7CQ2990416%7CQ3212934%7CQ4596612\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T08:13:18.852293797Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:18 GMT"
+        },
+        "bytes": 87046,
+        "sha256": "a107a21854241e9e5f0d54df09a22aafdea4cfcabb27c969c6d033a07802d109",
+        "body": "a107a21854241e9e5f0d54df09a22aafdea4cfcabb27c969c6d033a07802d109.body"
+      }
+    },
+    {
+      "query_index": 3,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2018+SENATORS+CLASSIC+COMMITTEE\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:20.010578794Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:20 GMT"
+        },
+        "bytes": 1056,
+        "sha256": "75a4bd7b99c35e890b403d65b32598d9e10537b9176853475bbe7f8ba7ef7ff7",
+        "body": "75a4bd7b99c35e890b403d65b32598d9e10537b9176853475bbe7f8ba7ef7ff7.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q1737657%7CQ276524%7CQ28839536%7CQ66096%7CQ71769\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T08:13:21.403738191Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:21 GMT"
+        },
+        "bytes": 325449,
+        "sha256": "92d3856e5e15580048255db4bdc3682a56e77fc39f980113083a5f79edd6d627",
+        "body": "92d3856e5e15580048255db4bdc3682a56e77fc39f980113083a5f79edd6d627.body"
+      }
+    },
+    {
+      "query_index": 4,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2019+SENATORS+CLASSIC+COMMITTEE\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:22.657146657Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1061",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:22 GMT"
+        },
+        "bytes": 1061,
+        "sha256": "960b7ebce9f3e6ab6ebc0bf69ecaf60baf5e8f60e44c30001fe5c84ee6cff47e",
+        "body": "960b7ebce9f3e6ab6ebc0bf69ecaf60baf5e8f60e44c30001fe5c84ee6cff47e.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q1494930%7CQ28839536%7CQ3543654%7CQ380900%7CQ66096\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T08:13:24.207014398Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 08:13:24 GMT"
+        },
+        "bytes": 435151,
+        "sha256": "1488cb69bdbdbff17f4540429f1c9155d78ae3254974d7b4da27d75cee9d5a43",
+        "body": "1488cb69bdbdbff17f4540429f1c9155d78ae3254974d7b4da27d75cee9d5a43.body"
+      }
+    },
+    {
+      "query_index": 5,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2022+FOUNDERS+COMMITTEE\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.358509835Z",
+        "status": 429,
+        "headers": {
+          "Content-Length": "278",
+          "Content-Type": "text/plain",
+          "Date": "Tue, 15 Sep 2026 08:13:24 GMT",
+          "Retry-After": "35"
+        },
+        "bytes": 278,
+        "sha256": "20b060be55f9d6575d8345fdb4b30127e40adf98e6a3d955460ffb9ac5c66f4d",
+        "body": "20b060be55f9d6575d8345fdb4b30127e40adf98e6a3d955460ffb9ac5c66f4d.body",
+        "failure": "http_status_not_ok"
+      }
+    },
+    {
+      "query_index": 6,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2023+SENATORS+CLASSIC+COMMITTEE\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.401023355Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 7,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2024+REPUBLICAN+SENATE+VICTORY\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.412834806Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 8,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2024+RNC+VICTORY\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.419109666Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 9,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2024+RNC+VICTORY+%28JFC%29\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.424550616Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 10,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2024+SENATORS+CLASSIC+COMMITTEE\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.430909686Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 11,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2024+THUNE+REPUBLICAN+SENATE+VICTORY\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.436277638Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 12,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2024+VOTER+MOBILIZATION+FUND\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.442612302Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 13,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=2A+DEFENSE+FUND\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.449053566Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 14,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=314+ACTION+FUND\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.454610014Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 15,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=314+ACTION+IMPACT+SLATE\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.46052689Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 16,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=314+ACTION+VICTORY+FUND\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.466097905Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 17,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=340B+HEALTH\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.47191832Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 18,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=3M+COMPANY\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.477514493Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    },
+    {
+      "query_index": 19,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=7TH+INNING+STRETCH\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T08:13:25.483331561Z",
+        "status": 0,
+        "headers": {},
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "body": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.body",
+        "failure": "capture_stopped_or_byte_budget"
+      }
+    }
+  ]
+}

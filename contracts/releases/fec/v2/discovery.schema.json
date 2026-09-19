@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/releases/fec/v2/discovery.schema.json",
+  "title": "Legal Tender FEC metadata discovery",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "inventory_version", "started_at", "completed_at", "observations"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.discovery.v1"},
+    "inventory_version": {"const": "legal-tender.fec.initial-release-inventory.v2"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "observations": {
+      "type": "array",
+      "minItems": 22,
+      "maxItems": 22,
+      "items": {"$ref": "#/$defs/observation"}
+    }
+  },
+  "$defs": {
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "request_method", "request_url", "observed_at", "status"],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "request_method": {"const": "HEAD"},
+        "request_url": {"type": "string", "format": "uri"},
+        "final_url": {"type": "string", "format": "uri"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "status": {"enum": ["available", "unavailable"]},
+        "http_status": {"type": "integer", "minimum": 100, "maximum": 599},
+        "version_identity": {"type": "string", "minLength": 1},
+        "version_basis": {"enum": ["version_id", "etag", "digest", "last_modified_content_length"]},
+        "version_id": {"type": "string", "minLength": 1},
+        "etag": {"type": "string", "minLength": 1},
+        "last_modified": {"type": "string", "minLength": 1},
+        "content_length": {"type": "integer", "minimum": 0},
+        "digest": {"type": "string", "minLength": 1},
+        "accept_ranges": {"type": "string", "minLength": 1},
+        "problem_code": {
+          "enum": ["request_failed", "unexpected_http_status", "version_identity_missing"]
+        },
+        "problem": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "available"}}},
+          "then": {"required": ["final_url", "http_status", "version_identity", "version_basis"]}
+        },
+        {
+          "if": {"properties": {"status": {"const": "unavailable"}}},
+          "then": {"required": ["problem_code", "problem"]}
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/efile-report-family",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "question": "Which preserved electronic filings form one report amendment family at a closed observation boundary, and which complete supported document is effective at that boundary?",
+  "inputs": [
+    {
+      "contract": "fec/efile-listings@1.0.0",
+      "role": "Explicit publisher amendment links, current-filing projections, report identity, and closed received-date discovery evidence.",
+      "required": true,
+      "version_policy": "Pin every listing page digest and the received-through convergence result used by one calculation result."
+    },
+    {
+      "contract": "fec/efile-documents@1.0.0",
+      "role": "Exact filing bytes, HDR root and amendment assertions, cover-form identity, and document validity.",
+      "required": true,
+      "version_policy": "Pin one accepted whole-document digest for every referenced family node. A changed byte stream creates a new input manifest."
+    },
+    {
+      "contract": "fec/efile-format@1.0.0",
+      "role": "Versioned HDR and cover-form parsing selected by the embedded format version.",
+      "required": true,
+      "version_policy": "Pin the exact dispatch and parser contract version; unsupported formats remain preserved but block selection."
+    }
+  ],
+  "identity": {
+    "result_key": "family_id + observation-boundary input-manifest digest + calculation version",
+    "input_manifest": "Ordered listing-page digests, convergence evidence, document digests, and parser-contract versions for every referenced node.",
+    "method_version": "contract_version; a semantic rule change requires a new version and replay.",
+    "result_digest": "SHA-256 of the deterministic UTF-8 JSON result bytes; the digest identifies this immutable calculation output, not a mutable family row."
+  },
+  "method": {
+    "ordered_steps": [
+      "Freeze one closed received-through listing observation, its convergence state, all listing page digests, and all documents referenced by amendment evidence.",
+      "Parse listing amends_file and amended_by as immediate-predecessor assertions. Parse HDR original_report_id only as a family-root assertion; it does not identify an immediate predecessor.",
+      "Build connected components from explicit amendment assertions. Never group by filing date, file-number order, committee and coverage similarity, or amendment_chain alone.",
+      "Choose the unique node with no accepted predecessor as the root and derive family_id as fec:efile-report:<root file number>.",
+      "Retain listing and cover-record committee and coverage assertions independently. Validate that they agree within each node and that committee ID, base form type, and report coverage agree throughout the family. Treat an explicit-link compatibility mismatch as a conflict, not as permission to split the family silently.",
+      "Reject cycles, branches, missing referenced nodes, multiple roots, multiple leaves, contradictory links, and discontinuous amendment numbers.",
+      "Require listing most_recent and most_recent_filing projections to agree with the unique leaf. amendment_chain is corroborating publisher evidence only because observed listings expose it asymmetrically.",
+      "Select the unique leaf as effective only after every blocking check passes. Emit null effective_file_number for every blocked state."
+    ],
+    "decision_states": [
+      {"id": "selected", "publishable": true, "meaning": "The observed family is closed, internally consistent, complete, supported, and has one effective leaf."},
+      {"id": "blocked_incomplete", "publishable": false, "meaning": "Discovery did not converge or a referenced listing or document is absent."},
+      {"id": "blocked_conflict", "publishable": false, "meaning": "Explicit publisher assertions branch, cycle, disagree, or violate report compatibility."},
+      {"id": "blocked_invalid_document", "publishable": false, "meaning": "A referenced document fails exact-byte, HDR, cover, or conservation checks."},
+      {"id": "blocked_unsupported_format", "publishable": false, "meaning": "The evidence is preserved but at least one required document has no accepted format parser."}
+    ],
+    "invariants": [
+      "Every original and amendment remains an immutable source document regardless of which leaf is effective.",
+      "A larger file number or later filed_date is never sufficient amendment evidence.",
+      "A termination filing is a report-family disposition. It does not delete the committee or any other report family.",
+      "One later observation that adds an amendment creates a new result; it never mutates or invalidates a prior reproducible selection.",
+      "Convenience fields such as amendment_chain and most_recent_filing corroborate explicit links but never repair a missing predecessor or document.",
+      "Selection authorizes only downstream projection from the chosen document. It does not determine which money rows count."
+    ]
+  },
+  "output": {
+    "result_schema": "result.schema.json",
+    "grain": "One immutable result per report-family identity, closed source observation, and calculation version.",
+    "fact_types": ["efile_report_family", "efile_amendment_assertion", "effective_efile_selection"],
+    "publication_states": [
+      {"id": "selected", "publishable": true, "meaning": "An effective document can feed record-family projections."},
+      {"id": "blocked_incomplete", "publishable": false, "meaning": "Wait for a closed listing observation and all referenced evidence."},
+      {"id": "blocked_conflict", "publishable": false, "meaning": "Expose the conflict for investigation; publish no current money view."},
+      {"id": "blocked_invalid_document", "publishable": false, "meaning": "Retain the source artifact and issues; publish no normalized current view."},
+      {"id": "blocked_unsupported_format", "publishable": false, "meaning": "Retain bytes until an accepted parser version can replay them."}
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "Any listing, convergence, document, or parser input change creates a new immutable calculation result. A newly observed successor changes the selected leaf only in that new result.",
+    "method_change_policy": "A change to grouping, compatibility, validation, or selection semantics requires a new calculation contract version and parallel replay.",
+    "history_policy": "Retain every source document, assertion, issue, result, and selected leaf indefinitely. Never rewrite historical observation-boundary results to the latest family state."
+  },
+  "quality": {
+    "checks": [
+      {"id": "observation_closed", "severity": "block", "rule": "The received-through listing window completed a converged pass; a partial or changing page set cannot select a leaf."},
+      {"id": "reference_closure", "severity": "block", "rule": "Every file number named by amends_file, amended_by, HDR original_report_id, or the asserted current projection has a captured listing and exact document."},
+      {"id": "document_complete", "severity": "block", "rule": "Every node has one accepted exact-byte document digest and supported HDR parser."},
+      {"id": "unique_root_leaf", "severity": "block", "rule": "The immediate-predecessor graph is acyclic and has exactly one root and one leaf."},
+      {"id": "linear_sequence", "severity": "block", "rule": "No node has more than one predecessor or successor and amendment numbers form one continuous sequence beginning at zero."},
+      {"id": "report_compatibility", "severity": "block", "rule": "Listing and cover committee/coverage assertions agree within each node, and committee ID, base form type, and coverage start/end match throughout an explicitly linked family."},
+      {"id": "publisher_projection", "severity": "block", "rule": "most_recent and most_recent_filing assertions agree with the computed leaf; null predecessor-side amended_by is allowed only at the leaf."},
+      {"id": "chain_projection_shape", "severity": "observe", "rule": "Capture amendment_chain exactly and report asymmetric projections; do not require every listing record to expose the same array."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/selected-first-amendment.json",
+      "representation": "canonical_json",
+      "sha256": "52eae400d6f9592820c8773fdc5f9ec6febc5e23a1c2396e9be0b2932d73d99f",
+      "input_paths": [
+        "../../../../sources/fec/efile-listings/v1/fixtures/original.json",
+        "../../../../sources/fec/efile-listings/v1/fixtures/amendment.json",
+        "../../../../sources/fec/efile-documents/v1/fixtures/1997074.fec",
+        "../../../../sources/fec/efile-documents/v1/fixtures/2009982.fec"
+      ],
+      "scenarios": [
+        "one original and one amendment",
+        "HDR root assertion plus immediate listing predecessor",
+        "asymmetric amendment_chain projection",
+        "complete family selects amendment 2009982"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": ["efile_received_date", "file_number", "listing_version", "document_version", "header_format_version"],
+    "semantic_change_dimensions": ["family_membership", "family_validation_state", "effective_file_number", "filing_disposition"],
+    "downstream_keys": ["family_id", "listing_committee_id", "listing_coverage_start_date", "listing_coverage_end_date", "effective_file_number"],
+    "no_change_policy": "If the complete input manifest and calculation version already have a successful result digest, reuse it and emit no downstream selection change. A source-only observation with the same family semantics may update operational lineage without rebuilding row projections."
+  },
+  "use": {
+    "retention": "Retain every result and its complete input manifest indefinitely so an investigative answer can reproduce which document was effective at a stated observation boundary.",
+    "disclaimer": "Effective means the selected complete electronic filing in a supported, closed amendment family as observed by Legal Tender. It does not establish processed FEC acceptance, paper-filing coverage, or a final monetary total."
+  }
+}

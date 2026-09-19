@@ -1,0 +1,19 @@
+{
+  "schema_version": "legal-tender.fec.resolved-independent-expenditure-policy-fixture.v1",
+  "cycle": "2024",
+  "candidate_resolution_decisions": [
+    {"decision_id": "confirmed", "spender_committee_id": "C00000001", "reported_candidate_id": "H4AA00001", "resolved_candidate_id": "H4AA00001", "support_oppose": "S", "state": "confirmed", "amount_minor_units": "100"},
+    {"decision_id": "resolved", "spender_committee_id": "C00000001", "reported_candidate_id": "H4AA99999", "resolved_candidate_id": "H4AA00001", "support_oppose": "S", "state": "resolved", "amount_minor_units": "-25"},
+    {"decision_id": "unverified", "spender_committee_id": "C00000001", "reported_candidate_id": "H4AA00001", "resolved_candidate_id": "H4AA00001", "support_oppose": "S", "state": "unverified", "amount_minor_units": "0"},
+    {"decision_id": "ambiguous", "spender_committee_id": "C00000001", "reported_candidate_id": "H4AA99998", "resolved_candidate_id": null, "support_oppose": "S", "state": "ambiguous", "amount_minor_units": "40"},
+    {"decision_id": "unresolved", "spender_committee_id": "C00000002", "reported_candidate_id": "H4AA99997", "resolved_candidate_id": null, "support_oppose": "O", "state": "unresolved", "amount_minor_units": "10"}
+  ],
+  "expected": {
+    "counts": {"source_decisions": 5, "projectable_decisions": 3, "unprojectable_decisions": 2, "confirmed": 1, "resolved": 1, "unverified": 1, "ambiguous": 1, "unresolved": 1, "result_groups": 1, "exceptions": 2},
+    "amounts": {"source_minor_units": "125", "projectable_minor_units": "75", "unprojectable_minor_units": "50", "confirmed_minor_units": "100", "resolved_minor_units": "-25", "unverified_minor_units": "0", "ambiguous_minor_units": "40", "unresolved_minor_units": "10"},
+    "results": [
+      {"spender_committee_id": "C00000001", "candidate_id": "H4AA00001", "support_oppose": "S", "signed_amount_minor_units": "75", "expenditure_count": 3, "positive_count": 1, "negative_count": 1, "zero_count": 1, "resolution_counts": {"confirmed": 1, "resolved": 1, "unverified": 1}, "resolution_amounts": {"confirmed_minor_units": "100", "resolved_minor_units": "-25", "unverified_minor_units": "0"}}
+    ],
+    "exception_decision_ids": ["ambiguous", "unresolved"]
+  }
+}

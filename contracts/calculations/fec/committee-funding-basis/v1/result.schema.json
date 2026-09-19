@@ -1,0 +1,266 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "calculation_id",
+    "policy",
+    "individual_policy",
+    "committee_policy",
+    "cycle",
+    "state",
+    "terminal_attribution_eligible",
+    "input",
+    "total",
+    "buckets",
+    "not_covered"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.committee-funding-basis.v1"
+    },
+    "calculation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "policy": {
+      "const": "fec/committee-reported-receipt-inventory@1.0.0"
+    },
+    "individual_policy": {
+      "const": "fec/candidate-itemized-individual-receipts@1.0.0"
+    },
+    "committee_policy": {
+      "const": "fec/receiver-reported-committee-flows@1.0.0"
+    },
+    "cycle": {
+      "type": "string",
+      "pattern": "^[0-9]{4}$"
+    },
+    "state": {
+      "const": "complete_reported_receipt_inventory"
+    },
+    "terminal_attribution_eligible": {
+      "const": false
+    },
+    "input": {
+      "$ref": "#/$defs/input"
+    },
+    "total": {
+      "$ref": "#/$defs/measures"
+    },
+    "buckets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 250000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "measures",
+          "first_source_row_ordinal",
+          "last_source_row_ordinal",
+          "shard_presence_bitmap"
+        ],
+        "properties": {
+          "key": {
+            "$ref": "#/$defs/key"
+          },
+          "measures": {
+            "$ref": "#/$defs/measures"
+          },
+          "first_source_row_ordinal": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "last_source_row_ordinal": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "shard_presence_bitmap": {
+            "type": "string",
+            "contentEncoding": "base64"
+          }
+        }
+      }
+    },
+    "not_covered": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "measures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rows",
+        "known_amount_rows",
+        "unknown_amount_rows",
+        "positive_rows",
+        "negative_rows",
+        "zero_rows",
+        "nonempty_conduit_id_rows",
+        "signed_minor_units",
+        "positive_minor_units",
+        "negative_minor_units"
+      ],
+      "properties": {
+        "rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "known_amount_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown_amount_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positive_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "negative_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zero_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nonempty_conduit_id_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "signed_minor_units": {
+          "type": "string",
+          "pattern": "^-?(0|[1-9][0-9]*)$"
+        },
+        "positive_minor_units": {
+          "type": "string",
+          "pattern": "^-?(0|[1-9][0-9]*)$"
+        },
+        "negative_minor_units": {
+          "type": "string",
+          "pattern": "^-?(0|[1-9][0-9]*)$"
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_set_id",
+        "manifest_sha256",
+        "facts",
+        "shards"
+      ],
+      "properties": {
+        "fact_set_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "facts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "shards": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recipient",
+        "component",
+        "individual_decision",
+        "committee_decision",
+        "receipt_role"
+      ],
+      "properties": {
+        "recipient": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "present",
+            "value"
+          ],
+          "properties": {
+            "present": {
+              "type": "boolean"
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        },
+        "component": {
+          "enum": [
+            "unresolved_recipient",
+            "memo_subtotal",
+            "overlapping_individual_and_committee",
+            "itemized_individual_only",
+            "committee_flow_only",
+            "unknown_amount",
+            "unresolved_individual_class",
+            "other_reported_receipt"
+          ]
+        },
+        "individual_decision": {
+          "enum": [
+            "included",
+            "excluded_non_individual",
+            "excluded_memo_subtotal",
+            "unresolved_individual_class",
+            "unresolved_amount"
+          ]
+        },
+        "committee_decision": {
+          "enum": [
+            "invalid_normalization",
+            "unresolved_recipient_committee_id",
+            "excluded_no_source_committee_id",
+            "unresolved_one_sided_source_committee_id",
+            "unresolved_conflicting_source_committee_ids",
+            "excluded_memo_subtotal",
+            "unresolved_amount",
+            "excluded_outbound_receipt_role",
+            "excluded_semantic_memo_receipt_role",
+            "excluded_earmarked_receipt_role",
+            "excluded_noncommittee_receipt_role",
+            "unresolved_receipt_role",
+            "included_receiver_reported_committee_flow"
+          ]
+        },
+        "receipt_role": {
+          "enum": [
+            "registered_filer_contribution",
+            "registered_filer_in_kind_contribution",
+            "affiliated_transfer_in",
+            "refund_or_repayment_received",
+            "outbound",
+            "semantic_memo",
+            "earmarked",
+            "noncommittee_receipt",
+            "unresolved"
+          ]
+        }
+      }
+    }
+  }
+}

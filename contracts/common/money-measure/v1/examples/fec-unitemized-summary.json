@@ -1,0 +1,30 @@
+{
+  "$schema": "../schema.json",
+  "schema_version": "1.0.0",
+  "semantic_role": "unitemized_individual_receipts",
+  "currency": "USD",
+  "amount": {
+    "state": "point",
+    "lower_minor_units": "4000000",
+    "upper_minor_units": "4000000",
+    "lower_inclusive": true,
+    "upper_inclusive": true
+  },
+  "measurement": {
+    "basis": "source_reported",
+    "kind": "summary_value",
+    "observation_state": "reported_value",
+    "reported_minor_units": "4000000",
+    "precision_increment_minor_units": null,
+    "accounting_method": null,
+    "source_rule_version": "fec.summary.unitemized_individual.v1"
+  },
+  "uncertainty": {
+    "coverage": "complete",
+    "attribution": "unresolved",
+    "revision": "publisher_processed_snapshot",
+    "identity": "unresolved",
+    "evidence": "reported"
+  },
+  "issues": ["fec.contributor_composition_undisclosed"]
+}

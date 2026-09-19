@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/efile-format/v1/layout.schema.json",
+  "title": "FEC electronic-filing logical row layout",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "layout_id", "contract_version", "status", "format_versions",
+    "record_family", "logical_field_count", "physical_field_policy", "fields"
+  ],
+  "properties": {
+    "$schema": {"type": "string", "format": "uri-reference"},
+    "layout_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]+$"},
+    "contract_version": {"type": "string", "pattern": "^[1-9][0-9]*\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["draft", "accepted", "retired"]},
+    "format_versions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string"},
+      "uniqueItems": true
+    },
+    "record_family": {"type": "string", "minLength": 1},
+    "logical_field_count": {"type": "integer", "minimum": 1},
+    "physical_field_policy": {"type": "string", "minLength": 1},
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "name", "publisher_name", "data_type", "validation", "form_associations"],
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 1},
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "publisher_name": {"type": "string", "minLength": 1},
+          "data_type": {"type": "string", "minLength": 1},
+          "validation": {"type": "string", "minLength": 1},
+          "form_associations": {
+            "type": "array",
+            "items": {"enum": ["F3", "F3X", "F3P", "F3L"]},
+            "uniqueItems": true
+          }
+        }
+      }
+    }
+  }
+}

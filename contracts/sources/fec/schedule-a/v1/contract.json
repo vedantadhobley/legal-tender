@@ -1,0 +1,188 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/schedule-a",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id": "fec", "name": "Federal Election Commission", "base_url": "https://www.fec.gov/"},
+  "dataset": {
+    "id": "schedule-a",
+    "name": "Processed Schedule A baseline and reconciliation dump",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "FEC processed itemized-receipt relation and its two-year inherited partitions, distributed as a monolithic PostgreSQL custom-format dump for baseline and reconciliation."
+  },
+  "authority": [
+    {"kind": "documentation", "url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/README.txt", "retrieved_on": "2026-08-27"},
+    {"kind": "documentation", "url": "https://github.com/fecgov/openFEC/blob/develop/webservices/common/models/itemized.py", "retrieved_on": "2026-08-27"},
+    {"kind": "api", "url": "https://api.open.fec.gov/v1/schedules/schedule_a/", "retrieved_on": "2026-08-27"}
+  ],
+  "acquisition": {
+    "authentication": {"class": "none", "environment_variable": null, "header": null, "scheme": null},
+    "endpoints": [
+      {
+        "name": "weekly PostgreSQL custom dump",
+        "method": "GET",
+        "url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+        "response_root": "disclosure.fec_fitem_sched_a and disclosure.fec_fitem_sched_a_{start_year}_{end_year}"
+      }
+    ],
+    "pagination": "None. The endpoint is one complete custom-format database snapshot; selective restore does not avoid downloading the complete artifact.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "publisher_snapshot",
+        "source": "Acquisition timestamp plus HTTP Last-Modified, ETag, content length, final URL, and whole-file SHA-256.",
+        "purpose": "Immutable provenance for a mutable weekly artifact; never used as receipt time."
+      },
+      {
+        "name": "two_year_transaction_period",
+        "source": "Relation field and inherited partition suffix fec_fitem_sched_a_{start_year}_{end_year}.",
+        "purpose": "Backfill and rebuild selection for the target two-year periods; retained separately from receipt, report, and election dates."
+      }
+    ],
+    "retry_policy": "Use resumable bounded transfer retries against the publisher URL, capture redirects, require byte count and dump integrity before acceptance, inventory the archive with pg_restore, and never replace the last accepted snapshot with a partial download or failed restore."
+  },
+  "physical_schema": {
+    "media_type": "application/x-postgresql-custom-dump",
+    "source_format": "postgresql_custom_dump",
+    "encoding": null,
+    "delimiter": null,
+    "line_ending": null,
+    "quote_policy": "not_applicable",
+    "empty_record_policy": "Not applicable to a PostgreSQL relation. A selected relation row must become an occurrence or an explicit extraction issue.",
+    "header_model": "relation_catalog",
+    "container_members": [],
+    "relations": [
+      "disclosure.fec_fitem_sched_a",
+      "disclosure.fec_fitem_sched_a_{start_year}_{end_year}"
+    ],
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "reject",
+    "null_policy": "Preserve SQL null, empty text, false, zero, and negative values as distinct states. Canonical extraction serializes NUMERIC and identifier values as strings, dates and timestamp-without-time-zone values as source-local strings, and booleans as booleans.",
+    "schema_fingerprint": "Exact 2026-08-23 archive DDL exposes 81 ordered relation fields from cmte_id through cmte_dsgn, including sub_id NOT NULL, filing_form NOT NULL, three tsvector search columns, is_individual, and pg_date DEFAULT now(); the same order is required by record.schema.json."
+  },
+  "identity": {
+    "publisher_record_key": "sub_id within the processed relation snapshot",
+    "occurrence_locator": "dump SHA-256 + restored relation name + deterministic extraction ordinal",
+    "record_version": "publisher + dataset + two_year_transaction_period + sub_id (or explicit unkeyed occurrence) + exact raw row SHA-256",
+    "duplicate_policy": "Preserve every extracted occurrence before enforcing relation constraints. Duplicate sub_id values, cross-partition placement, or conflicting content block the affected processed-receipt projection.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "publisher_snapshot", "meaning": "Acquisition and publisher-snapshot evidence, not transaction time."},
+      {"path": "contb_receipt_dt", "meaning": "Reported contribution receipt date with no source time or timezone."},
+      {"path": "rpt_yr", "meaning": "Filing report year."},
+      {"path": "fec_election_yr", "meaning": "FEC election year associated with election_tp."},
+      {"path": "two_year_transaction_period", "meaning": "FEC two-year transaction partition; not a replacement for the receipt or coverage date."},
+      {"path": "pg_date", "meaning": "Publisher processing/load timestamp without timezone, not the contribution date."}
+    ],
+    "money_fields": [
+      {"path": "contb_receipt_amt", "meaning": "Processed Schedule A receipt amount for this source record. Its counting and attribution depend on memo, amendment, conduit, and coverage rules.", "unit": "USD source NUMERIC; lossless reported_point"},
+      {"path": "contb_aggregate_ytd", "meaning": "Contributor aggregate year-to-date value reported with the filing record. It is an accumulator, not another receipt to sum.", "unit": "USD source NUMERIC; lossless reported_point"}
+    ],
+    "code_fields": [
+      {"path": "action_cd", "meaning": "Processed amendment/action code exposed by OpenFEC as amendment_indicator."},
+      {"path": "entity_tp", "meaning": "Raw contributor entity-type code."},
+      {"path": "election_tp", "meaning": "Raw election-type code and year label."},
+      {"path": "receipt_tp", "meaning": "Raw receipt-type code."},
+      {"path": "memo_cd", "meaning": "Raw memo code; OpenFEC derives memoed_subtotal when the value is X."},
+      {"path": "schedule_type + line_num + filing_form + rpt_tp", "meaning": "Raw filing placement and report codes; retain each physical field separately."},
+      {"path": "cmte_tp + org_tp + cmte_dsgn", "meaning": "Processed recipient committee classification codes."}
+    ],
+    "rules": [
+      "This relation is processed FEC data, not immutable raw filing rows. Keep that source class on every fact.",
+      "Preserve every selected relation row before applying counting, memo, amendment, or entity-resolution rules.",
+      "Convert valid NUMERIC money values losslessly to the common MoneyMeasure reported_point shape; retain the source scale separately and never use binary floating point.",
+      "Never sum contb_aggregate_ytd as receipt flow.",
+      "memo_cd X marks a memo item in the processed record; retain the row and code. A named downstream counting policy decides whether it contributes to a total.",
+      "Earmarked individual and conduit-total records can describe related money. Back-reference fields, transaction IDs, memo text, contributor IDs, and source lines remain available for structural reconciliation.",
+      "Do not use donor_cmte_nm, employer, occupation, or memo text alone as entity identity or a terminal-source classification.",
+      "is_individual and the tsvector fields are publisher-derived helpers, not substitutes for the raw contributor fields.",
+      "action_cd describes the processed row state but does not provide a complete as-filed amendment history. Do not synthesize a historical chain from this snapshot alone.",
+      "Keep receipt date, report year, election year, transaction period, processing timestamp, and snapshot time independent.",
+      "A valid sub_id identifies a processed record version, not a real-world transfer independently of memo and conduit reconciliation.",
+      "Compare snapshots with a separate null-aware semantic digest over all 81 decoded values so equivalent PostgreSQL COPY escape spellings do not manufacture a meaningful change.",
+      "The monolithic dump is the processed baseline and reconciliation lane, not the routine incremental transport. Raw electronic filings use a separate source contract and never overwrite this evidence."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The FEC replaces a weekly processed PostgreSQL snapshot covering 1975 forward. Rows expose action, transaction, back-reference, file, original-submission, and submission identifiers, but the snapshot is not a complete immutable filing-version log.",
+    "effective_projection": "Blocked while draft. Retain every accepted dump snapshot and selected partition extract. Any countable-current projection is a named rule result and must remain reproducible from source rows; historical as-filed analysis requires separate raw filing evidence."
+  },
+  "quality": {
+    "checks": [
+      {"id": "artifact_identity", "severity": "block", "rule": "Final URL, HTTP validators, byte count, retrieval time, and whole-dump SHA-256 are recorded before restore."},
+      {"id": "dump_integrity", "severity": "block", "rule": "pg_restore can inventory the complete custom-format dump and the required parent and target partition relations exist."},
+      {"id": "relation_selection", "severity": "block", "rule": "Selected-partition extraction observes exactly one COPY section for the exact catalog relation and rejects a zero-section pg_restore result even when pg_restore exits successfully."},
+      {"id": "relation_schema", "severity": "block", "rule": "The restored relation exposes exactly the 81 contracted fields and compatible PostgreSQL types; relation or type drift requires review."},
+      {"id": "partition_alignment", "severity": "block", "rule": "Every extracted row's two_year_transaction_period agrees with its selected inherited partition."},
+      {"id": "sub_id", "severity": "block", "rule": "Every extracted row has a non-empty decimal sub_id and no conflicting occurrence for the same snapshot key."},
+      {"id": "money_parse", "severity": "block", "rule": "Each non-null money value round-trips through an arbitrary-precision decimal representation."},
+      {"id": "occurrence_conservation", "severity": "block", "rule": "Every selected relation row becomes a versioned source occurrence or an explicit issue."},
+      {"id": "time_dimensions", "severity": "block", "rule": "Receipt, report, election, transaction-period, processing, and snapshot time fields are stored independently."},
+      {"id": "exact_dump_corpus", "severity": "block", "rule": "Paired exact COPY and canonical fixtures cover negative money, SQL-null receipt time, COPY escaping, action codes A/C/F/N, non-memo receipts, and a memo/back-reference pair from the selected partition."},
+      {"id": "memo_conduit_coverage", "severity": "partial", "rule": "Contract tests include exact targeted individual/memo back-reference rows and an additional exact memo row; broader conduit shapes and historic-period coverage are still required before acceptance."},
+      {"id": "api_projection_difference", "severity": "observe", "rule": "API-only row fixtures validate semantic mapping but cannot establish dump row values or occurrence conservation. The exact archive range fixture now establishes catalog, relation order, PostgreSQL types, declared nullability, defaults, and target-partition inheritance."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/earmarked-individual.json",
+      "representation": "synthetic_json",
+      "source_url": "https://api.open.fec.gov/v1/schedules/schedule_a/?api_key=DEMO_KEY&per_page=2&two_year_transaction_period=2024&image_number=202410159685547424",
+      "retrieved_on": "2026-08-27",
+      "sha256": "f1bff300bf49129c172311b69062b483d2e9c98292246e16ca58e45a7fe631a7",
+      "scenarios": ["earmarked individual receipt", "back-reference pair", "individual contributor derived flag"]
+    },
+    {
+      "path": "fixtures/memo-conduit-total.json",
+      "representation": "synthetic_json",
+      "source_url": "https://api.open.fec.gov/v1/schedules/schedule_a/?api_key=DEMO_KEY&per_page=2&two_year_transaction_period=2024&image_number=202410159685547424",
+      "retrieved_on": "2026-08-27",
+      "sha256": "4e3d09c611fafbf31e9562306e764c0b4e9e27c703af25c3eb6ae5cdef9873a6",
+      "scenarios": ["memo code X", "conduit-total description", "related amount must not be double counted"]
+    },
+    {
+      "path": "fixtures/archive/dump-2026-08-23.json",
+      "representation": "canonical_json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "24a5f3092bd321425c47f22d7594d0e71abc5740e9b768e406a4be2d7d6923f0",
+      "scenarios": [
+        "exact HTTP object identity and one-MiB range digest",
+        "complete PostgreSQL custom-archive catalog",
+        "exact 81-column parent relation DDL",
+        "2025_2026 inherited partition and check constraint",
+        "whole-artifact SHA-256 and complete catalog inventory",
+        "891016965-row four-partition conservation",
+        "lossless zstd storage artifacts with decompressed digest proof",
+        "explicit value-level replay and temporary-storage evidence boundaries"
+      ]
+    },
+    {"path": "fixtures/dump-2026-08-23/action-code-c.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "60c0060a67b0ba15441820ceb6f6b805037cd2c5fbb5116442310b2ae64ef986", "scenarios": ["exact restored action code C row"]},
+    {"path": "fixtures/dump-2026-08-23/action-code-f.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "86963aff8c1933eaf6d4c8a70427b2e89fab544cbb332c22fc2e0a54d43d2b4a", "scenarios": ["exact restored action code F row"]},
+    {"path": "fixtures/dump-2026-08-23/action-code-n.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "48266d34a0d83fbd6cc119b06c1ae9ccd374a068e46891fdc86020aca0bcdeaa", "scenarios": ["exact restored action code N row"]},
+    {"path": "fixtures/dump-2026-08-23/escaped-copy-text.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "4ebc848292ca57e76452fa887c26d7528dad14723b88d3f0065153897062cf32", "scenarios": ["exact restored COPY escape row"]},
+    {"path": "fixtures/dump-2026-08-23/negative-adjustment.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "bf0d7a943f5e0e68e568a59e5612d7807159cc8d1a93ca0ea80b1b30246af511", "scenarios": ["exact restored negative amount row"]},
+    {"path": "fixtures/dump-2026-08-23/null-receipt-date.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "a1bec09f6eb65319f834fffe7b65ca89ed0ee688da27b08580fd252a6bcb62e3", "scenarios": ["exact restored SQL-null receipt timestamp row"]},
+    {"path": "fixtures/dump-2026-08-23/targeted-individual.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "3299d4e6b993d398fa2a43ddd80a315681af1998dd3e8f932572a019abdacdf1", "scenarios": ["exact targeted individual row"]},
+    {"path": "fixtures/dump-2026-08-23/targeted-memo-committee.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "44367951ab0391e027dc6ef7b5d4572e038e4b1e9760471ad428b417f454af4a", "scenarios": ["exact targeted memo back-reference row"]},
+    {"path": "fixtures/dump-2026-08-23/action-code-c.copy", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "11bb7ad7bfc1e974c5727e10b4d14272982079414d0ecbf4419a45de774157f1", "scenarios": ["exact COPY action code C row"]},
+    {"path": "fixtures/dump-2026-08-23/action-code-f.copy", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "d162b25a021ec87c152142d8df71ccdd8009d0da3a8e1fd22b033511516ec498", "scenarios": ["exact COPY action code F row"]},
+    {"path": "fixtures/dump-2026-08-23/action-code-n.copy", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "8f9c0f0fe48d3eaad5bf4eb7676156855c235cd526276f2f4625aab0237eb9ee", "scenarios": ["exact COPY action code N row"]},
+    {"path": "fixtures/dump-2026-08-23/escaped-copy-text.copy", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "ccd7c4d58873ffb67ee52794653a35272d0f19362adab171aca1c06540b5c80c", "scenarios": ["exact COPY escaped-text row"]},
+    {"path": "fixtures/dump-2026-08-23/negative-adjustment.copy", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "f46ce5904950d2fd77f18f3d28a2e583e62e7fbc881ea551f4d03ec311e2d823", "scenarios": ["exact COPY negative amount row"]},
+    {"path": "fixtures/dump-2026-08-23/null-receipt-date.copy", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "7aa678c004df4a843600c1393f4f32607acca0ece38c730face1ec30396806a3", "scenarios": ["exact COPY null receipt timestamp row"]},
+    {"path": "fixtures/dump-2026-08-23/targeted-individual.copy", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "f409261a185a9bc551c32b12ca306076b5a98970b3e13531a2c7817ce91ae17b", "scenarios": ["exact COPY targeted individual row"]},
+    {"path": "fixtures/dump-2026-08-23/targeted-memo-committee.copy", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "retrieved_on": "2026-08-28", "sha256": "b8be26210fa97a019714cb20bc2780c42beab6729d079c94f411d68f017b08b1", "scenarios": ["exact COPY targeted memo row"]}
+  ],
+  "use": {
+    "retention": "Retain accepted dump artifacts and HTTP metadata according to the explicit raw-storage budget; retain their immutable digests, restore catalogs, selected source-period extracts, record versions, and issues indefinitely. Never discard provenance needed to replay a published fact.",
+    "citation_date_required": true,
+    "disclaimer": "Processed Schedule A rows are filing-derived receipt assertions. Memo, amendment, conduit, transfer, reporting, and itemization rules affect counting and attribution; a row does not by itself prove the money's terminal economic source."
+  },
+  "outputs": {
+    "fact_types": ["processed_itemized_receipt_assertion"],
+    "change_dimensions": ["publisher_snapshot", "two_year_transaction_period", "processed_record_version", "counting_rule_version", "attribution_rule_version"]
+  }
+}

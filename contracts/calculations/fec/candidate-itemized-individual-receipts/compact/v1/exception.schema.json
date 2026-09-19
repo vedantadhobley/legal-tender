@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/candidate-itemized-individual-receipts/compact/v1/exception.schema.json",
+  "title": "Compact receipt calculation membership exception",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "exception_id", "source_row_ordinal", "state", "reason"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.itemized-individual-receipt-membership-exception.v1"},
+    "exception_id": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "source_row_ordinal": {"type": "integer", "minimum": 1},
+    "state": {"enum": ["unresolved_individual_class", "unresolved_amount", "invalid_receipt_date"]},
+    "recipient_committee_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9]{8}$"},
+    "amount_state": {"type": "string", "minLength": 1},
+    "reason": {"type": "string", "minLength": 1}
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "schema_version": "legal-tender.funding-recovery-inputs.v1",
+  "generation": {
+    "kind": "shared_generation",
+    "id": "f1c9a89e46ae1bdc291cadf8299230adfb30ca52ddc81932aa6f14afee5a6ec1",
+    "sha256": "b6e65ec8d23b53dd9316131d67980b7a7272f51e69134fd276539a3e5f03c935",
+    "path": "dumps/audits/fec/shared-conduit-generation/2026-09-14/attempt-01/result.json"
+  },
+  "locators": [
+    {
+      "kind": "generation",
+      "id": "35d249388ad51d1b03a98324e2f096bc20e945a35d2a38206b12de7702e1d9cd",
+      "sha256": "1a3a48c7a9c58337a626999cdce0531a938d03262029ccc5b4f30dd67c9e9cfe",
+      "path": "dumps/audits/fec/funding-generation/2026-09-13/attempt-02/result.json"
+    },
+    {
+      "kind": "receipt_projection",
+      "id": "c0536042b7af9875f2e0de2d013f6ffeab31d8cc53755a8f660082753a0518e6",
+      "sha256": "5440395861205732971d0cd673c1eaf3bc60f213e3bd113a21ee3eace57d053a",
+      "path": "projections/arango/receipt-participants/cycle-v1/c0536042b7af9875f2e0de2d013f6ffeab31d8cc53755a8f660082753a0518e6/manifest.json"
+    },
+    {
+      "kind": "shared_projection",
+      "id": "f704616339eb95c36c5d47ed66956aeba9ede707bb81ac2e3bfe866a2b7c4465",
+      "sha256": "ab5ef6adad415e7bb9cd16308429abc4fa8c9f4e6c354734c47f8ea12246809e",
+      "path": "projections/arango/shared-conduits/v1/f704616339eb95c36c5d47ed66956aeba9ede707bb81ac2e3bfe866a2b7c4465/manifest.json"
+    },
+    {
+      "kind": "conduits",
+      "id": "11a165f5a286e4345c65906c54813c7bba7f5d6263e62aacc18a40ddbe948673",
+      "sha256": "bdf7fee7088f9c9cbdbed3b2a2328dcdcda4038750317f78b0b673af9191a976",
+      "path": "dumps/audits/fec/shared-conduit-publication/2026-09-14/attempt-01/calculation/manifest.json"
+    },
+    {
+      "kind": "participants",
+      "id": "5cf4f803465c19f8abc0f4cd3eab87b132184bc47536b6aa3c0c5753dbbe0a1e",
+      "sha256": "fb8788e9a5cdea6c099f38dbb5be5fa41992b425c1a471c85d5343a5097d61b8",
+      "path": "dumps/audits/fec/receipt-participant-index/2026-09-12/attempt-01/cycle-final/manifest.json"
+    },
+    {
+      "kind": "conduits",
+      "id": "1c597367db6598b0e8705e45b7b2d1cb83e6e0664f7425aa6e5677913a90ff05",
+      "sha256": "de5fed44189aadb0f41617942550a589a39d404819b3e834ae2305f8a78e9e9f",
+      "path": "dumps/audits/fec/receipt-conduit-publication/2026-09-12/attempt-01/cycle/manifest.json"
+    },
+    {
+      "kind": "topology",
+      "id": "3192971a9cbd28696cbf911ece53b7362a5a77c7c84be4e262236dd8b1c2acca",
+      "sha256": "cdd8c803f529fa2643b85c17ff2b1b1a6de428d792fb65588f0777393e433a23",
+      "path": "dumps/audits/fec/receipt-reference-topology/2026-09-12/attempt-01/cycle/manifest.json"
+    },
+    {
+      "kind": "references",
+      "id": "1a66232f2d0afb11a0b4e38af2d7caa23c9ea34db9c909f0698ac00dd7514fab",
+      "sha256": "75721e7c59fcd74321fa8b9a0e7e22397021c538dc08466cdad8b34f457ee2e4",
+      "path": "dumps/audits/fec/receipt-narrow-reader/2026-09-12/attempt-01/cycle/manifest.json"
+    },
+    {
+      "kind": "a_occurrences",
+      "id": "0d4fb929d384d91fd766ab112383a8c2b4b333b2f05e4a60c230e64435cd11fb",
+      "sha256": "d5474423021a51a5fd4c676e1b84ecc3ba9a2b3ee40520b5bd101029dbab3a19",
+      "path": "evidence/fec/schedule-a/compact/manifests/0d4fb929d384d91fd766ab112383a8c2b4b333b2f05e4a60c230e64435cd11fb.json"
+    }
+  ]
+}

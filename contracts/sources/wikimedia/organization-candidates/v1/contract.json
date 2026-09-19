@@ -1,0 +1,65 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "wikimedia/organization-candidates",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id":"wikimedia","name":"Wikimedia community projects","base_url":"https://www.wikimedia.org/"},
+  "dataset": {"id":"organization-candidates","name":"Wikipedia-discovered Wikidata candidates","semantic_domain":"organization_identity_evidence","description":"Bounded English Wikipedia search windows and corresponding Wikidata items. Proposals only; no canonical identity, employment or financial attribution."},
+  "authority": [
+    {"kind":"documentation","url":"https://www.mediawiki.org/wiki/API:Search","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.mediawiki.org/wiki/API:Pageprops","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.mediawiki.org/wiki/API:Revisions","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.mediawiki.org/wiki/Wikibase/API","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.mediawiki.org/wiki/API:Etiquette","retrieved_on":"2026-09-15"}
+  ],
+  "acquisition": {
+    "authentication":{"class":"none","environment_variable":null,"header":null,"scheme":null},
+    "endpoints":[
+      {"name":"wikipedia_search","method":"GET","url":"https://en.wikipedia.org/w/api.php","response_root":"query.pages; generator=search, namespace 0, five hits, pageprops and revision identifiers/timestamps"},
+      {"name":"wikidata_entities","method":"GET","url":"https://www.wikidata.org/w/api.php","response_root":"entities; wbgetentities over exactly the observed page QIDs, English labels/descriptions/aliases, all claims and enwiki sitelinks"}
+    ],
+    "pagination":"One five-hit search window per exact reported string. Preserve continuation raw; do not follow it or claim exhaustive search. Missing links and missing entities remain explicit.",
+    "rate_limit_per_minute":60,
+    "partitions":[{"name":"capture","source":"Exact query JSON digest and build identity","purpose":"Retain independent observation evidence without changing FEC releases or graph generations."}],
+    "retry_policy":"No automatic retries. At most twenty queries and forty serial requests, at least one second apart, 30 seconds/request and five minutes/run. Four MiB/body, 64 MiB/run, 128 KiB/response headers. Fixed HTTPS origins, no redirects, no proxy inheritance, no credentials. Send descriptive user-agent and maxlag=5. Save bounded failed bodies and attempt metadata; stop network calls after the first HTTP, transport or schema failure. Restart explicitly into a new directory."
+  },
+  "physical_schema": {
+    "media_type":"application/json",
+    "source_format":"json_api",
+    "encoding":"Strict UTF-8 JSON; reject duplicate keys, unpaired surrogates, excessive depth and trailing JSON.",
+    "record_schema":"record.schema.json",
+    "unknown_field_policy":"capture_and_review",
+    "null_policy":"Do not treat API failures as no matches. Missing items use the source missing flag. Incomplete page metadata blocks use. Raw null/empty forms remain in captured bytes.",
+    "schema_fingerprint":"Compiled closed envelopes and selected term/identity shapes in internal/source/wikimedia. Claims, sitelinks, limits and continuation retain opaque JSON under the explicit structural contract. Record each observed JSON path/type fingerprint in offline replay; never adopt remote schema changes automatically."
+  },
+  "identity": {
+    "publisher_record_key":"Wikipedia pageid plus revision metadata; Wikidata QID plus lastrevid. Neither is a FEC identity.",
+    "occurrence_locator":"Capture digest, query ordinal, exact request URL and response body digest; page ID or QID within that response.",
+    "record_version":"Exact response SHA-256 and publisher revision metadata. Cross-endpoint observations are not an atomic snapshot.",
+    "duplicate_policy":"Retain every query's observation. Reject repeated page IDs/ranks and duplicate JSON keys. Deduplicate only identical query text while retaining each original FEC source reference.",
+    "children":[{"object":"Wikidata claims, qualifiers and references","locator":"Exact body plus QID/property/statement position","content_digest":false}]
+  },
+  "semantics": {
+    "time_fields":[{"path":"observed_at","meaning":"Client request time, not validity of an employment or ownership relationship."},{"path":"revisions.timestamp, modified, claim qualifiers","meaning":"Preserve publisher revision and qualified statement time separately from FEC source cycles."}],
+    "money_fields":[],"code_fields":[],
+    "rules":[
+      "Wikipedia search discovers candidates; its order is not identity confidence. Separately versioned name rules propose QIDs only within the saved search window; source acquisition does not approve identity.",
+      "The v1 proposal baseline normalizes case and punctuation only. The separate v2 proposal policy adds explained letter/number boundaries and bounded trailing legal-designator variants. Both retain original source text, token order and accents; neither uses fuzzy, embedding or LLM rules. See docs/design/organization-resolution.md for the derived policy contract; source response schemas are unchanged.",
+      "Exclude Wikipedia disambiguation pages and explicit nondeprecated direct P31=Q5 human claims from organization proposals. Other types remain unverified; no subclass closure is inferred.",
+      "Preserve all returned claims, ranks, qualifiers and references. Do not convert P112/P169 or any other property into outgoing donor-to-company edges.",
+      "No person merge, employment verification, ownership verification, graph publication or terminal dollar allocation is authorized by this output."
+    ]
+  },
+  "revisions":{"publisher_model":"Mutable community-curated data and search indexes. Search and entity requests occur at different times.","effective_projection":"No current identity projection. Saved responses replay under a separate versioned proposal policy; refresh and reviewed corroboration remain future work."},
+  "quality":{"checks":[
+    {"id":"raw_integrity","severity":"block","rule":"Pin manifest and query digests; verify confined regular body files, size/hash, exact reconstructed requests and request/byte budgets."},
+    {"id":"source_shape","severity":"block","rule":"Retain invalid bodies, but do not use API errors, warnings, schema drift, incomplete entities or failed/truncated requests as negative search evidence."},
+    {"id":"identity_scope","severity":"partial","rule":"Name matches remain proposals. Missing QIDs, missing entities and competing name matches cannot become singleton identity decisions."}
+  ]},
+  "fixtures":[
+    {"path":"../../../../../internal/source/wikimedia/testdata/search.json","representation":"synthetic_json","scenarios":["five-hit window with continuation","page QID and revision metadata"]},
+    {"path":"../../../../../internal/source/wikimedia/testdata/entities.json","representation":"synthetic_json","scenarios":["exact alias","qualified statement and reference retention"]}
+  ],
+  "use":{"retention":"Retain raw capture and exact source/build identities for offline replay. API failures are evidence of a failed observation, not entity absence.","citation_date_required":true,"disclaimer":"Community-curated candidate evidence, not authoritative corporate identity or verified financial connection. Respect upstream licensing and attribution when displaying source content."},
+  "outputs":{"fact_types":["wikimedia.organization_candidate_observation.v1"],"change_dimensions":["query_membership","search_window","entity_revision","source_schema","proposal_policy"]}
+}

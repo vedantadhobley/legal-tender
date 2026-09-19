@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/all-candidates-summary/v1/record.schema.json",
+  "title": "FEC all-candidates summary source record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "CAND_ID", "CAND_NAME", "CAND_ICI", "PTY_CD", "CAND_PTY_AFFILIATION",
+    "TTL_RECEIPTS", "TRANS_FROM_AUTH", "TTL_DISB", "TRANS_TO_AUTH", "COH_BOP",
+    "COH_COP", "CAND_CONTRIB", "CAND_LOANS", "OTHER_LOANS", "CAND_LOAN_REPAY",
+    "OTHER_LOAN_REPAY", "DEBTS_OWED_BY", "TTL_INDIV_CONTRIB", "CAND_OFFICE_ST",
+    "CAND_OFFICE_DISTRICT", "SPEC_ELECTION", "PRIM_ELECTION", "RUN_ELECTION",
+    "GEN_ELECTION", "GEN_ELECTION_PRECENT", "OTHER_POL_CMTE_CONTRIB",
+    "POL_PTY_CONTRIB", "CVG_END_DT", "INDIV_REFUNDS", "CMTE_REFUNDS"
+  ],
+  "$defs": {
+    "money": {"type": "string", "pattern": "^$|^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"}
+  },
+  "properties": {
+    "CAND_ID": {"type": "string", "pattern": "^[HPS][A-Z0-9]{8}$"},
+    "CAND_NAME": {"type": "string"},
+    "CAND_ICI": {"type": "string"},
+    "PTY_CD": {"type": "string"},
+    "CAND_PTY_AFFILIATION": {"type": "string"},
+    "TTL_RECEIPTS": {"$ref": "#/$defs/money"},
+    "TRANS_FROM_AUTH": {"$ref": "#/$defs/money"},
+    "TTL_DISB": {"$ref": "#/$defs/money"},
+    "TRANS_TO_AUTH": {"$ref": "#/$defs/money"},
+    "COH_BOP": {"$ref": "#/$defs/money"},
+    "COH_COP": {"$ref": "#/$defs/money"},
+    "CAND_CONTRIB": {"$ref": "#/$defs/money"},
+    "CAND_LOANS": {"$ref": "#/$defs/money"},
+    "OTHER_LOANS": {"$ref": "#/$defs/money"},
+    "CAND_LOAN_REPAY": {"$ref": "#/$defs/money"},
+    "OTHER_LOAN_REPAY": {"$ref": "#/$defs/money"},
+    "DEBTS_OWED_BY": {"$ref": "#/$defs/money"},
+    "TTL_INDIV_CONTRIB": {"$ref": "#/$defs/money"},
+    "CAND_OFFICE_ST": {"type": "string"},
+    "CAND_OFFICE_DISTRICT": {"type": "string"},
+    "SPEC_ELECTION": {"type": "string"},
+    "PRIM_ELECTION": {"type": "string"},
+    "RUN_ELECTION": {"type": "string"},
+    "GEN_ELECTION": {"type": "string"},
+    "GEN_ELECTION_PRECENT": {"type": "string"},
+    "OTHER_POL_CMTE_CONTRIB": {"$ref": "#/$defs/money"},
+    "POL_PTY_CONTRIB": {"$ref": "#/$defs/money"},
+    "CVG_END_DT": {"type": "string", "pattern": "^$|^[0-9]{2}/[0-9]{2}/[0-9]{4}$"},
+    "INDIV_REFUNDS": {"$ref": "#/$defs/money"},
+    "CMTE_REFUNDS": {"$ref": "#/$defs/money"}
+  }
+}

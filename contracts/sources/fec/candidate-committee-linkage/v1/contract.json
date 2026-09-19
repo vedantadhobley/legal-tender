@@ -1,0 +1,101 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/candidate-committee-linkage",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id": "fec", "name": "Federal Election Commission", "base_url": "https://www.fec.gov/"},
+  "dataset": {
+    "id": "candidate-committee-linkage",
+    "name": "Candidate-committee linkage file",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "FEC assertions linking candidate IDs to committee IDs, with distinct candidate election year, FEC election period, committee type, designation, and linkage identity."
+  },
+  "authority": [
+    {"kind": "documentation", "url": "https://www.fec.gov/campaign-finance-data/candidate-committee-linkage-file-description/", "retrieved_on": "2026-08-27"},
+    {"kind": "documentation", "url": "https://www.fec.gov/files/bulk-downloads/data_dictionaries/ccl_header_file.csv", "retrieved_on": "2026-08-27", "sha256": "9de902716f8c5086fc91cc7b26b675c49916e43c742693df939278cb7d91c633"}
+  ],
+  "acquisition": {
+    "authentication": {"class": "none", "environment_variable": null, "header": null, "scheme": null},
+    "endpoints": [
+      {"name": "two-year bulk archive", "method": "GET", "url": "https://www.fec.gov/files/bulk-downloads/{two_year_period}/ccl{cycle_suffix}.zip", "response_root": "ccl.txt"}
+    ],
+    "pagination": "None. Each requested two-year period is one complete ZIP snapshot.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {"name": "two_year_period", "source": "Requested bulk URL path; cycle_suffix is the period's final two digits.", "purpose": "Acquisition and replay boundary. It must agree with FEC_ELECTION_YR before publication."}
+    ],
+    "retry_policy": "Bound retries for transport failures; follow redirects; publish only after validating the HTTP result, ZIP integrity, exact member name, archive digest, row width, and record count."
+  },
+  "physical_schema": {
+    "media_type": "application/vnd.fec.pipe-delimited+zip",
+    "source_format": "delimited_archive",
+    "encoding": "UTF-8",
+    "delimiter": "|",
+    "line_ending": "LF with a required final LF in the verified 2020, 2022, 2024, and 2026 artifacts",
+    "quote_policy": "none",
+    "empty_record_policy": "An empty physical line becomes an explicit record-boundary issue; it is never silently skipped.",
+    "header_model": "external_publisher_header",
+    "container_members": ["ccl.txt"],
+    "relations": [],
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "reject",
+    "null_policy": "Preserve every empty source field as the empty string; required identity and year fields failing their schema become issues rather than invented values.",
+    "schema_fingerprint": "7 ordered fields: CAND_ID|CAND_ELECTION_YR|FEC_ELECTION_YR|CMTE_ID|CMTE_TP|CMTE_DSGN|LINKAGE_ID"
+  },
+  "identity": {
+    "publisher_record_key": "LINKAGE_ID",
+    "occurrence_locator": "archive SHA-256 + exact member name + one-based physical line number",
+    "record_version": "occurrence locator + SHA-256 of the exact source line",
+    "duplicate_policy": "Preserve every physical occurrence. A repeated LINKAGE_ID with conflicting content blocks relationship publication; equivalent repeats remain separately auditable occurrences.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "source_partition.two_year_period", "meaning": "Requested bulk archive period and acquisition boundary."},
+      {"path": "CAND_ELECTION_YR", "meaning": "Candidate election year attached to this relationship; it can precede the FEC election period."},
+      {"path": "FEC_ELECTION_YR", "meaning": "FEC two-year period in which the linkage assertion is published."}
+    ],
+    "money_fields": [],
+    "code_fields": [
+      {"path": "CMTE_TP", "meaning": "Raw committee type code attached to the linkage."},
+      {"path": "CMTE_DSGN", "meaning": "Raw committee designation code attached to the linkage."}
+    ],
+    "rules": [
+      "Keep source_partition.two_year_period, FEC_ELECTION_YR, and CAND_ELECTION_YR separate.",
+      "A linkage is a source-backed relationship assertion, not proof that every committee transaction is candidate-controlled.",
+      "Preserve designation and committee type as filed before interpreting authorized, principal, or joint-fundraising roles.",
+      "Do not discard prior candidate-election-year linkages from a later FEC period.",
+      "Do not infer candidate-to-committee relationships from names when a linkage record is absent."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The FEC replaces the two-year linkage archive as registrations change; LINKAGE_ID identifies a published linkage but does not version changing snapshots.",
+    "effective_projection": "Blocked while draft. Preserve every archive snapshot and linkage occurrence; publish a relationship only from an accepted snapshot with no identity conflict."
+  },
+  "quality": {
+    "checks": [
+      {"id": "archive_identity", "severity": "block", "rule": "The archive digest, requested period, exact ccl.txt member, retrieval time, and response metadata are present."},
+      {"id": "row_width", "severity": "block", "rule": "Every physical line has exactly 7 fields; short rows are not padded and extra fields are not truncated."},
+      {"id": "partition_alignment", "severity": "block", "rule": "FEC_ELECTION_YR equals source_partition.two_year_period."},
+      {"id": "strict_decode", "severity": "block", "rule": "Every source byte decodes under the accepted encoding; invalid bytes are retained as failed raw evidence, never silently dropped."},
+      {"id": "occurrence_conservation", "severity": "block", "rule": "Every non-empty physical line becomes one record occurrence or one explicit issue."},
+      {"id": "duplicate_key", "severity": "block", "rule": "Conflicting records for one LINKAGE_ID remain separate and block relationship publication."},
+      {"id": "schema_drift", "severity": "block", "rule": "Member name, field order, or field count changes require contract review."}
+    ]
+  },
+  "fixtures": [
+    {"path": "fixtures/current-election.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "retrieved_on": "2026-06-21", "sha256": "79a5a8d77458719f7b919d4907d762b672853581b5523faf268e883bc7ecaaea", "scenarios": ["principal committee designation", "candidate election equals FEC period", "linkage identity"]},
+    {"path": "fixtures/prior-candidate-election.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "retrieved_on": "2026-06-21", "sha256": "6f90ddceb85c6953b54d68f9b391c3f2e91818ce1bef2a7191b20c0807a174d5", "scenarios": ["candidate election predates FEC period", "joint-fundraising designation", "period dimensions remain separate"]},
+    {"path": "fixtures/current-election.txt", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "retrieved_on": "2026-06-21", "sha256": "dd22a69b0abdfd468ddaa83c4fa141944906bfa23900db75723db9eae38f08bc", "scenarios": ["exact pipe-delimited linkage row", "7 fields", "terminating LF"]},
+    {"path": "fixtures/prior-candidate-election.txt", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "retrieved_on": "2026-06-21", "sha256": "a94f71e6c4023aa32fb4095f8cdda3e6467ef08b582f8e1350931277227aaae4", "scenarios": ["distinct candidate and FEC election years", "7 fields", "terminating LF"]}
+  ],
+  "use": {
+    "retention": "Retain the exact archive, HTTP metadata, archive digest, member inventory, record occurrences, and issues indefinitely; derived graph relationships are rebuildable.",
+    "citation_date_required": true,
+    "disclaimer": "This file reports FEC candidate-committee linkage assertions for a captured snapshot. Relationship designation must remain visible and does not alone establish control of each receipt or disbursement."
+  },
+  "outputs": {
+    "fact_types": ["candidate_committee_linkage_assertion"],
+    "change_dimensions": ["source_snapshot", "candidate_election_year", "committee_relationship"]
+  }
+}

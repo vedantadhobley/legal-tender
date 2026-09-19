@@ -1,0 +1,7 @@
+# CommonMark uses two trailing spaces for an intentional hard line break.
+*.md whitespace=-blank-at-eol
+
+# Retained evidence must preserve publisher bytes, including whitespace.
+contracts/**/fixtures/** -whitespace
+docs/audit/fixtures/** -whitespace
+tests/fixtures/** -whitespace

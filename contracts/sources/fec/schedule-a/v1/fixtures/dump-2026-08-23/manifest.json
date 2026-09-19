@@ -1,0 +1,64 @@
+{
+  "$schema": "../../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/schedule-a@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "Each fixture is one exact 2025_2026 COPY row decoded by the standard-library Go corpus probe using the ordered archive DDL. PostgreSQL COPY null becomes JSON null, t/f becomes a JSON boolean, escaped text is decoded, and every other source lexeme remains a string. Keys are serialized in lexical order. The paired exact-bytes manifest preserves the physical COPY row.",
+  "fixtures": [
+    {
+      "path": "action-code-c.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "60c0060a67b0ba15441820ceb6f6b805037cd2c5fbb5116442310b2ae64ef986",
+      "scenarios": ["exact restored row", "action code C", "candidate entity"]
+    },
+    {
+      "path": "action-code-f.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "86963aff8c1933eaf6d4c8a70427b2e89fab544cbb332c22fc2e0a54d43d2b4a",
+      "scenarios": ["exact restored row", "action code F", "individual entity"]
+    },
+    {
+      "path": "action-code-n.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "48266d34a0d83fbd6cc119b06c1ae9ccd374a068e46891fdc86020aca0bcdeaa",
+      "scenarios": ["exact restored row", "action code N", "individual entity"]
+    },
+    {
+      "path": "escaped-copy-text.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "4ebc848292ca57e76452fa887c26d7528dad14723b88d3f0065153897062cf32",
+      "scenarios": ["exact restored row", "PostgreSQL COPY escape decoding", "individual entity"]
+    },
+    {
+      "path": "negative-adjustment.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "bf0d7a943f5e0e68e568a59e5612d7807159cc8d1a93ca0ea80b1b30246af511",
+      "scenarios": ["exact restored row", "negative receipt amount", "candidate committee entity"]
+    },
+    {
+      "path": "null-receipt-date.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "a1bec09f6eb65319f834fffe7b65ca89ed0ee688da27b08580fd252a6bcb62e3",
+      "scenarios": ["exact restored row", "SQL null receipt timestamp", "non-null amount"]
+    },
+    {
+      "path": "targeted-individual.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "3299d4e6b993d398fa2a43ddd80a315681af1998dd3e8f932572a019abdacdf1",
+      "scenarios": ["exact restored row", "targeted filing 1997074", "individual side of memo pair"]
+    },
+    {
+      "path": "targeted-memo-committee.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "44367951ab0391e027dc6ef7b5d4572e038e4b1e9760471ad428b417f454af4a",
+      "scenarios": ["exact restored row", "targeted filing 1997074", "memo code X", "back-reference to individual row"]
+    }
+  ]
+}

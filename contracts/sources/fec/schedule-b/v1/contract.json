@@ -1,0 +1,156 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/schedule-b",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "publisher": {
+    "id": "fec",
+    "name": "Federal Election Commission",
+    "base_url": "https://www.fec.gov/"
+  },
+  "dataset": {
+    "id": "processed-schedule-b",
+    "name": "Processed Schedule B itemized disbursements",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "One processed Schedule B relation row per sender-reported disbursement observation in a weekly all-history PostgreSQL snapshot partitioned by two-year transaction period."
+  },
+  "authority": [
+    {
+      "kind": "documentation",
+      "url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/README.txt",
+      "retrieved_on": "2026-09-01"
+    },
+    {
+      "kind": "code_list",
+      "url": "https://www.fec.gov/campaign-finance-data/transaction-type-code-descriptions/",
+      "retrieved_on": "2026-09-01"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "none",
+      "environment_variable": null,
+      "header": null,
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "weekly processed Schedule B dump",
+        "method": "GET",
+        "url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_b.dump",
+        "response_root": "disclosure.fec_fitem_sched_b"
+      }
+    ],
+    "pagination": "None. One PostgreSQL custom-format artifact contains the parent relation and inherited two-year partitions from 1975 through the current period.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "publisher_snapshot",
+        "source": "Exact HTTP object identity, retrieval time, artifact digest, and PostgreSQL archive catalog.",
+        "purpose": "Immutable acquisition and replay boundary."
+      },
+      {
+        "name": "two_year_transaction_period",
+        "source": "Inherited relation selection plus the nullable row-level two_year_transaction_period field.",
+        "purpose": "Physical target-cycle selection without replacing disbursement, communication, report, or processing time."
+      }
+    ],
+    "retry_policy": "Bound transport retries; pin ETag or version identity; publish only after exact byte count and digest, complete archive inventory, exact relation schema, one COPY section, row conservation, and all-row parser validity."
+  },
+  "physical_schema": {
+    "media_type": "application/x-postgresql-custom-dump",
+    "source_format": "postgresql_custom_dump",
+    "encoding": "UTF-8",
+    "delimiter": "\t",
+    "line_ending": "PostgreSQL COPY text data rows use LF and require a final LF.",
+    "quote_policy": "none",
+    "empty_record_policy": "An empty physical COPY row is an explicit width issue; it is never skipped.",
+    "header_model": "relation_catalog",
+    "container_members": [],
+    "relations": [
+      "disclosure.fec_fitem_sched_b",
+      "disclosure.fec_fitem_sched_b_2019_2020",
+      "disclosure.fec_fitem_sched_b_2021_2022",
+      "disclosure.fec_fitem_sched_b_2023_2024",
+      "disclosure.fec_fitem_sched_b_2025_2026"
+    ],
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "reject",
+    "null_policy": "Preserve PostgreSQL COPY \\N as null and preserve empty text, zero, negative values, missing dates, and conflicting recipient IDs as distinct source values.",
+    "schema_fingerprint": "81 ordered fields pinned by fixtures/archive/dump-2026-08-30.json; sub_id and filing_form are the only NOT NULL columns; numeric precision, timestamps, search-vector text, pg_date default, and partition inheritance are preserved."
+  },
+  "identity": {
+    "publisher_record_key": "sub_id within one publisher_snapshot partition",
+    "occurrence_locator": "artifact SHA-256 + exact inherited relation name + one-based physical COPY row ordinal",
+    "record_version": "occurrence locator + null-aware semantic digest of all 81 decoded relation values",
+    "duplicate_policy": "Preserve every physical occurrence. A repeated sub_id in one partition is a blocking primary-key conflict; tran_id, orig_sub_id, and content equality never collapse rows.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "publisher_snapshot.observed_at", "meaning": "Legal Tender observation time for the exact weekly dump object."},
+      {"path": "disb_dt", "meaning": "Disbursement date asserted by the sending filer; nullable and independent from communication and filing times."},
+      {"path": "comm_dt", "meaning": "Communication date asserted by the filing; nullable and not a substitute for disbursement date."},
+      {"path": "rpt_yr", "meaning": "Report year retained independently from the transaction period."},
+      {"path": "two_year_transaction_period", "meaning": "Publisher-assigned two-year physical partition and query dimension; not the only temporal identity."},
+      {"path": "pg_date", "meaning": "Publisher processing timestamp without timezone."}
+    ],
+    "money_fields": [
+      {"path": "disb_amt", "meaning": "Signed exact reported amount for this sender-side observation; source scale is two decimal places.", "unit": "USD"},
+      {"path": "semi_an_bundled_refund", "meaning": "Nullable signed refund value for bundled-contribution disclosure; it is not another generic disbursement amount.", "unit": "USD"}
+    ],
+    "code_fields": [
+      {"path": "disb_tp", "meaning": "Raw Schedule B disbursement transaction type; a separate calculation defines any flow role."},
+      {"path": "action_cd", "meaning": "Raw processed action code; source ingestion does not decide effective status."},
+      {"path": "memo_cd", "meaning": "Raw memo code; source ingestion does not discard memo rows."},
+      {"path": "entity_tp", "meaning": "Raw recipient or payee entity type."},
+      {"path": "ref_disp_excess_flg", "meaning": "Raw refund or disposal of excess contribution indicator."}
+    ],
+    "rules": [
+      "Preserve all 81 fields before classifying effective disbursements, committee transfers, refunds, candidate-directed context, or reconciliation candidates.",
+      "Treat cmte_id as the reporting sender and preserve recipient_cmte_id and clean_recipient_cmte_id independently; neither name nor entity type can manufacture a recipient committee identity.",
+      "Keep disbursement date and communication date independent and preserve exact signed cents.",
+      "Do not discard memo rows, null amounts, null dates, negative rows, repeated transaction IDs, non-A action states, or one-sided recipient IDs during ingestion.",
+      "Do not infer that action A is effective or that another action is ineffective at the source boundary.",
+      "Do not add a Schedule B amount to a Schedule A amount solely because both describe compatible endpoints, dates, or values.",
+      "Classic oth and pas2 remain separately identified comparison and candidate-context evidence and never patch or duplicate this sender ledger."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The FEC replaces one weekly all-history processed snapshot. Rows expose action_cd, tran_id, back_ref_tran_id, file_num, orig_sub_id, and sub_id, but the source contract does not infer an amendment chain.",
+    "effective_projection": "A later versioned calculation must classify sender-side flow roles and effective observations, then a separate reconciliation must connect compatible Schedule B and Schedule A assertions without double counting."
+  },
+  "quality": {
+    "checks": [
+      {"id": "artifact_identity", "severity": "block", "rule": "Final URL, HTTP validators, byte count, retrieval time, and complete dump SHA-256 are recorded."},
+      {"id": "dump_integrity", "severity": "block", "rule": "pg_restore inventories exactly the parent plus inherited partitions and every selected relation exposes exactly the 81 contracted columns in order with compatible types and nullability."},
+      {"id": "copy_conservation", "severity": "block", "rule": "Each selected relation emits exactly one COPY section and its row count, byte count, and SHA-256 are conserved."},
+      {"id": "strict_decode", "severity": "block", "rule": "Every row is LF-terminated UTF-8 PostgreSQL COPY text with exactly 81 fields and valid null and escape syntax."},
+      {"id": "source_lexemes", "severity": "block", "rule": "Required values, NUMERIC precision and scale, integer precision, and timestamp syntax validate without binary floating point or silent coercion."},
+      {"id": "sub_id", "severity": "block", "rule": "Every row has a positive decimal sub_id and no duplicate key within one partition."},
+      {"id": "classic_overlap", "severity": "block", "rule": "A complete target-cycle scan measures exact sub_id membership against same-period oth and pas2 without adding their amounts."},
+      {"id": "schedule_a_alignment", "severity": "block", "rule": "A same-release target-cycle comparison measures compatible sender/receiver direction and reconciliation candidates before authority is accepted."},
+      {"id": "columnar_publication", "severity": "block", "rule": "A complete selected-cycle publication preserves every valid source row and all 81 lexemes, proves global sub_id uniqueness, round-trips the 98-column Parquet schema, and replays idempotently before authority is accepted."},
+      {"id": "calculation_boundary", "severity": "block", "rule": "This source contract never defines an effective outgoing-flow total by itself; a separate calculation contract must classify every source occurrence exactly once."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/archive/dump-2026-08-30.json",
+      "representation": "canonical_json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_b.dump",
+      "retrieved_on": "2026-09-01",
+      "sha256": "0dc5659a96437f268719db0533162b126a235e39891a98590a18fccb8262a543",
+      "scenarios": ["exact complete artifact identity", "first-MiB archive catalog", "81-column parent relation", "26 inherited two-year partitions"]
+    }
+  ],
+  "use": {
+    "retention": "Retain each accepted dump object, HTTP metadata, archive catalog, exact relation extract identity, occurrence versions, and issues indefinitely. Selected-cycle facts and calculations are rebuildable.",
+    "citation_date_required": true,
+    "disclaimer": "Processed Schedule B rows are sender-filed disbursement assertions. Amendments, memo records, action states, refunds, dates, recipient identities, and source anomalies affect effective totals; a compatible Schedule A receipt is corroborating or conflicting evidence, not another payment."
+  },
+  "outputs": {
+    "fact_types": ["processed_disbursement_assertion"],
+    "change_dimensions": ["publisher_snapshot", "two_year_transaction_period", "processed_record_version", "effective_record_rule_version", "reconciliation_rule_version", "time_basis"]
+  }
+}

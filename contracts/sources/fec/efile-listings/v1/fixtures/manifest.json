@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "../contract.json",
+  "representation": "canonical_json",
+  "transformation": "Exact API values selected from one-result responses and serialized as stable indented JSON. No field was normalized or omitted; credentials and transport headers are intentionally outside the fixture.",
+  "fixtures": [
+    {
+      "path": "original.json",
+      "source_url": "https://api.open.fec.gov/v1/efile/filings/?file_number=1997074&per_page=100",
+      "retrieved_on": "2026-08-27",
+      "sha256": "15411e7f7c103ec26c84cfead70abc15b43506550472968d87205f8d2fdd870d",
+      "scenarios": ["original filing later superseded", "predecessor chain array omits observed successor", "mutable most-recent projection"]
+    },
+    {
+      "path": "amendment.json",
+      "source_url": "https://api.open.fec.gov/v1/efile/filings/?file_number=2009982&per_page=100",
+      "retrieved_on": "2026-08-27",
+      "sha256": "23a9ec0d06c7d91d2e451964b73a22a141c1a2d1669f27875ac6d4acc96e5123",
+      "scenarios": ["first amendment", "successor chain contains original and amendment", "is_amended false on an amendment not yet superseded"]
+    }
+  ]
+}

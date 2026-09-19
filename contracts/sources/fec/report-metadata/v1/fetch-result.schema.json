@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/report-metadata/v1/fetch-result.schema.json",
+  "title": "Bounded metadata capture outcome; not a financial publication",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "request", "started_at", "finished_at", "state", "reason", "header_representation", "attempts", "bytes_read", "capture", "review", "history_complete", "financial_selection_ready"],
+  "properties": {
+    "version": {"const": "legal-tender.fec.report-metadata-capture.v1"},
+    "request": {"$ref": "request.schema.json"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "finished_at": {"type": "string", "format": "date-time"},
+    "state": {"enum": ["captured", "incomplete", "blocked", "failed"]},
+    "reason": {"type": "string", "minLength": 1},
+    "header_representation": {"const": "go_http_values_sensitive_headers_omitted.v1"},
+    "attempts": {"type": "array", "maxItems": 48, "items": {"$ref": "#/$defs/attempt"}},
+    "bytes_read": {"type": "integer", "minimum": 0},
+    "capture": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/artifact"}]},
+    "review": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/artifact"}]},
+    "history_complete": {"const": false},
+    "financial_selection_ready": {"const": false}
+  },
+  "if": {"properties": {"state": {"const": "captured"}}},
+  "then": {"properties": {"capture": {"$ref": "#/$defs/artifact"}, "review": {"$ref": "#/$defs/artifact"}, "reason": {"const": "query_empty_page_observed"}}},
+  "else": {"properties": {"capture": {"type": "null"}, "review": {"type": "null"}}},
+  "$defs": {
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256", "bytes"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^[a-z0-9.-]+$"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "bytes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "attempt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sequence", "page", "url", "started_at", "finished_at", "status", "outcome", "bytes_read", "body_complete", "retry_after_seconds", "omitted_headers", "body", "headers"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 48},
+        "page": {"type": "integer", "minimum": 1, "maximum": 16},
+        "url": {"type": "string", "format": "uri", "pattern": "^https://api\\.open\\.fec\\.gov/v1/(filings|reports/house-senate|reports/pac-party)/\\?"},
+        "started_at": {"type": "string", "format": "date-time"},
+        "finished_at": {"type": "string", "format": "date-time"},
+        "status": {"type": "integer", "minimum": 0, "maximum": 599},
+        "outcome": {"type": "string", "minLength": 1},
+        "bytes_read": {"type": "integer", "minimum": 0},
+        "body_complete": {"type": "boolean"},
+        "retry_after_seconds": {"type": "integer", "minimum": 0},
+        "omitted_headers": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "body": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/artifact"}]},
+        "headers": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/artifact"}]}
+      }
+    }
+  }
+}

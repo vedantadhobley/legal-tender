@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../../calculation-fixture-manifest.schema.json",
+  "calculation_contract": "../contract.json",
+  "transformation": "Reconcile exact processed Schedule A observations to raw occurrences, then align that evidence to the selected effective raw filing revision without collapsing publisher lag into conflict.",
+  "fixtures": [
+    {
+      "path": "original-processed-effective-amendment-pending.json",
+      "sha256": "9f3d1b2c772af61883276780c8ba04b874f06262d8412b705d475a7655fd9d86",
+      "input_paths": [
+        "../field-map.json",
+        "../../../../../sources/fec/efile-documents/v1/fixtures/1997074.fec",
+        "../../../../../sources/fec/efile-documents/v1/fixtures/2009982.fec",
+        "../../../../../sources/fec/schedule-a-api/v1/fixtures/original-filing-images.json",
+        "../../../../../sources/fec/schedule-a-api/v1/fixtures/amendment-not-yet-processed.json",
+        "../../../effective-schedule-a/v1/fixtures/first-amendment-change-set.json"
+      ],
+      "scenarios": [
+        "23 unique direct raw-to-processed matches with complete field-state conservation",
+        "processed publisher enrichment without source conflict",
+        "processed original filing lags a complete effective raw amendment",
+        "18 effective rows corroborated by identical prior-filing content",
+        "five modified and two added effective rows remain raw_only_pending_processing",
+        "targeted observation is diagnostic and ineligible for totals"
+      ]
+    }
+  ]
+}

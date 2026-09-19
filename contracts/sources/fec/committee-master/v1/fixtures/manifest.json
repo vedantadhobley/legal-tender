@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/committee-master@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "Each fixture is one exact 2024 cm.txt physical row mapped positionally to the publisher's ordered header, then serialized as sorted, indented JSON. Empty pipe-delimited fields remain empty strings.",
+  "fixtures": [
+    {"path": "connected-organization.json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "retrieved_on": "2026-06-21", "sha256": "33ebe9118824878568ec408b1cecad0d76b6c8f19f10b73cbd4e43d7e8642c31", "scenarios": ["connected organization", "corporation organization code", "source-empty candidate ID"]},
+    {"path": "source-empty-codes.json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "retrieved_on": "2026-06-21", "sha256": "f7dd74a70e4664a6986e738691272b56bab1932900a3e96321d8466e1b49f5b0", "scenarios": ["source-empty organization type", "source-empty party", "second address line"]}
+  ]
+}

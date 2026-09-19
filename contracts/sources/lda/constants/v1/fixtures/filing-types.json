@@ -1,0 +1,202 @@
+[
+  {
+    "name": "Registration",
+    "value": "RR"
+  },
+  {
+    "name": "Registration - Amendment",
+    "value": "RA"
+  },
+  {
+    "name": "1st Quarter - Report",
+    "value": "Q1"
+  },
+  {
+    "name": "1st Quarter - Report (No Activity)",
+    "value": "Q1Y"
+  },
+  {
+    "name": "1st Quarter - Termination",
+    "value": "1T"
+  },
+  {
+    "name": "1st Quarter - Termination (No Activity)",
+    "value": "1TY"
+  },
+  {
+    "name": "1st Quarter - Amendment",
+    "value": "1A"
+  },
+  {
+    "name": "1st Quarter - Amendment (No Activity)",
+    "value": "1AY"
+  },
+  {
+    "name": "1st Quarter - Termination Amendment",
+    "value": "1@"
+  },
+  {
+    "name": "1st Quarter - Termination Amendment (No Activity)",
+    "value": "1@Y"
+  },
+  {
+    "name": "2nd Quarter - Report",
+    "value": "Q2"
+  },
+  {
+    "name": "2nd Quarter - Report (No Activity)",
+    "value": "Q2Y"
+  },
+  {
+    "name": "2nd Quarter - Termination",
+    "value": "2T"
+  },
+  {
+    "name": "2nd Quarter - Termination (No Activity)",
+    "value": "2TY"
+  },
+  {
+    "name": "2nd Quarter - Amendment",
+    "value": "2A"
+  },
+  {
+    "name": "2nd Quarter - Amendment (No Activity)",
+    "value": "2AY"
+  },
+  {
+    "name": "2nd Quarter - Termination Amendment",
+    "value": "2@"
+  },
+  {
+    "name": "2nd Quarter - Termination Amendment (No Activity)",
+    "value": "2@Y"
+  },
+  {
+    "name": "3rd Quarter - Report",
+    "value": "Q3"
+  },
+  {
+    "name": "3rd Quarter - Report (No Activity)",
+    "value": "Q3Y"
+  },
+  {
+    "name": "3rd Quarter - Termination",
+    "value": "3T"
+  },
+  {
+    "name": "3rd Quarter - Termination (No Activity)",
+    "value": "3TY"
+  },
+  {
+    "name": "3rd Quarter - Amendment",
+    "value": "3A"
+  },
+  {
+    "name": "3rd Quarter - Amendment (No Activity)",
+    "value": "3AY"
+  },
+  {
+    "name": "3rd Quarter - Termination Amendment",
+    "value": "3@"
+  },
+  {
+    "name": "3rd Quarter - Termination Amendment (No Activity)",
+    "value": "3@Y"
+  },
+  {
+    "name": "4th Quarter - Report",
+    "value": "Q4"
+  },
+  {
+    "name": "4th Quarter - Report (No Activity)",
+    "value": "Q4Y"
+  },
+  {
+    "name": "4th Quarter - Termination",
+    "value": "4T"
+  },
+  {
+    "name": "4th Quarter - Termination (No Activity)",
+    "value": "4TY"
+  },
+  {
+    "name": "4th Quarter - Amendment",
+    "value": "4A"
+  },
+  {
+    "name": "4th Quarter - Amendment (No Activity)",
+    "value": "4AY"
+  },
+  {
+    "name": "4th Quarter - Termination Amendment",
+    "value": "4@"
+  },
+  {
+    "name": "4th Quarter - Termination Amendment (No Activity)",
+    "value": "4@Y"
+  },
+  {
+    "name": "Mid-Year Report",
+    "value": "MM"
+  },
+  {
+    "name": "Mid-Year Report (No Activity)",
+    "value": "MMY"
+  },
+  {
+    "name": "Mid-Year Termination",
+    "value": "MT"
+  },
+  {
+    "name": "Mid-Year Termination (No Activity)",
+    "value": "MTY"
+  },
+  {
+    "name": "Mid-Year Amendment",
+    "value": "MA"
+  },
+  {
+    "name": "Mid-Year Amendment (No Activity)",
+    "value": "MAY"
+  },
+  {
+    "name": "Mid-Year Termination Amendment",
+    "value": "M@"
+  },
+  {
+    "name": "Mid-Year Termination Amendment (No Activity)",
+    "value": "M@Y"
+  },
+  {
+    "name": "Year-End Report",
+    "value": "YY"
+  },
+  {
+    "name": "Year-End Report (No Activity)",
+    "value": "YYY"
+  },
+  {
+    "name": "Year-End Termination",
+    "value": "YT"
+  },
+  {
+    "name": "Year-End Termination (No Activity)",
+    "value": "YTY"
+  },
+  {
+    "name": "Year-End Amendment",
+    "value": "YA"
+  },
+  {
+    "name": "Year-End Amendment (No Activity)",
+    "value": "YAY"
+  },
+  {
+    "name": "Year-End Termination Amendment",
+    "value": "Y@"
+  },
+  {
+    "name": "Year-End Termination Amendment (No Activity)",
+    "value": "Y@Y"
+  }
+]

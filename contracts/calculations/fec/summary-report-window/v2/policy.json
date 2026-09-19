@@ -1,0 +1,22 @@
+{
+  "version": "legal-tender.fec.summary-report-window.v2",
+  "purpose": "compare declared reported spans without extending them to full calendar cycles",
+  "source_alignment": "independent_snapshots",
+  "delta": "summary_minus_window_exact_signed_minor_units",
+  "flow_scope": "reported_summary_coverage; require exact CVG_START_DT and CVG_END_DT match",
+  "opening_scope": "cycle_start_stock; unchanged from v1",
+  "closing_scope": "summary_end_stock; unchanged from v1",
+  "summary_fields": ["INDV_ITEM_CONTB", "INDV_UNITEM_CONTB", "INDV_CONTB", "TTL_RECEIPTS", "TTL_DISB", "COH_BOP", "COH_COP"],
+  "outside_reported_span": "preserve exact prefix/suffix dates and day counts; activity and money unknown",
+  "internal_coverage": "require existing field-window readiness; envelope dates do not bridge internal gaps",
+  "first_report": "earliest observed report, registration date, amendment N and equal values do not establish inactivity",
+  "cumulative_columns": "candidate election-cycle-to-date and PAC/party calendar-year-to-date are not two-calendar-year bulk period substitutes",
+  "field_conflicts": "unchanged v1 checks; retain all assertions and members",
+  "guards": {"same_report_membership_proven": false, "financial_use_eligible": false, "terminal_attribution_eligible": false},
+  "span_guards": {"financial_coverage_established": false, "outside_activity_known": false},
+  "references": [
+    "https://www.fec.gov/campaign-finance-data/committee-summary-file-description/",
+    "https://www.fec.gov/help-candidates-and-committees/filing-reports/quarterly-reports/",
+    "https://www.fec.gov/help-candidates-and-committees/filing-reports/election-cycle-aggregation/"
+  ]
+}

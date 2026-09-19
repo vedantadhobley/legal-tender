@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/audits/fec/receipt-report-profile/v2/result.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "profile_id", "policy", "individual_policy", "line_policy", "cycle", "summary_input", "summary_calculation_id", "schedule_a_source", "verification", "total_occurrences", "individual_predicate_occurrences", "reviewed_nonmemo_line_occurrences", "form_line_groups", "report_line_groups", "not_established", "comparison_ready", "terminal_attribution_eligible"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.receipt-report-occurrence-profile.v2"},
+    "profile_id": {"$ref": "../v1/result.schema.json#/$defs/digest"},
+    "policy": {"const": "fec/receipt-report-occurrence-profile@2.0.0"},
+    "individual_policy": {"$ref": "../v1/result.schema.json#/properties/individual_policy"},
+    "line_policy": {"const": "fec/reported-itemized-line-membership@1.0.0"},
+    "cycle": {"$ref": "../v1/result.schema.json#/properties/cycle"},
+    "summary_input": {"$ref": "../v1/result.schema.json#/properties/summary_input"},
+    "summary_calculation_id": {"$ref": "../v1/result.schema.json#/$defs/digest"},
+    "schedule_a_source": {"$ref": "../v1/result.schema.json#/properties/schedule_a_source"},
+    "verification": {"$ref": "../v1/result.schema.json#/properties/verification"},
+    "total_occurrences": {"$ref": "../v1/result.schema.json#/$defs/measures"},
+    "individual_predicate_occurrences": {"$ref": "../v1/result.schema.json#/$defs/measures"},
+    "reviewed_nonmemo_line_occurrences": {"$ref": "../v1/result.schema.json#/$defs/measures"},
+    "form_line_groups": {"type": "array", "minItems": 1, "maxItems": 500000, "items": {
+      "type": "object", "additionalProperties": false, "required": ["key", "measures"],
+      "properties": {
+        "key": {"$ref": "#/$defs/membership", "unevaluatedProperties": false},
+        "measures": {"$ref": "../v1/result.schema.json#/$defs/measures"}
+      }
+    }},
+    "report_line_groups": {"type": "array", "minItems": 1, "maxItems": 500000, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["key", "measures", "receipt_dates", "first_source_row_ordinal", "last_source_row_ordinal"],
+      "properties": {
+        "key": {
+          "allOf": [
+            {"$ref": "#/$defs/membership"},
+            {"type": "object", "required": ["committee", "file_num", "report_type", "report_year"], "properties": {
+              "committee": {"$ref": "../v1/result.schema.json#/$defs/cell"},
+              "file_num": {"$ref": "../v1/result.schema.json#/$defs/cell"},
+              "report_type": {"$ref": "../v1/result.schema.json#/$defs/cell"},
+              "report_year": {"$ref": "../v1/result.schema.json#/$defs/cell"}
+            }}
+          ],
+          "unevaluatedProperties": false
+        },
+        "measures": {"$ref": "../v1/result.schema.json#/$defs/measures"},
+        "receipt_dates": {"$ref": "../v1/result.schema.json#/$defs/report/properties/receipt_dates"},
+        "first_source_row_ordinal": {"type": "integer", "minimum": 1},
+        "last_source_row_ordinal": {"type": "integer", "minimum": 1}
+      }
+    }},
+    "not_established": {"const": ["publisher_key_uniqueness", "transaction_identity_uniqueness", "effective_report_selection", "original_filing_membership", "report_period_coverage", "summary_report_and_account_membership", "other_form_line_equivalence", "cash_funding_basis", "terminal_dollar_allocation"]},
+    "comparison_ready": {"const": false},
+    "terminal_attribution_eligible": {"const": false}
+  },
+  "$defs": {
+    "membership": {
+      "type": "object",
+      "required": ["filing_form", "schedule_type", "line_num", "memo_code", "publisher_individual_state", "disposition", "individual_decision"],
+      "properties": {
+        "filing_form": {"$ref": "../v1/result.schema.json#/$defs/cell"},
+        "schedule_type": {"$ref": "../v1/result.schema.json#/$defs/cell"},
+        "line_num": {"$ref": "../v1/result.schema.json#/$defs/cell"},
+        "memo_code": {"$ref": "../v1/result.schema.json#/$defs/cell"},
+        "publisher_individual_state": {"enum": ["true", "false", "source_null"]},
+        "individual_decision": {"enum": ["included", "unresolved_individual_class", "excluded_non_individual", "excluded_memo_subtotal", "unresolved_amount"]},
+        "disposition": {"enum": ["reviewed_nonmemo_line", "outside_reviewed_form_line", "excluded_memo_subtotal", "unresolved_memo_code", "unresolved_line_amount"]}
+      }
+    }
+  }
+}

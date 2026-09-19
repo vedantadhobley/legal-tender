@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/audits/fec/receipt-report-profile/v1/result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile_id", "policy", "individual_policy", "cycle", "summary_input", "summary_calculation_id", "schedule_a_source", "verification", "total_occurrences", "individual_predicate_occurrences", "form_line_decisions", "individual_report_groups", "not_established", "comparison_ready", "terminal_attribution_eligible"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.receipt-report-occurrence-profile.v1"},
+    "profile_id": {"$ref": "#/$defs/digest"},
+    "policy": {"const": "fec/receipt-report-occurrence-profile@1.0.0"},
+    "individual_policy": {"const": "fec/candidate-itemized-individual-receipts@1.0.0"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{3}[02468]$"},
+    "summary_input": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-summary-assertions/v1/result.schema.json#/properties/input"},
+    "summary_calculation_id": {"$ref": "#/$defs/digest"},
+    "schedule_a_source": {
+      "allOf": [
+        {"$ref": "https://legal-tender.local/contracts/releases/fec/v4/staged-release.schema.json#/$defs/output"},
+        {"required": ["row_count", "contracted_field_count"], "properties": {"source_id": {"const": "fec:schedule-a:processed"}, "selection_kind": {"const": "relation"}, "row_count": {"minimum": 1}, "contracted_field_count": {"const": 81}, "decompression_validated": {"const": true}}}
+      ]
+    },
+    "verification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "complete", "expected_period", "rows", "valid_rows", "invalid_rows", "compressed_bytes", "compressed_sha256", "uncompressed_bytes", "uncompressed_sha256", "elapsed_milliseconds", "checks"],
+      "properties": {
+        "schema_version": {"const": "legal-tender.schedule-a-verification.v1"},
+        "complete": {"const": true},
+        "expected_period": {"type": "string"},
+        "rows": {"type": "integer", "minimum": 1},
+        "valid_rows": {"type": "integer", "minimum": 1},
+        "invalid_rows": {"const": 0},
+        "compressed_bytes": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "uncompressed_bytes": {"type": "integer", "minimum": 1},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "elapsed_milliseconds": {"const": 0},
+        "checks": {"type": "array", "minItems": 6, "maxItems": 6, "items": {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "passed", "expected", "actual"],
+          "properties": {
+            "id": {"enum": ["row_validity", "row_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256"]},
+            "passed": {"const": true}, "expected": {"type": "string"}, "actual": {"type": "string"}
+          }
+        }}
+      }
+    },
+    "total_occurrences": {"$ref": "#/$defs/measures"},
+    "individual_predicate_occurrences": {"$ref": "#/$defs/measures"},
+    "form_line_decisions": {"type": "array", "minItems": 1, "maxItems": 500000, "items": {"$ref": "#/$defs/form"}},
+    "individual_report_groups": {"type": "array", "maxItems": 500000, "items": {"$ref": "#/$defs/report"}},
+    "not_established": {"const": ["publisher_key_uniqueness", "effective_report_selection", "report_period_coverage", "summary_report_and_account_membership", "form_line_equivalence", "cash_funding_basis", "terminal_dollar_allocation"]},
+    "comparison_ready": {"const": false},
+    "terminal_attribution_eligible": {"const": false}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "count": {"type": "integer", "minimum": 0},
+    "cell": {
+      "type": "object", "additionalProperties": false, "required": ["present", "value"],
+      "properties": {"present": {"type": "boolean"}, "value": {"type": "string"}},
+      "if": {"properties": {"present": {"const": false}}},
+      "then": {"properties": {"value": {"const": ""}}}
+    },
+    "measures": {"$ref": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/result.schema.json#/$defs/measures"},
+    "form": {
+      "type": "object", "additionalProperties": false, "required": ["key", "measures"],
+      "properties": {
+        "key": {
+          "type": "object", "additionalProperties": false, "required": ["filing_form", "schedule_type", "line_num", "individual_decision"],
+          "properties": {
+            "filing_form": {"$ref": "#/$defs/cell"}, "schedule_type": {"$ref": "#/$defs/cell"}, "line_num": {"$ref": "#/$defs/cell"},
+            "individual_decision": {"enum": ["included", "unresolved_individual_class", "excluded_non_individual", "excluded_memo_subtotal", "unresolved_amount"]}
+          }
+        },
+        "measures": {"$ref": "#/$defs/measures"}
+      }
+    },
+    "report": {
+      "type": "object", "additionalProperties": false, "required": ["key", "measures", "receipt_dates", "first_source_row_ordinal", "last_source_row_ordinal"],
+      "properties": {
+        "key": {
+          "type": "object", "additionalProperties": false, "required": ["committee", "file_num", "filing_form", "schedule_type", "line_num", "report_type", "report_year"],
+          "properties": {
+            "committee": {"$ref": "#/$defs/cell"}, "file_num": {"$ref": "#/$defs/cell"}, "filing_form": {"$ref": "#/$defs/cell"}, "schedule_type": {"$ref": "#/$defs/cell"}, "line_num": {"$ref": "#/$defs/cell"}, "report_type": {"$ref": "#/$defs/cell"}, "report_year": {"$ref": "#/$defs/cell"}
+          }
+        },
+        "measures": {"$ref": "#/$defs/measures"},
+        "receipt_dates": {
+          "type": "object", "additionalProperties": false, "required": ["missing_rows", "invalid_rows", "before_cycle_rows", "in_cycle_rows", "after_cycle_rows", "first_observed_date", "last_observed_date"],
+          "properties": {
+            "missing_rows": {"$ref": "#/$defs/count"}, "invalid_rows": {"$ref": "#/$defs/count"}, "before_cycle_rows": {"$ref": "#/$defs/count"}, "in_cycle_rows": {"$ref": "#/$defs/count"}, "after_cycle_rows": {"$ref": "#/$defs/count"},
+            "first_observed_date": {"type": "string", "pattern": "^(|[0-9]{4}-[0-9]{2}-[0-9]{2})$"},
+            "last_observed_date": {"type": "string", "pattern": "^(|[0-9]{4}-[0-9]{2}-[0-9]{2})$"}
+          }
+        },
+        "first_source_row_ordinal": {"type": "integer", "minimum": 1},
+        "last_source_row_ordinal": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

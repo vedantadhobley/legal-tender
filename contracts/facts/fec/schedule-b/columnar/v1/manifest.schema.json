@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/facts/fec/schedule-b/columnar/v1/manifest.schema.json",
+  "title": "Published processed Schedule B columnar fact set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "fact_set_id", "fact_type", "cycle", "relation",
+    "source_contract", "source_release_id", "source_release_manifest_sha256",
+    "source_artifact_sha256", "source_artifact_byte_count", "source_artifact_storage_key",
+    "run_id", "state", "physical_schema_version", "publisher_version",
+    "parquet_library", "published_at", "configuration", "counts", "source_replay",
+    "shards", "checks"
+  ],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.schedule-b-columnar-fact-set.v1"},
+    "fact_set_id": {"$ref": "#/$defs/digest"},
+    "fact_type": {"const": "fec.schedule_b_disbursement.v1"},
+    "cycle": {"enum": ["2020", "2022", "2024", "2026"]},
+    "relation": {"type": "string", "pattern": "^disclosure\\.fec_fitem_sched_b_[0-9]{4}_[0-9]{4}$"},
+    "source_contract": {"const": "fec/schedule-b@1.0.0"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "source_release_manifest_sha256": {"$ref": "#/$defs/digest"},
+    "source_artifact_sha256": {"$ref": "#/$defs/digest"},
+    "source_artifact_byte_count": {"type": "integer", "minimum": 1},
+    "source_artifact_storage_key": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "published"},
+    "physical_schema_version": {"const": "legal-tender.fec.schedule-b-parquet.v1"},
+    "publisher_version": {"const": "legal-tender.fec.schedule-b-columnar-publisher.v1"},
+    "parquet_library": {"const": "github.com/parquet-go/parquet-go@v0.32.0"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "configuration": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rows_per_shard", "rows_per_row_group", "column_count", "compression", "locator"],
+      "properties": {
+        "rows_per_shard": {"type": "integer", "minimum": 1},
+        "rows_per_row_group": {"type": "integer", "minimum": 1},
+        "column_count": {"const": 98},
+        "compression": {"const": "parquet-zstd"},
+        "locator": {"type": "string", "minLength": 1}
+      }
+    },
+    "counts": {"$ref": "#/$defs/counts"},
+    "source_replay": {"$ref": "#/$defs/sourceReplay"},
+    "shards": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/shard"}},
+    "checks": {"type": "array", "minItems": 8, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_rows", "facts", "valid_facts", "invalid_source_rows", "unique_sub_ids", "duplicate_sub_ids"],
+      "properties": {
+        "source_rows": {"type": "integer", "minimum": 1},
+        "facts": {"type": "integer", "minimum": 1},
+        "valid_facts": {"type": "integer", "minimum": 1},
+        "invalid_source_rows": {"const": 0},
+        "unique_sub_ids": {"type": "integer", "minimum": 1},
+        "duplicate_sub_ids": {"const": 0}
+      }
+    },
+    "sourceReplay": {
+      "type": "object", "additionalProperties": false,
+      "required": ["archive_bytes", "archive_sha256", "copy_rows", "copy_bytes", "copy_sha256", "fact_semantic_sha256"],
+      "properties": {
+        "archive_bytes": {"type": "integer", "minimum": 1},
+        "archive_sha256": {"$ref": "#/$defs/digest"},
+        "copy_rows": {"type": "integer", "minimum": 1},
+        "copy_bytes": {"type": "integer", "minimum": 1},
+        "copy_sha256": {"$ref": "#/$defs/digest"},
+        "fact_semantic_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "shard": {
+      "type": "object", "additionalProperties": false,
+      "required": ["index", "first_source_row_ordinal", "last_source_row_ordinal", "first_raw_byte_offset", "last_raw_byte_end", "source_rows", "facts", "row_groups", "bytes", "sha256", "semantic_sha256", "storage_key"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0},
+        "first_source_row_ordinal": {"type": "integer", "minimum": 1},
+        "last_source_row_ordinal": {"type": "integer", "minimum": 1},
+        "first_raw_byte_offset": {"type": "integer", "minimum": 0},
+        "last_raw_byte_end": {"type": "integer", "minimum": 1},
+        "source_rows": {"type": "integer", "minimum": 1},
+        "facts": {"type": "integer", "minimum": 1},
+        "row_groups": {"type": "integer", "minimum": 1},
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "semantic_sha256": {"$ref": "#/$defs/digest"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"const": true},
+        "severity": {"const": "block"},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

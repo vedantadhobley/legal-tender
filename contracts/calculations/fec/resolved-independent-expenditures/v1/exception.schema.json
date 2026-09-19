@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/resolved-independent-expenditures/v1/exception.schema.json",
+  "title": "Unprojectable resolved independent-expenditure decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "exception_id", "calculation_set_id",
+    "resolution_decision_id", "fact_id", "natural_key", "cycle",
+    "spender_committee_id", "reported_candidate_id", "support_oppose",
+    "state", "method", "amount_minor_units"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.resolved-independent-expenditure-exception.v1"},
+    "exception_id": {"$ref": "#/$defs/digest"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "resolution_decision_id": {"$ref": "#/$defs/digest"},
+    "fact_id": {"$ref": "#/$defs/digest"},
+    "natural_key": {"type": "string", "minLength": 1},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "spender_committee_id": {"type": "string", "minLength": 1},
+    "reported_candidate_id": {"type": "string", "minLength": 1},
+    "support_oppose": {"enum": ["S", "O"]},
+    "state": {"enum": ["ambiguous", "unresolved"]},
+    "method": {"type": "string", "minLength": 1},
+    "amount_minor_units": {"$ref": "#/$defs/signed_integer"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "signed_integer": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"}
+  }
+}

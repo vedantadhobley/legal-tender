@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculation-contract.schema.json",
+  "title": "Legal Tender calculation contract metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "contract_id", "contract_version", "status", "question",
+    "inputs", "identity", "method", "output", "revisions", "quality",
+    "fixtures", "propagation", "use"
+  ],
+  "properties": {
+    "$schema": {"type": "string", "format": "uri-reference"},
+    "contract_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]*$"},
+    "contract_version": {"type": "string", "pattern": "^[1-9][0-9]*\\.[0-9]+\\.[0-9]+$"},
+    "status": {"enum": ["draft", "accepted", "retired"]},
+    "question": {"$ref": "#/$defs/nonEmptyString"},
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/input"}
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result_key", "input_manifest", "method_version", "result_digest"],
+      "properties": {
+        "result_key": {"$ref": "#/$defs/nonEmptyString"},
+        "input_manifest": {"$ref": "#/$defs/nonEmptyString"},
+        "method_version": {"$ref": "#/$defs/nonEmptyString"},
+        "result_digest": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordered_steps", "decision_states", "invariants"],
+      "properties": {
+        "ordered_steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "decision_states": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/decisionState"}
+        },
+        "invariants": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result_schema", "grain", "fact_types", "publication_states"],
+      "properties": {
+        "result_schema": {"type": "string", "format": "uri-reference"},
+        "grain": {"$ref": "#/$defs/nonEmptyString"},
+        "fact_types": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "publication_states": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/decisionState"}
+        }
+      }
+    },
+    "revisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_change_policy", "method_change_policy", "history_policy"],
+      "properties": {
+        "input_change_policy": {"$ref": "#/$defs/nonEmptyString"},
+        "method_change_policy": {"$ref": "#/$defs/nonEmptyString"},
+        "history_policy": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checks"],
+      "properties": {
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/check"}
+        }
+      }
+    },
+    "fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/fixture"}
+    },
+    "propagation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_change_dimensions", "semantic_change_dimensions", "downstream_keys", "no_change_policy"],
+      "properties": {
+        "source_change_dimensions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "semantic_change_dimensions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "downstream_keys": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "no_change_policy": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "use": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["retention", "disclaimer"],
+      "properties": {
+        "retention": {"$ref": "#/$defs/nonEmptyString"},
+        "disclaimer": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract", "role", "required", "version_policy"],
+      "properties": {
+        "contract": {"$ref": "#/$defs/nonEmptyString"},
+        "role": {"$ref": "#/$defs/nonEmptyString"},
+        "required": {"type": "boolean"},
+        "version_policy": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "decisionState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "publishable", "meaning"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+        "publishable": {"type": "boolean"},
+        "meaning": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "rule"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+        "severity": {"enum": ["observe", "partial", "block"]},
+        "rule": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "representation", "sha256", "input_paths", "scenarios"],
+      "properties": {
+        "path": {"type": "string", "format": "uri-reference"},
+        "representation": {"enum": ["canonical_json", "synthetic_json"]},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "input_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "format": "uri-reference"}
+        },
+        "scenarios": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      }
+    }
+  }
+}

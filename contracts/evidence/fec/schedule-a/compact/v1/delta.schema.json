@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/schedule-a/compact/v1/delta.schema.json",
+  "title": "Compact Schedule A natural-key delta",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sub_id", "change", "prior_state", "current_state"],
+  "properties": {
+    "sub_id": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "change": {"enum": ["added", "changed", "absent", "invalid"]},
+    "prior_state": {"enum": ["missing", "unique", "invalid", "duplicate"]},
+    "current_state": {"enum": ["missing", "unique", "invalid", "duplicate"]},
+    "prior_row_ordinal": {"type": "integer", "minimum": 1},
+    "current_row_ordinal": {"type": "integer", "minimum": 1},
+    "prior_comparison_digest": {"$ref": "#/$defs/digest"},
+    "current_comparison_digest": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

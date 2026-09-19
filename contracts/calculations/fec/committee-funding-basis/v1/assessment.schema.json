@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/assessment.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "inventory_calculation_id",
+    "upstream_calculation_id",
+    "candidate_id",
+    "cycle",
+    "state",
+    "committees",
+    "terminal_attribution_eligible",
+    "not_covered"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.candidate-funding-basis-assessment.v1"
+    },
+    "inventory_calculation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "upstream_calculation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "candidate_id": {
+      "type": "string"
+    },
+    "cycle": {
+      "type": "string",
+      "pattern": "^[0-9]{4}$"
+    },
+    "state": {
+      "const": "reported_receipts_only_allocation_unresolved"
+    },
+    "committees": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "committee_id",
+          "candidate_authorized",
+          "has_current_master",
+          "components",
+          "coverage",
+          "terminal_attribution_eligible"
+        ],
+        "properties": {
+          "committee_id": {
+            "type": "string",
+            "pattern": "^C[0-9]{8}$"
+          },
+          "candidate_authorized": {
+            "type": "boolean"
+          },
+          "has_current_master": {
+            "type": "boolean"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "component",
+                "measures"
+              ],
+              "properties": {
+                "component": {
+                  "enum": [
+                    "unresolved_recipient",
+                    "memo_subtotal",
+                    "overlapping_individual_and_committee",
+                    "itemized_individual_only",
+                    "committee_flow_only",
+                    "unknown_amount",
+                    "unresolved_individual_class",
+                    "other_reported_receipt"
+                  ]
+                },
+                "measures": {
+                  "$ref": "result.schema.json#/$defs/measures"
+                }
+              }
+            }
+          },
+          "coverage": {
+            "enum": [
+              "no_schedule_a_rows_in_exact_snapshot",
+              "reported_schedule_a_rows_not_complete_funding"
+            ]
+          },
+          "terminal_attribution_eligible": {
+            "const": false
+          }
+        }
+      }
+    },
+    "terminal_attribution_eligible": {
+      "const": false
+    },
+    "not_covered": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

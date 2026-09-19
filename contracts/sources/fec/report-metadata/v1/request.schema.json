@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/report-metadata/v1/request.schema.json",
+  "title": "Bounded manual OpenFEC metadata capture request; no credentials",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "schema_sha256", "endpoint", "query", "limits"],
+  "properties": {
+    "contract": {"const": "fec/report-metadata@1.0.0"},
+    "schema_sha256": {"const": "0cca7f2af73270b35d7276e53d99b56b2f8f9970b33cb5d36a85fdb8b773caed"},
+    "endpoint": {"enum": ["/v1/filings/", "/v1/reports/house-senate/", "/v1/reports/pac-party/"]},
+    "query": {"$ref": "capture.schema.json#/$defs/query"},
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pages", "requests", "attempts_per_page", "source_bytes"],
+      "properties": {
+        "pages": {"type": "integer", "minimum": 1, "maximum": 16},
+        "requests": {"type": "integer", "minimum": 1, "maximum": 48},
+        "attempts_per_page": {"type": "integer", "minimum": 1, "maximum": 3},
+        "source_bytes": {"type": "integer", "minimum": 1024, "maximum": 16777216}
+      }
+    }
+  },
+  "if": {"properties": {"query": {"required": ["file_numbers"]}}},
+  "then": {"properties": {"endpoint": {"const": "/v1/filings/"}}}
+}

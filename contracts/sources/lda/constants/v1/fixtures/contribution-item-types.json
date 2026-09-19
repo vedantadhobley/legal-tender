@@ -1,0 +1,22 @@
+[
+  {
+    "name": "FECA",
+    "value": "feca"
+  },
+  {
+    "name": "Honorary Expenses",
+    "value": "he"
+  },
+  {
+    "name": "Meeting Expenses",
+    "value": "me"
+  },
+  {
+    "name": "Presidential Library Expenses",
+    "value": "ple"
+  },
+  {
+    "name": "Presidential Inaugural Committee",
+    "value": "pic"
+  }
+]

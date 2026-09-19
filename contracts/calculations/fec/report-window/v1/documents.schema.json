@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "documents"],
+  "properties": {
+    "version": {"const": "legal-tender.fec.report-document-set.v1"},
+    "documents": {"type": "array", "maxItems": 64, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_url", "body", "headers"],
+      "properties": {
+        "source_url": {"type": "string", "pattern": "^https://docquery\\.fec\\.gov/(paper|dcdev)/posted/[1-9][0-9]{0,9}\\.fec$"},
+        "body": {"$ref": "#/$defs/artifact"},
+        "headers": {"allOf": [{"$ref": "#/$defs/artifact"}, {"properties": {"bytes": {"maximum": 131072}}}]}
+      }
+    }}
+  },
+  "$defs": {"artifact": {
+    "type": "object", "additionalProperties": false, "required": ["path", "sha256", "bytes"],
+    "properties": {
+      "path": {"type": "string", "minLength": 1},
+      "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "bytes": {"type": "integer", "minimum": 1, "maximum": 4194304}
+    }
+  }}
+}

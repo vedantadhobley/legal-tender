@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/committee-master/v1/record.schema.json",
+  "title": "FEC committee master source record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "CMTE_ID", "CMTE_NM", "TRES_NM", "CMTE_ST1", "CMTE_ST2",
+    "CMTE_CITY", "CMTE_ST", "CMTE_ZIP", "CMTE_DSGN", "CMTE_TP",
+    "CMTE_PTY_AFFILIATION", "CMTE_FILING_FREQ", "ORG_TP",
+    "CONNECTED_ORG_NM", "CAND_ID"
+  ],
+  "properties": {
+    "CMTE_ID": {"type": "string", "pattern": "^C[0-9]{8}$"},
+    "CMTE_NM": {"type": "string"},
+    "TRES_NM": {"type": "string"},
+    "CMTE_ST1": {"type": "string"},
+    "CMTE_ST2": {"type": "string"},
+    "CMTE_CITY": {"type": "string"},
+    "CMTE_ST": {"type": "string"},
+    "CMTE_ZIP": {"type": "string"},
+    "CMTE_DSGN": {"type": "string"},
+    "CMTE_TP": {"type": "string"},
+    "CMTE_PTY_AFFILIATION": {"type": "string"},
+    "CMTE_FILING_FREQ": {"type": "string"},
+    "ORG_TP": {"type": "string"},
+    "CONNECTED_ORG_NM": {"type": "string"},
+    "CAND_ID": {"type": "string", "pattern": "^$|^[HPS][A-Z0-9]{8}$"}
+  }
+}

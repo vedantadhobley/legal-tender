@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/current-campaigns-summary@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "Each fixture is one exact 2024 webl24.txt physical row mapped positionally to the ordered local FEC header evidence, then serialized as sorted, indented JSON. Numeric lexemes and empty strings are unchanged; the contract remains draft pending stronger publisher-header provenance.",
+  "fixtures": [
+    {"path": "candidate-loan.json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "retrieved_on": "2026-06-21", "sha256": "64ebec3bce7a544028e98f1955fe43fa79ae1c6d642b6c5707883a78885363c2", "scenarios": ["candidate contribution", "candidate loan repayment", "debt and authorized transfers"]},
+    {"path": "partial-campaign.json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "retrieved_on": "2026-06-21", "sha256": "3b49aa92b2a6cbf691f0cd6a3549d5d436f473f9db04f077b104d93168b5f865", "scenarios": ["candidate loan", "candidate contribution", "summary categories do not collapse"]}
+  ]
+}

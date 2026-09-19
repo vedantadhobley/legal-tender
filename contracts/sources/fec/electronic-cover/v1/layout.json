@@ -1,0 +1,36 @@
+{
+  "version": "legal-tender.fec.electronic-cover.v1",
+  "status": "accepted-bounded-reader",
+  "source": {
+    "url": "https://cg-519a459a-0ea3-42c2-b7bc-fa1143481f74.s3-us-gov-west-1.amazonaws.com/bulk-downloads/electronic/eFilingFormats.zip",
+    "member": "eFilingFormats/FEC_v8x/FEC_Format_v8.4.xlsx",
+    "sha256": "9d3775d73e9398144b0e0267415ba53e1b5c6a326110b327ce2cd58d233bf3d6",
+    "bytes": 583496
+  },
+  "header": {"selector": ["HDR", "FEC", "8.4"], "physical_widths": [7, 8], "optional_trailing_comment": 8, "original_report_id": 6, "amendment_number": 7},
+  "layouts": {
+    "F3": {"width": 93, "report_code": 12, "coverage_start": 16, "coverage_end": 17, "amount_ranges_inclusive": [[24, 93]], "period_fields": {
+      "individual_itemized_contributions_period": [33],
+      "individual_unitemized_contributions_period": [34],
+      "total_individual_contributions_period": [35],
+      "total_receipts_period": [46, 59],
+      "total_disbursements_period": [57, 61],
+      "cash_on_hand_beginning_period": [58],
+      "cash_on_hand_end_period": [30, 62]
+    }},
+    "F3X": {"width": 123, "report_code": 10, "coverage_start": 14, "coverage_end": 15, "amount_ranges_inclusive": [[23, 74], [76, 123]], "period_fields": {
+      "individual_itemized_contributions_period": [30],
+      "individual_unitemized_contributions_period": [31],
+      "total_individual_contributions_period": [32],
+      "total_receipts_period": [24, 45],
+      "total_disbursements_period": [26, 66],
+      "cash_on_hand_beginning_period": [23],
+      "cash_on_hand_end_period": [27]
+    }}
+  },
+  "framing": "Pinned regular files and exact 200/206 HTTP framing; ASCII HDR and cover fields split on 1c; LF or CRLF records. Preserve every byte and locator. No short-row padding or extra-field truncation. Prefix records must end with a newline before interpretation.",
+  "money": "Exact signed decimal minor units. Blank, valid zero and invalid values remain distinct. Preserve both period and column-B fields; never use column B as a period fallback.",
+  "scope": "Only dcdev posted URLs and F3[NAT]/F3X[NAT]. No schedule parsing, effective-record selection, source publication or automatic acquisition.",
+  "limits": {"body_bytes": 4194304, "header_bytes": 131072, "record_bytes": 65536, "records": 4096},
+  "guards": {"history_complete": false, "financial_selection_ready": false, "original_image_verified": false}
+}

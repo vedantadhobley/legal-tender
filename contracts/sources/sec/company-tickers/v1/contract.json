@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "sec/company-tickers",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id":"sec","name":"U.S. Securities and Exchange Commission","base_url":"https://www.sec.gov/"},
+  "dataset": {"id":"company-tickers","name":"Company ticker and CIK directory","semantic_domain":"organization_identity_evidence","description":"One bulk name/ticker/CIK observation, independently searched using source-backed FEC query strings. Neither a complete organization registry nor FEC identity approval."},
+  "authority": [
+    {"kind":"documentation","url":"https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.sec.gov/about/developer-resources","retrieved_on":"2026-09-15"},
+    {"kind":"api","url":"https://www.sec.gov/files/company_tickers.json","retrieved_on":"2026-09-15"}
+  ],
+  "acquisition": {
+    "authentication":{"class":"none","environment_variable":null,"header":null,"scheme":null},
+    "endpoints":[{"name":"directory","method":"GET","url":"https://www.sec.gov/files/company_tickers.json","response_root":"object keyed by numeric source row indices"}],
+    "pagination":"None. One bounded bulk file; no organization query text is transmitted.",
+    "rate_limit_per_minute":null,
+    "partitions":[{"name":"capture","source":"One exact SEC response and observation timestamp","purpose":"Independent source snapshot, not a FEC cycle or source-release replacement."}],
+    "retry_policy":"One request per invocation, 30-second timeout, 16 MiB body cap and 100000-row parsing cap. Operator declares a user agent with reachable contact under SEC fair access. Fixed HTTPS URL, no credentials, inherited proxy, redirect, retry or fallback. New directory only, exact response retained, final manifest required for offline replay. No recurring schedule is implemented."
+  },
+  "physical_schema": {
+    "media_type":"application/json",
+    "source_format":"json_api",
+    "encoding":"Strict UTF-8 JSON: duplicate keys, invalid surrogates, trailing values and nesting over 32 are rejected. Numeric CIK tokens must use integer syntax; decimal/exponent encodings are not accepted by the Go parser even if mathematically integral.",
+    "record_schema":"record.schema.json",
+    "unknown_field_policy":"capture_and_review",
+    "null_policy":"No null rows or required values. Each row has exactly cik_str, ticker and title. Empty directories are unusable, not evidence of universal absence.",
+    "schema_fingerprint":"Versioned closed parser in internal/source/sec/directory.go and record.schema.json. Exact raw body SHA-256 preserves changed source bytes; an unknown interpreted field or shape blocks all candidate output from that snapshot."
+  },
+  "identity": {
+    "publisher_record_key":"Numeric CIK identifies a filer; it is not a directory-row key or a FEC organization identifier.",
+    "occurrence_locator":"Capture digest, body digest and exact source object key. Do not require keys to be contiguous.",
+    "record_version":"Exact response body SHA-256. Directory row keys have no cross-snapshot stability guarantee.",
+    "duplicate_policy":"Preserve every row and ticker, including multiple rows sharing a CIK. Group candidates by CIK without treating repeated rows as extra confirmation.",
+    "children":[]
+  },
+  "semantics": {
+    "time_fields":[{"path":"observed_at and selected HTTP headers","meaning":"Retrieval/publisher metadata, not name validity or a FEC relationship interval. Directory rows have no transaction-time validity assertion."}],
+    "money_fields":[],"code_fields":[],
+    "rules":[
+      "SEC describes this as ticker/CIK/conformed-name associations and does not guarantee scope or accuracy. A no-match result is scoped to this snapshot and matching policy, not entity nonexistence.",
+      "Keep original numeric CIK, ticker and title. The ten-digit zero-padded CIK is a separate derived representation.",
+      "The source does not independently bind a FEC employer or connected-organization string to a CIK. It cannot establish employment, ownership, parent/subsidiary identity or the origin of dollars.",
+      "Name candidates reuse organization-name-proposals.v2; no benchmark names, QIDs, CIKs, tickers or source positions become runtime exceptions.",
+      "Every distinct matching CIK survives. An exact name does not suppress a competing suffix/boundary candidate. Identity publication remains unapproved."
+    ]
+  },
+  "revisions":{"publisher_model":"Mutable periodically updated directory; each capture is a separate observation.","effective_projection":"No current-identity graph, historical name interpolation, recurring refresh, submissions fetch or complete SEC registrant index is implemented by this source."},
+  "quality":{"checks":[
+    {"id":"artifact_identity","severity":"block","rule":"Require manifest/body digests, fixed request URL, confined regular files, source budgets and exact body lengths."},
+    {"id":"source_shape","severity":"block","rule":"Reject unreviewed shapes without producing a usable empty directory; preserve raw failed bodies. Over-budget captures retain only a labeled prefix, never a complete-source assertion."},
+    {"id":"candidate_scope","severity":"partial","rule":"Preserve ambiguity, missing-ID/time blockers and exact query references. All identity/employment/ownership/financial approval flags remain false."}
+  ]},
+  "fixtures":[
+    {"path":"../../../../../internal/source/sec/testdata/directory.json","representation":"synthetic_json","scenarios":["Invented names and CIKs, not statements about real registrants","multiple tickers on one CIK remain separate rows","parent and bank names remain distinct","noncontiguous source keys"]},
+    {"path":"../../../../../tests/fixtures/organization-resolution/sec-company-tickers-v1.json","representation":"exact_bytes","source_url":"https://www.sec.gov/files/company_tickers.json","retrieved_on":"2026-09-15","sha256":"82cd5fd9ccffda811b93ba76070460dd41429c02c00e726f83deb71f553c6cff","scenarios":["Complete public response body from the normal Go capture path; private operator-contact metadata is not committed","all source rows and repeated CIKs conserved","original FEC query replay with unchanged name rules"]}
+  ],
+  "use":{"retention":"Retain source bodies and capture metadata for offline replay. Keep contact-bearing capture manifests/results private; the exact public body is a shared fixture, not a substitute capture manifest. Synthetic fixtures are explicitly not registry assertions. Live fetch and replay pass; broader reviewed cases remain required before source acceptance.","citation_date_required":true,"disclaimer":"Issuer directory candidates are incomplete name evidence, not approved FEC identities or financial relationships."},
+  "outputs":{"fact_types":["sec.company_ticker_observation.v1"],"change_dimensions":["directory_snapshot","query_source","source_schema","name_proposal_policy"]}
+}

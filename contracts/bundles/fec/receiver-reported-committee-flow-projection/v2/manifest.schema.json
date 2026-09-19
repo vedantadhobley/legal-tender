@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/bundles/fec/receiver-reported-committee-flow-projection/v2/manifest.schema.json",
+  "title": "Identity-aware receiver-reported committee-flow projection readiness bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "bundle_id", "bundle_type", "bundle_version", "publisher_version", "cycle", "source_release_id", "base_flow_bundle", "identity_coverage", "run_id", "state", "published_at", "counts", "checks"],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.receiver-reported-committee-flow-projection-bundle.v2"},
+    "bundle_id": {"$ref": "#/$defs/digest"},
+    "bundle_type": {"const": "fec/receiver-reported-committee-flow-projection"},
+    "bundle_version": {"const": "2.0.0"},
+    "publisher_version": {"const": "legal-tender.fec.receiver-reported-committee-flow-projection-bundle-publisher.v2"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "base_flow_bundle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "bundle_id", "manifest_sha256"],
+      "properties": {"role": {"const": "receiver_reported_committee_flow_v1"}, "bundle_id": {"$ref": "#/$defs/digest"}, "manifest_sha256": {"$ref": "#/$defs/digest"}}
+    },
+    "identity_coverage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "calculation_set_id", "manifest_sha256", "decisions_sha256"],
+      "properties": {"role": {"const": "committee_identity_coverage"}, "calculation_set_id": {"$ref": "#/$defs/digest"}, "manifest_sha256": {"$ref": "#/$defs/digest"}, "decisions_sha256": {"$ref": "#/$defs/digest"}}
+    },
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "ready"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["flow_result_groups", "committee_facts", "referenced_committees", "current_cycle_masters", "historical_registrations", "alternate_release_registrations", "unresolved_reported_ids"],
+      "properties": {
+        "flow_result_groups": {"type": "integer", "minimum": 1},
+        "committee_facts": {"type": "integer", "minimum": 1},
+        "referenced_committees": {"type": "integer", "minimum": 1},
+        "current_cycle_masters": {"type": "integer", "minimum": 0},
+        "historical_registrations": {"type": "integer", "minimum": 0},
+        "alternate_release_registrations": {"type": "integer", "minimum": 0},
+        "unresolved_reported_ids": {"type": "integer", "minimum": 0}
+      }
+    },
+    "checks": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {"id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}, "passed": {"const": true}, "severity": {"const": "block"}, "detail": {"type": "string", "minLength": 1}}
+    }
+  }
+}

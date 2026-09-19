@@ -1,0 +1,28 @@
+{
+  "$schema": "manifest.schema.json",
+  "schema_version": "legal-tender.fec.resolved-independent-expenditure-projection-bundle.v1",
+  "bundle_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "bundle_type": "fec/resolved-independent-expenditure-projection",
+  "bundle_version": "1.0.0",
+  "publisher_version": "legal-tender.fec.resolved-independent-expenditure-projection-bundle-publisher.v1",
+  "cycle": "2024",
+  "source_release_id": "fec-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "input_calculation": {"role": "resolved_independent_expenditures", "calculation": "fec/resolved-independent-expenditures", "calculation_version": "1.0.0", "calculation_set_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "manifest_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "candidate_resolution_calculation_set_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "candidate_resolution_manifest_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "results_sha256": "1111111111111111111111111111111111111111111111111111111111111111", "exceptions_sha256": "2222222222222222222222222222222222222222222222222222222222222222"},
+  "input_fact_sets": [
+    {"role": "candidate_master", "dataset": "candidate-master", "fact_type": "fec.candidate_assertion.v1", "fact_set_id": "3333333333333333333333333333333333333333333333333333333333333333", "manifest_sha256": "4444444444444444444444444444444444444444444444444444444444444444"},
+    {"role": "committee_master", "dataset": "committee-master", "fact_type": "fec.committee_assertion.v1", "fact_set_id": "5555555555555555555555555555555555555555555555555555555555555555", "manifest_sha256": "6666666666666666666666666666666666666666666666666666666666666666"}
+  ],
+  "run_id": "fixture-resolved-2024",
+  "state": "ready",
+  "published_at": "2026-09-01T02:30:00Z",
+  "counts": {"calculation_results": 5303, "calculation_exceptions": 296, "projectable_decisions": 57992, "unprojectable_decisions": 296, "candidate_facts": 9798, "committee_facts": 20938},
+  "checks": [
+    {"id": "exact_role_set", "passed": true, "severity": "block", "detail": "complete"},
+    {"id": "resolution_lineage", "passed": true, "severity": "block", "detail": "complete"},
+    {"id": "candidate_identity", "passed": true, "severity": "block", "detail": "complete"},
+    {"id": "cycle_coherence", "passed": true, "severity": "block", "detail": "complete"},
+    {"id": "source_release_coherence", "passed": true, "severity": "block", "detail": "complete"},
+    {"id": "backing_integrity", "passed": true, "severity": "block", "detail": "complete"},
+    {"id": "projection_readiness", "passed": true, "severity": "block", "detail": "complete"}
+  ]
+}

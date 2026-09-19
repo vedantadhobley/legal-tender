@@ -1,0 +1,30 @@
+{
+  "$schema": "../schema.json",
+  "schema_version": "1.0.0",
+  "semantic_role": "lobbying_expense",
+  "currency": "USD",
+  "amount": {
+    "state": "bounded",
+    "lower_minor_units": "0",
+    "upper_minor_units": "500000",
+    "lower_inclusive": true,
+    "upper_inclusive": false
+  },
+  "measurement": {
+    "basis": "source_reported",
+    "kind": "threshold_band",
+    "observation_state": "threshold_band",
+    "reported_minor_units": null,
+    "precision_increment_minor_units": null,
+    "accounting_method": "A",
+    "source_rule_version": "lda.money.v1"
+  },
+  "uncertainty": {
+    "coverage": "complete",
+    "attribution": "direct",
+    "revision": "all_versions",
+    "identity": "resolved",
+    "evidence": "reported"
+  },
+  "issues": []
+}

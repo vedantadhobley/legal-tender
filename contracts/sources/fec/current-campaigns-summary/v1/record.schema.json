@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/current-campaigns-summary/v1/record.schema.json",
+  "title": "FEC current House and Senate campaigns summary source record",
+  "$ref": "../../all-candidates-summary/v1/record.schema.json"
+}

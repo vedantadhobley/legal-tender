@@ -1,0 +1,71 @@
+{
+  "version": "legal-tender.audit.positive-receipt-families.v2",
+  "cycle": "2024",
+  "profile_storage_key": "dumps/audits/fec/receipt-report-profile-v2/2026-09-10/attempt-01/profile.json",
+  "profile_sha256": "acce0a13f2d87abfe78beb66c6bd2ae60f82a53bf656b3745343966ae57f3647",
+  "summary_fact_set": "603d086eb26baa5a9a99d7a717ec5b7469098c173d2d3eabaa119c00d9b7f637",
+  "scope": "Original/profile source witnesses; cover totals and itemized detail are independent expectations, not financial eligibility or inferred residuals.",
+  "cases": [
+    {
+      "file": "1753173", "committee": "C00849901", "form": "F3", "retained": false,
+      "metadata_capture": "metadata-candidate/capture.json",
+      "body": "1753173.fec", "headers": "1753173.fec.headers",
+      "body_sha256": "8f82657d70261d1e472c666b49f95991e6ca021bfd3eddb6addb2873d6f72ddf",
+      "headers_sha256": "8848cc20dde7455e757c84c03ff48b2e761a11fd5fc4a851229c2750f5f80735",
+      "targets": {"candidate_contributions": "210000", "other_receipts": "67818"},
+      "detail_targets": {"candidate_contributions": "210000", "other_receipts": "61700"},
+      "expected_group_differences": []
+    },
+    {
+      "file": "1730162", "committee": "C00845032", "form": "F3", "retained": true,
+      "metadata_capture": "metadata-offset-f3/capture.json",
+      "expected_scope_blockers": ["header_chain_identity_mismatch"],
+      "body": "dumps/audits/fec/receipt-memo-review/2026-09-10/attempt-01/1730162-electronic.fec",
+      "headers": "dumps/audits/fec/receipt-memo-review/2026-09-10/attempt-01/1730162-electronic.headers",
+      "body_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "headers_sha256": "6b13f14c4670c5435ac7dbb79766103cf2a5f5de2c1355f14941812e6a906373",
+      "targets": {"operating_offsets": "275442"}, "detail_targets": {"operating_offsets": "275442"},
+      "expected_unreviewed_records": {"SD10": 11},
+      "expected_group_differences": [{"tag": "SA11AI", "memo": "", "processed_unknown_amount_rows": 2, "original_minus_processed_known_minor_units": "2"}]
+    },
+    {
+      "file": "1690269", "committee": "C00075820", "form": "F3X", "retained": true,
+      "metadata_capture": "dumps/audits/fec/report-metadata-reader/2026-09-10/attempt-01/nrcc-reports-capture.json", "metadata_retained": true,
+      "body": "dumps/audits/fec/receipt-family-witnesses/2026-09-11/attempt-01/1690269.fec",
+      "headers": "dumps/audits/fec/receipt-family-witnesses/2026-09-11/attempt-01/1690269.fec.headers",
+      "body_sha256": "ed37e2942cf833020efb39158a2cb821623405b3683fdb515886277e2c2d63ad",
+      "headers_sha256": "966a03b77476171caaab7fc2e3c74eb939df004c4da1298cc93167799eba4221",
+      "targets": {"other_federal_receipts": "50353615"}, "detail_targets": {"other_federal_receipts": "48358528"},
+      "expected_group_differences": []
+    },
+    {
+      "file": "1796827", "committee": "C00698894", "form": "F3X", "retained": false,
+      "metadata_capture": "metadata-repayment/capture.json",
+      "expected_scope_blockers": ["header_chain_identity_mismatch"],
+      "body": "1796827.fec", "headers": "1796827.fec.headers",
+      "body_sha256": "66d388b613de3045a1229b2452df9502f878e7642a1a8a24675669340ffb60d4",
+      "headers_sha256": "7074a1ea3a4f85af6de7ce02cbb2901610088ed7b5e10a238d86fd6f37b23dd3",
+      "targets": {"loan_repayments_received": "250000"}, "detail_targets": {"loan_repayments_received": "250000"},
+      "expected_unreviewed_records": {"SD9": 1}, "expected_group_differences": []
+    },
+    {
+      "file": "1678288", "committee": "C00817940", "form": "F3X", "retained": false,
+      "metadata_capture": "metadata-offset-f3x/capture.json",
+      "body": "1678288.fec", "headers": "1678288.fec.headers",
+      "body_sha256": "53fe5a1b32014180767b6d8963bda66fbfddb9128dbe03f9f238c9bffeacf602",
+      "headers_sha256": "5282b101931e7756a9dd7c041b140d7b7a7f90ed5dea90cab87b1d399b28b19b",
+      "targets": {"operating_offsets": "21114"}, "detail_targets": {"operating_offsets": "21114"},
+      "expected_group_differences": []
+    },
+    {
+      "file": "1688894", "committee": "C00383307", "form": "F3X", "retained": false,
+      "metadata_capture": "metadata-refund/capture.json",
+      "expected_scope_blockers": ["header_chain_identity_mismatch"],
+      "body": "1688894.fec", "headers": "1688894.fec.headers",
+      "body_sha256": "6421107d2363dc473eb0fe06b926cc8c8e581538c4ccd9ec04c6d219648c2e00",
+      "headers_sha256": "a1cd255ceb4e2abc785ccb16a9a5da29aa194a2687bcf87fff46d8c0d4a59749",
+      "targets": {"contribution_refunds_received": "450000"}, "detail_targets": {"contribution_refunds_received": "450000"},
+      "expected_group_differences": []
+    }
+  ]
+}

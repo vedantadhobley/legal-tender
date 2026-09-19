@@ -1,0 +1,15 @@
+{
+  "version": "legal-tender.fec.report-field-binding.v1",
+  "inputs": "Re-verify an electronic cover's body/header pins and one report-metadata capture with an explicit inclusive window. Never accept caller-selected membership or trusted review JSON.",
+  "scope_binding": [
+    "A complete 8.4 document has exactly one supported financial cover and valid identity/period.",
+    "The posted file ID has an exact metadata observation and is a verified observed-chain candidate under report-period-membership v1.",
+    "Metadata traversal is complete at observation time. Committee, form, literal report code, period and amendment indicator agree. The report is entirely inside the requested window.",
+    "An amended chain's HDR original report ID matches its first chain member. The positive one-to-three-digit amendment sequence is preserved but does not rank versions or establish an amendment count.",
+    "A singleton chain has a non-amendment cover and blank HDR amendment identity fields. Paper/mixed cohorts and prefix captures never bind."
+  ],
+  "field_binding": "Every mapped cover position and the metadata field must contain a valid explicit amount. Repeated cover positions agree, and metadata minus cover is exactly zero. Failures stay local to the field; source values remain unchanged.",
+  "interpretation": "reported_value_bound attaches matching reported observations to one observed chain candidate. It is not a complete financial report, donor composition, clean cash balance, whole-window membership, or inferred missing amount.",
+  "guards": {"cycle_total_ready": false, "cash_basis_ready": false, "terminal_attribution_eligible": false},
+  "non_goals": ["cycle totals", "subtotal correction", "cash carry-forward correction", "financial report completeness", "terminal allocation", "recurring acquisition", "graph changes"]
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/schedule-a/compact/v1/key-exception.schema.json",
+  "title": "Compact Schedule A exceptional natural-key state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["partition", "sub_id", "state", "occurrence_count", "comparison_digest"],
+  "properties": {
+    "partition": {"type": "integer", "minimum": 0},
+    "sub_id": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "state": {"enum": ["invalid", "duplicate"]},
+    "occurrence_count": {"type": "integer", "minimum": 1},
+    "row_ordinal": {"type": "integer", "minimum": 1},
+    "comparison_digest": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "invalid"}}},
+      "then": {"required": ["row_ordinal"], "properties": {"occurrence_count": {"const": 1}}}
+    },
+    {
+      "if": {"properties": {"state": {"const": "duplicate"}}},
+      "then": {"properties": {"occurrence_count": {"minimum": 2}}, "not": {"required": ["row_ordinal"]}}
+    }
+  ]
+}

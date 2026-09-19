@@ -1,0 +1,31 @@
+{
+  "schema_version": "legal-tender.fec.independent-expenditure-candidate-resolution-policy-fixture.v1",
+  "cycle": "2024",
+  "candidate_facts": [
+    {"fact_id": "candidate-smith", "candidate_id": "H4AA00001", "name": "SMITH, JANE", "office": "H", "state": "AA", "district": "01"},
+    {"fact_id": "candidate-doe", "candidate_id": "H4AA00002", "name": "DOE, JOHN", "office": "H", "state": "AA", "district": "02"},
+    {"fact_id": "candidate-lee-one", "candidate_id": "H4AA00003", "name": "LEE, ALEX", "office": "H", "state": "AA", "district": "03"},
+    {"fact_id": "candidate-lee-two", "candidate_id": "H4AA00004", "name": "LEE, ALEX", "office": "H", "state": "AA", "district": "03"},
+    {"fact_id": "candidate-rivera", "candidate_id": "H4AA00005", "name": "RIVERA, MARIA", "office": "H", "state": "AA", "district": "05"}
+  ],
+  "effective_facts": [
+    {"fact_id": "confirmed", "reported_candidate_id": "H4AA00001", "name": "Jane Smith", "office": "H", "state": "AA", "district": "1", "amount_minor_units": "100"},
+    {"fact_id": "resolved", "reported_candidate_id": "H4AA99999", "name": "John Doe", "office": "H", "state": "AA", "district": "02", "amount_minor_units": "200"},
+    {"fact_id": "ambiguous", "reported_candidate_id": "H4AA99998", "name": "Alex Lee", "office": "H", "state": "AA", "district": "03", "amount_minor_units": "-50"},
+    {"fact_id": "unverified", "reported_candidate_id": "H4AA00005", "name": "Morgan Quinn", "office": "H", "state": "AA", "district": "06", "amount_minor_units": "300"},
+    {"fact_id": "unresolved-no-match", "reported_candidate_id": "H4AA99997", "name": "Casey Unknown", "office": "H", "state": "AA", "district": "07", "amount_minor_units": "400"},
+    {"fact_id": "unresolved-insufficient", "reported_candidate_id": "H4AA99996", "name": null, "office": "H", "state": "AA", "district": "08", "amount_minor_units": "500"}
+  ],
+  "expected": {
+    "counts": {"source_effective_facts": 6, "confirmed": 1, "resolved": 1, "unverified": 1, "ambiguous": 1, "unresolved": 2},
+    "amounts": {"source_effective_minor_units": "1450", "confirmed_minor_units": "100", "resolved_minor_units": "200", "unverified_minor_units": "300", "ambiguous_minor_units": "-50", "unresolved_minor_units": "900"},
+    "decisions": [
+      {"fact_id": "confirmed", "state": "confirmed", "method": "reported_id_exact_context", "resolved_candidate_id": "H4AA00001"},
+      {"fact_id": "resolved", "state": "resolved", "method": "unique_exact_name_office_context", "resolved_candidate_id": "H4AA00002"},
+      {"fact_id": "ambiguous", "state": "ambiguous", "method": "multiple_exact_name_office_context", "resolved_candidate_id": null},
+      {"fact_id": "unverified", "state": "unverified", "method": "reported_id_context_unverified", "resolved_candidate_id": "H4AA00005"},
+      {"fact_id": "unresolved-no-match", "state": "unresolved", "method": "no_exact_name_office_context", "resolved_candidate_id": null},
+      {"fact_id": "unresolved-insufficient", "state": "unresolved", "method": "insufficient_reported_context", "resolved_candidate_id": null}
+    ]
+  }
+}

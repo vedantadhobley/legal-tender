@@ -1,0 +1,54 @@
+{
+  "schema_version": "legal-tender.fec.receiver-reported-committee-flow-policy-fixture.v1",
+  "cycle": "2024",
+  "facts": [
+    {"fact_id": "affiliated-transfer", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "18G", "memo_subtotal": false, "amount_minor_units": "10000", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "registered-filer-negative", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "15K", "memo_subtotal": false, "amount_minor_units": "-500", "entity_type": "IND", "is_individual": true},
+    {"fact_id": "registered-filer-in-kind", "state": "valid", "recipient": "C00000003", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "15Z", "memo_subtotal": false, "amount_minor_units": "250", "entity_type": null, "is_individual": null},
+    {"fact_id": "refund-received", "state": "valid", "recipient": "C00000003", "contributor_id": "C00000004", "clean_contributor_id": "C00000004", "receipt_type": "20R", "memo_subtotal": false, "amount_minor_units": "100", "entity_type": "COM", "is_individual": false},
+    {"fact_id": "memo-x", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "15K", "memo_subtotal": true, "amount_minor_units": "700", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "outbound", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "24K", "memo_subtotal": false, "amount_minor_units": "800", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "semantic-memo", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "18J", "memo_subtotal": false, "amount_minor_units": "900", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "earmarked", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "15E", "memo_subtotal": false, "amount_minor_units": "1000", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "noncommittee-receipt", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "10", "memo_subtotal": false, "amount_minor_units": "1100", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "null-receipt-type", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": null, "memo_subtotal": false, "amount_minor_units": "1200", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "generic-receipt-type", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "15", "memo_subtotal": false, "amount_minor_units": "1300", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "raw-id-only", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": null, "receipt_type": "15K", "memo_subtotal": false, "amount_minor_units": "1400", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "conflicting-ids", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000004", "receipt_type": "15K", "memo_subtotal": false, "amount_minor_units": "1500", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "invalid-recipient", "state": "valid", "recipient": "P00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "15K", "memo_subtotal": false, "amount_minor_units": "1600", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "unknown-amount", "state": "valid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "15K", "memo_subtotal": false, "amount_minor_units": null, "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "invalid-normalization", "state": "invalid", "recipient": "C00000002", "contributor_id": "C00000001", "clean_contributor_id": "C00000001", "receipt_type": "15K", "memo_subtotal": false, "amount_minor_units": "1700", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "no-source-id", "state": "valid", "recipient": "C00000002", "contributor_id": null, "clean_contributor_id": null, "receipt_type": "15K", "memo_subtotal": false, "amount_minor_units": "1800", "entity_type": "PAC", "is_individual": false},
+    {"fact_id": "clean-id-only", "state": "valid", "recipient": "C00000002", "contributor_id": null, "clean_contributor_id": "C00000001", "receipt_type": "15K", "memo_subtotal": false, "amount_minor_units": "1900", "entity_type": "PAC", "is_individual": false}
+  ],
+  "expected": {
+    "decision_counts": {
+      "source_facts": 18,
+      "included_receiver_reported_committee_flow": 4,
+      "invalid_normalization": 1,
+      "unresolved_recipient_committee_id": 1,
+      "excluded_no_source_committee_id": 1,
+      "unresolved_one_sided_source_committee_id": 2,
+      "unresolved_conflicting_source_committee_ids": 1,
+      "excluded_memo_subtotal": 1,
+      "unresolved_amount": 1,
+      "excluded_outbound_receipt_role": 1,
+      "excluded_semantic_memo_receipt_role": 1,
+      "excluded_earmarked_receipt_role": 1,
+      "excluded_noncommittee_receipt_role": 1,
+      "unresolved_receipt_role": 2
+    },
+    "amounts": {
+      "included_minor_units": "9850",
+      "excluded_minor_units": "6300",
+      "unresolved_minor_units": "10600",
+      "known_source_minor_units": "26750"
+    },
+    "results": [
+      {"source": "C00000001", "recipient": "C00000002", "receipt_role": "affiliated_transfer_in", "amount_minor_units": "10000", "receipt_count": 1},
+      {"source": "C00000001", "recipient": "C00000002", "receipt_role": "registered_filer_contribution", "amount_minor_units": "-500", "receipt_count": 1},
+      {"source": "C00000001", "recipient": "C00000003", "receipt_role": "registered_filer_in_kind_contribution", "amount_minor_units": "250", "receipt_count": 1},
+      {"source": "C00000004", "recipient": "C00000003", "receipt_role": "refund_or_repayment_received", "amount_minor_units": "100", "receipt_count": 1}
+    ]
+  }
+}

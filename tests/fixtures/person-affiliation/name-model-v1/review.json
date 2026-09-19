@@ -1,0 +1,43 @@
+{
+  "Profile": {"model":"gpt-oss-120b","reasoning_effort":"medium","max_tokens":4096},
+  "Metadata": {
+    "models.json":"cc7da7b0bb17a05d3c5113152952dff0d47c8854f147ef7a56d1a5167930c308",
+    "completed.json":"08b0cddc118f5173f27afc41e4d33177263183954885964a13382e228e70bc64",
+    "inputs.json":"0fc19991f5dda977aa859a537a6aaa5450ddc80d1fc165ef9eee0ccf5f9b51bf",
+    "expected.json":"70f1212373398e03065f3e0119e35ec8681d7e54eda52b2024c6f3390a245957"
+  },
+  "Cases": [
+    {
+      "ID":"microsoft-hood","SHA256":"d03d9462c76d226996b2671e491d4eaa2e3352d5129804c4e6ed49f462534f30","Valid":true,
+      "Review":"All nine expected name surfaces and kinds match exactly, including the previously missed separately named person, acquisition targets and educational institutions. No whole-clause name selections. Surname and full name remain distinct proposals, not accepted equivalents or employment links."
+    },
+    {
+      "ID":"amd-su","SHA256":"0b01ed510420c59e0b1f985f994fdb34cd6b1a60550d226103f6525fe0b8da50","Valid":true,
+      "Review":"All seven expected surfaces match, including initials, standalone surname, legal suffix and separately written abbreviation. The names-only task completes where the earlier interpretation task truncated; this does not establish full role extraction, equal work or population accuracy."
+    },
+    {
+      "ID":"new-pronoun-employer-change","SHA256":"f65e79a39fa5b22abd483b5a77bd0ed50aad558891b129f36b8115affe4e1638","Valid":true,
+      "Review":"All three names match. Copper Instruments no longer includes the adjacent word 'in'. No pronoun binding or employer relationship is produced. The older malformed endpoint remains unchanged in its original capture."
+    },
+    {
+      "ID":"new-correction-and-conflict","SHA256":"fb1c26f767736a6edb860cf54be0163497f90e6a61f3bc899e12981cc8c0afed","Valid":true,
+      "Review":"All three names match, including Vale Devices rather than the older 'of Vale' selection. Names alone do not resolve the contradiction, apply a correction or establish that this person holds a role."
+    },
+    {
+      "ID":"fresh-mcclure","SHA256":"97d7fa241357b942f1c6b2f7be84e769a9fdf065e0247b4cccbd430f47264f0b","Valid":true,
+      "Review":"Four of six expected surfaces match. Standalone McClure is omitted. The Goldman Sachs name omits the legal suffix's final period, so exact scoring records that prediction as unexpected and the expected complete spelling as missing. Smeal College of Business Board of Visitors is an extra selection under this task's instruction to exclude board titles; it is literal source text, not an invented organization. The shorter college name is also selected correctly. No trimming, identity merging or label changes repair these results."
+    },
+    {
+      "ID":"fresh-name-punctuation","SHA256":"e9765220b7836b5916f002169d376cd81d9895f895232670ad1682207b6d4c95","Valid":true,
+      "Review":"All five surfaces match exactly, preserving accents, apostrophe, hyphen, ampersand and legal-suffix period. Honorific and explanatory parentheses are excluded. The standalone surname and abbreviation remain distinct spellings, not verified aliases."
+    },
+    {
+      "ID":"fresh-shared-surname","SHA256":"efd0c96643de57072ba40fd4029db074baa8672c6fcdb1c6cbf9d07f4fd58d8f","Valid":true,
+      "Review":"All four surfaces match. Both full names and standalone Shah are preserved; the pronoun is not selected. This does not choose which person Shah refers to, infer employment from the visit or establish resolved identities."
+    },
+    {
+      "ID":"fresh-no-names-instruction","SHA256":"2f66d47255131c3944c864b1dbb18d08a610e7ec7489f9304de839cb92928183","Valid":true,
+      "Review":"Correct empty names array. The source instruction does not cause CEO to be selected as an organization or generate an approval field. This one control does not prove general injection resistance."
+    }
+  ]
+}

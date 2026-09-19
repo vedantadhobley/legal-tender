@@ -1,0 +1,28 @@
+# Read-only evidence inspection. No Arango endpoint, credentials or network.
+services:
+  recovery-inventory:
+    image: ${LT_GO_IMAGE:?load scripts/go-build.env}
+    network_mode: none
+    read_only: true
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 2
+    pids_limit: 64
+    cap_drop: [ALL]
+    cap_add: [DAC_OVERRIDE]
+    security_opt: [no-new-privileges:true]
+    environment:
+      GOMEMLIMIT: 384MiB
+      GOMAXPROCS: "2"
+      LT_RECOVERY_INPUT_SHA256: ${LT_RECOVERY_INPUT_SHA256:?exact input digest required}
+      LT_RECOVERY_BINARY_SHA256: ${LT_RECOVERY_BINARY_SHA256:?exact executable digest required}
+      LT_RECOVERY_COMMAND: ${LT_RECOVERY_COMMAND:-inspect-funding-recovery-inventory}
+      LT_RECOVERY_MAX_BYTES: ${LT_RECOVERY_MAX_BYTES:-0}
+      LT_RECOVERY_WORKERS: ${LT_RECOVERY_WORKERS:-0}
+    volumes:
+      - ${LT_RECOVERY_STORAGE:?storage root required}:/storage:ro
+      - ${LT_RECOVERY_BINARY:?accepted executable required}:/app:ro
+      - ${LT_RECOVERY_INPUTS:?input specification required}:/inputs.json:ro
+      - ${LT_RECOVERY_OUTPUT:?new output directory required}:/output
+      - ./scripts/run-funding-recovery-inventory.sh:/runner.sh:ro
+    entrypoint: [bash, /runner.sh, --worker]

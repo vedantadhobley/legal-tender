@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "../contract.json",
+  "representation": "canonical_json",
+  "transformation": "Every value from the successful official OpenFEC response body is retained and serialized as stable indented JSON. Request credentials and transport headers are excluded from repository fixtures. The original query uses the committee, two-year period, and exact beginning/ending image range from its preserved filing listing; the amendment query uses the corresponding successor range.",
+  "fixtures": [
+    {
+      "path": "original-filing-images.json",
+      "source_url": "https://api.open.fec.gov/v1/schedules/schedule_a/?committee_id=C00392928&min_image_number=202607159885305174&max_image_number=202607159885305254&two_year_transaction_period=2026&per_page=100",
+      "retrieved_on": "2026-08-27",
+      "sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+      "scenarios": ["23 exact processed rows for raw original file 1997074", "listing image-range selection", "unique sub_id and transaction_id", "processed action A/ADD on raw F3XN source", "mutable nested committee and contributor expansions"]
+    },
+    {
+      "path": "amendment-not-yet-processed.json",
+      "source_url": "https://api.open.fec.gov/v1/schedules/schedule_a/?committee_id=C00392928&min_image_number=202608279903415525&max_image_number=202608279903415608&two_year_transaction_period=2026&per_page=100",
+      "retrieved_on": "2026-08-27",
+      "sha256": "dacb02c589f913cb10140a33966f41aab2f1b1139ad62988859b5dc3adc7ca38",
+      "scenarios": ["complete exact zero-result observation", "raw amendment file 2009982 not yet exposed by processed API", "time-bounded processing lag rather than permanent absence"]
+    }
+  ]
+}

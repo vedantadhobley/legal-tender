@@ -1,0 +1,27 @@
+HTTP/2 200 
+content-type: application/octet-stream
+content-length: 630349
+accept-ranges: bytes
+date: Thu, 10 Sep 2026 07:24:15 GMT
+server: AmazonS3
+last-modified: Sat, 06 Apr 2024 10:54:29 GMT
+etag: "5a6650d16c9702261aca12661e40f9ba"
+x-amz-meta-user-agent: aws-datasync/3.8.1935.0-70bfabd9
+x-amz-meta-file-owner: 496
+x-amz-meta-file-permissions: 100664
+x-amz-meta-file-group: 987
+x-amz-meta-file-atime: 1697242294744087325ns
+x-amz-meta-file-mtime: 1697242294737087432ns
+x-amz-version-id: hcX.edy37hOV9hTvnHgKpD1NL8oLXKMc
+x-amz-server-side-encryption: AES256
+x-amz-replication-status: COMPLETED
+x-cache: Miss from cloudfront
+via: 1.1 b787d00b53c710066f0d489ebc435a74.cloudfront.net (CloudFront)
+x-amz-cf-pop: BOS50-P3
+x-amz-cf-id: de5jsaigFXHi2aDelfPSFXoZ3fLbZ1hX3BWjxa0-whzc5XP_FZlJpQ==
+x-frame-options: SAMEORIGIN
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+permissions-policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+

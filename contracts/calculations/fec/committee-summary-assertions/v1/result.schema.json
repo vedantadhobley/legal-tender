@@ -1,0 +1,442 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/committee-summary-assertions/v1/result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "calculation_id",
+    "policy",
+    "state",
+    "cycle",
+    "input",
+    "excluded_grouping_fields",
+    "counts",
+    "committees",
+    "unindexed",
+    "financial_use_eligible",
+    "terminal_attribution_eligible"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.committee-summary-assertions.v1"
+    },
+    "calculation_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "policy": {
+      "const": "fec/exact-committee-summary-assertions@1.0.0"
+    },
+    "state": {
+      "const": "complete_evidence_grouping"
+    },
+    "cycle": {
+      "type": "string",
+      "pattern": "^[0-9]{3}[02468]$"
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_set_id",
+        "manifest_sha256",
+        "source_release_id",
+        "source_release_manifest_sha256",
+        "source_artifact_sha256"
+      ],
+      "properties": {
+        "fact_set_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_release_id": {
+          "type": "string",
+          "pattern": "^fec-[a-f0-9]{64}$"
+        },
+        "source_release_manifest_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_artifact_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "excluded_grouping_fields": {
+      "const": [
+        "CAND_ID"
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_rows",
+        "indexed_rows",
+        "unindexed_rows",
+        "committees",
+        "assertions",
+        "repeated_evidence_rows",
+        "conflicting_committees"
+      ],
+      "properties": {
+        "source_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "indexed_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "unindexed_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "committees": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "assertions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "repeated_evidence_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "conflicting_committees": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        }
+      }
+    },
+    "committees": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/$defs/committee"
+      }
+    },
+    "unindexed": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "committee_raw",
+          "reason",
+          "member"
+        ],
+        "properties": {
+          "committee_raw": {
+            "type": "string"
+          },
+          "reason": {
+            "const": "invalid_committee_or_cycle_identity"
+          },
+          "member": {
+            "$ref": "#/$defs/member"
+          }
+        }
+      }
+    },
+    "financial_use_eligible": {
+      "const": false
+    },
+    "terminal_attribution_eligible": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_id",
+        "occurrence_id",
+        "ordinal",
+        "offset",
+        "length",
+        "raw_sha256",
+        "candidate_raw",
+        "candidate"
+      ],
+      "properties": {
+        "fact_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "occurrence_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "raw_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "candidate_raw": {
+          "type": "string"
+        },
+        "candidate": {
+          "$ref": "https://legal-tender.local/contracts/facts/fec/committee-summary/v1/fact.schema.json#/$defs/value"
+        }
+      }
+    },
+    "equation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "operands",
+        "delta_minor_units"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "equal",
+            "different",
+            "missing",
+            "invalid"
+          ]
+        },
+        "operands": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "field",
+              "coefficient",
+              "raw",
+              "value"
+            ],
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "coefficient": {
+                "enum": [
+                  -1,
+                  1
+                ]
+              },
+              "raw": {
+                "type": "string"
+              },
+              "value": {
+                "$ref": "https://legal-tender.local/contracts/facts/fec/committee-summary/v1/fact.schema.json#/$defs/money"
+              }
+            }
+          }
+        },
+        "delta_minor_units": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^-?[0-9]+$"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "missing",
+                  "invalid"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "delta_minor_units": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "delta_minor_units": {
+                "type": "string",
+                "pattern": "^-?[0-9]+$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assertion_id",
+        "non_candidate_fields_sha256",
+        "representative_fact_id",
+        "committee_type_raw",
+        "designation_raw",
+        "coverage_start",
+        "coverage_end",
+        "representative_issues",
+        "members",
+        "diagnostic_equations"
+      ],
+      "properties": {
+        "assertion_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "non_candidate_fields_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "representative_fact_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "committee_type_raw": {
+          "type": "string"
+        },
+        "designation_raw": {
+          "type": "string"
+        },
+        "coverage_start": {
+          "$ref": "https://legal-tender.local/contracts/facts/fec/committee-summary/v1/fact.schema.json#/$defs/value"
+        },
+        "coverage_end": {
+          "$ref": "https://legal-tender.local/contracts/facts/fec/committee-summary/v1/fact.schema.json#/$defs/value"
+        },
+        "representative_issues": {
+          "$ref": "https://legal-tender.local/contracts/facts/fec/committee-summary/v1/fact.schema.json#/properties/record/properties/issues"
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/member"
+          }
+        },
+        "diagnostic_equations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cash",
+            "cash_federal_columns",
+            "individual"
+          ],
+          "properties": {
+            "cash": {
+              "$ref": "#/$defs/equation"
+            },
+            "cash_federal_columns": {
+              "$ref": "#/$defs/equation"
+            },
+            "individual": {
+              "$ref": "#/$defs/equation"
+            }
+          }
+        }
+      }
+    },
+    "committee": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "committee_id",
+        "state",
+        "conflict_fields",
+        "assertions"
+      ],
+      "properties": {
+        "committee_id": {
+          "type": "string",
+          "pattern": "^C[0-9]{8}$"
+        },
+        "state": {
+          "enum": [
+            "single_assertion",
+            "conflicting_assertions"
+          ]
+        },
+        "conflict_fields": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "string"
+          }
+        },
+        "assertions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/assertion"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "single_assertion"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "assertions": {
+                "maxItems": 1
+              },
+              "conflict_fields": {
+                "maxItems": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "assertions": {
+                "minItems": 2
+              },
+              "conflict_fields": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

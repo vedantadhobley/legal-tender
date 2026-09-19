@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "../contract.json",
+  "representation": "canonical_json",
+  "transformation": "Split exact physical rows on byte 1c after HDR 8.5 dispatch, retain the exact occurrence metadata and extra fields, and map source sequences 1 through 45 without value normalization.",
+  "fixtures": [
+    {
+      "path": "ordinary-organization.json",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2010008.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "94a406b0c93ed9c02a2f6de4c6a3a3bd5250e772172bfb39825b54d41b717a5e",
+      "scenarios": ["ordinary organization receipt", "45 physical fields", "as-filed amount and accumulator", "bare LF"]
+    },
+    {
+      "path": "memo-original.json",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/1997074.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "8788658d77240a61f4836244dd48e75b8f8db4988d045a26623311c9bcafc728",
+      "scenarios": ["memo code X", "back reference", "committee contributor", "extra trailing empty field", "original filing occurrence"]
+    },
+    {
+      "path": "memo-amendment.json",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2009982.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "dac2b50824d5ee001c30ebd93e7f89474b9cd0b4e465cff5df7bf99270543b40",
+      "scenarios": ["identical row bytes in amendment", "same transaction ID across filing versions", "distinct document lineage and byte offset"]
+    }
+  ]
+}

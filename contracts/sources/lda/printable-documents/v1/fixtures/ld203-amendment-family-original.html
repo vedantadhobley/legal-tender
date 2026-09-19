@@ -1,0 +1,254 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></meta><title>LD-203 Contribution Report</title><style type="text/css">
+                    /*-----------------------------------------------------
+                    Office of the Clerk
+                    U.S. House of Representatives
+
+                    ********************************
+                    LD3 xml/xslt PRINT Style Sheet
+                    ********************************
+
+                    -------------------------------------------------------*/
+                    body {
+                        font: 62.5% Georgia, "Times New Roman", Times, serif;
+                        margin: 0em;
+                        padding: 0em;
+                        width: auto;
+                        /*background-color:#CCCCFF;*/
+                    }
+                    p {
+                        /*background-color:#FFFF99;*/
+                        margin: 0em;
+                        padding: 0em 0em 0em 1.7em;
+                        font-size: 1.2em;
+                    }
+                    h2 {
+                        font: 1.5em Georgia, "Times New Roman", Times, serif;
+                        font-variant:small-caps;
+                        letter-spacing: .05em;
+                        font-weight: bold;
+                        margin: 0em 0em 0.5em 0em;
+                        padding: 0em;
+                        /*background-color:#FFCC66;*/
+                    }
+                    h3 {
+                        /*background-color:#00CCFF;*/
+                        margin: 0.7em 0em 0em 0em;
+                        padding: 0em 0em 0em 1.7em;
+                        font: 1.2em Georgia, "Times New Roman", Times, serif;
+                        font-weight: bold;
+                    }
+
+
+                    /*------------------------------------------------------------
+                        Header
+                    --------------------------------------------------------------*/
+                    #header img {
+                        width: 72px;
+                        height: 67px;
+                        float: left;
+                        margin: 0em;
+                        padding: 0em;
+                    }
+                    h1 {
+                        margin: 0em;
+                        padding: 0.5em 0.4em;
+                        float: left;
+                        font: 3em Georgia, "Times New Roman", Times, serif;
+                        font-variant: small-caps;
+                        font-weight: bold;
+                        letter-spacing: .07em;
+                        /*background-color:#CC9933;*/
+                    }
+
+
+
+                    /*------------------------------------------------------------
+                        Clerk / Secretary Info
+                    --------------------------------------------------------------*/
+                    span.spacer {
+                        display: block;
+                        float: none;
+                        clear: both;
+                        margin: 0em;
+                        padding: 0em;
+                        border: 0em;
+                        border-style: none;
+                        visibility: hidden;
+                        height: 0.8em;
+                    }
+                    #congInfo {
+                        float: none;
+                        clear: both;
+                        /*background-color:#FFCCFF;*/
+                        border: 1px solid #808080;
+                        border-style: solid none;
+                        padding: .2em 2em;
+                        font-size: 1em;
+                        text-align: center;
+                        margin: 0em 0em 2em 0em;
+                    }
+                    #congInfo p {
+                        line-height: 1.5em;
+                        padding: 0em;
+                        margin: 0em;
+                    }
+
+                    /*------------------------------------------------------------
+                        Filer Type / ID Numbers / Report Period / Contact Info
+                    --------------------------------------------------------------*/
+                    #filerType, #idNum, #reportPeriod, #contactInfo {
+                        width: 45%;
+                        float: left;
+                        margin: 0em 0em 2em 0em;
+                    }
+                    #filerType input, #reportPeriod input, #contributions input {
+                        font-size: 1.2em;
+                        padding: 0em;
+                        margin: 0em 0.2em 0em 0em;
+                    }
+                    /* may need some more work with these inputs */
+                    #filerType {
+                        /*background-color:#FFFFCC;*/
+                        margin-right: 5em;
+                    }
+                    #idNum {
+                        /*background-color:#ccFFCC;*/
+                    }
+                    #reportPeriod {
+                        /*background-color:#CCCC99;*/
+                        clear: left;
+                        margin-right: 5em;
+                    }
+                    #contactInfo {
+                        /*background-color:#FFCC99;*/
+                    }
+
+                    /*------------------------------------------------------------
+                        PAC Names
+                    --------------------------------------------------------------*/
+                    #pacNames {
+                        float: none;
+                        clear: both;
+                        /*background-color: #00CCCC;*/
+                        margin: 0em 0em 2em 0em;
+                        padding: 0em;
+                    }
+                    #pacNames ul {
+                        margin: 0em 0em 0em 1.7em;
+                        padding: 0em 0em 0em 1.5em;
+                        /*background-color: #99FFFF;*/
+                    }
+                    #pacNames ul li {
+                        margin: 0em;
+                        padding: 0.25em 0em;
+                        /*background-color:#A3E0DD;*/
+                        font-size: 1.2em;
+                    }
+
+
+
+                    /*------------------------------------------------------------
+                        Contributions
+                    --------------------------------------------------------------*/
+                    #contributions {
+                        margin: 0em 0em 2em 0em;
+                        /*background-color:#99CC99;*/
+                        float:none;
+                        clear:both;
+                    }
+                    #contributions input {
+                        margin: 0em 0.2em 0em 1.5em;
+                    }
+                    #contributions p {
+                        padding: 0em;
+                    }
+                    #contributions h3 {
+                        padding: 0em;
+                    }
+                    #contributions h3.rowNum {
+                        margin: 0em;
+                        border-top: 1px solid #bfbfbf;
+                        font-size: 1.6em;
+                    }
+                    #contributions table {
+                        padding: 0em;
+                        margin: 1em 0em 0em 1.7em;
+                        width: 97%;
+                    }
+                    #contributions table tr td {
+                        padding: 0em 0em 2em 0em;
+                    }
+                    .cType {
+                        width: 28%;
+                        float: left;
+                        padding: 0em;
+                        margin: 0em 1em 0em 0em;
+                        overflow: hidden;
+                        /*background-color:#DEDDCB;*/
+                    }
+                    .cName {
+                        width: 39%;
+                        float: left;
+                        padding: 0em;
+                        margin: 0em 1em 0em 0em;
+                        overflow: hidden;
+                        /*background-color:#FF66CC;*/
+                    }
+                    .cAmount {
+                        width: 15%;
+                        overflow: hidden;
+                        float: left;
+                        /*background-color:#00FFFF;*/
+                        padding: 0em;
+                        margin: 0em 1em 0em 0em;
+                    }
+                    .cDate {
+                        width: 13%;
+                        float: left;
+                        /*background-color: #66FF33;*/
+                        padding: 0em;
+                        margin: 0em;
+                        overflow: hidden;
+                    }
+                    .cPayee {
+                        width: 28%;
+                        float: left;
+                        clear: left;
+                        overflow: hidden;
+                        /*background-color: #71AFF4;*/
+                        padding: 0em;
+                        margin: 0em 1em 0em 0em;
+                    }
+                    .cHonoree {
+                        width: 70%;
+                        float: left;
+                        overflow: hidden;
+                        /*background-color:#FF0000;*/
+                        padding: 0em;
+                        margin: 0em;
+                    }
+
+
+                    /*------------------------------------------------------------
+                        Comments
+                    --------------------------------------------------------------*/
+                    #comments {
+                        margin: 0em 0em 2em 0em;
+                        /*background-color:#99CC99;*/
+                        float: none;
+                        clear: both;
+                    }
+
+                    body {
+                        padding: 2em 3em;
+                    }
+
+                    tr.altRow {
+                        background-color: #eeeeee;
+                    }
+                </style></head><body><div id="header"><img src="/static/shared/images/ld203_eagle.gif" alt="Eagle Seal"></img><h1>Lobbying Contribution Report</h1></div><span class="spacer"> </span><div id="congInfo"><p>
+						Clerk of the House of Representatives • Legislative Resource Center • B-106 Cannon Building • Washington, DC 20515<br></br>
+						Secretary of the Senate • Office of Public Records • 232 Hart Building • Washington, DC 20510
+					</p></div><div id="filerType"><h2>Filer Type and Name</h2><h3>Type:</h3><p><input name="organization" type="checkbox" align="center" checked value="Y" disabled></input>Organization <input name="lobbyist" type="checkbox" align="center" value="Y" disabled></input>Lobbyist</p><h3>Organization Name:</h3><p>SOMATUS, Inc.</p></div><div id="idNum"><h2>Identification Numbers</h2><h3>House Registrant ID:</h3><p>55810</p><h3>Senate Registrant ID:</h3><p>401107038</p></div><div id="reportPeriod"><h2>Reporting Period</h2><h3>Year:</h3><p>2024</p><p><input name="MM" type="checkbox" align="center" checked value="Y" disabled></input> Mid-Year (January 1 - June 30)</p><p><input name="YY" type="checkbox" align="center" value="Y" disabled></input> Year-End (July 1 - December 31)</p></div><div id="pacNames"><h2>Political Action Committee Names</h2><ul></ul></div><div id="contributions"><h2>Contributions</h2><p><input name="contrib" type="checkbox" align="center" checked value="Y" disabled></input> No Contributions</p><table></table></div><div id="comments"><h2>Comments</h2><p>
+  </p></div><div id="signature"><h2>Certification and Signature</h2><p><input name="certified" type="checkbox" align="center" checked value="Y" disabled></input>I certify that I have read and am familiar with the provisions of the Standing Rules of the Senate and the Standing rules of the House of Representatives relating to the provision of gifts and travel.  I have not provided, requested or directed a gift, including travel, to a Member of Congress or an officer or employee of either House of Congress with knowledge that receipt of the gift would violate rule XXXV of the Standing Rules of the Senate or rule XXV of the Rules of the House of Representatives during this filing period.</p><h3>Digitally Signed By:</h3><p>Anne Rohall-Andrade, 2/5/2024 12:52:00 PM</p></div></body></html>

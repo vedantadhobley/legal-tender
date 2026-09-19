@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "../contract.json",
+  "representation": "exact_bytes",
+  "transformation": "None. The fixture is the complete HTTP response body from the listing fec_url. It contains byte 1c field separators and bare LF record terminators exactly as served.",
+  "fixtures": [
+    {
+      "path": "1997074.fec",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/1997074.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+      "scenarios": ["complete original filing", "HDR version 8.5", "bare LF records", "F3XN cover", "Schedule A rows retained before amendment"]
+    },
+    {
+      "path": "2009982.fec",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2009982.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+      "scenarios": ["complete first amendment", "HDR original report ID and amendment number", "bare LF records", "F3XA cover", "byte-identical Schedule A row retained in another filing version"]
+    },
+    {
+      "path": "2010008.fec",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2010008.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b3ee8deafb7a24ef3eaa69487c6ac050e665d6d664b31ef953357344b9d8597d",
+      "scenarios": ["complete small filing", "HDR version 8.5", "bare LF records", "F3XN cover", "Schedule A, Schedule B, and Schedule C physical rows"]
+    }
+  ]
+}

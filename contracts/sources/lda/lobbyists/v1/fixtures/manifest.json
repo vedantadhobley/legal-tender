@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "lda/lobbyists@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "The public API response was parsed as JSON and reserialized with sorted object keys and two-space indentation. Values and array order are unchanged; HTTP headers and original whitespace are not part of this fixture.",
+  "fixtures": [
+    {
+      "path": "lobbyist.json",
+      "source_url": "https://lda.gov/api/v1/lobbyists/38841/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "a6582db9efbcc05db2b9ccb5ab4269d2fd4c737092095f65f56625722b8461bd",
+      "scenarios": [
+        "lobbyist master",
+        "nullable name affixes",
+        "nested registrant relationship"
+      ]
+    }
+  ]
+}

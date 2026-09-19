@@ -1,0 +1,194 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/efile-schedule-a",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "fec",
+    "name": "Federal Election Commission",
+    "base_url": "https://www.fec.gov/"
+  },
+  "dataset": {
+    "id": "efile-schedule-a",
+    "name": "As-filed Schedule A rows",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "Physical Schedule A itemized-receipt occurrences parsed losslessly from exact electronic filings under the version selected by HDR."
+  },
+  "authority": [
+    {
+      "kind": "documentation",
+      "url": "https://docquery.fec.gov/formatspecs/FEC_EFO_Format_Specifications.xlsx",
+      "retrieved_on": "2026-08-27",
+      "sha256": "c667016493df28c186445201cf8a2bcff43563bccc41b75b2bcc06366b69132b"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://docquery.fec.gov/tools/VenPak.zip",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b9308d0d0ff8edccf2d7f671a75c90ff6aa5cf9eb6ac57b99fceeb3fbf1de10c"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "none",
+      "environment_variable": null,
+      "header": null,
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "parent raw electronic filing",
+        "method": "GET",
+        "url": "https://docquery.fec.gov/dcdev/posted/{file_number}.fec",
+        "response_root": "ordered physical rows whose field 1 is a Schedule A form type"
+      }
+    ],
+    "pagination": "None inside a document. Process every framed physical record in order; Schedule A selection is a lossless child projection of the already accepted whole document.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "efile_received_date",
+        "source": "Received-date partition inherited from the selecting listing and parent document.",
+        "purpose": "Routine incremental lineage, not contribution time or election-cycle assignment."
+      },
+      {
+        "name": "header_format_version",
+        "source": "Exact HDR field 3 in the parent document.",
+        "purpose": "Select the only valid physical layout before field mapping."
+      }
+    ],
+    "retry_policy": "No independent row retry exists. Reacquire or quarantine the complete parent document when framing, dispatch, byte conservation, or digest checks fail."
+  },
+  "physical_schema": {
+    "media_type": "application/vnd.fec.electronic-filing",
+    "source_format": "fec_electronic_filing",
+    "encoding": "Exact field bytes decoded only under the parent format contract; canonical fixtures contain lossless source text for their ASCII-only rows.",
+    "delimiter": "\u001c",
+    "line_ending": "Retain the exact parent record terminator, including specified CRLF or observed bare LF.",
+    "quote_policy": "none",
+    "empty_record_policy": "Every selected physical row becomes one canonical occurrence or one explicit row issue. No empty, duplicate, memo, negative, amendment, or malformed occurrence is silently dropped.",
+    "header_model": "embedded_header",
+    "container_members": [],
+    "relations": [],
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Canonical empty string means an explicit physical empty field. Canonical null means a logical trailing sequence omitted from the physical row. extra_fields retains every physical field after sequence 45, including empty values.",
+    "schema_fingerprint": "contracts/sources/fec/efile-format/v1/schedule-a-fields.json: 45 ordered fields from form_type through account_system_code for HDR versions 8.3, 8.4, and 8.5."
+  },
+  "identity": {
+    "publisher_record_key": "file_number + physical_record_ordinal; transaction_id is retained as a report-family assertion, not a globally unique occurrence key",
+    "occurrence_locator": "parent document SHA-256 + byte_start + byte_end_exclusive + physical_record_ordinal",
+    "record_version": "occurrence locator + physical record SHA-256 + header format version + layout contract version",
+    "duplicate_policy": "Preserve all physical occurrences. Identical row bytes and transaction IDs across an original and amendment remain distinct source occurrences. Same-file transaction-ID conflicts become validation issues and are never repaired by last-write-wins.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "fields.contribution_date", "meaning": "As-filed contribution date in YYYYMMDD when valid; no source time or timezone."},
+      {"path": "parent_listing.receipt_date", "meaning": "Electronic filing receipt timestamp, independent of contribution date."},
+      {"path": "parent_listing.coverage_start_date + parent_listing.coverage_end_date", "meaning": "Report coverage assertion, independent of contribution and receipt dates."},
+      {"path": "parent_document.document_observation", "meaning": "Legal Tender artifact retrieval and publisher-object metadata time."}
+    ],
+    "money_fields": [
+      {"path": "fields.contribution_amount", "meaning": "As-filed amount for this physical Schedule A assertion. It remains source text until parsed losslessly as a reported point and does not imply countability.", "unit": "USD source AMT-12; common MoneyMeasure reported_point after exact decimal parsing"},
+      {"path": "fields.contribution_aggregate", "meaning": "As-filed contributor accumulator whose period varies by parent form. It is not another receipt to sum.", "unit": "USD source AMT-12; lossless reported accumulator"}
+    ],
+    "code_fields": [
+      {"path": "fields.form_type", "meaning": "Schedule A record type and summary-line reference, such as SA11AI."},
+      {"path": "fields.entity_type", "meaning": "As-filed contributor entity-type code; not resolved entity identity."},
+      {"path": "fields.election_code", "meaning": "As-filed election code; not the source partition and not a substitute for report coverage."},
+      {"path": "fields.memo_code", "meaning": "As-filed memo flag; X means true under the format layout."},
+      {"path": "fields.back_reference_transaction_id_number + fields.back_reference_schedule_name", "meaning": "As-filed structural references to a related record."}
+    ],
+    "rules": [
+      "Map fields only after the parent HDR selects a supported version. Preserve unknown versions and rows but emit no normalized Schedule A fact.",
+      "The official modification history changes HDR and other forms between 8.3, 8.4, and 8.5 but records no Schedule A layout change; all three dispatch explicitly to the pinned 45-field layout.",
+      "Preserve the exact physical row and every decoded source field before validating types or applying domain meaning.",
+      "Parse valid money using arbitrary-precision decimal and the common MoneyMeasure contract. Preserve the original text, scale, sign, empty state, and parse issue. Never use binary floating point.",
+      "contribution_aggregate is an accumulator. Never add it to contribution_amount or treat it as an independent flow.",
+      "memo_code X does not delete the row. A named downstream counting rule decides whether and how it contributes to a total.",
+      "Back references and equal amounts can describe related conduit or memo rows. They authorize a structural relationship assertion, not automatic row collapse or terminal-source attribution.",
+      "donor_committee fields, conduit fields, contributor names, employer, occupation, and memo text remain separate source assertions. None alone establishes entity identity, employment identity, ideology, economic origin, or terminal source.",
+      "A repeated transaction_id across original and amended files is expected by the format's report-life rule and must remain versioned at filing occurrence grain.",
+      "Keep contribution date, election code, report coverage, filing receipt, publisher load, artifact observation, and target two-year projection independent.",
+      "No as-filed row enters processed reconciliation, effective-report totals, transfer edges, or terminal-source calculations without a separately versioned calculation result."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "Electronic amendments are complete report submissions. The same transaction ID and identical row bytes can recur in an original and amendment, while other rows can be added, changed, or removed.",
+    "effective_projection": "Blocked while draft. All original and amendment occurrences publish only as as_filed evidence. A separate effective-report calculation selects a report version and emits row-presence changes without deleting source history."
+  },
+  "quality": {
+    "checks": [
+      {"id": "parent_binding", "severity": "block", "rule": "Each row occurrence retains file_number, parent whole-document digest, header version, ordinal, byte range, record terminator, and physical-row digest."},
+      {"id": "byte_round_trip", "severity": "block", "rule": "The exact row fixture or stored raw bytes match physical_record_sha256 and the byte range in the parent artifact."},
+      {"id": "layout_dispatch", "severity": "block", "rule": "HDR version is supported and maps to the exact pinned Schedule A layout before canonical fields are emitted."},
+      {"id": "field_conservation", "severity": "block", "rule": "All physical fields are represented as one of the 45 logical values or in extra_fields; omitted trailing logical fields are null, never fabricated empty strings."},
+      {"id": "extra_fields", "severity": "partial", "rule": "Extra non-empty fields block normalization. Extra empty fields are preserved and reported as observed physical variance."},
+      {"id": "record_type", "severity": "block", "rule": "fields.form_type is a Schedule A record type allowed by the selected layout and associated parent cover form."},
+      {"id": "transaction_id", "severity": "partial", "rule": "Missing, non-uppercase, overlength, or same-file duplicate transaction IDs remain explicit source-validation issues."},
+      {"id": "money_parse", "severity": "partial", "rule": "Non-empty money text parses losslessly as arbitrary-precision decimal or remains an uncountable parse issue without loss of the source row."},
+      {"id": "date_parse", "severity": "partial", "rule": "Non-empty contribution date is a valid YYYYMMDD calendar date or remains a time-quality issue without an invented date."},
+      {"id": "amendment_duplicate", "severity": "observe", "rule": "Fixtures prove an identical memo row in an original and its amendment remains two occurrences with different parent digests and byte offsets."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/ordinary-organization.json",
+      "representation": "canonical_json",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2010008.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "94a406b0c93ed9c02a2f6de4c6a3a3bd5250e772172bfb39825b54d41b717a5e",
+      "scenarios": ["ordinary organization receipt", "45 physical fields", "as-filed amount and accumulator", "bare LF"]
+    },
+    {
+      "path": "fixtures/memo-original.json",
+      "representation": "canonical_json",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/1997074.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "8788658d77240a61f4836244dd48e75b8f8db4988d045a26623311c9bcafc728",
+      "scenarios": ["memo code X", "back reference", "committee contributor", "extra trailing empty field", "original filing occurrence"]
+    },
+    {
+      "path": "fixtures/memo-amendment.json",
+      "representation": "canonical_json",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2009982.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "dac2b50824d5ee001c30ebd93e7f89474b9cd0b4e465cff5df7bf99270543b40",
+      "scenarios": ["identical row bytes in amendment", "same transaction ID across filing versions", "distinct document lineage and byte offset"]
+    },
+    {
+      "path": "fixtures/2010008-row-3.fecrow",
+      "representation": "exact_bytes",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2010008.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "2348cc558d56bf9fbcaa66152e39a82ed85210a3d4c3ec3d091689a29cbfeb65",
+      "scenarios": ["exact physical row including LF terminator", "ordinary organization receipt"]
+    },
+    {
+      "path": "fixtures/1997074-row-5.fecrow",
+      "representation": "exact_bytes",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/1997074.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "abdcb9b9036dc0e4fd7842954d97c92517fca14da048cdee8adf50b2933f8733",
+      "scenarios": ["exact original memo row", "extra trailing empty field"]
+    },
+    {
+      "path": "fixtures/2009982-row-5.fecrow",
+      "representation": "exact_bytes",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2009982.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "abdcb9b9036dc0e4fd7842954d97c92517fca14da048cdee8adf50b2933f8733",
+      "scenarios": ["exact amendment memo row", "byte-identical row retained as another occurrence"]
+    }
+  ],
+  "use": {
+    "retention": "Retain exact parent filings, exact row bytes, canonical occurrences, parse issues, and all contract versions indefinitely. A derived current view never deletes or rewrites as-filed evidence.",
+    "citation_date_required": true,
+    "disclaimer": "An as-filed Schedule A row is a filer assertion, not a processed FEC record or proof of terminal economic source. Memo, amendment, conduit, report coverage, and later processing rules affect counting and attribution."
+  },
+  "outputs": {
+    "fact_types": ["as_filed_itemized_receipt_assertion"],
+    "change_dimensions": ["efile_received_date", "file_number", "report_family", "document_version", "transaction_id", "physical_record_version", "layout_version"]
+  }
+}

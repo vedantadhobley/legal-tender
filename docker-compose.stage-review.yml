@@ -1,0 +1,27 @@
+# One-shot metadata comparison; no publisher, source or graph writes.
+services:
+  stage-review:
+    image: ${LT_GO_IMAGE:?load scripts/go-build.env}
+    network_mode: none
+    read_only: true
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 2
+    pids_limit: 64
+    cap_drop: [ALL]
+    cap_add: [DAC_OVERRIDE]
+    security_opt: [no-new-privileges:true]
+    environment:
+      GOMEMLIMIT: 384MiB
+      GOMAXPROCS: "2"
+      LT_REVIEW_RELEASE: ${LT_REVIEW_RELEASE:?exact release path required}
+      LT_REVIEW_RELEASE_SHA: ${LT_REVIEW_RELEASE_SHA:?exact release digest required}
+      LT_REVIEW_STAGE: ${LT_REVIEW_STAGE:?candidate path required}
+      LT_REVIEW_STAGE_SHA: ${LT_REVIEW_STAGE_SHA:?candidate digest required}
+      LT_REVIEW_BINARY_SHA: ${LT_REVIEW_BINARY_SHA:?exact executable digest required}
+    volumes:
+      - ${LT_REVIEW_STORAGE:?storage root required}:/storage:ro
+      - ${LT_REVIEW_BINARY:?accepted executable required}:/app:ro
+      - ${LT_REVIEW_OUTPUT:?new output directory required}:/output
+      - ./scripts/run-stage-evidence-review.sh:/runner.sh:ro
+    entrypoint: [bash, /runner.sh, --worker]

@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/effective-independent-expenditures/v1/manifest.schema.json",
+  "title": "Published effective independent-expenditure calculation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "calculation_set_id", "calculation",
+    "calculation_version", "publisher_version", "result_schema_version",
+    "exception_schema_version", "cycle", "source_release_id",
+    "input_fact_set", "run_id", "state", "published_at", "predicate",
+    "decision_counts", "route_counts", "source_shape_counts", "amounts",
+    "exceptions", "results", "checks"
+  ],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.effective-independent-expenditure-set.v1"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "calculation": {"const": "fec/effective-independent-expenditures"},
+    "calculation_version": {"const": "1.0.0"},
+    "publisher_version": {"const": "legal-tender.fec.effective-independent-expenditure-publisher.v1"},
+    "result_schema_version": {"const": "legal-tender.fec.effective-independent-expenditure-spender-candidate.v1"},
+    "exception_schema_version": {"const": "legal-tender.fec.effective-independent-expenditure-exception.v1"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "input_fact_set": {"$ref": "#/$defs/fact_set"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "published"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "predicate": {"$ref": "#/$defs/predicate"},
+    "decision_counts": {"$ref": "#/$defs/decision_counts"},
+    "route_counts": {"$ref": "#/$defs/route_counts"},
+    "source_shape_counts": {"$ref": "#/$defs/source_shape_counts"},
+    "amounts": {"$ref": "#/$defs/amounts"},
+    "exceptions": {"$ref": "#/$defs/artifact"},
+    "results": {"$ref": "#/$defs/artifact"},
+    "checks": {"type": "array", "minItems": 8, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "fact_set": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "dataset", "fact_type", "fact_set_id", "manifest_sha256"],
+      "properties": {
+        "role": {"const": "schedule_e_independent_expenditures"},
+        "dataset": {"const": "schedule-e"},
+        "fact_type": {"const": "fec.schedule_e_independent_expenditure.v1"},
+        "fact_set_id": {"$ref": "#/$defs/digest"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "predicate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "input_fact_schema_version", "membership_identity", "required_fields", "decision_order", "route_requirements", "exceptional_states"],
+      "properties": {
+        "version": {"const": "legal-tender.fec.effective-independent-expenditure-membership-predicate.v1"},
+        "input_fact_schema_version": {"const": "legal-tender.fec.schedule-e-independent-expenditure.v1"},
+        "membership_identity": {"const": "Schedule E fact-set ID plus fact ID"},
+        "required_fields": {"type": "array", "minItems": 6, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "decision_order": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/rule"}},
+        "route_requirements": {"const": ["spender committee ID present", "candidate ID present", "support/oppose code is S or O"]},
+        "exceptional_states": {"const": ["unresolved_amount", "included_unattributed"]}
+      }
+    },
+    "rule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "all"],
+      "properties": {
+        "state": {"enum": ["excluded_memo", "unresolved_amount", "included"]},
+        "all": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "decision_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_facts", "included", "excluded_memo", "excluded_memo_amount_unresolved", "unresolved_amount"],
+      "properties": {
+        "source_facts": {"type": "integer", "minimum": 0},
+        "included": {"type": "integer", "minimum": 0},
+        "excluded_memo": {"type": "integer", "minimum": 0},
+        "excluded_memo_amount_unresolved": {"type": "integer", "minimum": 0},
+        "unresolved_amount": {"type": "integer", "minimum": 0}
+      }
+    },
+    "route_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attributed", "unattributed", "missing_spender", "missing_candidate", "invalid_support_oppose", "result_groups"],
+      "properties": {
+        "attributed": {"type": "integer", "minimum": 0},
+        "unattributed": {"type": "integer", "minimum": 0},
+        "missing_spender": {"type": "integer", "minimum": 0},
+        "missing_candidate": {"type": "integer", "minimum": 0},
+        "invalid_support_oppose": {"type": "integer", "minimum": 0},
+        "result_groups": {"type": "integer", "minimum": 0}
+      }
+    },
+    "source_shape_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "valid_facts", "invalid_facts", "action_add", "action_change",
+        "action_no_change", "action_terminate", "action_null", "action_other",
+        "notice_like_facts", "missing_expenditure_type", "transaction_id_missing",
+        "transaction_keyed_facts", "distinct_transaction_keys",
+        "repeated_transaction_keys", "repeated_transaction_occurrences"
+      ],
+      "properties": {
+        "valid_facts": {"type": "integer", "minimum": 0},
+        "invalid_facts": {"type": "integer", "minimum": 0},
+        "action_add": {"type": "integer", "minimum": 0},
+        "action_change": {"type": "integer", "minimum": 0},
+        "action_no_change": {"type": "integer", "minimum": 0},
+        "action_terminate": {"type": "integer", "minimum": 0},
+        "action_null": {"type": "integer", "minimum": 0},
+        "action_other": {"type": "integer", "minimum": 0},
+        "notice_like_facts": {"type": "integer", "minimum": 0},
+        "missing_expenditure_type": {"type": "integer", "minimum": 0},
+        "transaction_id_missing": {"type": "integer", "minimum": 0},
+        "transaction_keyed_facts": {"type": "integer", "minimum": 0},
+        "distinct_transaction_keys": {"type": "integer", "minimum": 0},
+        "repeated_transaction_keys": {"type": "integer", "minimum": 0},
+        "repeated_transaction_occurrences": {"type": "integer", "minimum": 0}
+      }
+    },
+    "amounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["included_minor_units", "excluded_memo_minor_units", "attributed_minor_units", "unattributed_minor_units"],
+      "properties": {
+        "included_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "excluded_memo_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "attributed_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "unattributed_minor_units": {"$ref": "#/$defs/signed_integer"}
+      }
+    },
+    "signed_integer": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "storage_key"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "compression": {"const": "zstd"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "warning"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

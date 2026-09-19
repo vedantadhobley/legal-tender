@@ -1,0 +1,72 @@
+{
+  "address_1": "700 12th Street",
+  "address_2": "Suite 700",
+  "city": "Washington",
+  "comments": "I made a contribution for a political campaign.",
+  "contact_name": null,
+  "contribution_items": [
+    {
+      "amount": "29.00",
+      "contribution_type": "pic",
+      "contribution_type_display": "Presidential Inaugural Committee",
+      "contributor_name": "SELF",
+      "date": "2024-06-28",
+      "honoree_name": "N/A",
+      "payee_name": "ACTBLUE JOE BIDEN"
+    }
+  ],
+  "country": "US",
+  "country_display": "United States of America",
+  "dt_posted": "2024-07-18T09:15:25-04:00",
+  "filer_type": "lobbyist",
+  "filer_type_display": "Lobbyist",
+  "filing_document_content_type": "text/html",
+  "filing_document_url": "https://lda.gov/filings/public/contribution/ef5bb479-667c-4494-a310-a5eff2cfe1f0/print/",
+  "filing_period": "mid_year",
+  "filing_period_display": "Mid-Year (Jan 1 - Jun 30)",
+  "filing_type": "MM",
+  "filing_type_display": "Mid-Year Report",
+  "filing_uuid": "ef5bb479-667c-4494-a310-a5eff2cfe1f0",
+  "filing_year": 2024,
+  "lobbyist": {
+    "first_name": "KATHRYN",
+    "id": 141004,
+    "last_name": "COHEN",
+    "middle_name": null,
+    "nickname": null,
+    "prefix": null,
+    "prefix_display": null,
+    "suffix": null,
+    "suffix_display": null
+  },
+  "no_contributions": false,
+  "pacs": [
+    "ActBlue"
+  ],
+  "registrant": {
+    "address_1": "700 12th Street NW",
+    "address_2": "Suite 700",
+    "address_3": null,
+    "address_4": null,
+    "city": "Washington",
+    "contact_name": "COLETTE ALSTON",
+    "contact_telephone": "+1 202-499-2280",
+    "country": "US",
+    "country_display": "United States of America",
+    "description": "ABHW is the national voice for companies that manage behavioral health & wellness services",
+    "dt_updated": "2026-07-20T08:21:58.745723-04:00",
+    "house_registrant_id": null,
+    "id": 400577734,
+    "name": "ASSOCIATION FOR BEHAVIORAL HEALTH AND WELLNESS",
+    "ppb_country": "US",
+    "ppb_country_display": "United States of America",
+    "state": "DC",
+    "state_display": "District of Columbia",
+    "url": "https://lda.gov/api/v1/registrants/400577734/",
+    "zip": "20005"
+  },
+  "state": "DC",
+  "state_display": "District of Columbia",
+  "url": "https://lda.gov/api/v1/contributions/ef5bb479-667c-4494-a310-a5eff2cfe1f0/",
+  "zip": "20005"
+}

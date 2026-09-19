@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/efile-listings/v1/record.schema.json",
+  "title": "OpenFEC electronic-filing listing record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "amended_by", "amendment_chain", "amendment_number", "amends_file",
+    "beginning_image_number", "committee_id", "committee_name",
+    "coverage_end_date", "coverage_start_date", "csv_url",
+    "document_description", "ending_image_number", "fec_file_id", "fec_url",
+    "file_number", "filed_date", "form_type", "html_url", "is_amended",
+    "load_timestamp", "most_recent", "most_recent_filing", "pdf_url",
+    "receipt_date"
+  ],
+  "properties": {
+    "amended_by": {"type": ["integer", "null"], "minimum": 1},
+    "amendment_chain": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 1}
+    },
+    "amendment_number": {"type": ["integer", "null"], "minimum": 0},
+    "amends_file": {"type": ["integer", "null"], "minimum": 1},
+    "beginning_image_number": {"$ref": "#/$defs/nullableText"},
+    "committee_id": {"type": ["string", "null"], "pattern": "^C[0-9]{8}$"},
+    "committee_name": {"$ref": "#/$defs/nullableText"},
+    "coverage_end_date": {"$ref": "#/$defs/nullableDate"},
+    "coverage_start_date": {"$ref": "#/$defs/nullableDate"},
+    "csv_url": {"$ref": "#/$defs/nullableUrl"},
+    "document_description": {"$ref": "#/$defs/nullableText"},
+    "ending_image_number": {"$ref": "#/$defs/nullableText"},
+    "fec_file_id": {"type": ["string", "null"], "pattern": "^FEC-[0-9]+$"},
+    "fec_url": {"$ref": "#/$defs/nullableUrl"},
+    "file_number": {"type": "integer", "minimum": 1},
+    "filed_date": {"$ref": "#/$defs/nullableDate"},
+    "form_type": {"$ref": "#/$defs/nullableText"},
+    "html_url": {"$ref": "#/$defs/nullableUrl"},
+    "is_amended": {"type": "boolean"},
+    "load_timestamp": {"$ref": "#/$defs/nullableLocalTimestamp"},
+    "most_recent": {"type": "boolean"},
+    "most_recent_filing": {"type": ["integer", "null"], "minimum": 1},
+    "pdf_url": {"$ref": "#/$defs/nullableUrl"},
+    "receipt_date": {"$ref": "#/$defs/nullableLocalTimestamp"}
+  },
+  "$defs": {
+    "nullableText": {
+      "type": ["string", "null"]
+    },
+    "nullableUrl": {
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "nullableDate": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "nullableLocalTimestamp": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?$"
+    }
+  }
+}

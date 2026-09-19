@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/schedule-e@1.0.0",
+  "representation": "exact_bytes",
+  "transformation": "Each fixture is one exact physical PostgreSQL COPY text row selected by sub_id from disclosure.fec_fitem_sched_e in the 2026-08-30 dump, including its terminating LF. COPY null markers and escapes remain physical source bytes.",
+  "fixtures": [
+    {
+      "path": "fractional-amount.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "d792c4e9032e4e2a7d642535af0f8cfc83032b80e581b3fd5f66d8f2867b44b6",
+      "scenarios": ["80 COPY fields", "terminating LF", "fractional-dollar precision", "2026 support expenditure"]
+    },
+    {
+      "path": "memo-x.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "35dc0fc94a9f648b9d26da71cfef1f63227edfc0d58673e02d75129efe293981",
+      "scenarios": ["80 COPY fields", "terminating LF", "memo code X", "null expense date"]
+    },
+    {
+      "path": "missing-expenditure-type.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "224bf6f5441b09c30f0de71c0e4d3bc74964ad7cd791bf294b4e63a759514b76",
+      "scenarios": ["80 COPY fields", "terminating LF", "null exp_tp", "null dissemination date"]
+    },
+    {
+      "path": "negative-amount.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "acf89fd4dfba1f2ab853ec1462e21442e3a358f5520daae5d6211d1b023682db",
+      "scenarios": ["80 COPY fields", "terminating LF", "negative exp_amt", "orig_sub_id lineage"]
+    },
+    {
+      "path": "escaped-copy-text.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "63027c72f2a3d400efae38f5262abd5b9ab6e0c95a41112803dca9b309576629",
+      "scenarios": ["80 COPY fields", "terminating LF", "escaped tab", "action code C"]
+    }
+  ]
+}

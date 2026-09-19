@@ -1,0 +1,79 @@
+{
+  "policy": "fec/summary-receipt-comparison-readiness@1.0.0",
+  "scope": "one exact committee, one source cycle, verified receipt inventory and freshly verified summary grouping",
+  "fields": [
+    {
+      "field": "INDV_ITEM_CONTB",
+      "equation": "individual",
+      "receipt_relationship": "candidate_individual_predicate",
+      "blocker": "individual_predicate_form_scope_unverified"
+    },
+    {
+      "field": "INDV_UNITEM_CONTB",
+      "equation": "individual",
+      "receipt_relationship": "no_itemized_inventory_counterpart",
+      "blocker": "unitemized_not_observed_in_itemized_inventory"
+    },
+    {
+      "field": "INDV_CONTB",
+      "equation": "individual",
+      "receipt_relationship": "incomplete_individual_population",
+      "blocker": "unitemized_component_not_in_inventory"
+    },
+    {
+      "field": "TTL_RECEIPTS",
+      "equation": "cash",
+      "receipt_relationship": "unverified_receipt_family_population",
+      "blocker": "complete_receipt_family_scope_unverified"
+    },
+    {
+      "field": "TTL_FED_RECEIPTS",
+      "equation": "cash_federal_columns",
+      "receipt_relationship": "unverified_federal_receipt_population",
+      "blocker": "federal_receipt_family_scope_unverified"
+    },
+    {
+      "field": "COH_BOP",
+      "equation": "cash",
+      "receipt_relationship": "no_receipt_inventory_balance",
+      "blocker": "cash_balance_not_observed_in_receipt_inventory"
+    },
+    {
+      "field": "COH_COP",
+      "equation": "cash",
+      "receipt_relationship": "no_receipt_inventory_balance",
+      "blocker": "cash_balance_not_observed_in_receipt_inventory"
+    },
+    {
+      "field": "TTL_DISB",
+      "equation": "cash",
+      "receipt_relationship": "no_receipt_inventory_disbursements",
+      "blocker": "disbursements_not_observed_in_receipt_inventory"
+    },
+    {
+      "field": "TTL_FED_DISB",
+      "equation": "cash_federal_columns",
+      "receipt_relationship": "no_receipt_inventory_disbursements",
+      "blocker": "disbursements_not_observed_in_receipt_inventory"
+    }
+  ],
+  "unassessed_source_fields": "All other summary fields remain preserved in facts, not assessed by this consumer.",
+  "invariants": [
+    "Every summary variant/member survives; no financial selection or sum across variants.",
+    "Different source releases produce an explicit blocker and no numeric difference.",
+    "One release ID with conflicting manifest digests is an integrity error.",
+    "The individual predicate includes overlap once; overlapping cohort metrics are not additive.",
+    "Empty receipt cohorts do not establish reported zero funding.",
+    "Unitemized money is only a reported source field, never inferred from a detail gap.",
+    "Matching arithmetic does not prove period, account, form-line, or amendment completeness.",
+    "Cash/valuation, continuity, and availability are funding blockers distinct from comparison blockers.",
+    "Federal-column sensitivity never supplies a fallback cash identity.",
+    "Every comparison delta stays null and all financial readiness/eligibility flags stay false."
+  ],
+  "limits": {
+    "max_committees_per_command": 1,
+    "summary_source_max_rows": 100000,
+    "inventory_max_bytes": 134217728
+  },
+  "publication": "Read-only manual diagnostic; no new source, calculation pointer, Arango mutation, or Dagster asset."
+}

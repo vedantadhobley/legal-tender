@@ -1,0 +1,112 @@
+{
+  "scope":"Manually reviewed annotation fixtures for an offline contract proof. No new model output, automatic prose extraction or donor acceptance. Expected states test mechanics conditional on supplied semantics, not NLP accuracy.",
+  "cases":[
+    {
+      "id":"pronoun-bound",
+      "source_case_sha256":"25ca2f675995111868b1628543ffe230ee638c8aefc55b8379c9cfa2bc52090f",
+      "review":"The reviewed annotation binds She to the named antecedent and organization in the prior entry. Go checks the references, not whether the pronoun interpretation is linguistically correct. The previous model missed the CFO mention; this annotation is not a repaired model response.",
+      "input":{
+        "interpretation_origin":"reviewed_fixture",
+        "mentions":[
+          {"id":"name","entry":0,"text":"Marina Ortiz"},
+          {"id":"organization","entry":0,"text":"Cedar Analytics"},
+          {"id":"clause","entry":1,"text":"She served as chief financial officer from 2018 to 2021."},
+          {"id":"pronoun","entry":1,"text":"She"}
+        ],
+        "interpretations":[{"id":"cfo","clause":"clause","kind":"role","normalized":"chief financial officer","role_kind":"executive","subjects":["name"],"organizations":["organization"],"evidence":["clause","pronoun","name","organization"],"binding":"coreference","status":"asserted"}],
+        "context_links":[]
+      },
+      "expected_states":{"cfo":"unverified_role_interpretation"}
+    },
+    {
+      "id":"pronoun-ambiguous",
+      "source_case_sha256":"e3bcd19d5ab1414e8e17d48b0b1b3815f7efe8fb0606a9e71faa9df60b028467",
+      "review":"Retain both possible antecedents, not a guessed CEO. Meeting attendance remains an activity with no corporate-role classification. These meaning labels are reviewed inputs, not discoveries made by the validator.",
+      "input":{
+        "interpretation_origin":"reviewed_fixture",
+        "mentions":[
+          {"id":"first","entry":0,"text":"Leah Chen"},
+          {"id":"second","entry":0,"text":"Nora Shah"},
+          {"id":"organization","entry":0,"text":"Juniper Labs"},
+          {"id":"meeting","entry":0,"text":"attended a meeting"},
+          {"id":"clause","entry":1,"text":"She is the chief executive officer."}
+        ],
+        "interpretations":[
+          {"id":"possible-ceo","clause":"clause","kind":"role","normalized":"chief executive officer","role_kind":"executive","subjects":["first","second"],"organizations":["organization"],"evidence":["clause","first","second","organization"],"binding":"ambiguous","status":"asserted"},
+          {"id":"first-attendance","clause":"meeting","kind":"activity","normalized":"meeting attendance","subjects":["first"],"organizations":["organization"],"evidence":["meeting","first","organization"],"binding":"direct","status":"asserted"},
+          {"id":"second-attendance","clause":"meeting","kind":"activity","normalized":"meeting attendance","subjects":["second"],"organizations":["organization"],"evidence":["meeting","second","organization"],"binding":"direct","status":"asserted"}
+        ],
+        "context_links":[]
+      },
+      "expected_states":{"possible-ceo":"binding_ambiguous","first-attendance":"incidental_activity_not_role","second-attendance":"incidental_activity_not_role"}
+    },
+    {
+      "id":"retraction-separate",
+      "source_case_sha256":"bd4b8d0af7b2a24a32274eb464721fa425a50d6e31d5d0ada39d8bc564c5ec4f",
+      "review":"Retain the original positive statement and the correction as different mentions. A reviewed retracts link targets the original interpretation; the correction does not have to repeat its title. Context blocking is derived from the supplied link, not from an automatic English retraction detector.",
+      "input":{
+        "interpretation_origin":"reviewed_fixture",
+        "mentions":[
+          {"id":"name","entry":0,"text":"Owen Price"},
+          {"id":"organization","entry":0,"text":"Harbor Robotics"},
+          {"id":"positive","entry":0,"text":"Owen Price is chief executive officer of Harbor Robotics."},
+          {"id":"correction","entry":1,"text":"Correction: that statement is false. Owen Price has never worked for Harbor Robotics."}
+        ],
+        "interpretations":[
+          {"id":"original-ceo","clause":"positive","kind":"role","normalized":"chief executive officer","role_kind":"executive","subjects":["name"],"organizations":["organization"],"evidence":["positive","name","organization"],"binding":"direct","status":"asserted"},
+          {"id":"notice","clause":"correction","kind":"correction","normalized":"retraction","subjects":[],"organizations":[],"evidence":["correction"],"binding":"unresolved","status":"unclear"}
+        ],
+        "context_links":[{"from":"notice","to":"original-ceo","kind":"retracts"}]
+      },
+      "expected_states":{"original-ceo":"context_blocked","notice":"unverified_correction_interpretation"}
+    },
+    {
+      "id":"alias-literal",
+      "source_case_sha256":"b29cfc6701f5c2271bab88f45c7e854f95ab25c17be55cac66598b64dd829b5c",
+      "review":"The full parenthetical spelling is immutable literal evidence. Lucía Inés Vega is allowed only as a separately labeled derived display-name proposal. It is not an accepted canonical name, alias identity or a string found contiguously in the source.",
+      "input":{
+        "interpretation_origin":"reviewed_fixture",
+        "mentions":[
+          {"id":"name-form","entry":0,"text":"Lucía (Luci) Inés Vega"},
+          {"id":"nickname","entry":0,"text":"Luci"}
+        ],
+        "interpretations":[{"id":"display-name","clause":"name-form","kind":"name_form","normalized":"Lucía Inés Vega","subjects":["name-form"],"organizations":[],"evidence":["name-form","nickname"],"binding":"direct","status":"asserted"}],
+        "context_links":[]
+      },
+      "expected_states":{"display-name":"unverified_name_form_interpretation"}
+    },
+    {
+      "id":"role-time",
+      "source_case_sha256":"eb4bdce2542c813874a9d43acd9553d8b73a4e5b8334477ff2470a759ffd2d7f",
+      "review":"Founded survives verbatim while founder is a separate reviewed role interpretation. No appointment year is copied into another role or converted to a tenure interval. This tests normalization separation, not automatic role-date extraction.",
+      "input":{
+        "interpretation_origin":"reviewed_fixture",
+        "mentions":[
+          {"id":"name","entry":0,"text":"Priya Rao"},
+          {"id":"organization","entry":0,"text":"Quartz Works"},
+          {"id":"clause","entry":0,"text":"In 2012, Priya Rao founded Quartz Works."},
+          {"id":"predicate","entry":0,"text":"founded"}
+        ],
+        "interpretations":[{"id":"founding","clause":"clause","kind":"role","normalized":"founder","role_kind":"founder","subjects":["name"],"organizations":["organization"],"evidence":["clause","predicate","name","organization"],"binding":"direct","status":"asserted"}],
+        "context_links":[]
+      },
+      "expected_states":{"founding":"unverified_role_interpretation"}
+    },
+    {
+      "id":"conditional-appointment",
+      "source_case_sha256":"4027169d8daa8d8830444d865b1c0e561f1baf3b37ceb107d0f8744f858e8577",
+      "review":"Conditional wording and the no-appointment sentence remain literal context. The supplied hypothetical interpretation never becomes an accepted positive role or actual 2028 tenure.",
+      "input":{
+        "interpretation_origin":"reviewed_fixture",
+        "mentions":[
+          {"id":"name","entry":0,"text":"Noah Reed"},
+          {"id":"organization","entry":0,"text":"Ember Manufacturing"},
+          {"id":"clause","entry":0,"text":"If Noah Reed were appointed president of Ember Manufacturing in 2028, the current president would retire. No appointment has been made."}
+        ],
+        "interpretations":[{"id":"possible-president","clause":"clause","kind":"role","normalized":"president","role_kind":"executive","subjects":["name"],"organizations":["organization"],"evidence":["clause","name","organization"],"binding":"direct","status":"hypothetical"}],
+        "context_links":[]
+      },
+      "expected_states":{"possible-president":"nonpositive_hypothetical"}
+    }
+  ]
+}

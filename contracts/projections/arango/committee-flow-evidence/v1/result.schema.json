@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/projections/arango/committee-flow-evidence/v1/result.schema.json",
+  "title": "Verified observation-only Arango projection result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "projection_id", "database", "state", "reused", "cycle", "bundle_id", "bundle_sha256", "entities", "unresolved_same_cycle_masters", "schedule_a", "schedule_b", "components", "source_drilldown", "verified_source_shards", "queries", "storage", "checks", "elapsed_seconds", "process_peak_rss_bytes", "completed_at"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.arango.committee-flow-evidence.v1"},
+    "projection_id": {"$ref": "#/$defs/digest"},
+    "database": {"type": "string", "pattern": "^lt_flow_evidence_[0-9]{3}[02468]_[a-f0-9]{32}$"},
+    "state": {"enum": ["ready", "partial"]},
+    "reused": {"type": "boolean"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{3}[02468]$"},
+    "bundle_id": {"$ref": "#/$defs/digest"},
+    "bundle_sha256": {"$ref": "#/$defs/digest"},
+    "entities": {"$ref": "#/$defs/count"},
+    "unresolved_same_cycle_masters": {"$ref": "#/$defs/count"},
+    "schedule_a": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json#/$defs/measures"},
+    "schedule_b": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json#/$defs/measures"},
+    "components": {"$ref": "#/$defs/count"},
+    "source_drilldown": {
+      "type": "array", "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["edge_id", "source"],
+        "properties": {
+          "edge_id": {"type": "string", "pattern": "^(receiver|sender)_reported_observations/[a-f0-9]{64}$"},
+          "source": {
+            "type": "object", "additionalProperties": false,
+            "required": ["side", "fact_set_id", "source_row_ordinal", "shard_sha256", "fields"],
+            "properties": {
+              "side": {"enum": ["schedule_a", "schedule_b"]},
+              "fact_set_id": {"$ref": "#/$defs/digest"},
+              "source_row_ordinal": {"type": "integer", "minimum": 1},
+              "shard_sha256": {"$ref": "#/$defs/digest"},
+              "fields": {"type": "object", "additionalProperties": {"type": ["string", "integer", "boolean", "null"]}}
+            }
+          }
+        }
+      }
+    },
+    "verified_source_shards": {"$ref": "#/$defs/count"},
+    "queries": {
+      "type": "array", "minItems": 4, "maxItems": 10,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["ledger", "kind", "rows", "milliseconds", "status"],
+        "properties": {
+          "ledger": {"enum": ["schedule_a", "schedule_b"]},
+          "kind": {"enum": ["neighborhood", "paths", "shortest", "cycles", "one_sided_lookup"]},
+          "rows": {"type": "integer", "minimum": 0, "maximum": 25},
+          "milliseconds": {"type": "number", "minimum": 0},
+          "status": {"enum": ["passed", "empty_selected_cohort", "no_cycle_sample_within_bound", "no_one_sided_component"]}
+        }
+      }
+    },
+    "storage": {
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["collection", "document_bytes", "index_bytes", "cache_bytes"],
+        "properties": {
+          "collection": {"enum": ["entities", "receiver_reported_observations", "sender_reported_observations", "reconciliation_components"]},
+          "document_bytes": {"$ref": "#/$defs/count"},
+          "index_bytes": {"$ref": "#/$defs/count"},
+          "cache_bytes": {"$ref": "#/$defs/count"}
+        }
+      }
+    },
+    "checks": {
+      "type": "array", "minItems": 9, "maxItems": 9,
+      "prefixItems": [
+        {"const": "exact_readiness_ancestry"},
+        {"const": "separate_ledger_conservation"},
+        {"const": "complete_component_membership"},
+        {"const": "explicit_identity_coverage"},
+        {"const": "full_document_readback"},
+        {"const": "single_ledger_bounded_queries"},
+        {"const": "one_sided_evidence_lookup"},
+        {"const": "full_source_row_drilldown"},
+        {"const": "storage_measurement"}
+      ],
+      "items": false
+    },
+    "elapsed_seconds": {"type": "number", "minimum": 0},
+    "process_peak_rss_bytes": {"$ref": "#/$defs/count"},
+    "completed_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "count": {"type": "integer", "minimum": 0}
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/schedule-a/v1/occurrence.schema.json",
+  "title": "Processed Schedule A source-record occurrence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "occurrence_id", "row_ordinal", "raw_byte_offset", "raw_byte_length",
+    "raw_content_sha256", "publisher_record_reference", "record_version_id",
+    "state", "issue_codes"
+  ],
+  "properties": {
+    "occurrence_id": {"$ref": "#/$defs/digest"},
+    "row_ordinal": {"type": "integer", "minimum": 1},
+    "raw_byte_offset": {"type": "integer", "minimum": 0},
+    "raw_byte_length": {"type": "integer", "minimum": 1},
+    "raw_content_sha256": {"$ref": "#/$defs/digest"},
+    "natural_key": {"type": ["string", "null"], "minLength": 1},
+    "publisher_record_reference": {"type": "string", "minLength": 1},
+    "record_version_id": {"$ref": "#/$defs/digest"},
+    "semantic_digest": {
+      "anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+    },
+    "state": {"enum": ["valid", "invalid"]},
+    "issue_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "valid"}}},
+      "then": {
+        "properties": {
+          "natural_key": {"type": "string", "minLength": 1},
+          "semantic_digest": {"$ref": "#/$defs/digest"},
+          "issue_codes": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"state": {"const": "invalid"}}},
+      "then": {"properties": {"issue_codes": {"minItems": 1}}}
+    }
+  ]
+}

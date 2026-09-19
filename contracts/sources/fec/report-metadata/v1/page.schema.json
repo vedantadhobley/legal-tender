@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "api_version",
+    "pagination",
+    "results"
+  ],
+  "properties": {
+    "api_version": {
+      "const": "1.0"
+    },
+    "pagination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "is_count_exact",
+        "page",
+        "pages",
+        "per_page"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "is_count_exact": {
+          "type": "boolean"
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "per_page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "results": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "record.schema.json"
+      }
+    }
+  }
+}

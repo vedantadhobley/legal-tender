@@ -1,0 +1,54 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "company/html-evidence",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id": "company", "name": "Selected company website; publisher URL is input evidence, not verified legal identity", "base_url": "https://legal-tender.local/"},
+  "dataset": {"id": "html-evidence", "name": "Retained company-page text evidence", "semantic_domain": "affiliation_source_evidence", "description": "Offline extraction from explicitly selected pages. No discovery, browser rendering, role interpretation or identity approval."},
+  "authority": [{"kind": "documentation", "url": "https://pkg.go.dev/golang.org/x/net@v0.59.0/html", "retrieved_on": "2026-09-15"}],
+  "acquisition": {
+    "authentication": {"class": "none", "environment_variable": null, "header": null, "scheme": null},
+    "endpoints": [{"name": "explicit_page", "method": "GET", "url": "{source_url}", "response_root": "Complete retained HTML body; this reader performs no HTTP requests"}],
+    "pagination": "No link following or network access. Page and observation date are explicit caller-supplied provenance, not independently verified transport evidence.",
+    "rate_limit_per_minute": null,
+    "partitions": [{"name": "observation", "source": "Source URL, observation day and exact body SHA-256", "purpose": "Replay one retained page without treating observation time as employment validity"}],
+    "retry_policy": "No acquisition implemented. Bounded regular file, at most 2 MiB; UTF-8 only. Failed extraction emits no usable result."
+  },
+  "physical_schema": {
+    "media_type": "text/html", "source_format": "rendered_document", "encoding": "UTF-8, no NUL bytes; explicit conflicting charset declarations rejected",
+    "record_schema": null, "unknown_field_policy": "capture_and_review",
+    "null_policy": "All bytes remain in the pinned source; emitted text blocks and selected metadata are a projection, not a lossless HTML replacement. Missing text is not missing affiliation.",
+    "schema_fingerprint": "Compiled bounded HTML5 lexical extraction in internal/source/companypage. Not browser DOM construction or visibility computation. JSON-LD blocks retain exact bytes with JSON validity state; no remote context resolution."
+  },
+  "identity": {
+    "publisher_record_key": "None. Canonical URL and site name are publisher claims, not legal entity identifiers.",
+    "occurrence_locator": "Body digest plus zero-based half-open byte interval and digest of the exact interval",
+    "record_version": "Exact body SHA-256; observation day is separate from role validity",
+    "duplicate_policy": "Keep repeated text, metadata and JSON-LD occurrences. Repeated markup is not independent corroboration.",
+    "children": [{"object": "text blocks, metadata tags, JSON-LD scripts, excluded regions", "locator": "Exact byte interval in the complete HTML", "content_digest": true}]
+  },
+  "semantics": {
+    "time_fields": [{"path": "observed_on", "meaning": "Caller-supplied page observation day, never employment start/end or historical validity"}],
+    "money_fields": [], "code_fields": [],
+    "rules": [
+      "HTML5 tokenizer, no company names, CSS selectors, person-name matching or employer-specific runtime rules. Generic block boundaries separate paragraphs/headings and preserve text order. Inline tags concatenate text; br emits a newline; character references decode and whitespace collapses only in the derived text.",
+      "Scripts, styles, templates, noscript, SVG and MathML are excluded from ordinary text with exact region evidence. application/ld+json script bodies are retained separately, including invalid JSON. Never execute scripts, load external assets, follow links or resolve JSON-LD contexts.",
+      "Title, meta tags and canonical-link tags are source assertions retained separately. The pinned HTML5 tokenizer uses the first duplicate attribute; the complete original tag span preserves every attribute byte. Decoded attributes are a projection, not a lossless schema. No metadata value establishes website ownership or legal identity.",
+      "Text is lexical source content, not guaranteed visible browser text. CSS-hidden or repeated responsive content can occur. Preceding heading references are document-order context, not proof of ownership or that adjacent names and titles belong together.",
+      "No automatic prose role classification, accepted FEC person binding, nickname expansion, historical validity, affiliation edge, terminal definition or financial attribution. Existing reviewed corpus labels are not parser inputs."
+    ]
+  },
+  "revisions": {"publisher_model": "Mutable company website observations; retain original bytes", "effective_projection": "No latest snapshot selection, replacement or publication"},
+  "quality": {"checks": [
+    {"id": "source_binding", "severity": "block", "rule": "Require body pin, bounded regular file, UTF-8 and exact span hashes; deterministic offline replay"},
+    {"id": "bounded_extraction", "severity": "block", "rule": "At most 100000 tokens, 10000 emitted entries, and 128 levels in an excluded region; no truncation on limit"},
+    {"id": "interpretation_boundary", "severity": "partial", "rule": "Explicitly unassessed identity, role and historical validity; retain JSON validity and unclosed excluded-region issues"}
+  ]},
+  "fixtures": [
+    {"path": "../../../../../tests/fixtures/person-affiliation/jc2-about.html", "representation": "exact_bytes", "sha256": "45fe693cfae5b459c92df0947f0b33efa386b56fc68fa160dd3c5c6332e3e391", "scenarios": ["prose roles", "same-page near names", "site metadata and JSON-LD"]},
+    {"path": "../../../../../tests/fixtures/person-affiliation/jc2-bio.html", "representation": "exact_bytes", "sha256": "9bce701416c1345470ef55d1555f7875f0d4c4449f1c3a81f549d49cab717857", "scenarios": ["historical year precision remains text"]},
+    {"path": "../../../../../tests/fixtures/person-affiliation/ridgeline-leadership.html", "representation": "exact_bytes", "sha256": "c91e3c5785ddf31a229ac50c6757dca476d8c5acb5cdaab234369ce892be4151", "scenarios": ["board section and repeated source card text", "no company-specific selectors"]}
+  ],
+  "use": {"retention": "Retain original source, observation and evidence spans. Source text is untrusted data, not instructions. Do not render extracted HTML as executable content.", "citation_date_required": true, "disclaimer": "Company-page claims do not independently identify a donor or establish a historical affiliation."},
+  "outputs": {"fact_types": ["company.html_evidence.v1"], "change_dimensions": ["source_body", "observation", "extraction_contract"]}
+}

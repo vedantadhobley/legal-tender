@@ -1,0 +1,81 @@
+{
+  "schema_version": "legal-tender.arango.candidate-receipts-probe-result.v1",
+  "projection_version": "legal-tender.arango.candidate-receipts-projection.v1",
+  "projection_id": "e3530a3f82e329eeb708ff1d06639c0f283469b8d7726ee6db8efac3b9c14c66",
+  "state": "partial",
+  "cycle": "2024",
+  "database": "lt_probe_2024_e3530a3f82e329ee",
+  "graph": "candidate_receipts",
+  "run_id": "arango-projection-2024-20260831",
+  "observed_at": "2026-08-31T19:06:27.1518733Z",
+  "inputs": {
+    "source_release_id": "fec-a6e6f777c3c506b100a7709815bc89f2ae84749faf4343a4589f7ec1bac066a2",
+    "fact_bundle_id": "b00ce42a65696310b8c1f8c3f8f3bc28077f5bc774e4955657cc16b210d629a3",
+    "fact_bundle_manifest_sha256": "66108c97917ea4cc18b9f22c4481862d888f5844e0d8c7cd3e73938bfd596de0",
+    "calculation_set_id": "f8f2eefacff34b7b420246e2e665db525a1b13320673ee8b30620450dc5c39d4",
+    "calculation_manifest_sha256": "30eac10e320aa9f9dd06564ad8b793795f8821bce2228baa505df592eb34bfbf",
+    "candidate_fact_set_id": "eb251d4982a5f82f4172cf3d25eda4a908b96af258bc67478689b37c393aa3ec",
+    "candidate_manifest_sha256": "c56f12ac076a7e29211c4de8b7bdbf03a89943616823c64290966b1fe65772e7",
+    "committee_fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+    "committee_manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30"
+  },
+  "expected_counts": {
+    "entities": 31035,
+    "candidates": 9941,
+    "committees": 21094,
+    "candidate_results": 8175,
+    "candidate_committee_relationships": 8584,
+    "receipt_components": 2116
+  },
+  "observed_counts": {
+    "entities": 31035,
+    "candidates": 9941,
+    "committees": 21094,
+    "candidate_results": 8175,
+    "candidate_committee_relationships": 8584,
+    "receipt_components": 2116
+  },
+  "reused_projection": true,
+  "missing_master_facts": {"candidates": 143, "committees": 156},
+  "storage": {
+    "collections": [
+      {"name": "entities", "documents": 31035, "document_bytes": 45346041, "index_count": 2, "index_bytes": 3215817, "cache_bytes": 0},
+      {"name": "candidate_results", "documents": 8175, "document_bytes": 45346041, "index_count": 2, "index_bytes": 845625, "cache_bytes": 0},
+      {"name": "candidate_committee_relationships", "documents": 8584, "document_bytes": 38318046, "index_count": 3, "index_bytes": 3009642, "cache_bytes": 0},
+      {"name": "receipt_components", "documents": 2116, "document_bytes": 3716271, "index_count": 3, "index_bytes": 356160, "cache_bytes": 0},
+      {"name": "projection_metadata", "documents": 1, "document_bytes": 897, "index_count": 2, "index_bytes": 51, "cache_bytes": 0}
+    ],
+    "document_bytes": 132727296,
+    "index_bytes": 7427295,
+    "combined_bytes": 140154591
+  },
+  "representative_candidate_id": "S2PA00661",
+  "queries": [
+    {
+      "id": "candidate_result_by_id",
+      "repetitions": 25,
+      "result_rows": 1,
+      "minimum_micros": 80,
+      "median_micros": 92,
+      "p95_micros": 142,
+      "maximum_micros": 180
+    },
+    {
+      "id": "candidate_inbound_receipt_neighborhood",
+      "repetitions": 25,
+      "result_rows": 3,
+      "minimum_micros": 131,
+      "median_micros": 177,
+      "p95_micros": 299,
+      "maximum_micros": 311
+    }
+  ],
+  "checks": [
+    {"id": "input_coherence", "passed": true, "severity": "block", "detail": "exact inputs share one release"},
+    {"id": "content_addressed_database", "passed": true, "severity": "block", "detail": "database derives from projection identity"},
+    {"id": "count_conservation", "passed": true, "severity": "block", "detail": "all collection counts match"},
+    {"id": "master_fact_coverage", "passed": false, "severity": "warn", "detail": "explicit placeholders remain"},
+    {"id": "storage_figures", "passed": true, "severity": "block", "detail": "all collection figures were read"},
+    {"id": "query_execution", "passed": true, "severity": "block", "detail": "both representative queries completed"}
+  ]
+}

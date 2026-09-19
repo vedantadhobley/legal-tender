@@ -1,0 +1,323 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/audits/fec/report-metadata/v1/result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "contract",
+    "schema_sha256",
+    "capture_sha256",
+    "endpoint",
+    "query",
+    "state",
+    "pagination_state",
+    "history_complete",
+    "financial_selection_ready",
+    "rows",
+    "missing_requested_files",
+    "pages",
+    "issues"
+  ],
+  "properties": {
+    "version": {
+      "const": "legal-tender.fec.report-metadata-review.v1"
+    },
+    "contract": {
+      "const": "fec/report-metadata@1.0.0"
+    },
+    "schema_sha256": {
+      "const": "0cca7f2af73270b35d7276e53d99b56b2f8f9970b33cb5d36a85fdb8b773caed"
+    },
+    "capture_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "endpoint": {
+      "enum": [
+        "/v1/filings/",
+        "/v1/reports/house-senate/",
+        "/v1/reports/pac-party/"
+      ]
+    },
+    "query": {
+      "$ref": "#/$defs/query"
+    },
+    "state": {
+      "enum": [
+        "validated_observations",
+        "blocked"
+      ]
+    },
+    "pagination_state": {
+      "enum": [
+        "partial",
+        "exact_count_satisfied",
+        "empty_page_observed"
+      ]
+    },
+    "history_complete": {
+      "const": false
+    },
+    "financial_selection_ready": {
+      "const": false
+    },
+    "rows": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1600
+    },
+    "missing_requested_files": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "capture",
+          "pagination",
+          "records"
+        ],
+        "properties": {
+          "capture": {
+            "$ref": "#/$defs/page"
+          },
+          "pagination": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "count",
+              "is_count_exact",
+              "page",
+              "pages",
+              "per_page"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "is_count_exact": {
+                "type": "boolean"
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "pages": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "per_page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          },
+          "records": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ordinal",
+                "sha256",
+                "file_number",
+                "committee_id",
+                "raw"
+              ],
+              "properties": {
+                "ordinal": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "file_number": {
+                  "type": "string",
+                  "pattern": "^([1-9][0-9]*)?$"
+                },
+                "committee_id": {
+                  "type": "string",
+                  "pattern": "^(C[0-9]{8})?$"
+                },
+                "raw": {
+                  "description": "Every source value, including structurally rejected rows. Exact bytes reside in the hash-bound page."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "page",
+          "ordinal",
+          "field",
+          "code"
+        ],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ordinal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "field": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4194304
+        }
+      }
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "per_page"
+      ],
+      "properties": {
+        "file_numbers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "committee_id": {
+          "type": "string",
+          "pattern": "^C[0-9]{8}$"
+        },
+        "cycle": {
+          "type": "integer",
+          "minimum": 1976,
+          "maximum": 9998,
+          "multipleOf": 2
+        },
+        "per_page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "file_numbers"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "committee_id"
+                ]
+              },
+              {
+                "required": [
+                  "cycle"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "committee_id",
+            "cycle"
+          ],
+          "not": {
+            "required": [
+              "file_numbers"
+            ]
+          }
+        }
+      ]
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "observed_at",
+        "time_basis",
+        "body",
+        "headers"
+      ],
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "time_basis": {
+          "enum": [
+            "http_date",
+            "client_clock"
+          ]
+        },
+        "body": {
+          "$ref": "#/$defs/artifact"
+        },
+        "headers": {
+          "$ref": "#/$defs/artifact"
+        }
+      }
+    }
+  }
+}

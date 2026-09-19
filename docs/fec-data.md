@@ -1,3 +1,13 @@
+# FEC data reference
+
+> **Status:** Legacy bulk-file field notes. They are useful research, not the
+> Go rewrite's schema or source authority. Use the machine-readable
+> [`contracts/sources/fec/`](../contracts/sources/fec/) boundaries and the
+> [coordinated release strategy](./design/fec-release-strategy.md) for current
+> behavior. Active release-inventory v3 selects processed Schedule A, Schedule
+> B, and Schedule E plus cycle-scoped candidate, committee, linkage, and two
+> summary products. Classic `indiv`, `oth`, and `pas2` remain comparison
+> evidence where the processed schedules are authoritative.
 
 ### Links
 

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/all-candidates-summary@1.0.0",
+  "representation": "exact_bytes",
+  "transformation": "Each file is one exact physical line copied from the 2024 weball24.txt member, including its terminating LF byte. Numeric lexemes, empty fields, and signs are unchanged.",
+  "fixtures": [
+    {"path": "current-coverage.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/weball24.zip", "retrieved_on": "2026-06-21", "sha256": "7185fa6773e6b1f416fe9d2eea0fad6f43d6dfb67d9b46f16aba366f69c56dfa", "scenarios": ["exact pipe-delimited summary row", "30 fields", "terminating LF"]},
+    {"path": "prior-coverage-negative-refund.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/weball24.zip", "retrieved_on": "2026-06-21", "sha256": "07a97b57c95c865b91a30273ced688c212d422efe510e3f0d82a6721265399e0", "scenarios": ["exact negative numeric lexeme", "30 fields", "terminating LF"]}
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "version": "legal-tender.fec.receipt-family-summary.v1",
+  "upstream_version": "legal-tender.fec.receipt-family-window.v1",
+  "source_map": "legal-tender.fec.receipt-family-map.v1",
+  "scope": "reported_summary_coverage",
+  "mappings": {
+    "F3": {
+      "party_contributions": "PTY_CMTE_CONTB",
+      "other_committee_contributions": "OTH_CMTE_CONTB",
+      "authorized_transfers": "TRANF_FROM_OTHER_AUTH_CMTE",
+      "candidate_made_or_guaranteed_loans": "CAND_LOAN",
+      "other_loans": "OTH_LOANS"
+    },
+    "F3X": {
+      "party_contributions": "PTY_CMTE_CONTB",
+      "other_committee_contributions": "OTH_CMTE_CONTB",
+      "affiliated_or_party_transfers": "TRANF_FROM_OTHER_AUTH_CMTE",
+      "loans_received": "OTH_LOANS"
+    }
+  },
+  "operands": "Reverify the same immutable summary publication; preserve raw and typed values linked to every exact assertion representative and retained member set. Never add fan-out rows or select among conflicting assertions.",
+  "comparisons": ["summary_minus_reported_window", "summary_minus_qualified_detail_window"],
+  "numeric": "exact_signed_minor_units_no_float; null stays null; no delta across unequal scopes",
+  "loan_scope": "CAND_LOAN is a reported-field alias for candidate-made or guaranteed loans, not proof of principal origin. F3X OTH_LOANS maps to line 13, excluding affiliated/party loans reported as line 12 transfers. No TTL_LOANS, balances, repayments or cash substitution.",
+  "dates": "Require both declared summary coverage boundaries to equal the independently covered family window within the source cycle. Never prorate, clip receipt dates, bridge report gaps or infer outside-span activity.",
+  "conflicts": "Scope conflicts block all comparisons; amount-field conflicts block that field in every variant. Unrelated contact or arithmetic discrepancies remain evidence without erasing scalar comparisons.",
+  "source_alignment": "independent_snapshots",
+  "limits": ["no_new_source_membership_proof", "no_summary_gap_fill", "no_cross_family_total", "no_cash_or_donor_origin_claim", "no_new_financial_amendment_selection"],
+  "guards": {"same_report_membership_proven": false, "financial_use_eligible": false, "terminal_attribution_eligible": false}
+}

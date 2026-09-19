@@ -1,0 +1,334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "calculation_set_id",
+    "cycle",
+    "state",
+    "input",
+    "policy",
+    "schedule_a",
+    "schedule_b",
+    "summary",
+    "assertions",
+    "graph_eligible"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.committee-flow-reconciliation.v1"
+    },
+    "calculation_set_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "cycle": {
+      "type": "string",
+      "pattern": "^[0-9]{3}[02468]$"
+    },
+    "state": {
+      "const": "complete_candidate_reconciliation"
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_id",
+        "release_sha256",
+        "schedule_a",
+        "schedule_b"
+      ],
+      "properties": {
+        "release_id": {
+          "type": "string",
+          "pattern": "^fec-[a-f0-9]{64}$"
+        },
+        "release_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "schedule_a": {
+          "$ref": "#/$defs/input"
+        },
+        "schedule_b": {
+          "$ref": "#/$defs/input"
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sender",
+        "receiver",
+        "reporting",
+        "matcher",
+        "sender_rules"
+      ],
+      "properties": {
+        "sender": {
+          "const": "legal-tender.fec.sender-reported-committee-flow-policy.v1"
+        },
+        "receiver": {
+          "const": "legal-tender.fec.receiver-reported-committee-flow-policy.v1"
+        },
+        "reporting": {
+          "const": "legal-tender.fec.processed-disbursement-reporting-policy.v1"
+        },
+        "matcher": {
+          "const": "legal-tender.fec.committee-flow-candidate-components.v1"
+        },
+        "sender_rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "reporting_role",
+              "code",
+              "flow_role"
+            ],
+            "properties": {
+              "reporting_role": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "flow_role": {
+                "enum": [
+                  "contribution",
+                  "in_kind",
+                  "affiliated_transfer",
+                  "refund_or_repayment",
+                  "loan"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "schedule_a": {
+      "$ref": "#/$defs/side"
+    },
+    "schedule_b": {
+      "$ref": "#/$defs/side"
+    },
+    "summary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "components",
+          "schedule_a",
+          "schedule_b"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "corroborated_exact_signature",
+              "candidate_date_disagreement",
+              "candidate_missing_date",
+              "conflicting_amount",
+              "conflicting_role",
+              "ambiguous_candidates",
+              "unmatched_schedule_a",
+              "unmatched_schedule_b"
+            ]
+          },
+          "components": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "schedule_a": {
+            "$ref": "#/$defs/measures"
+          },
+          "schedule_b": {
+            "$ref": "#/$defs/measures"
+          }
+        }
+      }
+    },
+    "assertions": {
+      "$ref": "#/$defs/artifact"
+    },
+    "graph_eligible": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "measures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rows",
+        "known_amount_rows",
+        "signed_amount_minor_units"
+      ],
+      "properties": {
+        "rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "known_amount_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "signed_amount_minor_units": {
+          "type": "string",
+          "pattern": "^-?(0|[1-9][0-9]*)$"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_count",
+        "uncompressed_byte_count",
+        "uncompressed_sha256",
+        "compressed_byte_count",
+        "compressed_sha256",
+        "compression",
+        "storage_key"
+      ],
+      "properties": {
+        "record_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uncompressed_byte_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uncompressed_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "compressed_byte_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "compressed_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "compression": {
+          "const": "zstd"
+        },
+        "storage_key": {
+          "type": "string",
+          "pattern": "^evidence/[a-f0-9]{64}/"
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_set_id",
+        "manifest_sha256",
+        "source_release_id",
+        "source_artifact_sha256",
+        "facts"
+      ],
+      "properties": {
+        "fact_set_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_release_id": {
+          "type": "string",
+          "pattern": "^fec-[a-f0-9]{64}$"
+        },
+        "source_artifact_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "facts": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "side": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "decisions",
+        "selected",
+        "observations"
+      ],
+      "properties": {
+        "total": {
+          "$ref": "#/$defs/measures"
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "measures"
+            ],
+            "properties": {
+              "key": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reporting_role",
+                  "type"
+                ],
+                "properties": {
+                  "state": {
+                    "type": "string"
+                  },
+                  "reporting_role": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "present",
+                      "value"
+                    ],
+                    "properties": {
+                      "present": {
+                        "type": "boolean"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "measures": {
+                "$ref": "#/$defs/measures"
+              }
+            }
+          }
+        },
+        "selected": {
+          "$ref": "#/$defs/measures"
+        },
+        "observations": {
+          "$ref": "#/$defs/artifact"
+        }
+      }
+    }
+  }
+}

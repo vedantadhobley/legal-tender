@@ -1,0 +1,108 @@
+{
+  "affiliated_organizations": [],
+  "client": {
+    "client_government_entity": null,
+    "client_id": 54141,
+    "client_self_select": true,
+    "country": "US",
+    "country_display": "United States of America",
+    "effective_date": "2022-10-03",
+    "general_description": "healthcare, digital health",
+    "id": 54141,
+    "name": "INCLUDED HEALTH",
+    "ppb_country": "US",
+    "ppb_country_display": "United States of America",
+    "ppb_state": "CA",
+    "ppb_state_display": "California",
+    "state": "CA",
+    "state_display": "California",
+    "url": "https://lda.gov/api/v1/clients/54141/"
+  },
+  "conviction_disclosures": [],
+  "dt_posted": "2024-02-01T11:24:42-05:00",
+  "expenses": "10000.00",
+  "expenses_method": "A",
+  "expenses_method_display": "A",
+  "filing_document_content_type": "text/html",
+  "filing_document_url": "https://lda.gov/filings/public/filing/24aa3971-815e-40ca-a63f-455ff0090c03/print/",
+  "filing_period": "first_quarter",
+  "filing_period_display": "1st Quarter (Jan 1 - Mar 31)",
+  "filing_type": "1T",
+  "filing_type_display": "1st Quarter - Termination",
+  "filing_uuid": "24aa3971-815e-40ca-a63f-455ff0090c03",
+  "filing_year": 2024,
+  "foreign_entities": [],
+  "income": null,
+  "lobbying_activities": [
+    {
+      "description": "HR 824 - Telehealth Benefit Expansion for Workers Act HR 1843/S1001 - Telehealth Expansion Act of 2023 HR 5378 - Lower Costs, More Transparency Act",
+      "foreign_entity_issues": "",
+      "general_issue_code": "HCR",
+      "general_issue_code_display": "Health Issues",
+      "government_entities": [
+        {
+          "id": 2,
+          "name": "HOUSE OF REPRESENTATIVES"
+        },
+        {
+          "id": 1,
+          "name": "SENATE"
+        },
+        {
+          "id": 12,
+          "name": "White House Office"
+        }
+      ],
+      "lobbyists": [
+        {
+          "covered_position": null,
+          "lobbyist": {
+            "first_name": "LATOYA",
+            "id": 141457,
+            "last_name": "THOMAS",
+            "middle_name": null,
+            "nickname": null,
+            "prefix": null,
+            "prefix_display": null,
+            "suffix": null,
+            "suffix_display": null
+          },
+          "new": true
+        }
+      ]
+    }
+  ],
+  "posted_by_name": "Latoya S. Thomas",
+  "registrant": {
+    "address_1": "One California Street",
+    "address_2": "Ste. 2300",
+    "address_3": null,
+    "address_4": null,
+    "city": "San Francisco",
+    "contact_name": "LATOYA THOMAS",
+    "contact_telephone": "+1 919-522-0083",
+    "country": "US",
+    "country_display": "United States of America",
+    "description": null,
+    "dt_updated": "2024-07-30T13:00:38.795632-04:00",
+    "house_registrant_id": 55883,
+    "id": 401107190,
+    "name": "INCLUDED HEALTH",
+    "ppb_country": "US",
+    "ppb_country_display": "United States of America",
+    "state": "CA",
+    "state_display": "California",
+    "url": "https://lda.gov/api/v1/registrants/401107190/",
+    "zip": "94111"
+  },
+  "registrant_address_1": "One California Street",
+  "registrant_address_2": "Ste. 2300",
+  "registrant_city": "San Francisco",
+  "registrant_country": "United States of America",
+  "registrant_different_address": false,
+  "registrant_ppb_country": null,
+  "registrant_state": "CA",
+  "registrant_zip": "94111",
+  "termination_date": "2024-02-02",
+  "url": "https://lda.gov/api/v1/filings/24aa3971-815e-40ca-a63f-455ff0090c03/"
+}

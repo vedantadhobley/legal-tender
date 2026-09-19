@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "sec/inline-registrant-identity",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id":"sec","name":"U.S. Securities and Exchange Commission","base_url":"https://www.sec.gov/"},
+  "dataset": {"id":"inline-registrant-identity","name":"Tagged registrant identity in an explicit EDGAR filing","semantic_domain":"organization_identity_evidence","description":"Bounded extraction of tagged DEI registrant name and CIK with source-byte locators and referenced contexts. Other filing contents remain opaque bytes. This is neither a full XBRL processor nor FEC identity approval."},
+  "authority": [
+    {"kind":"documentation","url":"https://www.sec.gov/search-filings/edgar-application-programming-interfaces","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.sec.gov/about/developer-resources","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.sec.gov/Archives/edgar/data/34782/000003478225000025/0000034782-25-000025-index.htm","retrieved_on":"2026-09-15"}
+  ],
+  "acquisition": {
+    "authentication":{"class":"none","environment_variable":null,"header":null,"scheme":null},
+    "endpoints":[{"name":"explicit_filing_document","method":"GET","url":"https://www.sec.gov/Archives/edgar/data/{cik_unpadded}/{accession_compact}/{document}","response_root":"one XHTML html root"}],
+    "pagination":"None. Caller supplies CIK, accession and primary-document basename. No latest-filing or amendment selection is implemented.",
+    "rate_limit_per_minute":null,
+    "partitions":[{"name":"capture","source":"Explicit filing reference and exact observed document bytes","purpose":"Source observation, not a FEC cycle or identity-validity window."}],
+    "retry_policy":"One fixed-origin HTTPS GET per invocation; 30-second timeout, 16 MiB body and 128 KiB response-header caps. Declared operator contact from SEC_USER_AGENT or explicit flag. No auth, inherited proxy, redirects, retry or alternative host. Preserve failed observations; an oversized body is a labeled unusable prefix. New private directory and final manifest required."
+  },
+  "physical_schema": {
+    "media_type":"text/html",
+    "record_schema":null,
+    "encoding":"Strict UTF-8 XML or ASCII/US-ASCII declarations with ASCII-only bytes. Not tolerant HTML. One XHTML root, no DTD/directives, duplicate attributes or contexts, maximum depth 128.",
+    "unknown_field_policy":"capture_and_review",
+    "null_policy":"Extract only inline-XBRL 2013 nonNumeric facts with official DEI year namespaces and EntityRegistrantName or EntityCentralIndexKey concepts. Retain missing or conflicting values as ineligible facts; never substitute prose or null defaults.",
+    "schema_fingerprint":"Versioned token profile in internal/source/sec/filing.go, not a JSON schema for XML. Maximum 1024 selected facts, 8192 decoded text bytes per selected fact and 50000 contexts. QName values resolve against their in-scope namespaces. Preserve raw document hashes and exact fact/context byte spans. Uninterpreted financial tags are opaque, not accepted typed facts."
+  },
+  "identity": {
+    "publisher_record_key":"Explicit issuer CIK, accession and document basename. The accession prefix may identify a filing agent rather than the issuer.",
+    "occurrence_locator":"Capture and body digests plus zero-based start-inclusive/end-exclusive byte offsets. Each selected fact also retains its own span digest, ordinal, original id and contextRef.",
+    "record_version":"Exact captured body SHA-256; observation does not select a current or effective filing.",
+    "duplicate_policy":"Preserve repeated selected fact occurrences. Duplicate fact IDs are ineligible; duplicate context IDs block parsing. Competing names or CIKs cannot be silently collapsed into an approved identity.",
+    "children":[{"object":"Referenced XBRL context","locator":"Source context ID and exact byte span, bound by full document SHA-256","content_digest":false}]
+  },
+  "semantics": {
+    "time_fields":[{"path":"context.start_date/end_date/instant","meaning":"XBRL reporting context, not an employment, connected-organization or legal-name validity interval."},{"path":"response.observed_at","meaning":"Retrieval observation time, not filing or amendment precedence."}],
+    "money_fields":[],"code_fields":[],
+    "rules":[
+      "Keep decoded tagged text separate from original source bytes. Do not infer identity from surrounding prose or financial text.",
+      "Only untransformed selected facts with id/name/contextRef attributes are eligible. Extra selected-fact attributes, continuation, nested non-XHTML content, missing contexts, dimensions and identifier conflicts remain explicit blockers.",
+      "Usable contexts have one SEC-scheme CIK entity identifier and one valid ordered date period or instant. Preserve original CIK text; derive zero padding only for identifier comparison.",
+      "A usable parsed source can contain no eligible identity facts. Comparison must then report incomplete evidence, not a verified negative identity.",
+      "The comparison policy uses format-only Normalize against original FEC query text. It does not expand the directory name vocabulary or ignore parent/bank/holding distinctions.",
+      "The directory and filing are separate SEC resources, not independent proof binding FEC text to a CIK. Preserve original directory alternatives and all FEC source references. Identity, employment, ownership and financial approval flags remain false."
+    ]
+  },
+  "revisions":{"publisher_model":"Retain each exact filing-document observation separately; do not overwrite prior captures.","effective_projection":"No submissions adapter, latest or amended filing selector, recurring refresh, historical identity interpolation or graph publication."},
+  "quality":{"checks":[
+    {"id":"artifact_identity","severity":"block","rule":"Require exact manifest/body pins, constructed SEC URL, confined regular files and bounded lengths."},
+    {"id":"xml_profile","severity":"block","rule":"Malformed or unsupported XML is an explicit unusable source; only the selected DEI identity profile is interpreted."},
+    {"id":"fact_eligibility","severity":"partial","rule":"Preserve unsupported transformations, missing contexts, dimensions, duplicate IDs and conflicting identifiers as ineligible evidence."},
+    {"id":"identity_scope","severity":"partial","rule":"A name match is supporting evidence, not approval. Preserve ambiguous and uninspected directory candidates and unknown transaction-time identity."}
+  ]},
+  "fixtures":[
+    {"path":"../../../../../tests/fixtures/organization-resolution/sec-annual-report-v1.htm","representation":"exact_bytes","source_url":"https://www.sec.gov/Archives/edgar/data/34782/000003478225000025/source-20241231.htm","retrieved_on":"2026-09-15","sha256":"d4ce073c085d7193a586565759038b28e08aca3c4a166566de437b6eca9ce1cd","scenarios":["Exact public annual report matches normal Go capture body","Two tagged registrant identity occurrences with source locators and annual contexts","Private operator request-contact metadata is not committed"]}
+  ],
+  "use":{"retention":"Preserve exact public filing bytes and private contact-bearing captures/results separately. Synthetic XML and mutation tests live in internal/source/sec/testdata and are not real registrant assertions. Live capture and replay are a narrow parser gate, not population-wide source or identity acceptance.","citation_date_required":true,"disclaimer":"Filed name/CIK observations are not FEC identity, employment, ownership or money-flow approval."},
+  "outputs":{"fact_types":["sec.tagged_registrant_identity_observation.v1"],"change_dimensions":["filing_reference","filing_body","source_schema","query_source","directory_snapshot","comparison_policy"]}
+}

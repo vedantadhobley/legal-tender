@@ -1,0 +1,37 @@
+{
+  "version": "role-source-review-attempts.v1",
+  "scope": "Bounded research observations, not normal Go capture manifests. Full response headers stay private because they contain cookies and request-network metadata. The fields here are an explicitly selected safe projection.",
+  "source_url": "https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&formatversion=2&ids=Q1393271%7CQ173395%7CQ8034666&languages=en&maxlag=5&props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks&sitefilter=enwiki",
+  "expected_ids": ["Q1393271", "Q173395", "Q8034666"],
+  "selection": "Explicit review items for John Chambers, Cisco and Workday. Not an automatic donor identity selector and not exhaustive discovery of the earlier corpus subjects or organizations.",
+  "attempts": [
+    {
+      "response_date": "2026-09-15T20:05:01Z",
+      "http_status": 200,
+      "retry_after_seconds": 5,
+      "api_error": "maxlag",
+      "body": "wikidata-maxlag-1.json",
+      "bytes": 507,
+      "sha256": "c476a4cac300b5467c8773ee95f75f1d43bb0e280421ec702273d507bad2f1e9"
+    },
+    {
+      "response_date": "2026-09-15T20:11:08Z",
+      "http_status": 200,
+      "retry_after_seconds": 5,
+      "api_error": "maxlag",
+      "body": "wikidata-maxlag-2.json",
+      "bytes": 507,
+      "sha256": "6e1da6cb47ea6082868dc6fbc87022578210b7d515682f15a6dd6f92fcf54b5b"
+    },
+    {
+      "response_date": "2026-09-15T20:32:49Z",
+      "http_status": 200,
+      "retry_after_seconds": 5,
+      "api_error": "maxlag",
+      "body": "wikidata-maxlag-3.json",
+      "bytes": 482,
+      "sha256": "a6ffbabde4577b4fa8a98fb5b5399a235b84a169563af4ee3a685b24859af956"
+    }
+  ],
+  "outcome": "All three background-mode observations are unusable source responses, not empty candidate or role sets. Stopped after the third observation without changing its request policy. A subsequent separately approved interactive request succeeded; see role-source-interactive.json. These earlier failures remain unchanged evidence, not proof of a general outage."
+}

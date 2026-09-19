@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/schedule-a/v1/natural-index.schema.json",
+  "title": "Processed Schedule A natural-key state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["natural_key", "state", "occurrence_count", "state_digest"],
+  "properties": {
+    "natural_key": {"type": "string", "minLength": 1},
+    "state": {"enum": ["unique", "duplicate", "invalid"]},
+    "occurrence_count": {"type": "integer", "minimum": 1},
+    "state_digest": {"$ref": "#/$defs/digest"},
+    "row_ordinal": {"type": "integer", "minimum": 1},
+    "occurrence_id": {"$ref": "#/$defs/digest"},
+    "record_version_id": {"$ref": "#/$defs/digest"},
+    "semantic_digest": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "unique"}}},
+      "then": {"required": ["row_ordinal", "occurrence_id", "record_version_id", "semantic_digest"]}
+    },
+    {
+      "if": {"properties": {"state": {"const": "duplicate"}}},
+      "then": {
+        "not": {
+          "anyOf": [
+            {"required": ["occurrence_id"]},
+            {"required": ["record_version_id"]},
+            {"required": ["semantic_digest"]},
+            {"required": ["row_ordinal"]}
+          ]
+        }
+      }
+    },
+    {
+      "if": {"properties": {"state": {"const": "invalid"}}},
+      "then": {
+        "not": {
+          "anyOf": [
+            {"required": ["occurrence_id"]},
+            {"required": ["record_version_id"]},
+            {"required": ["semantic_digest"]},
+            {"required": ["row_ordinal"]}
+          ]
+        }
+      }
+    }
+  ]
+}

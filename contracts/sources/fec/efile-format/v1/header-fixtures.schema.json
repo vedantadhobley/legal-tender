@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/efile-format/v1/header-fixtures.schema.json",
+  "title": "Exact FEC HDR byte fragments",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "fixtures"],
+  "properties": {
+    "$schema": {"type": "string", "format": "uri-reference"},
+    "fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "format_version", "file_number", "source_url", "retrieved_on", "raw_hex", "sha256", "record_terminator_hex"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9._-]+$"},
+          "format_version": {"enum": ["8.3", "8.4", "8.5"]},
+          "file_number": {"type": "integer", "minimum": 1},
+          "source_url": {"type": "string", "format": "uri"},
+          "retrieved_on": {"type": "string", "format": "date"},
+          "raw_hex": {"type": "string", "pattern": "^(?:[a-f0-9]{2})+$"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "record_terminator_hex": {"enum": ["0d0a", "0a"]}
+        }
+      }
+    }
+  }
+}

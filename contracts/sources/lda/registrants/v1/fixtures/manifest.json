@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "lda/registrants@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "The public API response was parsed as JSON and reserialized with sorted object keys and two-space indentation. Values and array order are unchanged; HTTP headers and original whitespace are not part of this fixture.",
+  "fixtures": [
+    {
+      "path": "registrant.json",
+      "source_url": "https://lda.gov/api/v1/registrants/35707/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "7e4c9446d763aa0697f3b10db293494ad5fa6fd118427fc52828424372cfcacd",
+      "scenarios": [
+        "registrant master",
+        "House registrant ID",
+        "master update timestamp"
+      ]
+    }
+  ]
+}

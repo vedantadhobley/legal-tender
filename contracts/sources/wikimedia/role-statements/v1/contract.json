@@ -1,0 +1,67 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "wikimedia/role-statements",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id":"wikimedia","name":"Wikimedia community projects","base_url":"https://www.wikidata.org/"},
+  "dataset": {"id":"role-statements","name":"Structured role statements in retained Wikidata items","semantic_domain":"person_organization_role_evidence","description":"Automatic bounded extraction of explicit source statements; no donor resolution, corporate identity approval or monetary attribution."},
+  "authority": [
+    {"kind":"documentation","url":"https://doc.wikimedia.org/Wikibase/master/php/docs_topics_json.html","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.wikidata.org/wiki/Property:P108","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.wikidata.org/wiki/Property:P112","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.wikidata.org/wiki/Property:P169","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.wikidata.org/wiki/Property:P3320","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.wikidata.org/wiki/Property:P1830","retrieved_on":"2026-09-15"}
+  ],
+  "acquisition": {
+    "authentication":{"class":"none","environment_variable":null,"header":null,"scheme":null},
+    "endpoints":[{"name":"wikidata_entities","method":"GET","url":"https://www.wikidata.org/w/api.php","response_root":"wbgetentities: entities; English terms, all claims, info and enwiki sitelinks"}],
+    "pagination":"No network in the extractor. Explicit expected QID set, at most twenty items. Existing organization capture can supply entity bodies; this does not make its search into person discovery.",
+    "rate_limit_per_minute":60,
+    "partitions":[{"name":"body","source":"Exact response SHA-256 and explicit expected item IDs","purpose":"Offline versioned source interpretation without changing FEC partitions."}],
+    "retry_policy":"No fetching or retry in this slice. Caller retains transport provenance. API errors, maxlag, warnings, incomplete expected item sets and unsupported envelopes fail extraction, never become empty matches. Do not bypass upstream throttling. Automatic person search, inverse lookup and refresh selection remain unimplemented."
+  },
+  "physical_schema": {
+    "media_type":"application/json","source_format":"json_api","encoding":"Strict UTF-8 JSON; duplicate keys, invalid surrogates and trailing JSON rejected.",
+    "record_schema":"../../organization-candidates/v1/record.schema.json",
+    "unknown_field_policy":"capture_and_review",
+    "null_policy":"Missing, null, unknown and no-value evidence remain distinct in exact raw statements. somevalue/novalue never invent an entity ID. Missing entity and no selected property are different states.",
+    "schema_fingerprint":"Existing closed wbgetentities envelope and terms reader; additive closed selected-statement/snak/time profiles in internal/source/wikimedia/roles.go and role_time.go. Four MiB per body, twenty expected items, ten thousand total statements. Unknown selected-statement structure produces a retained occurrence issue, not normalized role evidence. Other properties remain counted and source-located. References are opaque snak objects, not verified citations."
+  },
+  "identity": {
+    "publisher_record_key":"Item QID, lastrevid, property and statement ID. Duplicate statement IDs do not collapse occurrences.",
+    "occurrence_locator":"Whole-response digest plus exact JSON pointer /entities/QID/claims/property/zero-based-index and raw statement digest.",
+    "record_version":"Whole-response bytes and publisher item revision; different entity captures are not assumed atomic.",
+    "duplicate_policy":"Every selected array occurrence remains separate. Repeated statement IDs are marked on all affected selected occurrences.",
+    "children":[{"object":"Time qualifiers and citation snaks","locator":"Parent statement pointer and original array position","content_digest":false}]
+  },
+  "semantics": {
+    "time_fields":[{"path":"qualifiers.P580/P582/P585","meaning":"Reported start/end/as-of qualifiers, not retrieval or revision dates. Preserve all values, calendar, precision, timezone and uncertainty fields."},{"path":"modified","meaning":"Item edit time, never role validity."}],
+    "money_fields":[],"code_fields":[],
+    "rules":[
+      "P108 points from reported holder to employer and supplies employment only. P112/P169/P3320 point from related entity to founder/CEO/board member. Reverse those endpoint roles explicitly without rewriting source direction.",
+      "P1830 owner-of and P127 owned-by supply ownership without control evidence. Owners may be organizations and owned objects may be assets rather than corporations.",
+      "P39 position-held and P488 chairperson are retained with unknown role category; never infer corporate board/executive authority from them.",
+      "Holder QID is not necessarily a person. Report whether a loaded item contains a direct unqualified nondeprecated P31=Q5 assertion; do not infer corporate type from the absence of that assertion. Missing endpoint items remain explicit.",
+      "Normal, preferred and deprecated statements all survive. Preferred rank is not confidence or current validity. Deprecated evidence remains explicitly marked.",
+      "Gregorian CE year/month/day time precision is rendered at that precision only. Do not manufacture January 1, month-end or interval bounds. Other calendars, precisions, timezones and before/after uncertainty remain preserved but unsupported for this display profile.",
+      "Repeated temporal qualifiers are not reduced to one value. Non-time qualifiers are explicit uninterpreted constraints; references are not consulted as validity dates.",
+      "Raw statement, qualifiers and references remain intact. Labels and aliases are vocabulary evidence, not person matching rules. No company/person names or benchmark IDs select runtime behavior.",
+      "No screening Claim bridge, identity approval, primary-company selection, graph write, terminal policy or financial allocation is implemented by this adapter."
+    ]
+  },
+  "revisions":{"publisher_model":"Mutable community-authored items; retain exact observations and ranks.","effective_projection":"No latest statement selection, role-validity interpolation or production affiliation publication."},
+  "quality":{"checks":[
+    {"id":"body_identity","severity":"block","rule":"Verify exact body pin, explicit expected IDs, strict envelope and bounded input sizes."},
+    {"id":"statement_conservation","severity":"block","rule":"Every selected occurrence becomes one raw-backed observation or explicit local issue; count all uninterpreted properties."},
+    {"id":"role_scope","severity":"partial","rule":"Retain endpoint type gaps, source unknown values, unsupported qualifiers and historical precision without promoting source evidence to verified person/corporate identity."}
+  ]},
+  "fixtures":[
+    {"path":"../../../../../tests/fixtures/organization-resolution/capture-v1/1488cb69bdbdbff17f4540429f1c9155d78ae3254974d7b4da27d75cee9d5a43.body","representation":"exact_bytes","sha256":"1488cb69bdbdbff17f4540429f1c9155d78ae3254974d7b4da27d75cee9d5a43","scenarios":["Employment and unrelated political offices remain distinct","General chairpersons are not corporate board classifications"]},
+    {"path":"../../../../../tests/fixtures/organization-resolution/capture-v1/170c8d6855097ff0cf4f7fb613f0367151c58f18afedb465d8e8d1b53b45f209.body","representation":"exact_bytes","sha256":"170c8d6855097ff0cf4f7fb613f0367151c58f18afedb465d8e8d1b53b45f209","scenarios":["Multiple employment statements","Year-precision chairperson qualifier"]},
+    {"path":"../../../../../tests/fixtures/organization-resolution/capture-v1/a107a21854241e9e5f0d54df09a22aafdea4cfcabb27c969c6d033a07802d109.body","representation":"exact_bytes","sha256":"a107a21854241e9e5f0d54df09a22aafdea4cfcabb27c969c6d033a07802d109","scenarios":["Reverse CEO and board-member orientation","Ownership is not controlling ownership","Month and year qualifiers retain precision"]},
+    {"path":"../../../../../tests/fixtures/person-affiliation/wikidata-maxlag-1.json","representation":"exact_bytes","sha256":"c476a4cac300b5467c8773ee95f75f1d43bb0e280421ec702273d507bad2f1e9","scenarios":["HTTP 200 API maxlag error is unusable source, not no matches"]}
+  ],
+  "use":{"retention":"Preserve complete input bodies and revision/provenance metadata. Reuse retained company-page annotations for comparison; do not silently relabel them as automatic extraction.","citation_date_required":true,"disclaimer":"Wikidata structured data is community-curated CC0 evidence. Citations, role claims and aliases are not independently verified identity or monetary links."},
+  "outputs":{"fact_types":["wikimedia.reported_role_statement.v1"],"change_dimensions":["item_revision","statement_occurrence","qualifier_precision","property_contract"]}
+}

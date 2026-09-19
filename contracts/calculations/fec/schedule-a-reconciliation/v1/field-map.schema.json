@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/schedule-a-reconciliation/v1/field-map.schema.json",
+  "title": "Raw-to-processed Schedule A comparison map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "mapping_id", "mapping_version", "raw_contract", "processed_contracts", "comparators", "fields"],
+  "properties": {
+    "$schema": {"const": "field-map.schema.json"},
+    "mapping_id": {"const": "fec/schedule-a-raw-processed-fields"},
+    "mapping_version": {"const": "1.0.0"},
+    "raw_contract": {"const": "fec/efile-schedule-a@1.0.0"},
+    "processed_contracts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": ["fec/schedule-a-api@1.0.0", "fec/schedule-a@1.0.0"]}
+    },
+    "comparators": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "rule"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+          "rule": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 45,
+      "maxItems": 45,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["raw_sequence", "raw_field", "processed_fields", "processed_relation_fields", "comparator", "applicability"],
+        "properties": {
+          "raw_sequence": {"type": "integer", "minimum": 1, "maximum": 45},
+          "raw_field": {"type": "string", "minLength": 1},
+          "processed_fields": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "processed_relation_fields": {
+            "description": "Equivalent field names in fec/schedule-a@1.0.0 after exact dump extraction.",
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "comparator": {"enum": ["source_text", "source_date", "source_decimal", "schedule_line", "unmapped"]},
+          "applicability": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

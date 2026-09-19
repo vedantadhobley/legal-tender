@@ -1,0 +1,713 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/summary-receipt-review/v1/result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "policy",
+    "state",
+    "cycle",
+    "committee_id",
+    "inventory_calculation_id",
+    "receipt_input",
+    "receipt_source",
+    "summary_input",
+    "summary_calculation_id",
+    "source_alignment",
+    "summary_state",
+    "summary_conflict_fields",
+    "summary_unindexed_source_rows",
+    "receipts",
+    "assertions",
+    "comparison_blockers",
+    "funding_blockers",
+    "comparison_ready",
+    "complete_committee_funding_basis",
+    "terminal_attribution_eligible"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.summary-receipt-comparison-readiness.v1"
+    },
+    "review_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "policy": {
+      "const": "fec/summary-receipt-comparison-readiness@1.0.0"
+    },
+    "state": {
+      "const": "reported_observations_comparison_blocked"
+    },
+    "cycle": {
+      "type": "string",
+      "pattern": "^[0-9]{3}[02468]$"
+    },
+    "committee_id": {
+      "type": "string",
+      "pattern": "^C[0-9]{8}$"
+    },
+    "inventory_calculation_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "receipt_input": {
+      "$ref": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/result.schema.json#/$defs/input"
+    },
+    "receipt_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_id",
+        "manifest_sha256"
+      ],
+      "properties": {
+        "release_id": {
+          "type": "string",
+          "pattern": "^fec-[a-f0-9]{64}$"
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "summary_input": {
+      "$ref": "https://legal-tender.local/contracts/calculations/fec/committee-summary-assertions/v1/result.schema.json#/properties/input"
+    },
+    "summary_calculation_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_alignment": {
+      "enum": [
+        "same_source_release",
+        "different_source_release"
+      ]
+    },
+    "summary_state": {
+      "enum": [
+        "no_indexed_summary_in_snapshot",
+        "single_assertion",
+        "conflicting_assertions"
+      ]
+    },
+    "summary_conflict_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary_unindexed_source_rows": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "receipts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "total",
+        "individual_predicate",
+        "individual_committee_overlap",
+        "components"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "no_rows_in_snapshot",
+            "reported_rows_not_complete_funding"
+          ]
+        },
+        "total": {
+          "$ref": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/result.schema.json#/$defs/measures"
+        },
+        "individual_predicate": {
+          "$ref": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/result.schema.json#/$defs/measures"
+        },
+        "individual_committee_overlap": {
+          "$ref": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/result.schema.json#/$defs/measures"
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "component",
+              "receipt_role",
+              "measures"
+            ],
+            "properties": {
+              "component": {
+                "type": "string"
+              },
+              "receipt_role": {
+                "type": "string"
+              },
+              "measures": {
+                "$ref": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/result.schema.json#/$defs/measures"
+              }
+            }
+          }
+        }
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {
+        "$ref": "#/$defs/variant"
+      }
+    },
+    "comparison_blockers": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "source_release_mismatch",
+          "receipt_reporting_period_coverage_unverified",
+          "summary_account_and_report_scope_unverified",
+          "no_recipient_rows_in_snapshot",
+          "no_indexed_summary_in_snapshot"
+        ]
+      }
+    },
+    "funding_blockers": {
+      "const": [
+        "cash_versus_valuation_unverified",
+        "inter_report_cash_continuity_unverified",
+        "recipient_cash_availability_unverified",
+        "complete_funding_family_coverage_unverified"
+      ]
+    },
+    "comparison_ready": {
+      "const": false
+    },
+    "complete_committee_funding_basis": {
+      "const": false
+    },
+    "terminal_attribution_eligible": {
+      "const": false
+    }
+  },
+  "$defs": {
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "raw",
+        "value",
+        "receipt_relationship",
+        "field_blockers",
+        "delta_minor_units"
+      ],
+      "properties": {
+        "field": {
+          "enum": [
+            "INDV_ITEM_CONTB",
+            "INDV_UNITEM_CONTB",
+            "INDV_CONTB",
+            "TTL_RECEIPTS",
+            "TTL_FED_RECEIPTS",
+            "COH_BOP",
+            "COH_COP",
+            "TTL_DISB",
+            "TTL_FED_DISB"
+          ]
+        },
+        "raw": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "https://legal-tender.local/contracts/facts/fec/committee-summary/v1/fact.schema.json#/$defs/money"
+        },
+        "receipt_relationship": {
+          "enum": [
+            "candidate_individual_predicate",
+            "no_itemized_inventory_counterpart",
+            "incomplete_individual_population",
+            "unverified_receipt_family_population",
+            "unverified_federal_receipt_population",
+            "no_receipt_inventory_balance",
+            "no_receipt_inventory_disbursements"
+          ]
+        },
+        "field_blockers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "individual_predicate_form_scope_unverified",
+              "unitemized_not_observed_in_itemized_inventory",
+              "unitemized_component_not_in_inventory",
+              "complete_receipt_family_scope_unverified",
+              "federal_receipt_family_scope_unverified",
+              "cash_balance_not_observed_in_receipt_inventory",
+              "disbursements_not_observed_in_receipt_inventory",
+              "summary_value_source_blank",
+              "summary_value_invalid",
+              "conflicting_reported_field",
+              "summary_cash_arithmetic_different",
+              "summary_cash_arithmetic_missing",
+              "summary_cash_arithmetic_invalid",
+              "summary_individual_arithmetic_different",
+              "summary_individual_arithmetic_missing",
+              "summary_individual_arithmetic_invalid"
+            ]
+          }
+        },
+        "delta_minor_units": {
+          "const": null
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "delta_minor_units"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "equal",
+            "different",
+            "missing",
+            "invalid"
+          ]
+        },
+        "delta_minor_units": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^-?[0-9]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "missing",
+                  "invalid"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "delta_minor_units": {
+                "const": null
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "delta_minor_units": {
+                "type": "string",
+                "pattern": "^-?[0-9]+$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assertion_id",
+        "representative_fact_id",
+        "committee_type_raw",
+        "designation_raw",
+        "members",
+        "coverage_start",
+        "coverage_end",
+        "scope_blockers",
+        "fields",
+        "summary_diagnostics"
+      ],
+      "properties": {
+        "assertion_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "representative_fact_id": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "committee_type_raw": {
+          "type": "string"
+        },
+        "designation_raw": {
+          "type": "string"
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100000,
+          "items": {
+            "$ref": "https://legal-tender.local/contracts/calculations/fec/committee-summary-assertions/v1/result.schema.json#/$defs/member"
+          }
+        },
+        "coverage_start": {
+          "$ref": "https://legal-tender.local/contracts/facts/fec/committee-summary/v1/fact.schema.json#/$defs/value"
+        },
+        "coverage_end": {
+          "$ref": "https://legal-tender.local/contracts/facts/fec/committee-summary/v1/fact.schema.json#/$defs/value"
+        },
+        "scope_blockers": {
+          "type": "array",
+          "minItems": 0,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "conflicting_summary_scope",
+              "summary_coverage_unavailable",
+              "summary_coverage_reversed",
+              "summary_coverage_outside_source_cycle"
+            ]
+          }
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "prefixItems": [
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field"
+                },
+                {
+                  "properties": {
+                    "field": {
+                      "const": "INDV_ITEM_CONTB"
+                    },
+                    "receipt_relationship": {
+                      "const": "candidate_individual_predicate"
+                    },
+                    "field_blockers": {
+                      "contains": {
+                        "const": "individual_predicate_form_scope_unverified"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field"
+                },
+                {
+                  "properties": {
+                    "field": {
+                      "const": "INDV_UNITEM_CONTB"
+                    },
+                    "receipt_relationship": {
+                      "const": "no_itemized_inventory_counterpart"
+                    },
+                    "field_blockers": {
+                      "contains": {
+                        "const": "unitemized_not_observed_in_itemized_inventory"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field"
+                },
+                {
+                  "properties": {
+                    "field": {
+                      "const": "INDV_CONTB"
+                    },
+                    "receipt_relationship": {
+                      "const": "incomplete_individual_population"
+                    },
+                    "field_blockers": {
+                      "contains": {
+                        "const": "unitemized_component_not_in_inventory"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field"
+                },
+                {
+                  "properties": {
+                    "field": {
+                      "const": "TTL_RECEIPTS"
+                    },
+                    "receipt_relationship": {
+                      "const": "unverified_receipt_family_population"
+                    },
+                    "field_blockers": {
+                      "contains": {
+                        "const": "complete_receipt_family_scope_unverified"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field"
+                },
+                {
+                  "properties": {
+                    "field": {
+                      "const": "TTL_FED_RECEIPTS"
+                    },
+                    "receipt_relationship": {
+                      "const": "unverified_federal_receipt_population"
+                    },
+                    "field_blockers": {
+                      "contains": {
+                        "const": "federal_receipt_family_scope_unverified"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field"
+                },
+                {
+                  "properties": {
+                    "field": {
+                      "const": "COH_BOP"
+                    },
+                    "receipt_relationship": {
+                      "const": "no_receipt_inventory_balance"
+                    },
+                    "field_blockers": {
+                      "contains": {
+                        "const": "cash_balance_not_observed_in_receipt_inventory"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field"
+                },
+                {
+                  "properties": {
+                    "field": {
+                      "const": "COH_COP"
+                    },
+                    "receipt_relationship": {
+                      "const": "no_receipt_inventory_balance"
+                    },
+                    "field_blockers": {
+                      "contains": {
+                        "const": "cash_balance_not_observed_in_receipt_inventory"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field"
+                },
+                {
+                  "properties": {
+                    "field": {
+                      "const": "TTL_DISB"
+                    },
+                    "receipt_relationship": {
+                      "const": "no_receipt_inventory_disbursements"
+                    },
+                    "field_blockers": {
+                      "contains": {
+                        "const": "disbursements_not_observed_in_receipt_inventory"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/field"
+                },
+                {
+                  "properties": {
+                    "field": {
+                      "const": "TTL_FED_DISB"
+                    },
+                    "receipt_relationship": {
+                      "const": "no_receipt_inventory_disbursements"
+                    },
+                    "field_blockers": {
+                      "contains": {
+                        "const": "disbursements_not_observed_in_receipt_inventory"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "items": false
+        },
+        "summary_diagnostics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cash",
+            "individual",
+            "cash_federal_columns"
+          ],
+          "properties": {
+            "cash": {
+              "$ref": "#/$defs/diagnostic"
+            },
+            "individual": {
+              "$ref": "#/$defs/diagnostic"
+            },
+            "cash_federal_columns": {
+              "$ref": "#/$defs/diagnostic"
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "comparison_blockers": {
+          "allOf": [
+            {
+              "contains": {
+                "const": "receipt_reporting_period_coverage_unverified"
+              }
+            },
+            {
+              "contains": {
+                "const": "summary_account_and_report_scope_unverified"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source_alignment": {
+            "const": "different_source_release"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "comparison_blockers": {
+            "contains": {
+              "const": "source_release_mismatch"
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "comparison_blockers": {
+            "not": {
+              "contains": {
+                "const": "source_release_mismatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "summary_state": {
+            "const": "single_assertion"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assertions": {
+            "minItems": 1,
+            "maxItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "summary_state": {
+            "const": "conflicting_assertions"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assertions": {
+            "minItems": 2
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "summary_state": {
+            "const": "no_indexed_summary_in_snapshot"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assertions": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

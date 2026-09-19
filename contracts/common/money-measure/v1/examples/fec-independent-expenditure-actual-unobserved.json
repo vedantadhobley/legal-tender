@@ -1,0 +1,30 @@
+{
+  "$schema": "../schema.json",
+  "schema_version": "1.0.0",
+  "semantic_role": "independent_expenditure_actual_cost",
+  "currency": "USD",
+  "amount": {
+    "state": "unbounded",
+    "lower_minor_units": null,
+    "upper_minor_units": null,
+    "lower_inclusive": null,
+    "upper_inclusive": null
+  },
+  "measurement": {
+    "basis": "calculated",
+    "kind": "unknown",
+    "observation_state": null,
+    "reported_minor_units": null,
+    "precision_increment_minor_units": null,
+    "accounting_method": null,
+    "source_rule_version": null
+  },
+  "uncertainty": {
+    "coverage": "partial",
+    "attribution": "direct",
+    "revision": "unresolved",
+    "identity": "resolved",
+    "evidence": "calculated"
+  },
+  "issues": ["fec.actual_cost_pending"]
+}

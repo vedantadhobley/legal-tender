@@ -1,0 +1,826 @@
+{
+  "schema_version": "legal-tender.fec.committee-summary-fact-set.v1",
+  "fact_set_id": "51e74d2fcb87de643f15378e58c47f1b3448b0a33cd8f7b50def08699e70c1f8",
+  "fact_type": "fec.committee_summary.v1",
+  "state": "published",
+  "cycle": "2024",
+  "source_contract": "fec/committee-summary@1.0.0",
+  "parser_version": "legal-tender.fec.committee-summary-reader.v1",
+  "source_release_id": "fec-1551484e641043bfd0b96c3219f54d14395a1aa62534c0b30e75d56a791f001a",
+  "source_release_manifest_sha256": "c8933cbbffd41eff1e14ec3675d815410595b6d238f684404bcb96b5f2b25aaf",
+  "source_artifact": {
+    "source_id": "fec:committee-summary:2024",
+    "request_url": "https://www.fec.gov/files/bulk-downloads/2024/committee_summary_2024.csv",
+    "final_url": "https://www.fec.gov/files/bulk-downloads/2024/committee_summary_2024.csv",
+    "observed_at": "2026-09-08T22:03:30.197767331Z",
+    "version_identity": "etag:\"3c3966277cb7a0f967cdf9ba78b2449b07b0831369eeed7628c2d3626deaec43\"",
+    "version_basis": "etag",
+    "etag": "\"3c3966277cb7a0f967cdf9ba78b2449b07b0831369eeed7628c2d3626deaec43\"",
+    "content_length": 4271,
+    "accept_ranges": "bytes",
+    "byte_count": 4271,
+    "sha256": "3c3966277cb7a0f967cdf9ba78b2449b07b0831369eeed7628c2d3626deaec43",
+    "storage_key": "raw/fec/artifacts/sha256/3c/3c3966277cb7a0f967cdf9ba78b2449b07b0831369eeed7628c2d3626deaec43",
+    "acquired_at": "2026-09-08T22:03:30.325135387Z"
+  },
+  "run_id": "fixture-facts",
+  "published_at": "2026-09-08T22:03:31.009296795Z",
+  "verification": {
+    "schema_version": "legal-tender.committee-summary-verification.v1",
+    "source_contract": "fec/committee-summary@1.0.0",
+    "parser_version": "legal-tender.fec.committee-summary-reader.v1",
+    "complete": true,
+    "expected": {
+      "cycle": "2024",
+      "bytes": 4271,
+      "sha256": "3c3966277cb7a0f967cdf9ba78b2449b07b0831369eeed7628c2d3626deaec43"
+    },
+    "header_sha256": "f8e539448b8271b6fc975f0982b5426cf2d1dc08425d0685fdf8f8f7b31de0b9",
+    "header_bytes": 1439,
+    "record_bytes": 2832,
+    "rows": 8,
+    "rows_with_issues": 2,
+    "fields_sha256": "a655c4262edf0d92ff1ae3594ddb08b7b9e0249e4fd14650e8b7288fbd93f986",
+    "typed_values_sha256": "03ffe9569e7da35e6e1bc4f0f77450ff12cc1756c905138ac03faae5b5fe1cd4",
+    "money": {
+      "CAND_CNTB": {
+        "valid": 5,
+        "blank": 3,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 5,
+        "leading_decimal": 0
+      },
+      "CAND_LOAN": {
+        "valid": 5,
+        "blank": 3,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 4,
+        "leading_decimal": 0
+      },
+      "CAND_LOAN_REPYMNT": {
+        "valid": 5,
+        "blank": 3,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 4,
+        "leading_decimal": 0
+      },
+      "COH_BOP": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 4,
+        "negative": 1,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "COH_BOY": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "COH_COP": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 5,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "COH_COY": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "COORD_EXP_BY_PTY_CMTE": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "DEBTS_OWED_BY_CMTE": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 6,
+        "leading_decimal": 0
+      },
+      "DEBTS_OWED_TO_CMTE": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 7,
+        "leading_decimal": 0
+      },
+      "EXEMPT_LEGAL_ACCTG_DISB": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "EXP_PRIOR_YRS_SUBJECT_LIM": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "EXP_SUBJECT_LIMITS": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "FED_CAND_CMTE_CONTB": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "FED_CAND_CONTB_REF": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "FED_FUNDS": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "FNDRSG_DISB": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "INDT_EXP": {
+        "valid": 3,
+        "blank": 5,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "INDV_CONTB": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 2,
+        "negative": 1,
+        "zero": 4,
+        "leading_decimal": 0
+      },
+      "INDV_ITEM_CONTB": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 2,
+        "negative": 1,
+        "zero": 4,
+        "leading_decimal": 0
+      },
+      "INDV_REF": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 2,
+        "negative": 0,
+        "zero": 5,
+        "leading_decimal": 0
+      },
+      "INDV_UNITEM_CONTB": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 2,
+        "negative": 1,
+        "zero": 4,
+        "leading_decimal": 0
+      },
+      "ITEM_CONVN_EXP_DISB": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "ITEM_OTHER_DISB": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "ITEM_OTHER_INCOME": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "ITEM_OTHER_REF_REB_RET": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "ITEM_REF_REB_RET": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "LOANS_MADE": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "LOAN_REPYMTS_RECEIVED": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "NET_CONTB": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 3,
+        "negative": 1,
+        "zero": 3,
+        "leading_decimal": 0
+      },
+      "NET_OP_EXP": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 4,
+        "negative": 0,
+        "zero": 3,
+        "leading_decimal": 0
+      },
+      "NON_ALLOC_FED_ELECT_ACTVY": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "OFFSETS_TO_FNDRSG": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "OFFSETS_TO_LEGAL_ACCTG": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "OFFSETS_TO_OP_EXP": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 2,
+        "negative": 0,
+        "zero": 5,
+        "leading_decimal": 0
+      },
+      "OP_EXP": {
+        "valid": 5,
+        "blank": 3,
+        "invalid": 0,
+        "positive": 3,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "OTHER_DISB": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 6,
+        "leading_decimal": 0
+      },
+      "OTHER_FED_OP_EXP": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 1,
+        "leading_decimal": 0
+      },
+      "OTHER_RECEIPTS": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 4,
+        "negative": 0,
+        "zero": 3,
+        "leading_decimal": 1
+      },
+      "OTH_CMTE_CONTB": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 3,
+        "negative": 0,
+        "zero": 4,
+        "leading_decimal": 0
+      },
+      "OTH_CMTE_REF": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 7,
+        "leading_decimal": 0
+      },
+      "OTH_LOANS": {
+        "valid": 5,
+        "blank": 3,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 5,
+        "leading_decimal": 0
+      },
+      "OTH_LOAN_REPYMTS": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 7,
+        "leading_decimal": 0
+      },
+      "POL_PTY_CMTE_REF": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 7,
+        "leading_decimal": 0
+      },
+      "PTY_CMTE_CONTB": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 7,
+        "leading_decimal": 0
+      },
+      "SHARED_FED_ACTVY_FED_SHR": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "SHARED_FED_ACTVY_NONFED": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "SHARED_FED_OP_EXP": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 1,
+        "leading_decimal": 0
+      },
+      "SHARED_NONFED_OP_EXP": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "SUBTTL_CONVN_EXP_DISB": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "SUBTTL_OTHER_REF_REB_RET": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "SUBTTL_REF_REB_RET": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "TRANF_FROM_NONFED_ACCT": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "TRANF_FROM_NONFED_LEVIN": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "TRANF_FROM_OTHER_AUTH_CMTE": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 6,
+        "leading_decimal": 0
+      },
+      "TRANF_TO_OTHER_AUTH_CMTE": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 6,
+        "leading_decimal": 0
+      },
+      "TTL_COMMUNICATION_COST": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "TTL_CONTB": {
+        "valid": 8,
+        "blank": 0,
+        "invalid": 0,
+        "positive": 3,
+        "negative": 1,
+        "zero": 4,
+        "leading_decimal": 0
+      },
+      "TTL_CONTB_REF": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 2,
+        "negative": 0,
+        "zero": 5,
+        "leading_decimal": 0
+      },
+      "TTL_DISB": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 6,
+        "negative": 0,
+        "zero": 1,
+        "leading_decimal": 0
+      },
+      "TTL_EXP_SUBJECT_LIMITS": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "TTL_FED_DISB": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 2,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "TTL_FED_ELECT_ACTVY": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "TTL_FED_RECEIPTS": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 2,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 1
+      },
+      "TTL_LOANS": {
+        "valid": 3,
+        "blank": 5,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "TTL_LOAN_REPYMTS": {
+        "valid": 5,
+        "blank": 3,
+        "invalid": 0,
+        "positive": 1,
+        "negative": 0,
+        "zero": 4,
+        "leading_decimal": 0
+      },
+      "TTL_NONFED_TRANF": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 2,
+        "leading_decimal": 0
+      },
+      "TTL_OFFSETS_TO_OP_EXP": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "TTL_OP_EXP": {
+        "valid": 2,
+        "blank": 6,
+        "invalid": 0,
+        "positive": 2,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "TTL_RECEIPTS": {
+        "valid": 7,
+        "blank": 1,
+        "invalid": 0,
+        "positive": 6,
+        "negative": 0,
+        "zero": 1,
+        "leading_decimal": 1
+      },
+      "UNITEM_CONVN_EXP_DISB": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "UNITEM_OTHER_DISB": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "UNITEM_OTHER_INCOME": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "UNITEM_OTHER_REF_REB_RET": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      },
+      "UNITEM_REF_REB_RET": {
+        "valid": 0,
+        "blank": 8,
+        "invalid": 0,
+        "positive": 0,
+        "negative": 0,
+        "zero": 0,
+        "leading_decimal": 0
+      }
+    },
+    "dates": {
+      "CVG_END_DT": {
+        "valid": 8,
+        "blank": 0,
+        "invalid": 0
+      },
+      "CVG_START_DT": {
+        "valid": 7,
+        "blank": 0,
+        "invalid": 1
+      }
+    },
+    "identifiers": {
+      "CAND_ID": {
+        "valid": 3,
+        "blank": 5,
+        "invalid": 0
+      },
+      "CMTE_ID": {
+        "valid": 8,
+        "blank": 0,
+        "invalid": 0
+      },
+      "FEC_ELECTION_YR": {
+        "valid": 8,
+        "blank": 0,
+        "invalid": 0
+      }
+    },
+    "intervals": {
+      "valid_endpoints": 7,
+      "unavailable_endpoints": 1,
+      "reversed": 1,
+      "start_before_cycle": 0,
+      "end_after_cycle": 0,
+      "start_after_cycle_start": 2
+    },
+    "multiplicity": {
+      "committee_ids": 7,
+      "unindexed_committee_rows": 0,
+      "repeated_committee_ids": 1,
+      "repeated_committee_occurrences": 2,
+      "repeated_committee_extra_rows": 1,
+      "equal_non_candidate_groups": 1,
+      "conflicting_non_candidate_groups": 0,
+      "composite_keys": 8,
+      "unindexed_composite_rows": 0,
+      "duplicate_composite_extra_rows": 0,
+      "conflicting_composite_keys": 0,
+      "exact_duplicate_extra_rows": 0
+    },
+    "diagnostic_equations": {
+      "cash": {
+        "equal": 3,
+        "different": 4,
+        "missing": 1,
+        "invalid": 0
+      },
+      "individual": {
+        "equal": 7,
+        "different": 0,
+        "missing": 1,
+        "invalid": 0
+      }
+    },
+    "issue_counts": {
+      "invalid_date": 1,
+      "reversed_interval": 1
+    },
+    "issue_examples": {
+      "invalid_date": [
+        {
+          "ordinal": 5,
+          "offset": 2842,
+          "raw_sha256": "10a370d75667280add0f9ef46524c6323e24e4403d65a90ab0182e872cd9dfdd",
+          "code": "invalid_date",
+          "field": "CVG_START_DT"
+        }
+      ],
+      "reversed_interval": [
+        {
+          "ordinal": 8,
+          "offset": 3891,
+          "raw_sha256": "941f0c7f0272cb9a3e6bd238c5a79c8f8497cfc6ff9f1a6195892c68dd0f9b5f",
+          "code": "reversed_interval",
+          "field": "CVG_START_DT"
+        }
+      ]
+    },
+    "max_issue_examples_per_code": 10,
+    "code_interpretation": "preserved_not_interpreted",
+    "terminal_attribution_eligible": false
+  },
+  "facts": {
+    "record_count": 8,
+    "uncompressed_byte_count": 72274,
+    "uncompressed_sha256": "a316e78bbfaa00339a331d729643dc3a665c8bef7bb40a0f44607483e346a07a",
+    "compressed_byte_count": 7076,
+    "compressed_sha256": "ac379bd61121c37a5f75c34e99249cfcef2ec570331d2f8ae92d71753bf40911",
+    "compression": "zstd",
+    "storage_key": "facts/fec/committee-summary/v1/facts/sha256/ac/ac379bd61121c37a5f75c34e99249cfcef2ec570331d2f8ae92d71753bf40911.jsonl.zst"
+  },
+  "readback_verified": true,
+  "terminal_attribution_eligible": false
+}

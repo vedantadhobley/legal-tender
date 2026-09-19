@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/fixture-manifest.schema.json",
+  "title": "Legal Tender contract fixture manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "dataset_contract",
+    "representation",
+    "transformation",
+    "fixtures"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "dataset_contract": {
+      "type": "string",
+      "minLength": 1
+    },
+    "representation": {
+      "enum": ["canonical_json", "synthetic_json", "exact_bytes"]
+    },
+    "transformation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "source_url",
+          "retrieved_on",
+          "sha256",
+          "scenarios"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "source_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "retrieved_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "scenarios": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

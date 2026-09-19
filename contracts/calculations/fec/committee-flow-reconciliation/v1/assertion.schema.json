@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/assertion.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "assertion_id",
+    "state",
+    "schedule_a_ordinals",
+    "schedule_b_ordinals",
+    "schedule_a_amount_minor_units",
+    "schedule_b_amount_minor_units"
+  ],
+  "properties": {
+    "assertion_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "state": {
+      "enum": [
+        "corroborated_exact_signature",
+        "candidate_date_disagreement",
+        "candidate_missing_date",
+        "conflicting_amount",
+        "conflicting_role",
+        "ambiguous_candidates",
+        "unmatched_schedule_a",
+        "unmatched_schedule_b"
+      ]
+    },
+    "schedule_a_ordinals": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "uniqueItems": true
+    },
+    "schedule_b_ordinals": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "uniqueItems": true
+    },
+    "schedule_a_amount_minor_units": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)$"
+    },
+    "schedule_b_amount_minor_units": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)$"
+    }
+  }
+}

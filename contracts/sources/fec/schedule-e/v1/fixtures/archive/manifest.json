@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/schedule-e@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "Point-in-time HTTP metadata, pg_restore schema-only output, dump metadata, complete Go COPY-stream verification, and the later direct-dump versus restored-table row-multiset proof were mapped without changing source values.",
+  "fixtures": [
+    {
+      "path": "dump-2026-08-30.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "239a71635234873ab757640f95296cbb097caf270df611ae439b5020970cb537",
+      "scenarios": ["exact HTTP object identity", "complete 80-column relation DDL", "548318-row parser replay", "COPY byte and digest conservation", "direct and restored COPY row-multiset equivalence"]
+    }
+  ]
+}

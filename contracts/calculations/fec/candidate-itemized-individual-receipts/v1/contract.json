@@ -1,0 +1,120 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/candidate-itemized-individual-receipts",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "question": "What signed processed Schedule A itemized-individual receipt component is attributable to one candidate's same-cycle authorized committees, and how does the resolved detail compare with each independently published candidate summary through the same date?",
+  "inputs": [
+    {
+      "contract": "fec.schedule_a_receipt.v1",
+      "role": "Every lossless normalized processed Schedule A receipt fact in one cycle fact set.",
+      "required": true,
+      "version_policy": "Pin the exact Schedule A fact-set manifest and calculation version."
+    },
+    {
+      "contract": "fec.candidate_committee_linkage.v1",
+      "role": "Same-cycle FEC linkage assertions used only to establish authorized or principal committee scope.",
+      "required": true,
+      "version_policy": "Pin the exact candidate-committee linkage fact-set manifest."
+    },
+    {
+      "contract": "fec.candidate_summary_all.v1",
+      "role": "Independent all-candidates summary assertions and coverage-through date.",
+      "required": false,
+      "version_policy": "Pin the exact summary fact-set manifest when present; absence never blocks the detailed component."
+    },
+    {
+      "contract": "fec.campaign_summary.v1",
+      "role": "Independent current House and Senate campaign summary assertions and coverage-through date.",
+      "required": false,
+      "version_policy": "Pin the exact summary fact-set manifest when present; keep it separate from all-candidates summary evidence."
+    }
+  ],
+  "identity": {
+    "result_key": "candidate ID + FEC two-year cycle + exact input fact-set IDs + calculation version",
+    "input_manifest": "Exact Schedule A, linkage, all-candidates summary, and current-campaign summary fact-set identities plus their source-release ancestry.",
+    "method_version": "fec/candidate-itemized-individual-receipts@1.0.0",
+    "result_digest": "SHA-256 of deterministic UTF-8 JSON result bytes after candidate, committee, summary, and issue ordering."
+  },
+  "method": {
+    "ordered_steps": [
+      "Select same-cycle candidate-committee linkage facts and group them by candidate and committee.",
+      "Treat designation A or P as authorized only when all valid assertions for the pair are compatible and the committee is not claimed as authorized by another candidate in the same cycle; conflicts make every affected relationship unresolved.",
+      "For each Schedule A fact, apply ordered source-specific decisions: exclude publisher-classed non-individual rows, exclude memo-X subtotal rows, resolve a signed amount for remaining publisher-classed individual rows, and preserve null or invalid controlling fields as unresolved.",
+      "Sum included signed cents with checked int64 arithmetic through committee and candidate levels. Never net or fill another source value.",
+      "For each summary independently, bound included detail to dates inside the two-year cycle and on or before that summary's coverage-through date.",
+      "Compare TTL_INDIV_CONTRIB with the resolved date-bounded detail and label the result individual_detail_gap. Preserve TTL_RECEIPTS as context but do not compare it with this narrower component.",
+      "Publish unresolved coverage and every numeric difference as diagnostic evidence. Never copy a summary amount into the detailed component."
+    ],
+    "decision_states": [
+      {"id": "included", "publishable": true, "meaning": "The FEC classed the row as individual, memo code is not X, and signed receipt cents are valid."},
+      {"id": "excluded_non_individual", "publishable": true, "meaning": "The FEC explicitly did not class the row as individual."},
+      {"id": "excluded_memo_subtotal", "publishable": true, "meaning": "The FEC classed the row as individual but memo code X excludes it from this FEC-style subtotal."},
+      {"id": "unresolved_individual_class", "publishable": false, "meaning": "The publisher individual classification is null or invalid."},
+      {"id": "unresolved_amount", "publishable": false, "meaning": "An otherwise included row has no valid signed minor-unit amount."},
+      {"id": "authorization_unresolved", "publishable": false, "meaning": "Same-cycle linkage assertions do not establish one compatible authorized relationship."}
+    ],
+    "invariants": [
+      "Normalized source facts remain immutable; calculation states are separate derived records.",
+      "Negative and zero included amounts remain included and conserve through every subtotal.",
+      "Candidate scope comes only from same-cycle A or P linkage assertions, never from names, Schedule A candidate fields, or another cycle.",
+      "One committee cannot contribute the same receipt subtotal to two candidates in one cycle; shared authorized claims remain unresolved.",
+      "The processed Schedule A snapshot is treated as the FEC's then-current processed row set; no local amendment winner or transaction-ID deduplication is applied.",
+      "Each summary population remains separate and keeps its own coverage-through date.",
+      "TTL_RECEIPTS is broader than this component and cannot validate it by direct equality.",
+      "A summary gap is not named unitemized, missing, or erroneous without separate evidence."
+    ]
+  },
+  "output": {
+    "result_schema": "result.schema.json",
+    "grain": "One immutable source-level decision per Schedule A fact plus one immutable result per candidate, FEC two-year cycle, exact fact-set input manifest, and calculation version.",
+    "fact_types": ["itemized_individual_receipt_decision", "candidate_authorized_committee_relationship", "candidate_itemized_individual_receipt_component", "candidate_summary_reconciliation"],
+    "publication_states": [
+      {"id": "complete", "publishable": true, "meaning": "Every controlling receipt and authorization field in the selected candidate scope is resolved."},
+      {"id": "partial", "publishable": true, "meaning": "The resolved signed subtotal is publishable with explicit incomplete coverage and must not be presented as complete."},
+      {"id": "not_comparable", "publishable": false, "meaning": "No compatible same-cycle authorized scope or summary coverage boundary supports the requested comparison."}
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "A changed receipt, linkage, or summary fact-set identity creates a new immutable result only for affected cycle and candidate keys.",
+    "method_change_policy": "Any change to receipt decision order, authorization rules, date bounds, comparison field, arithmetic, or uncertainty semantics requires a new calculation version.",
+    "history_policy": "Retain every receipt decision, calculation result, input identity, relationship state, source summary assertion, and reconciliation difference indefinitely."
+  },
+  "quality": {
+    "checks": [
+      {"id": "cycle_identity", "severity": "block", "rule": "Every consumed fact belongs to the requested two-year cycle and compatible source-release ancestry."},
+      {"id": "relationship_scope", "severity": "block", "rule": "Only compatible, candidate-exclusive same-cycle A or P linkage assertions enter the authorized committee set."},
+      {"id": "receipt_decision", "severity": "block", "rule": "Every Schedule A fact receives exactly one ordered source-level decision state."},
+      {"id": "signed_conservation", "severity": "block", "rule": "Included signed cents conserve exactly from receipt decisions through committee and candidate subtotals."},
+      {"id": "checked_arithmetic", "severity": "block", "rule": "Any signed int64 sum or subtraction overflow blocks the result."},
+      {"id": "summary_independence", "severity": "block", "rule": "Summary values remain source assertions and never fill or replace detailed values."},
+      {"id": "coverage_alignment", "severity": "partial", "rule": "A numeric reconciliation states the explicit summary coverage date and unresolved detailed-date count."},
+      {"id": "total_receipts_context", "severity": "observe", "rule": "TTL_RECEIPTS is retained for context but is not directly compared with this itemized-individual component."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/resolved-summary-gap.json",
+      "representation": "canonical_json",
+      "sha256": "871219ed6c0fe60a9490e756be4d559a4e54adaea5a671281ab7a85bc2d0b40b",
+      "input_paths": ["fixtures/input.json"],
+      "scenarios": [
+        "one authorized committee",
+        "one included positive itemized-individual receipt",
+        "date-bounded all-candidates summary comparison",
+        "TTL_INDIV_CONTRIB minus resolved detail produces a labeled individual_detail_gap",
+        "TTL_RECEIPTS remains context and does not enter the calculation"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": ["Schedule A fact set", "candidate-committee linkage fact set", "all-candidates summary fact set", "current-campaign summary fact set"],
+    "semantic_change_dimensions": ["receipt decision", "signed amount", "receipt date", "recipient committee", "authorization state", "summary amount", "summary coverage date"],
+    "downstream_keys": ["cycle", "candidate_id", "committee_id", "summary_fact_id"],
+    "no_change_policy": "Identical exact input fact sets and calculation version reuse the prior result. A summary-only change recomputes only that candidate's reconciliation; a receipt or linkage change targets candidates connected to the affected committee in the same cycle."
+  },
+  "use": {
+    "retention": "Retain receipt decisions, calculated components, committee subtotals, source summaries, reconciliation differences, issues, and exact input identities for every published version.",
+    "disclaimer": "This result is the resolved processed Schedule A itemized-individual component for disclosed authorized committees. It is not total candidate-controlled receipts, personal income to a candidate, or proof that a summary residual has one specific composition."
+  }
+}

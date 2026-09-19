@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "gleif/lei-record",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id":"gleif","name":"Global Legal Entity Identifier Foundation","base_url":"https://www.gleif.org/"},
+  "dataset": {"id":"lei-record","name":"Exact-LEI registry observations","semantic_domain":"organization_identity_evidence","description":"Bounded direct LEI lookups for identifiers asserted by saved Wikimedia candidates. No name-search fallback or FEC identity approval."},
+  "authority": [
+    {"kind":"documentation","url":"https://www.gleif.org/en/lei-data/gleif-api","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://api.gleif.org/docs","retrieved_on":"2026-09-15"},
+    {"kind":"api","url":"https://api.gleif.org/api/v1/lei-records/300300SRCLQKVTFFOM15","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.wikidata.org/wiki/Property:P1278","retrieved_on":"2026-09-15"}
+  ],
+  "acquisition": {
+    "authentication":{"class":"none","environment_variable":null,"header":null,"scheme":null},
+    "endpoints":[{"name":"lei_record","method":"GET","url":"https://api.gleif.org/api/v1/lei-records/{lei}","response_root":"data; exact requested LEI, no includes or relationship traversal"}],
+    "pagination":"None: one exact-LEI resource per request. A zero-request plan means no valid identifiers in the selected evidence, not no organizations in the registry.",
+    "rate_limit_per_minute":60,
+    "partitions":[{"name":"capture","source":"Pinned Wikimedia capture plus versioned request selection and sorted unique LEIs","purpose":"Bind registry observations to exact candidate evidence without changing FEC releases."}],
+    "retry_policy":"Manual bounded capture only. At most twenty serial requests, one-second spacing, 30 seconds/request, five minutes/run, 2 MiB/body and 40 MiB/run. Fixed HTTPS origin, no redirects, credentials or inherited proxy. Stop after the first transport, HTTP, body or schema failure; preserve subsequent unattempted requests. No retry or alternate-source fallback. New directories only; final manifest marks replayability."
+  },
+  "physical_schema": {
+    "media_type":"application/vnd.api+json",
+    "source_format":"json_api",
+    "encoding":"Strict UTF-8 JSON with duplicate-key, surrogate, nesting and trailing-value checks.",
+    "record_schema":"record.schema.json",
+    "unknown_field_policy":"capture_and_review",
+    "null_policy":"Legal name, name lists, statuses and required timestamps must have their accepted shapes. nextRenewalDate may be null and remains null. Uninterpreted source fields remain raw JSON. HTTP 404 and all other non-200 responses remain source failures, not entity absence.",
+    "schema_fingerprint":"Compiled closed interpreted boundaries in internal/source/gleif/record.go. Known unconsumed address, identifier-mapping, event and relationship values remain explicitly opaque source JSON, not normalized facts. Each observation retains the JSON path/type fingerprint. Unknown keys at interpreted boundaries block usable parsing while retaining the body."
+  },
+  "identity": {
+    "publisher_record_key":"LEI; requested value, data.id and data.attributes.lei must agree. Validate 20-character syntax and MOD 97-10 check digits without repairing text.",
+    "occurrence_locator":"Capture digest, request ordinal, exact URL and response digest.",
+    "record_version":"Exact body digest and Golden Copy publishDate; observations from different requests are not an atomic publisher snapshot.",
+    "duplicate_policy":"Fetch each distinct valid LEI once; preserve every source claim and query/QID occurrence in the calculation. Requests remain sorted and bounded.",
+    "children":[{"object":"otherNames, transliteratedOtherNames and opaque events/relationships","locator":"Exact body and field/array position","content_digest":false}]
+  },
+  "semantics": {
+    "time_fields":[{"path":"observed_at","meaning":"HTTP observation time, not FEC relationship validity."},{"path":"meta.goldenCopy.publishDate, registration.lastUpdateDate, registration.nextRenewalDate","meaning":"Publisher snapshot/update/renewal assertions; not legal-name or employment validity intervals."}],
+    "money_fields":[],"code_fields":[],
+    "rules":[
+      "P1278 selects exact registry identifiers; no company names, QIDs or benchmark answers are production exceptions.",
+      "The registry confirms that the referenced LEI record was observed. It does not independently bind a FEC reported string or a Wikidata QID to that legal entity.",
+      "Legal names, previous names and transliterations remain separate. Names are not silently translated, shortened or promoted across time.",
+      "ACTIVE/ISSUED, LAPSED, inactive and unknown status values remain distinct evidence. LAPSED does not mean nonexistent. GLEIF corroborationLevel describes publisher validation, not this application's entity-resolution approval.",
+      "Do not follow parent, successor, address or identifier-mapping links or convert those opaque values into identity or financial edges."
+    ]
+  },
+  "revisions":{"publisher_model":"Mutable registry observations drawn from Golden Copy releases.","effective_projection":"No entity identity publication, recurring refresh or bulk local index is implemented by this probe. Historical snapshots are never overwritten."},
+  "quality":{"checks":[
+    {"id":"artifact_identity","severity":"block","rule":"Require exact capture/body digests, confined regular files, request reconstruction, budgets, complete request conservation and no requests after a failure."},
+    {"id":"source_shape","severity":"block","rule":"Reject unreviewed interpreted shapes, wrong LEIs and source self-link mismatches; retain failed bodies without producing records."},
+    {"id":"identity_scope","severity":"partial","rule":"Missing, competing, qualified and deprecated identifier claims remain explicit. All output identity/employment/ownership/financial approval flags stay false."}
+  ]},
+  "fixtures":[{"path":"../../../../../internal/source/gleif/testdata/record.json","representation":"synthetic_json","scenarios":["synthetic name attached to valid-format LEI; not a real identity assertion","previous name retained separately","publisher statuses and timestamps"]}],
+  "use":{"retention":"Retain exact source bytes and capture ancestry for offline replay. The synthetic fixture deliberately does not describe the real entity associated with its checksum-valid test LEI.","citation_date_required":true,"disclaimer":"Registry observations provide corroboration evidence, not proof of a FEC employer identity or the origin of contribution dollars."},
+  "outputs":{"fact_types":["gleif.lei_record_observation.v1"],"change_dimensions":["registry_record","candidate_identifier_claims","source_schema","corroboration_policy"]}
+}

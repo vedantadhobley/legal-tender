@@ -1,0 +1,46 @@
+# Disposable integration fixture. No development storage, credentials or proxy.
+name: legal-tender-window-test
+services:
+  window-arango:
+    image: arangodb:3.11
+    environment:
+      ARANGO_NO_AUTH: "1"
+      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "1073741824"
+    mem_limit: 2g
+    cpus: 2
+    volumes:
+      - arango-data:/var/lib/arangodb3
+      - arango-apps:/var/lib/arangodb3-apps
+    healthcheck:
+      test: [CMD, arangosh, --server.endpoint, tcp://127.0.0.1:8529, --server.authentication, "false", --javascript.execute-string, "db._version()"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  window-test:
+    image: golang:1.26.5-bookworm
+    working_dir: /src
+    mem_limit: 4g
+    cpus: 4
+    environment:
+      LT_WINDOW_INTEGRATION: "1"
+      GOTOOLCHAIN: local
+      GOMODCACHE: /gomodcache
+      GOCACHE: /gocache
+      GOMEMLIMIT: 2GiB
+      GOMAXPROCS: "4"
+    volumes:
+      - .:/src:ro
+      - ${LT_GO_CACHE_DIR:?set LT_GO_CACHE_DIR}/gomodcache:/gomodcache:ro
+      - build-cache:/gocache
+      - arango-data:/arango-data:ro
+    depends_on:
+      window-arango:
+        condition: service_healthy
+    command: [go, test, -buildvcs=false, -race, -count=1, -v, ./internal/integration/fundingwindow]
+networks:
+  default:
+    internal: true
+volumes:
+  arango-data:
+  arango-apps:
+  build-cache:

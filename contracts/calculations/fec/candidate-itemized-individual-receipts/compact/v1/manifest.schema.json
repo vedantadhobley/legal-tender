@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/candidate-itemized-individual-receipts/compact/v1/manifest.schema.json",
+  "title": "Published compact candidate itemized-individual receipt calculation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "calculation_set_id", "calculation",
+    "calculation_version", "publisher_version", "result_schema_version",
+    "cycle", "source_release_id", "input_fact_sets", "run_id", "state",
+    "published_at", "predicate", "decision_counts", "result_counts",
+    "reconciliations", "exceptions", "results", "checks"
+  ],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.candidate-itemized-individual-receipts-compact-set.v1"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "calculation": {"const": "fec/candidate-itemized-individual-receipts"},
+    "calculation_version": {"const": "1.0.0"},
+    "publisher_version": {"const": "legal-tender.fec.candidate-itemized-individual-receipts-compact-publisher.v1"},
+    "result_schema_version": {"const": "legal-tender.fec.candidate-itemized-individual-receipts.v1"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "input_fact_sets": {"type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true, "items": {"$ref": "#/$defs/fact_set"}},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "published"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "predicate": {"$ref": "#/$defs/predicate"},
+    "decision_counts": {"$ref": "#/$defs/decision_counts"},
+    "result_counts": {"$ref": "#/$defs/result_counts"},
+    "reconciliations": {"$ref": "#/$defs/reconciliation_set"},
+    "exceptions": {"$ref": "#/$defs/artifact"},
+    "results": {"$ref": "#/$defs/artifact"},
+    "checks": {"type": "array", "minItems": 8, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "fact_set": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "dataset", "fact_type", "fact_set_id", "manifest_sha256"],
+      "properties": {
+        "role": {"enum": ["schedule_a_receipts", "candidate_committee_linkage", "all_candidates_summary", "current_campaigns_summary"]},
+        "dataset": {"enum": ["schedule-a", "candidate-committee-linkage", "all-candidates-summary", "current-campaigns-summary"]},
+        "fact_type": {"enum": ["fec.schedule_a_receipt.v1", "fec.candidate_committee_linkage.v1", "fec.candidate_summary_all.v1", "fec.campaign_summary.v1"]},
+        "fact_set_id": {"$ref": "#/$defs/digest"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "predicate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "input_physical_schema_version", "membership_identity", "required_columns", "decision_order", "exceptional_states"],
+      "properties": {
+        "version": {"const": "legal-tender.fec.itemized-individual-receipt-membership-predicate.v1"},
+        "input_physical_schema_version": {"const": "legal-tender.fec.schedule-a-parquet.v1"},
+        "membership_identity": {"const": "columnar fact-set ID plus one-based source row ordinal"},
+        "required_columns": {"type": "array", "minItems": 9, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "decision_order": {"type": "array", "minItems": 5, "maxItems": 5, "items": {"$ref": "#/$defs/rule"}},
+        "exceptional_states": {"const": ["unresolved_individual_class", "unresolved_amount", "invalid_receipt_date"]}
+      }
+    },
+    "rule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "all"],
+      "properties": {
+        "state": {"enum": ["included", "excluded_non_individual", "excluded_memo_subtotal", "unresolved_individual_class", "unresolved_amount"]},
+        "all": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "decision_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["included", "excluded_non_individual", "excluded_memo_subtotal", "unresolved_individual_class", "unresolved_amount", "included_amount_minor_units"],
+      "properties": {
+        "included": {"type": "integer", "minimum": 0},
+        "excluded_non_individual": {"type": "integer", "minimum": 0},
+        "excluded_memo_subtotal": {"type": "integer", "minimum": 0},
+        "unresolved_individual_class": {"type": "integer", "minimum": 0},
+        "unresolved_amount": {"type": "integer", "minimum": 0},
+        "included_amount_minor_units": {"type": "string", "pattern": "^-?[0-9]+$"}
+      }
+    },
+    "result_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_rows", "validated_rows", "candidate_routed_rows", "rows_without_candidate_route", "routed_invalid_receipt_dates", "linkage_facts", "summary_facts", "candidates", "complete_candidates", "partial_candidates", "not_comparable_candidates"],
+      "properties": {
+        "source_rows": {"type": "integer", "minimum": 0},
+        "validated_rows": {"type": "integer", "minimum": 0},
+        "candidate_routed_rows": {"type": "integer", "minimum": 0},
+        "rows_without_candidate_route": {"type": "integer", "minimum": 0},
+        "routed_invalid_receipt_dates": {"type": "integer", "minimum": 0},
+        "linkage_facts": {"type": "integer", "minimum": 0},
+        "summary_facts": {"type": "integer", "minimum": 0},
+        "candidates": {"type": "integer", "minimum": 0},
+        "complete_candidates": {"type": "integer", "minimum": 0},
+        "partial_candidates": {"type": "integer", "minimum": 0},
+        "not_comparable_candidates": {"type": "integer", "minimum": 0}
+      }
+    },
+    "reconciliation_set": {
+      "type": "object", "additionalProperties": false,
+      "required": ["overall", "by_summary_fact_type"],
+      "properties": {
+        "overall": {"$ref": "#/$defs/reconciliation_counts"},
+        "by_summary_fact_type": {"type": "object", "additionalProperties": {"$ref": "#/$defs/reconciliation_counts"}}
+      }
+    },
+    "reconciliation_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["total", "comparable", "exact", "within_five_percent", "within_ten_percent", "within_twenty_five_percent", "nonzero_difference", "zero_summary", "nonzero_summary", "not_comparable"],
+      "properties": {
+        "total": {"type": "integer", "minimum": 0}, "comparable": {"type": "integer", "minimum": 0},
+        "exact": {"type": "integer", "minimum": 0}, "within_five_percent": {"type": "integer", "minimum": 0},
+        "within_ten_percent": {"type": "integer", "minimum": 0}, "within_twenty_five_percent": {"type": "integer", "minimum": 0},
+        "nonzero_difference": {"type": "integer", "minimum": 0}, "zero_summary": {"type": "integer", "minimum": 0},
+        "nonzero_summary": {"type": "integer", "minimum": 0}, "not_comparable": {"type": "integer", "minimum": 0}
+      }
+    },
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "storage_key"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "compression": {"const": "zstd"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "warning"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

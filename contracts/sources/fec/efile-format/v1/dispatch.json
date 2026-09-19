@@ -1,0 +1,77 @@
+{
+  "$schema": "dispatch.schema.json",
+  "dispatch_id": "fec/efile-format",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "source_evidence": [
+    {
+      "name": "FEC electronic filing specification workbook 8.5",
+      "url": "https://docquery.fec.gov/formatspecs/FEC_EFO_Format_Specifications.xlsx",
+      "retrieved_on": "2026-08-27",
+      "sha256": "c667016493df28c186445201cf8a2bcff43563bccc41b75b2bcc06366b69132b"
+    },
+    {
+      "name": "FEC electronic filing specification Part I 8.5",
+      "url": "https://docquery.fec.gov/tools/VenPak.zip",
+      "member": "FEC_Format_v8.5.pdf",
+      "retrieved_on": "2026-08-27",
+      "sha256": "9501d60c5f94c757a23e70ab015cc8d277f451a2263ab91a78d801e203c8ed78"
+    },
+    {
+      "name": "FEC vendor-package modification history",
+      "url": "https://docquery.fec.gov/tools/VenPak.zip",
+      "member": "FEC_MODS.TXT",
+      "retrieved_on": "2026-08-27",
+      "sha256": "05e18754ebd03c926838eb003f8dafc30add3f7a11dd75584fdcd05191fc493d"
+    }
+  ],
+  "byte_protocol": {
+    "field_separator_hex": "1c",
+    "specified_record_terminator_hex": "0d0a",
+    "observed_record_terminators": ["0d0a", "0a"],
+    "quote_policy": "double quote characters are forbidden by the format specification",
+    "decode_policy": "Parse structure as bytes. Preserve exact bytes before text decoding. Version 8.5 permits selected legacy single-byte values above ASCII, but does not pin a Unicode mapping; unsupported byte-to-character mappings remain explicit issues rather than replacement characters."
+  },
+  "header": {
+    "must_be_first_record": true,
+    "selector": {
+      "record_type": "HDR",
+      "electronic_filing_type": "FEC",
+      "version_field_sequence": 3
+    },
+    "trailing_field_policy": "Fields 1 through 3 are required for dispatch. Unused trailing fields may be omitted, so a valid HDR need not expose all eight logical fields physically.",
+    "fields": [
+      {"sequence": 1, "name": "record_type", "required": true},
+      {"sequence": 2, "name": "electronic_filing_type", "required": true},
+      {"sequence": 3, "name": "fec_format_version", "required": true},
+      {"sequence": 4, "name": "software_name", "required": false},
+      {"sequence": 5, "name": "software_version", "required": false},
+      {"sequence": 6, "name": "original_report_id", "required": false},
+      {"sequence": 7, "name": "amendment_number", "required": false},
+      {"sequence": 8, "name": "header_comment", "required": false}
+    ]
+  },
+  "versions": [
+    {
+      "header_version": "8.3",
+      "parser": "fec-v8-byte-records/v1",
+      "schedule_a_layout": "schedule-a-45/v1",
+      "evidence_fixture": "fixtures/hdr-8.3.json",
+      "support": "supported"
+    },
+    {
+      "header_version": "8.4",
+      "parser": "fec-v8-byte-records/v1",
+      "schedule_a_layout": "schedule-a-45/v1",
+      "evidence_fixture": "fixtures/hdr-8.4.json",
+      "support": "supported"
+    },
+    {
+      "header_version": "8.5",
+      "parser": "fec-v8-byte-records/v1",
+      "schedule_a_layout": "schedule-a-45/v1",
+      "evidence_fixture": "fixtures/hdr-8.5.json",
+      "support": "supported"
+    }
+  ]
+}

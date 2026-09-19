@@ -1,0 +1,100 @@
+{
+  "affiliated_organizations": [],
+  "client": {
+    "client_government_entity": null,
+    "client_id": 56764,
+    "client_self_select": false,
+    "country": "US",
+    "country_display": "United States of America",
+    "effective_date": "2023-08-01",
+    "general_description": "CTIA is the trade association of the cellular/wireless industry.",
+    "id": 56764,
+    "name": "CTIA - THE WIRELESS ASSOCIATION",
+    "ppb_country": "US",
+    "ppb_country_display": "United States of America",
+    "ppb_state": "DC",
+    "ppb_state_display": "District of Columbia",
+    "state": "DC",
+    "state_display": "District of Columbia",
+    "url": "https://lda.gov/api/v1/clients/56764/"
+  },
+  "conviction_disclosures": [],
+  "dt_posted": "2024-01-02T13:14:26-05:00",
+  "expenses": null,
+  "expenses_method": null,
+  "expenses_method_display": null,
+  "filing_document_content_type": "text/html",
+  "filing_document_url": "https://lda.gov/filings/public/filing/467e4a97-6351-4902-8ffa-dd51632e156b/print/",
+  "filing_period": "first_quarter",
+  "filing_period_display": "1st Quarter (Jan 1 - Mar 31)",
+  "filing_type": "Q1",
+  "filing_type_display": "1st Quarter - Report",
+  "filing_uuid": "467e4a97-6351-4902-8ffa-dd51632e156b",
+  "filing_year": 2024,
+  "foreign_entities": [],
+  "income": "30000.00",
+  "lobbying_activities": [
+    {
+      "description": "H.R.3949, End Cells in Cells Act, a bill to increase criminal penalties for contraband cell phones in prisons and jails.",
+      "foreign_entity_issues": "",
+      "general_issue_code": "TEC",
+      "general_issue_code_display": "Telecommunications",
+      "government_entities": [
+        {
+          "id": 2,
+          "name": "HOUSE OF REPRESENTATIVES"
+        }
+      ],
+      "lobbyists": [
+        {
+          "covered_position": null,
+          "lobbyist": {
+            "first_name": "SEAN",
+            "id": 143905,
+            "last_name": "FARRELL",
+            "middle_name": null,
+            "nickname": null,
+            "prefix": null,
+            "prefix_display": null,
+            "suffix": null,
+            "suffix_display": null
+          },
+          "new": false
+        }
+      ]
+    }
+  ],
+  "posted_by_name": "Sean Farrell",
+  "registrant": {
+    "address_1": "921 H Street, NE",
+    "address_2": "#252",
+    "address_3": null,
+    "address_4": null,
+    "city": "Washington",
+    "contact_name": "SEAN FARRELL",
+    "contact_telephone": "+1 202-944-0520",
+    "country": "US",
+    "country_display": "United States of America",
+    "description": null,
+    "dt_updated": "2026-07-09T15:58:43.665743-04:00",
+    "house_registrant_id": 56170,
+    "id": 401107792,
+    "name": "EAST CAPITOL ADVISORS LLC",
+    "ppb_country": "US",
+    "ppb_country_display": "United States of America",
+    "state": "DC",
+    "state_display": "District of Columbia",
+    "url": "https://lda.gov/api/v1/registrants/401107792/",
+    "zip": "20002"
+  },
+  "registrant_address_1": "921 H Street, NE",
+  "registrant_address_2": "#252",
+  "registrant_city": "Washington",
+  "registrant_country": "United States of America",
+  "registrant_different_address": false,
+  "registrant_ppb_country": null,
+  "registrant_state": "DC",
+  "registrant_zip": "20002",
+  "termination_date": null,
+  "url": "https://lda.gov/api/v1/filings/467e4a97-6351-4902-8ffa-dd51632e156b/"
+}

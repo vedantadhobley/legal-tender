@@ -1,0 +1,60 @@
+{
+  "$schema":"../../../../source-contract.schema.json",
+  "contract_id":"gleif/name-search",
+  "contract_version":"1.0.0",
+  "status":"draft",
+  "publisher":{"id":"gleif","name":"Global Legal Entity Identifier Foundation","base_url":"https://www.gleif.org/"},
+  "dataset":{"id":"name-search","name":"Independent organization-name registry discovery","semantic_domain":"organization_candidate_evidence","description":"Bounded source-derived names, without a preexisting QID or LEI. Name correspondence is not an accepted FEC identity or a role assertion."},
+  "authority":[
+    {"kind":"documentation","url":"https://www.gleif.org/en/lei-data/gleif-api","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://api.gleif.org/demo","retrieved_on":"2026-09-15"},
+    {"kind":"api","url":"https://api.gleif.org/api/v1/lei-records?filter%5Bentity.names%5D=RIDGELINE+INC&page%5Bnumber%5D=1&page%5Bsize%5D=5","retrieved_on":"2026-09-15"}
+  ],
+  "acquisition":{
+    "authentication":{"class":"none","environment_variable":null,"header":null,"scheme":null},
+    "endpoints":[{"name":"name_search","method":"GET","url":"https://api.gleif.org/api/v1/lei-records","response_root":"data array; filter[entity.names], page[number]=1, page[size]=5"}],
+    "pagination":"Capture only the first five records. Verify reported counts, bounds and same-query page links; preserve but never follow continuation. Query-window completeness is not exhaustive entity discovery.",
+    "rate_limit_per_minute":60,
+    "partitions":[{"name":"capture","source":"Exact source-qualified organization inputs, normalized-query policy and build","purpose":"Independent registry candidate evidence, separate from FEC release and Wikimedia outcomes."}],
+    "retry_policy":"At most twenty serial requests, one-second spacing, 30 seconds/request, five minutes/run, 2 MiB/body and 40 MiB/run. Fixed HTTPS origin, no redirects, inherited proxy, credentials or retries. Stop after first transport/status/schema failure. Preserve failed bodies and unattempted slots. Write only to a new directory; final manifest required."
+  },
+  "physical_schema":{
+    "media_type":"application/vnd.api+json","source_format":"json_api",
+    "encoding":"Strict UTF-8 JSON, duplicate-key/surrogate/depth/trailing-data rejection.",
+    "record_schema":null,
+    "unknown_field_policy":"capture_and_review",
+    "null_policy":"data must be an array; pagination counts are integers, from/to are null only for zero results. Empty queries preserve original null/blank values. Source failure never becomes an empty registry result.",
+    "schema_fingerprint":"Compiled first-page envelope/pagination profile in internal/source/gleif/names.go; shared exact-LEI resource profile in record.go. Exact raw resource bytes and full page retained. Unknown interpreted keys block use; known opaque nested values remain uninterpreted."
+  },
+  "identity":{
+    "publisher_record_key":"Checksum-valid LEI, resource id, attributes.lei and self link must agree.",
+    "occurrence_locator":"Capture digest, query index, body hash and /data/N; array order preserved without treating it as confidence.",
+    "record_version":"Body digest and Golden Copy publication timestamp; separate requests are not an atomic snapshot.",
+    "duplicate_policy":"Share network requests for identical normalized names while retaining all source-field occurrences. Repeated LEIs within a page fail the page gate; all original bytes remain retained. Never merge companies or donor appearances.",
+    "children":[{"object":"legalName, otherNames, transliteratedOtherNames","locator":"Resource position plus field/array index; prior names remain prior names","content_digest":false}]
+  },
+  "semantics":{
+    "time_fields":[{"path":"observed_at, meta.goldenCopy.publishDate, registration timestamps","meaning":"Observation and registry timestamps, not name or employment validity dates."}],
+    "money_fields":[],"code_fields":[],
+    "rules":[
+      "The generic planner accepts pinned organization strings. The diagnostic adapter verifies as-filed employer fields. No donor names, addresses, occupations or amounts are sent; reviewed roles, company URLs and benchmark IDs never choose queries.",
+      "reported-organization-name-search.v1 uses case/punctuation normalization while preserving token order, accents, letter/number boundaries and legal suffixes. Raw values remain unchanged. No broad variants, country/status filter, fuzzy fallback or pagination crawl.",
+      "Registry search is candidate retrieval, not a guaranteed literal match. Compare every result to the original string using explained organization-name proposals. Retain all unrelated results and competing LEIs.",
+      "Legal, other and transliterated names retain language and source type. Previous-name correspondence is not current legal-name proof. Entity and registration status are separate; no status silently discards records.",
+      "A complete publisher query window is not complete registry/entity coverage. Zero hits do not establish company absence. An LEI is optional evidence, never a prerequisite for graph representation.",
+      "No identity, employer, ownership, role, graph or dollar approval. Independent registry discovery is not an independent binding of a FEC employer string to a specific company."
+    ]
+  },
+  "revisions":{"publisher_model":"Mutable Golden Copy search index and records; preserve each observation separately.","effective_projection":"Offline source-bound candidates only; no accepted identity, recurring refresh or replacement of prior captures."},
+  "quality":{"checks":[
+    {"id":"provenance","severity":"block","rule":"Recompute query plan, verify manifest/body pins, regular confined files, exact request URLs, counts and stop behavior."},
+    {"id":"page_and_resource_identity","severity":"block","rule":"Verify page bounds/links/counts and each resource identity; retain schema failures without records."},
+    {"id":"identity_boundary","severity":"partial","rule":"Keep missing coverage, competing names and missing independent identity/time/role evidence explicit; all approval flags false."}
+  ]},
+  "fixtures":[
+    {"path":"../../../../../internal/source/gleif/testdata/empty-search.json","representation":"exact_bytes","sha256":"749a0113f8a8d10f497990eb1126c4aec17088d3cc80fc7a4a5d4b4a7ab0ba29","scenarios":["empty successful first-page response with nullable bounds"]},
+    {"path":"../../../../../internal/source/gleif/testdata/name-search.json","representation":"exact_bytes","sha256":"f9a4e8b5cbe42659bde869a0615deae91139fba14b609b47275bcd1dbc65b1de","scenarios":["three distinct registry resources","two identical-name candidates remain distinct"]}
+  ],
+  "use":{"retention":"Retain complete public bodies and safe selected headers, not cookies or operator secrets. Live probes and accepted captures remain distinct.","citation_date_required":true,"disclaimer":"Registry candidates do not establish which company a FEC appearance refers to, or any employment relationship."},
+  "outputs":{"fact_types":["gleif.name_search_observation.v1"],"change_dimensions":["source_inputs","query_policy","publisher_window","registry_records","name_proposal_policy"]}
+}

@@ -1,0 +1,329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/releases/fec/v4/acquisition-result.schema.json",
+  "title": "Legal Tender coordinated FEC acquisition result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "inventory_version",
+    "candidate_release_id",
+    "plan_sha256",
+    "run_id",
+    "status",
+    "started_at",
+    "completed_at",
+    "storage",
+    "artifacts",
+    "post_capture",
+    "issues"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.acquisition.v1"
+    },
+    "inventory_version": {
+      "const": "legal-tender.fec.initial-release-inventory.v4"
+    },
+    "candidate_release_id": {
+      "type": "string",
+      "pattern": "^fec-[a-f0-9]{64}$"
+    },
+    "prior_release_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plan_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,128}$"
+    },
+    "status": {
+      "enum": [
+        "acquired",
+        "blocked",
+        "failed"
+      ]
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "storage": {
+      "$ref": "#/$defs/storage"
+    },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 27,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "post_capture": {
+      "$ref": "#/$defs/postCapture"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    }
+  },
+  "$defs": {
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schedule_a_hot_bytes_before",
+        "candidate_download_bytes",
+        "remaining_download_bytes",
+        "projected_schedule_a_hot_bytes",
+        "schedule_a_hot_cap_bytes",
+        "free_bytes_before",
+        "free_floor_bytes",
+        "working_margin_bytes",
+        "largest_extract_working_bytes",
+        "passed"
+      ],
+      "properties": {
+        "schedule_a_hot_bytes_before": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate_download_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "remaining_download_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "projected_schedule_a_hot_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "schedule_a_hot_cap_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "free_bytes_before": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "free_floor_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "working_margin_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "largest_extract_working_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "disposition",
+        "version_identity",
+        "byte_count",
+        "sha256",
+        "storage_key",
+        "acquired_at",
+        "container_check"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "disposition": {
+          "enum": [
+            "acquired",
+            "reused"
+          ]
+        },
+        "version_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "byte_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "storage_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "acquired_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "container_check": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "postCapture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "versions"
+      ],
+      "properties": {
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "versions": {
+          "type": "array",
+          "maxItems": 27,
+          "items": {
+            "$ref": "#/$defs/postCaptureVersion"
+          }
+        }
+      }
+    },
+    "postCaptureVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "observed_at",
+        "status"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
+        "version_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "problem_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "problem": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "acquired"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "storage": {
+            "properties": {
+              "passed": {
+                "const": true
+              }
+            }
+          },
+          "artifacts": {
+            "minItems": 27
+          },
+          "post_capture": {
+            "required": [
+              "started_at",
+              "completed_at"
+            ],
+            "properties": {
+              "versions": {
+                "minItems": 27
+              }
+            }
+          },
+          "issues": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "blocked",
+              "failed"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "issues": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "policy": "prose-relationship-syntax-candidates.v1",
+  "implementation_sha256": "b719da5a1dffc21f0b3f635347d68345379c75347f97a8f8ca50a84a28516e09",
+  "lexical_implementation_sha256": "a81649084f3270c26c61e11dbae865bb54b472143ddb8236663222f20cb447d0",
+  "scope": "Source list fixed before extraction; target witnesses reviewed after first replay. New official-site pages plus two previously reviewed date-research snapshots not used in prose development. Not blind, random, exhaustive or population accuracy evaluation. No donor claim about new subjects. All emitted candidates reviewed; alias accuracy unmeasured.",
+  "acquisition": "Three complete new public HTML bodies retained from bounded curl HTTPS GETs on 2026-09-17 UTC. Status, media type and final URL observed; exact HTTP headers not retained. Two old bodies reused unchanged. AMD failed an HTTP/2 request and one explicit HTTP/1.1 retry; no body or excerpt substitutes for it. This is a research log, not a production capture manifest.",
+  "sources": [
+    {
+      "id": "microsoft-nadella",
+      "file": "microsoft-nadella.html",
+      "requested_url": "https://news.microsoft.com/source/exec/satya-nadella/",
+      "source": {"url": "https://news.microsoft.com/source/exec/satya-nadella/", "observed_on": "2026-09-17", "sha256": "8f6dd9228652f4898ad15be0f0ec6172d283104598e9eb5a4c1c5434a7df798e"},
+      "http_status": 200, "media_type": "text/html; charset=UTF-8", "bytes": 186236,
+      "entries": 141, "text_blocks": 39, "roles": 1, "aliases": 0,
+      "witnesses": [
+        {
+          "id": "nadella-microsoft", "person": "Satya Nadella", "role": "Chairman and Chief Executive Officer", "organization": "Microsoft",
+          "outcome": "syntax_candidate_found", "reason": "Direct supported clause; later appointment wording remains outside the candidate and does not establish a combined-role interval.",
+          "evidence": [{"entry": 61, "span": {"start": 83709, "end": 83910, "sha256": "1e1ff241e84c230365def116fc8cd52dd575d3676803cfc0541c83a761782440"}, "text": "Satya Nadella is Chairman and Chief Executive Officer of Microsoft."}]
+        }
+      ]
+    },
+    {
+      "id": "ibm-krishna",
+      "file": "ibm-krishna.html",
+      "requested_url": "https://newsroom.ibm.com/Arvind-Krishna",
+      "source": {"url": "https://newsroom.ibm.com/Arvind-Krishna", "observed_on": "2026-09-17", "sha256": "58b83170834c743e2e06f082ab375cb6a0d9f963d070b664c8827e63970767b1"},
+      "http_status": 200, "media_type": "text/html; charset=UTF-8", "bytes": 31551,
+      "entries": 79, "text_blocks": 39, "roles": 0, "aliases": 0,
+      "witnesses": [
+        {
+          "id": "krishna-ibm", "person": "Arvind Krishna", "role": "Chairman, President and Chief Executive Officer", "organization": "IBM",
+          "outcome": "missed_reviewed_role", "reason": "Comma-separated compound title is outside the grammar; the complete clause survives lexical extraction.",
+          "evidence": [{"entry": 59, "span": {"start": 21409, "end": 21792, "sha256": "44fc51b036f16cee0e278e056a2c048759ec128f14995676ebebd45d02072d62"}, "text": "Arvind Krishna is the Chairman, President and Chief Executive Officer of IBM."}]
+        }
+      ]
+    },
+    {
+      "id": "ford-leadership",
+      "file": "ford-leadership.html",
+      "requested_url": "https://corporate.ford.com/about/leadership.html",
+      "source": {"url": "https://corporate.ford.com/about/leadership/", "observed_on": "2026-09-17", "sha256": "96e992b490ec9e50745c14a054f5ae9231ed854efd3e696de95f355eba85a216"},
+      "http_status": 200, "media_type": "text/html;charset=utf-8", "bytes": 1638230,
+      "entries": 602, "text_blocks": 408, "roles": 0, "aliases": 0,
+      "witnesses": [
+        {
+          "id": "farley-ford", "person": "James D. Farley Jr.", "role": "Chief Executive Officer", "organization": "Ford Motor Company",
+          "outcome": "missed_reviewed_role", "reason": "Reviewed name/title card uses separate lexical blocks; v1 deliberately makes no layout join.",
+          "evidence": [
+            {"entry": 392, "span": {"start": 340461, "end": 340480, "sha256": "00ab1aaa8d49c2fe449986fe3a71b9f18277e9e4e44f7a4443512b603ea2e933"}, "text": "James D. Farley Jr."},
+            {"entry": 394, "span": {"start": 340935, "end": 340978, "sha256": "48051a80cde7c798ae28fc51c89063e010b665c7dafc0548c291377ecce878fc"}, "text": "Chief Executive Officer, Ford Motor Company"}
+          ]
+        },
+        {
+          "id": "william-ford", "person": "William Clay Ford Jr.", "role": "Executive Chair", "organization": "Ford Motor Company",
+          "outcome": "missed_reviewed_role", "reason": "Different adjacent card and role, not another title for Farley. No automatic cross-block or same-surname binding.",
+          "evidence": [
+            {"entry": 395, "span": {"start": 344176, "end": 344197, "sha256": "ca24517373b23547f59616e63adad496d5fcb47a5ab0fcb2c490a62ee6f2f40e"}, "text": "William Clay Ford Jr."},
+            {"entry": 397, "span": {"start": 344652, "end": 344687, "sha256": "c6a45cc7d302e00843dfa4b9554c7d25c1be7e372899cfc6b96a75a15b8daa75"}, "text": "Executive Chair, Ford Motor Company"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ridgeline-co-ceo",
+      "file": "../dated-roles/ridgeline-co-ceo.html",
+      "requested_url": "https://ridgeline.ai/news/ridgeline-names-dave-blair-co-ceo-expands-executive-leadership-team",
+      "source": {"url": "https://ridgeline.ai/company/news/ridgeline-names-dave-blair-co-ceo-expands-executive-leadership-team", "observed_on": "2026-09-16", "sha256": "8ddee61251a09af95c31c5be9aef3552a8566cbac8ec01ca8a878a5ce73945a0"},
+      "http_status": 200, "media_type": "not_recorded_in_original_review", "bytes": 133429,
+      "entries": 263, "text_blocks": 168, "roles": 0, "aliases": 0,
+      "witnesses": [
+        {
+          "id": "duffield-ridgeline", "person": "Dave Duffield", "role": "founder and now co-CEO", "organization": "Ridgeline",
+          "outcome": "missed_reviewed_role", "reason": "Quote attribution places organization and title before the name, inside a block. v1 supports neither that order nor general sentence extraction.",
+          "evidence": [{"entry": 188, "span": {"start": 95318, "end": 95920, "sha256": "43d40d6670da960e5fd371d859d24690cb40fcafa3672efccc7e57bf4be64652"}, "text": "says Ridgeline founder and now co-CEO Dave Duffield."}]
+        }
+      ]
+    },
+    {
+      "id": "sprinklr-proxy-2023",
+      "file": "../dated-roles/sprinklr-proxy-2023.html",
+      "requested_url": "https://investors.sprinklr.com/financial-information/all-sec-filings/content/0001140361-23-023208/ny20007009x1_def14a.htm",
+      "source": {"url": "https://investors.sprinklr.com/financial-information/all-sec-filings/content/0001140361-23-023208/ny20007009x1_def14a.htm", "observed_on": "2026-09-16", "sha256": "b5e6824dbb523caab10ee6cf66a83cc60e8591dfdae201a382bb36cf3579e18a"},
+      "http_status": 200, "media_type": "not_recorded_in_original_review", "bytes": 1740511,
+      "entries": 5809, "text_blocks": 5808, "roles": 0, "aliases": 0,
+      "witnesses": [
+        {
+          "id": "chambers-jc2", "person": "John Chambers", "role": "Chief Executive Officer", "organization": "JC2 Ventures",
+          "outcome": "missed_reviewed_role", "reason": "Person is in the preceding sentence; role uses He also is. Source also has other organizations and distinct historical dates; no pronoun or date inference is permitted.",
+          "evidence": [{"entry": 493, "span": {"start": 197121, "end": 198419, "sha256": "75d21949f135884c7bebd570e2eef1907904253941d86638119c7ce8c573e99a"}, "text": "John Chambers has served as a member of our board of directors since September 2017. He also is the Chief Executive Officer of JC2 Ventures"}]
+        }
+      ]
+    }
+  ],
+  "retrieval_failures": [
+    {
+      "id": "amd-su", "url": "https://www.amd.com/en/corporate/leadership/lisa-su.html", "observed_on": "2026-09-17",
+      "attempts": [
+        {"transport": "default_http2", "curl_exit": 92, "http_status": 0, "received_bytes": 0, "outcome": "http2_stream_internal_error"},
+        {"transport": "explicit_http1.1_retry", "curl_exit": 28, "http_status": 0, "received_bytes": 0, "outcome": "timeout_after_20_seconds"}
+      ],
+      "outcome": "not_evaluated_no_retained_body"
+    }
+  ],
+  "identity_approved": false,
+  "graph_publication_approved": false,
+  "financial_attribution": false
+}

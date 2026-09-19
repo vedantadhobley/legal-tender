@@ -1,0 +1,418 @@
+{
+  "$schema": "inventory.schema.json",
+  "schema_version": "legal-tender.fec.release-inventory.v4",
+  "inventory_version": "legal-tender.fec.initial-release-inventory.v4",
+  "periods": [
+    "2020",
+    "2022",
+    "2024",
+    "2026"
+  ],
+  "sources": [
+    {
+      "source_id": "fec:cn:2020",
+      "fact_family": "candidate_master",
+      "source_contract": "fec/candidate-master@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2020/cn20.zip",
+      "periods": [
+        "2020"
+      ],
+      "selected_members": [
+        "cn.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:cm:2020",
+      "fact_family": "committee_master",
+      "source_contract": "fec/committee-master@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2020/cm20.zip",
+      "periods": [
+        "2020"
+      ],
+      "selected_members": [
+        "cm.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:ccl:2020",
+      "fact_family": "candidate_committee_linkage",
+      "source_contract": "fec/candidate-committee-linkage@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2020/ccl20.zip",
+      "periods": [
+        "2020"
+      ],
+      "selected_members": [
+        "ccl.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:weball:2020",
+      "fact_family": "all_candidates_summary",
+      "source_contract": "fec/all-candidates-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2020/weball20.zip",
+      "periods": [
+        "2020"
+      ],
+      "selected_members": [
+        "weball20.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:webl:2020",
+      "fact_family": "current_campaigns_summary",
+      "source_contract": "fec/current-campaigns-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2020/webl20.zip",
+      "periods": [
+        "2020"
+      ],
+      "selected_members": [
+        "webl20.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:cn:2022",
+      "fact_family": "candidate_master",
+      "source_contract": "fec/candidate-master@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2022/cn22.zip",
+      "periods": [
+        "2022"
+      ],
+      "selected_members": [
+        "cn.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:cm:2022",
+      "fact_family": "committee_master",
+      "source_contract": "fec/committee-master@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2022/cm22.zip",
+      "periods": [
+        "2022"
+      ],
+      "selected_members": [
+        "cm.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:ccl:2022",
+      "fact_family": "candidate_committee_linkage",
+      "source_contract": "fec/candidate-committee-linkage@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2022/ccl22.zip",
+      "periods": [
+        "2022"
+      ],
+      "selected_members": [
+        "ccl.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:weball:2022",
+      "fact_family": "all_candidates_summary",
+      "source_contract": "fec/all-candidates-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2022/weball22.zip",
+      "periods": [
+        "2022"
+      ],
+      "selected_members": [
+        "weball22.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:webl:2022",
+      "fact_family": "current_campaigns_summary",
+      "source_contract": "fec/current-campaigns-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2022/webl22.zip",
+      "periods": [
+        "2022"
+      ],
+      "selected_members": [
+        "webl22.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:cn:2024",
+      "fact_family": "candidate_master",
+      "source_contract": "fec/candidate-master@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip",
+      "periods": [
+        "2024"
+      ],
+      "selected_members": [
+        "cn.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:cm:2024",
+      "fact_family": "committee_master",
+      "source_contract": "fec/committee-master@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip",
+      "periods": [
+        "2024"
+      ],
+      "selected_members": [
+        "cm.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:ccl:2024",
+      "fact_family": "candidate_committee_linkage",
+      "source_contract": "fec/candidate-committee-linkage@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip",
+      "periods": [
+        "2024"
+      ],
+      "selected_members": [
+        "ccl.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:weball:2024",
+      "fact_family": "all_candidates_summary",
+      "source_contract": "fec/all-candidates-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2024/weball24.zip",
+      "periods": [
+        "2024"
+      ],
+      "selected_members": [
+        "weball24.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:webl:2024",
+      "fact_family": "current_campaigns_summary",
+      "source_contract": "fec/current-campaigns-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip",
+      "periods": [
+        "2024"
+      ],
+      "selected_members": [
+        "webl24.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:cn:2026",
+      "fact_family": "candidate_master",
+      "source_contract": "fec/candidate-master@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2026/cn26.zip",
+      "periods": [
+        "2026"
+      ],
+      "selected_members": [
+        "cn.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:cm:2026",
+      "fact_family": "committee_master",
+      "source_contract": "fec/committee-master@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2026/cm26.zip",
+      "periods": [
+        "2026"
+      ],
+      "selected_members": [
+        "cm.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:ccl:2026",
+      "fact_family": "candidate_committee_linkage",
+      "source_contract": "fec/candidate-committee-linkage@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2026/ccl26.zip",
+      "periods": [
+        "2026"
+      ],
+      "selected_members": [
+        "ccl.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:weball:2026",
+      "fact_family": "all_candidates_summary",
+      "source_contract": "fec/all-candidates-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2026/weball26.zip",
+      "periods": [
+        "2026"
+      ],
+      "selected_members": [
+        "weball26.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:webl:2026",
+      "fact_family": "current_campaigns_summary",
+      "source_contract": "fec/current-campaigns-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2026/webl26.zip",
+      "periods": [
+        "2026"
+      ],
+      "selected_members": [
+        "webl26.txt"
+      ],
+      "selected_relations": []
+    },
+    {
+      "source_id": "fec:schedule-a:processed",
+      "fact_family": "processed_schedule_a",
+      "source_contract": "fec/schedule-a@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "periods": [
+        "2020",
+        "2022",
+        "2024",
+        "2026"
+      ],
+      "selected_members": [],
+      "selected_relations": [],
+      "relation_selections": [
+        {
+          "name": "disclosure.fec_fitem_sched_a_2019_2020",
+          "scope": "2020",
+          "field_count": 81
+        },
+        {
+          "name": "disclosure.fec_fitem_sched_a_2021_2022",
+          "scope": "2022",
+          "field_count": 81
+        },
+        {
+          "name": "disclosure.fec_fitem_sched_a_2023_2024",
+          "scope": "2024",
+          "field_count": 81
+        },
+        {
+          "name": "disclosure.fec_fitem_sched_a_2025_2026",
+          "scope": "2026",
+          "field_count": 81
+        }
+      ]
+    },
+    {
+      "source_id": "fec:schedule-e:processed",
+      "fact_family": "processed_schedule_e",
+      "source_contract": "fec/schedule-e@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "periods": [
+        "2020",
+        "2022",
+        "2024",
+        "2026"
+      ],
+      "selected_members": [],
+      "selected_relations": [],
+      "relation_selections": [
+        {
+          "name": "disclosure.fec_fitem_sched_e",
+          "scope": "all_history",
+          "field_count": 80
+        }
+      ]
+    },
+    {
+      "source_id": "fec:schedule-b:processed",
+      "fact_family": "processed_schedule_b",
+      "source_contract": "fec/schedule-b@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_b.dump",
+      "periods": [
+        "2020",
+        "2022",
+        "2024",
+        "2026"
+      ],
+      "selected_members": [],
+      "selected_relations": [],
+      "relation_selections": [
+        {
+          "name": "disclosure.fec_fitem_sched_b_2019_2020",
+          "scope": "2020",
+          "field_count": 81,
+          "materialization": "archive_direct"
+        },
+        {
+          "name": "disclosure.fec_fitem_sched_b_2021_2022",
+          "scope": "2022",
+          "field_count": 81,
+          "materialization": "archive_direct"
+        },
+        {
+          "name": "disclosure.fec_fitem_sched_b_2023_2024",
+          "scope": "2024",
+          "field_count": 81,
+          "materialization": "archive_direct"
+        },
+        {
+          "name": "disclosure.fec_fitem_sched_b_2025_2026",
+          "scope": "2026",
+          "field_count": 81,
+          "materialization": "archive_direct"
+        }
+      ]
+    },
+    {
+      "source_id": "fec:committee-summary:2020",
+      "fact_family": "committee_summary",
+      "source_contract": "fec/committee-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2020/committee_summary_2020.csv",
+      "periods": [
+        "2020"
+      ],
+      "selected_members": [],
+      "selected_relations": [],
+      "artifact_format": "committee_summary_csv"
+    },
+    {
+      "source_id": "fec:committee-summary:2022",
+      "fact_family": "committee_summary",
+      "source_contract": "fec/committee-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2022/committee_summary_2022.csv",
+      "periods": [
+        "2022"
+      ],
+      "selected_members": [],
+      "selected_relations": [],
+      "artifact_format": "committee_summary_csv"
+    },
+    {
+      "source_id": "fec:committee-summary:2024",
+      "fact_family": "committee_summary",
+      "source_contract": "fec/committee-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2024/committee_summary_2024.csv",
+      "periods": [
+        "2024"
+      ],
+      "selected_members": [],
+      "selected_relations": [],
+      "artifact_format": "committee_summary_csv"
+    },
+    {
+      "source_id": "fec:committee-summary:2026",
+      "fact_family": "committee_summary",
+      "source_contract": "fec/committee-summary@1.0.0",
+      "request_url": "https://www.fec.gov/files/bulk-downloads/2026/committee_summary_2026.csv",
+      "periods": [
+        "2026"
+      ],
+      "selected_members": [],
+      "selected_relations": [],
+      "artifact_format": "committee_summary_csv"
+    }
+  ]
+}

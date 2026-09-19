@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/bundles/fec/independent-expenditure-projection/v1/manifest.schema.json",
+  "title": "Independent-expenditure projection readiness bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "bundle_id", "bundle_type",
+    "bundle_version", "publisher_version", "cycle", "source_release_id",
+    "input_calculation", "input_fact_sets", "run_id", "state",
+    "published_at", "counts", "checks"
+  ],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.independent-expenditure-projection-bundle.v1"},
+    "bundle_id": {"$ref": "#/$defs/digest"},
+    "bundle_type": {"const": "fec/independent-expenditure-projection"},
+    "bundle_version": {"const": "1.0.0"},
+    "publisher_version": {"const": "legal-tender.fec.independent-expenditure-projection-bundle-publisher.v1"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "input_calculation": {"$ref": "#/$defs/calculation"},
+    "input_fact_sets": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/fact_set"}
+    },
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "ready"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calculation_results", "candidate_facts", "committee_facts"],
+      "properties": {
+        "calculation_results": {"type": "integer", "minimum": 1},
+        "candidate_facts": {"type": "integer", "minimum": 1},
+        "committee_facts": {"type": "integer", "minimum": 1}
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/check"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "calculation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role", "calculation", "calculation_version", "calculation_set_id",
+        "manifest_sha256", "schedule_e_fact_set_id",
+        "schedule_e_manifest_sha256"
+      ],
+      "properties": {
+        "role": {"const": "effective_independent_expenditures"},
+        "calculation": {"const": "fec/effective-independent-expenditures"},
+        "calculation_version": {"const": "1.0.0"},
+        "calculation_set_id": {"$ref": "#/$defs/digest"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"},
+        "schedule_e_fact_set_id": {"$ref": "#/$defs/digest"},
+        "schedule_e_manifest_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "fact_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "dataset", "fact_type", "fact_set_id", "manifest_sha256"],
+      "properties": {
+        "role": {"enum": ["candidate_master", "committee_master"]},
+        "dataset": {"enum": ["candidate-master", "committee-master"]},
+        "fact_type": {"enum": ["fec.candidate_assertion.v1", "fec.committee_assertion.v1"]},
+        "fact_set_id": {"$ref": "#/$defs/digest"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"type": "boolean"},
+        "severity": {"const": "block"},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

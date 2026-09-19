@@ -1,0 +1,40 @@
+{
+  "contract": "fec/report-scope@1.0.0",
+  "status": "accepted-bounded-reader",
+  "version": "legal-tender.fec.report-scope.v1",
+  "source_evidence": {
+    "url": "https://docquery.fec.gov/",
+    "package": "PaperFormats.zip",
+    "member": "Paper_v3x/PAPER_Format_V3.4.xlsx",
+    "sha256": "f9637d641d581d169cecc42cfb46c08e5a073f02803df8159e3ff40e3860f259",
+    "qualification": "docs/audit/receipt-report-metadata-2026-09-10.md"
+  },
+  "representation": "paper_transcription_p3.4",
+  "byte_protocol": {
+    "field_separator_hex": "1c",
+    "record_terminators_hex": ["0a", "0d0a"],
+    "unterminated_last_record": "complete only for a length-verified HTTP 200 body",
+    "typed_decoding": "ASCII only; retain other bytes and leave affected interpretation unresolved"
+  },
+  "paper_header": {"fields": 6, "allowed_extra": "one empty trailing delimiter field", "selector": ["HDR", "P3.4"], "original_id_sequence": 6, "original_id_use": "unused by publisher; never an amendment edge"},
+  "f3x": {
+    "fields": 125,
+    "forms": ["F3XN", "F3XA", "F3XT"],
+    "committee_id": 2,
+    "report_code": 10,
+    "coverage_start": 13,
+    "coverage_end": 14,
+    "amount_ranges_inclusive": [[21, 27], [29, 72], [74, 122]],
+    "not_money": {"qualified_committee": 28, "cash_on_hand_year": 73, "beginning_image": 123, "ending_image": 124, "receipt_date": 125}
+  },
+  "sc1": {"fields": 47, "form": 1, "committee_id": 2, "lender_name": 3, "loan_amount": 9},
+  "dispositions": {
+    "financial_cover_present": "One supported cover contains valid nonblank amounts. Not a complete or effective financial report; other schedule layouts need not be supported.",
+    "supplemental_attachment_shape": "Complete paper response has one valid-identity/period F3X cover, every amount field blank, and only same-filer substantive SC1 records after it. This describes the transcription, not independently verified original-image contents.",
+    "unresolved": "Unsupported, incomplete, invalid, blank-without-supplement, mixed, or multi-cover scope. Keep all record bytes and explicit issues."
+  },
+  "metadata": "Re-read at most four pinned report-metadata captures; preserve exact matching records and literal field/type differences. Missing metadata does not erase document-shape evidence. No endpoint precedence or inferred family links.",
+  "limits": {"body_bytes": 4194304, "header_bytes": 131072, "record_bytes": 65536, "records": 4096, "metadata_captures": 4},
+  "guards": {"original_image_verified": false, "history_complete": false, "financial_selection_ready": false},
+  "non_goals": ["electronic form layout inference", "financial replacement selection", "original image OCR", "report-family construction", "amount correction", "processed-ledger changes", "graph gating", "recurring acquisition"]
+}

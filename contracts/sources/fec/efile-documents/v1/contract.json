@@ -1,0 +1,171 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/efile-documents",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "fec",
+    "name": "Federal Election Commission",
+    "base_url": "https://www.fec.gov/"
+  },
+  "dataset": {
+    "id": "efile-documents",
+    "name": "Raw electronic filing documents",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "Exact .fec byte streams referenced by OpenFEC electronic-filing listings, retained at filing and physical-record grain."
+  },
+  "authority": [
+    {
+      "kind": "documentation",
+      "url": "https://efilingapps.fec.gov/registration/softwarelogs.htm",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://docquery.fec.gov/formatspecs/FEC_EFO_Format_Specifications.xlsx",
+      "retrieved_on": "2026-08-27",
+      "sha256": "c667016493df28c186445201cf8a2bcff43563bccc41b75b2bcc06366b69132b"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://docquery.fec.gov/tools/VenPak.zip",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b9308d0d0ff8edccf2d7f671a75c90ff6aa5cf9eb6ac57b99fceeb3fbf1de10c"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "none",
+      "environment_variable": null,
+      "header": null,
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "listing-selected raw filing",
+        "method": "GET",
+        "url": "https://docquery.fec.gov/dcdev/posted/{file_number}.fec",
+        "response_root": "exact response bytes"
+      }
+    ],
+    "pagination": "None. One listing file number selects one document response. Never synthesize the URL when the preserved listing supplies fec_url; the template documents the observed publisher pattern only.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "efile_received_date",
+        "source": "Received-date partition inherited from the exact listing version that selected the document.",
+        "purpose": "Routine daily acquisition lineage; it is not embedded document time."
+      },
+      {
+        "name": "document_observation",
+        "source": "Retrieval time plus final URL, status, headers, byte length, publisher validators, and SHA-256.",
+        "purpose": "Detect and preserve any byte change behind one file number or URL."
+      }
+    ],
+    "retry_policy": "Use bounded retries and resumable transfer only when the final byte stream can be verified. Record redirects and validators. A truncated, mismatched, or changed document becomes a new explicit acquisition result and never replaces a previously accepted digest."
+  },
+  "physical_schema": {
+    "media_type": "application/vnd.fec.electronic-filing",
+    "source_format": "fec_electronic_filing",
+    "encoding": "Byte protocol. Decode text only after structural parsing under the selected format contract.",
+    "delimiter": "\u001c",
+    "line_ending": "Publisher specification requires CRLF (hex 0d0a); exact sampled files also contain bare LF (hex 0a), which is preserved and reported.",
+    "quote_policy": "none",
+    "empty_record_policy": "Every physical byte span becomes an ordered record occurrence or an explicit framing issue; empty physical records are preserved as issues.",
+    "header_model": "embedded_header",
+    "container_members": [],
+    "relations": [],
+    "record_schema": null,
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "The byte format has empty and physically omitted trailing fields, not JSON null. Preserve field count, explicit empties, omitted trailing sequences, extra fields, delimiter bytes, and terminator bytes before canonical mapping.",
+    "schema_fingerprint": "Structural dispatch is contracts/sources/fec/efile-format/v1/dispatch.json; HDR field 3 selects 8.3, 8.4, or 8.5. The first record is HDR, the second is the cover record, fields use byte 1c, and logical row layouts come from the selected version."
+  },
+  "identity": {
+    "publisher_record_key": "listing file_number",
+    "occurrence_locator": "document SHA-256 + zero-based byte start + byte end exclusive + physical record ordinal",
+    "record_version": "file_number + final URL + response validators + whole-document SHA-256",
+    "duplicate_policy": "Preserve every acquired document version and physical row occurrence. Equal row bytes in an original and amendment remain two occurrences. Different bytes for one file number block derived publication and never overwrite prior evidence.",
+    "children": [
+      {
+        "object": "physical .fec record",
+        "locator": "byte range and ordinal within whole-document SHA-256",
+        "content_digest": true
+      }
+    ]
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "listing.receipt_date", "meaning": "Receipt timestamp on the selecting listing, not embedded in the document bytes."},
+      {"path": "listing.coverage_start_date + listing.coverage_end_date", "meaning": "Listing report coverage assertion; the cover record has its own source fields that require a form contract."},
+      {"path": "document_observation", "meaning": "Legal Tender retrieval and publisher-object metadata time."}
+    ],
+    "money_fields": [],
+    "code_fields": [
+      {"path": "HDR[1] + HDR[2]", "meaning": "Required record type HDR and electronic filing type FEC."},
+      {"path": "HDR[3]", "meaning": "FEC format version and sole parser-dispatch selector."},
+      {"path": "cover[1]", "meaning": "Physical filing cover record type, retained separately from listing form_type."},
+      {"path": "row[1]", "meaning": "Physical form or schedule record type used only after header dispatch."}
+    ],
+    "rules": [
+      "The exact response bytes are the source artifact. Parsed fields, CSV, HTML, PDF, and processed FEC data never replace them.",
+      "Read HDR fields 1 through 3 as bytes before decoding the rest of the file. Select the parser only from exact HDR format_version.",
+      "Unknown or unsupported header versions remain fully captured as preserve_only documents and physical rows. They produce no normalized transaction facts.",
+      "The official format specifies byte 1c fields and CRLF records. Bare-LF documents observed from the official document host remain parseable evidence with an explicit terminator variance.",
+      "Unused trailing fields may be omitted. Never infer a physical empty delimiter for an omitted field; canonical padding uses null and retains the original physical count.",
+      "The first record must be HDR and the second must be one cover record. Later rows remain ordered and are dispatched by record type under the selected version.",
+      "Equal transaction IDs or equal row bytes across original and amended files do not authorize deduplication at ingestion.",
+      "Do not infer effective amendment status, money counting, conduit attribution, terminal source, or graph edges at this layer."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "Each listing file number selects an as-received electronic filing. Amendments are new file numbers and normally carry an original report ID and amendment number in HDR, but listing and document relationships remain independent evidence until reconciled.",
+    "effective_projection": "Blocked while draft. Preserve every document version and row occurrence. A separate versioned report-family calculation chooses an effective electronic filing without deleting originals or amendments."
+  },
+  "quality": {
+    "checks": [
+      {"id": "whole_document_digest", "severity": "block", "rule": "Final URL, HTTP status, response validators, content length, retrieval time, and whole-document SHA-256 are recorded and byte count matches the response."},
+      {"id": "listing_binding", "severity": "block", "rule": "The document retains the selecting listing file_number, fec_url, and listing record version."},
+      {"id": "hdr_first", "severity": "block", "rule": "The first physical record exposes HDR, FEC, and a non-empty format version in fields 1 through 3."},
+      {"id": "known_dispatch", "severity": "partial", "rule": "Versions 8.3, 8.4, and 8.5 dispatch to pinned contracts. Any other version is preserve_only until its contract is accepted."},
+      {"id": "cover_second", "severity": "block", "rule": "The second physical record is present and is not HDR or a schedule row; disagreement with listing form_type remains an explicit issue."},
+      {"id": "record_conservation", "severity": "block", "rule": "Every byte after accepted framing belongs to one ordered record occurrence or a byte-range issue; reconstructed record bytes equal the whole artifact."},
+      {"id": "terminator", "severity": "partial", "rule": "Each record terminator is retained. Bare LF is accepted as observed publisher evidence but reported against the CRLF specification."},
+      {"id": "decode_repertoire", "severity": "partial", "rule": "No undecodable byte is replaced or discarded; legacy bytes above ASCII require an accepted mapping before normalized text publication."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/1997074.fec",
+      "representation": "exact_bytes",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/1997074.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+      "scenarios": ["complete original filing", "HDR version 8.5", "bare LF records", "F3XN cover", "Schedule A rows retained before amendment"]
+    },
+    {
+      "path": "fixtures/2009982.fec",
+      "representation": "exact_bytes",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2009982.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+      "scenarios": ["complete first amendment", "HDR original report ID and amendment number", "bare LF records", "F3XA cover", "byte-identical Schedule A row retained in another filing version"]
+    },
+    {
+      "path": "fixtures/2010008.fec",
+      "representation": "exact_bytes",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2010008.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b3ee8deafb7a24ef3eaa69487c6ac050e665d6d664b31ef953357344b9d8597d",
+      "scenarios": ["complete small filing", "HDR version 8.5", "bare LF records", "F3XN cover", "Schedule A, Schedule B, and Schedule C physical rows"]
+    }
+  ],
+  "use": {
+    "retention": "Retain every exact filing document and all transport metadata indefinitely. Parsed physical records and issues retain the whole-document digest and byte range so the artifact can be reconstructed and cited.",
+    "citation_date_required": true,
+    "disclaimer": "Raw electronic filings are as-filed evidence. They can be amended, omit paper-only filings, differ from later FEC processing, and require versioned counting and effective-report rules before use in totals or graph attribution."
+  },
+  "outputs": {
+    "fact_types": ["electronic_filing_document", "electronic_filing_physical_record"],
+    "change_dimensions": ["efile_received_date", "file_number", "document_version", "header_format_version", "physical_record_type"]
+  }
+}

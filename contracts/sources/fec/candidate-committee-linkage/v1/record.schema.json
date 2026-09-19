@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/candidate-committee-linkage/v1/record.schema.json",
+  "title": "FEC candidate-committee linkage source record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["CAND_ID", "CAND_ELECTION_YR", "FEC_ELECTION_YR", "CMTE_ID", "CMTE_TP", "CMTE_DSGN", "LINKAGE_ID"],
+  "properties": {
+    "CAND_ID": {"type": "string", "pattern": "^[HPS][A-Z0-9]{8}$"},
+    "CAND_ELECTION_YR": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "FEC_ELECTION_YR": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "CMTE_ID": {"type": "string", "pattern": "^C[0-9]{8}$"},
+    "CMTE_TP": {"type": "string"},
+    "CMTE_DSGN": {"type": "string"},
+    "LINKAGE_ID": {"type": "string", "pattern": "^[0-9]+$"}
+  }
+}

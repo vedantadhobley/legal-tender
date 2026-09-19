@@ -1,0 +1,198 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/schedule-e",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "publisher": {
+    "id": "fec",
+    "name": "Federal Election Commission",
+    "base_url": "https://www.fec.gov/"
+  },
+  "dataset": {
+    "id": "processed-schedule-e",
+    "name": "Processed Schedule E independent expenditures",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "One processed Schedule E relation row per published outside-spending record version in a weekly all-history PostgreSQL snapshot."
+  },
+  "authority": [
+    {
+      "kind": "documentation",
+      "url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/README.txt",
+      "retrieved_on": "2026-08-31"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://www.fec.gov/campaign-finance-data/independent-expenditures-file-description/",
+      "retrieved_on": "2026-08-31"
+    },
+    {
+      "kind": "code_list",
+      "url": "https://www.fec.gov/campaign-finance-data/transaction-type-code-descriptions/",
+      "retrieved_on": "2026-08-31"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "none",
+      "environment_variable": null,
+      "header": null,
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "weekly processed Schedule E dump",
+        "method": "GET",
+        "url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+        "response_root": "disclosure.fec_fitem_sched_e"
+      }
+    ],
+    "pagination": "None. One PostgreSQL custom-format artifact contains the complete published Schedule E relation.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "publisher_snapshot",
+        "source": "Exact HTTP object identity, retrieval time, artifact digest, and PostgreSQL archive catalog.",
+        "purpose": "Immutable acquisition and replay boundary."
+      },
+      {
+        "name": "election_cycle",
+        "source": "Nullable election_cycle relation field retained on every row.",
+        "purpose": "Selected-cycle publication and query scope after the complete relation is preserved; it is not a transport partition."
+      }
+    ],
+    "retry_policy": "Bound transport retries; follow redirects; publish only after checking response identity, byte count, artifact SHA-256, pg_restore inventory, exact relation schema, COPY conservation, and all-row parser validity."
+  },
+  "physical_schema": {
+    "media_type": "application/x-postgresql-custom-dump",
+    "source_format": "postgresql_custom_dump",
+    "encoding": "UTF-8",
+    "delimiter": "\t",
+    "line_ending": "PostgreSQL COPY text data rows use LF and require a final LF.",
+    "quote_policy": "none",
+    "empty_record_policy": "An empty physical COPY row is an explicit width issue; it is never skipped.",
+    "header_model": "relation_catalog",
+    "container_members": [],
+    "relations": ["disclosure.fec_fitem_sched_e"],
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "reject",
+    "null_policy": "Preserve PostgreSQL COPY \\N as null and preserve empty text, zero, negative values, and missing dates as distinct source values.",
+    "schema_fingerprint": "80 ordered fields pinned by fixtures/archive/dump-2026-08-30.json; sub_id and filing_form are the only NOT NULL columns; numeric precision, timestamps, tsvector text, and pg_date default are preserved."
+  },
+  "identity": {
+    "publisher_record_key": "sub_id within one publisher_snapshot",
+    "occurrence_locator": "artifact SHA-256 + exact relation name + one-based physical COPY row ordinal",
+    "record_version": "occurrence locator + null-aware semantic digest of all 80 decoded relation values",
+    "duplicate_policy": "Preserve every physical occurrence. A repeated sub_id in one snapshot is a blocking primary-key conflict; tran_id, orig_sub_id, and content equality never collapse source rows.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "publisher_snapshot.observed_at", "meaning": "Legal Tender observation time for the exact weekly dump object."},
+      {"path": "exp_dt", "meaning": "Expense date asserted by the filing; nullable and independent from dissemination and filing times."},
+      {"path": "dissem_dt", "meaning": "Dissemination date asserted by the filing; nullable and independent from expense time."},
+      {"path": "indt_sign_dt", "meaning": "Independent-expenditure certification signature time asserted by the source."},
+      {"path": "notary_sign_dt", "meaning": "Nullable notary signature time asserted by the source."},
+      {"path": "notary_commission_exprtn_dt", "meaning": "Nullable notary commission expiration time; not an expenditure time."},
+      {"path": "rpt_yr", "meaning": "Report year retained independently from election_cycle."},
+      {"path": "election_cycle", "meaning": "Publisher-assigned two-year election cycle used for selected-cycle publication, not the only temporal identity."},
+      {"path": "pg_date", "meaning": "Publisher processing timestamp without timezone."}
+    ],
+    "money_fields": [
+      {"path": "exp_amt", "meaning": "Signed exact reported expenditure amount for this source row; source scale is two decimal places.", "unit": "USD"},
+      {"path": "cal_ytd_ofc_sought", "meaning": "Signed exact publisher year-to-date amount associated with the office sought; it is not another occurrence amount.", "unit": "USD"}
+    ],
+    "code_fields": [
+      {"path": "exp_tp", "meaning": "Raw expenditure transaction type, including 24A opposition, 24E support, and null anomalies."},
+      {"path": "s_o_ind", "meaning": "Raw support-or-oppose indicator."},
+      {"path": "action_cd", "meaning": "Raw processed action code. The observed corpus includes A, C, N, T, and null."},
+      {"path": "memo_cd", "meaning": "Raw memo code, including X and null."},
+      {"path": "entity_tp", "meaning": "Raw payee entity type."}
+    ],
+    "rules": [
+      "Preserve all 80 source fields before selecting effective records or calculating totals.",
+      "Keep spender, payee, candidate, support-or-oppose, purpose, expense date, dissemination date, filing lineage, and source document evidence independently queryable.",
+      "Keep exact cents and signed values; never replace exp_amt with the rounded classic pas2 amount.",
+      "Do not sum cal_ytd_ofc_sought as another expenditure occurrence.",
+      "Do not discard memo rows, null exp_tp rows, null amounts, null dates, negative rows, repeated transaction IDs, or non-A action states during ingestion.",
+      "Do not infer that action A is effective or that C, N, or T is ineffective at the source boundary.",
+      "Do not combine opposition spending with candidate funding or candidate-controlled receipts.",
+      "Classic pas2 and the 24/48-hour file remain separately identified comparison evidence and never patch or duplicate this amount ledger."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The FEC replaces one weekly all-history processed snapshot. Rows expose action_cd, tran_id, back_ref_tran_id, file_num, orig_sub_id, and sub_id, but the snapshot alone does not define the effective amendment chain.",
+    "effective_projection": "The separate accepted fec/effective-independent-expenditures@1.0.0 calculation treats this processed regular-report relation as the publisher-selected view, excludes memo-code X, includes every other exact signed amount, preserves unresolved or unrouteable facts as sparse exceptions, and prohibits 24/48 notice rows."
+  },
+  "quality": {
+    "checks": [
+      {"id": "artifact_identity", "severity": "block", "rule": "Final URL, HTTP validators, byte count, retrieval time, and complete dump SHA-256 are recorded."},
+      {"id": "dump_integrity", "severity": "block", "rule": "pg_restore inventories exactly the expected relation and the relation exposes exactly the 80 contracted columns in order with compatible PostgreSQL types and nullability."},
+      {"id": "copy_conservation", "severity": "block", "rule": "The selected relation emits exactly one COPY section and its row count, byte count, and SHA-256 are conserved."},
+      {"id": "strict_decode", "severity": "block", "rule": "Every row is LF-terminated UTF-8 PostgreSQL COPY text with exactly 80 fields and valid null and escape syntax."},
+      {"id": "source_lexemes", "severity": "block", "rule": "Required values, NUMERIC precision and scale, integer precision, and timestamp syntax validate without binary floating point or silent coercion."},
+      {"id": "sub_id", "severity": "block", "rule": "Every row has a nonnegative decimal sub_id and no duplicate key within one snapshot."},
+      {"id": "occurrence_conservation", "severity": "block", "rule": "Every relation row becomes one immutable occurrence or one explicit issue before cycle selection."},
+      {"id": "anomaly_preservation", "severity": "block", "rule": "Null amounts, dates, types, action codes, negative amounts, fractional cents, memo-X rows, and COPY-escaped text remain representable."},
+      {"id": "effective_calculation", "severity": "observe", "rule": "This source contract never defines a total by itself. Outside-spending totals require a separately accepted calculation contract and exact fact-set lineage; fec/effective-independent-expenditures@1.0.0 passes that separate gate for the four target cycles."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/archive/dump-2026-08-30.json",
+      "representation": "canonical_json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "239a71635234873ab757640f95296cbb097caf270df611ae439b5020970cb537",
+      "scenarios": ["exact dump object identity", "80-column relation catalog", "complete 548318-row parser verification"]
+    },
+    {
+      "path": "fixtures/dump-2026-08-30/fractional-amount.copy",
+      "representation": "exact_bytes",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "d792c4e9032e4e2a7d642535af0f8cfc83032b80e581b3fd5f66d8f2867b44b6",
+      "scenarios": ["exact 80-field COPY row", "2026 support expenditure", "fractional-dollar precision"]
+    },
+    {
+      "path": "fixtures/dump-2026-08-30/memo-x.copy",
+      "representation": "exact_bytes",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "35dc0fc94a9f648b9d26da71cfef1f63227edfc0d58673e02d75129efe293981",
+      "scenarios": ["exact 80-field COPY row", "memo code X", "null expense date"]
+    },
+    {
+      "path": "fixtures/dump-2026-08-30/missing-expenditure-type.copy",
+      "representation": "exact_bytes",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "224bf6f5441b09c30f0de71c0e4d3bc74964ad7cd791bf294b4e63a759514b76",
+      "scenarios": ["exact 80-field COPY row", "null expenditure type", "null dissemination date"]
+    },
+    {
+      "path": "fixtures/dump-2026-08-30/negative-amount.copy",
+      "representation": "exact_bytes",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "acf89fd4dfba1f2ab853ec1462e21442e3a358f5520daae5d6211d1b023682db",
+      "scenarios": ["exact 80-field COPY row", "negative opposition amount", "orig_sub_id lineage"]
+    },
+    {
+      "path": "fixtures/dump-2026-08-30/escaped-copy-text.copy",
+      "representation": "exact_bytes",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_e.dump",
+      "retrieved_on": "2026-08-31",
+      "sha256": "63027c72f2a3d400efae38f5262abd5b9ab6e0c95a41112803dca9b309576629",
+      "scenarios": ["exact 80-field COPY row", "PostgreSQL escaped tab", "action code C"]
+    }
+  ],
+  "use": {
+    "retention": "Retain each accepted dump object, HTTP metadata, archive catalog, exact relation extract identity, occurrence versions, and issues indefinitely. Selected-cycle facts and calculations are rebuildable.",
+    "citation_date_required": true,
+    "disclaimer": "Processed Schedule E rows are filing-derived outside-spending assertions. Amendments, action states, memo records, estimates, dates, and source anomalies affect effective totals; support spending is not a contribution to or controlled receipt of the named candidate."
+  },
+  "outputs": {
+    "fact_types": ["processed_independent_expenditure_assertion"],
+    "change_dimensions": ["publisher_snapshot", "election_cycle", "processed_record_version", "effective_record_rule_version", "time_basis"]
+  }
+}

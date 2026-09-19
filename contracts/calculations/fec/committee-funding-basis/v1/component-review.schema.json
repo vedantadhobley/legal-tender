@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/component-review.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "inventory_calculation_id",
+    "cycle",
+    "input",
+    "component",
+    "measures",
+    "receipts",
+    "policy",
+    "decisions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.receipt-component-evidence.v1"
+    },
+    "inventory_calculation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "cycle": {
+      "type": "string",
+      "pattern": "^[0-9]{4}$"
+    },
+    "input": {
+      "$ref": "result.schema.json#/$defs/input"
+    },
+    "component": {
+      "$ref": "result.schema.json#/$defs/key/properties/component"
+    },
+    "measures": {
+      "$ref": "result.schema.json#/$defs/measures"
+    },
+    "receipts": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "$ref": "page.schema.json#/properties/receipts/items"
+      }
+    },
+    "policy": {
+      "const": "fec/reported-receipt-source-evidence@1.0.0"
+    },
+    "decisions": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "$ref": "evidence-decision.schema.json"
+      }
+    }
+  }
+}

@@ -1,0 +1,383 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Complete processed Schedule B semantics diagnostic v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "cycle",
+    "started_at",
+    "elapsed_seconds",
+    "workers",
+    "input",
+    "measures",
+    "groups",
+    "profile_sha256",
+    "caveats"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.audit.fec.schedule-b-semantics.v1"
+    },
+    "status": {
+      "const": "complete_diagnostic"
+    },
+    "cycle": {
+      "type": "string",
+      "pattern": "^[0-9]{3}[02468]$"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "workers": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_set_id",
+        "manifest_sha256",
+        "source_release_id",
+        "source_artifact_sha256",
+        "facts",
+        "shards"
+      ],
+      "properties": {
+        "fact_set_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "source_release_id": {
+          "type": "string",
+          "pattern": "^fec-[0-9a-f]{64}$"
+        },
+        "source_artifact_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "facts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "shards": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "measures": {
+      "$ref": "#/$defs/measures"
+    },
+    "groups": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "shape",
+          "measures",
+          "example"
+        ],
+        "properties": {
+          "shape": {
+            "$ref": "#/$defs/shape"
+          },
+          "measures": {
+            "$ref": "#/$defs/measures"
+          },
+          "example": {
+            "$ref": "#/$defs/example"
+          }
+        }
+      }
+    },
+    "profile_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "caveats": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "present",
+        "value"
+      ],
+      "properties": {
+        "present": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "shape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "form",
+        "line",
+        "schedule",
+        "action",
+        "memo",
+        "disbursement_type",
+        "entity_type",
+        "reporting_role",
+        "recipient_identity",
+        "valid_sender",
+        "self_recipient"
+      ],
+      "properties": {
+        "form": {
+          "type": "string"
+        },
+        "line": {
+          "$ref": "#/$defs/cell"
+        },
+        "schedule": {
+          "$ref": "#/$defs/cell"
+        },
+        "action": {
+          "$ref": "#/$defs/cell"
+        },
+        "memo": {
+          "$ref": "#/$defs/cell"
+        },
+        "disbursement_type": {
+          "$ref": "#/$defs/cell"
+        },
+        "entity_type": {
+          "$ref": "#/$defs/cell"
+        },
+        "reporting_role": {
+          "type": "string"
+        },
+        "recipient_identity": {
+          "enum": [
+            "exact_matching_committee_id",
+            "conflicting_committee_ids",
+            "raw_committee_id_only",
+            "clean_committee_id_only",
+            "no_valid_committee_id"
+          ]
+        },
+        "valid_sender": {
+          "type": "boolean"
+        },
+        "self_recipient": {
+          "type": "boolean"
+        }
+      }
+    },
+    "measures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rows",
+        "amount_rows",
+        "missing_amount_rows",
+        "negative_rows",
+        "zero_rows",
+        "non_memo_rows",
+        "transaction_rows",
+        "back_reference_transaction_rows",
+        "back_reference_schedule_rows",
+        "original_submission_rows",
+        "original_equals_submission_rows",
+        "file_rows",
+        "link_rows",
+        "candidate_rows",
+        "conduit_name_rows",
+        "beneficiary_name_rows",
+        "amount_minor_units",
+        "non_memo_amount_minor_units"
+      ],
+      "properties": {
+        "rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "amount_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_amount_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "negative_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zero_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "non_memo_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "transaction_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "back_reference_transaction_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "back_reference_schedule_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "original_submission_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "original_equals_submission_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "file_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "link_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conduit_name_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "beneficiary_name_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "amount_minor_units": {
+          "type": "string",
+          "pattern": "^-?(0|[1-9][0-9]*)$"
+        },
+        "non_memo_amount_minor_units": {
+          "type": "string",
+          "pattern": "^-?(0|[1-9][0-9]*)$"
+        }
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ordinal",
+        "sub_id",
+        "sender",
+        "raw_recipient",
+        "clean_recipient",
+        "candidate",
+        "file",
+        "transaction",
+        "original_submission",
+        "back_reference_transaction",
+        "back_reference_schedule",
+        "line_label"
+      ],
+      "properties": {
+        "ordinal": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sub_id": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "sender": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "raw_recipient": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "clean_recipient": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "candidate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "transaction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "original_submission": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "back_reference_transaction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "back_reference_schedule": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "line_label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

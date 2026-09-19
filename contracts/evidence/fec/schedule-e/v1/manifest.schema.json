@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/schedule-e/v1/manifest.schema.json",
+  "title": "Published processed Schedule E occurrence set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "occurrence_set_id", "source_release_id",
+    "source_release_manifest_sha256", "source_artifact_sha256",
+    "staged_output_sha256", "relation", "cycle", "run_id", "state",
+    "parser_version", "published_at", "counts", "occurrences", "checks"
+  ],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.schedule-e-occurrence-set.v1"},
+    "occurrence_set_id": {"$ref": "#/$defs/digest"},
+    "prior_occurrence_set_id": {"$ref": "#/$defs/digest"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "source_release_manifest_sha256": {"$ref": "#/$defs/digest"},
+    "source_artifact_sha256": {"$ref": "#/$defs/digest"},
+    "staged_output_sha256": {"$ref": "#/$defs/digest"},
+    "relation": {"const": "disclosure.fec_fitem_sched_e"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "published"},
+    "parser_version": {"const": "legal-tender.fec.schedule-e-occurrence-parser.v1"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_rows", "selected_rows", "other_cycle_rows", "null_cycle_rows"],
+      "properties": {
+        "source_rows": {"type": "integer", "minimum": 0},
+        "selected_rows": {"type": "integer", "minimum": 0},
+        "other_cycle_rows": {"type": "integer", "minimum": 0},
+        "null_cycle_rows": {"type": "integer", "minimum": 0}
+      }
+    },
+    "occurrences": {"$ref": "#/$defs/artifact"},
+    "checks": {"type": "array", "minItems": 6, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "storage_key"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "compression": {"const": "zstd"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "warning"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

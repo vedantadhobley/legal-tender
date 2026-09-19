@@ -1,0 +1,30 @@
+{
+  "$schema": "../schema.json",
+  "schema_version": "1.0.0",
+  "semantic_role": "itemized_receipt",
+  "currency": "USD",
+  "amount": {
+    "state": "point",
+    "lower_minor_units": "12500",
+    "upper_minor_units": "12500",
+    "lower_inclusive": true,
+    "upper_inclusive": true
+  },
+  "measurement": {
+    "basis": "source_reported",
+    "kind": "reported_point",
+    "observation_state": "reported_value",
+    "reported_minor_units": "12500",
+    "precision_increment_minor_units": null,
+    "accounting_method": null,
+    "source_rule_version": "fec.schedule_a.amount.v1"
+  },
+  "uncertainty": {
+    "coverage": "complete",
+    "attribution": "direct",
+    "revision": "publisher_processed_snapshot",
+    "identity": "resolved",
+    "evidence": "reported"
+  },
+  "issues": []
+}

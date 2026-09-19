@@ -1,0 +1,182 @@
+[
+  {
+    "name": "federal contributions",
+    "form": "F3X",
+    "line": "23",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "included_non_memo_itemized_disbursement",
+    "role": "federal_contribution"
+  },
+  {
+    "name": "presidential operating same line",
+    "form": "F3P",
+    "line": "23",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "included_non_memo_itemized_disbursement",
+    "role": "operating_expenditure"
+  },
+  {
+    "name": "authorized transfer",
+    "form": "F3",
+    "line": "18",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "included_non_memo_itemized_disbursement",
+    "role": "authorized_committee_transfer"
+  },
+  {
+    "name": "affiliated transfer",
+    "form": "F3X",
+    "line": "22",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "included_non_memo_itemized_disbursement",
+    "role": "affiliated_or_party_transfer"
+  },
+  {
+    "name": "loans distinct",
+    "form": "F3X",
+    "line": "27",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "included_non_memo_itemized_disbursement",
+    "role": "loan_made"
+  },
+  {
+    "name": "refund distinct",
+    "form": "F3X",
+    "line": "28C",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "included_non_memo_itemized_disbursement",
+    "role": "committee_contribution_refund"
+  },
+  {
+    "name": "memo X",
+    "form": "F3X",
+    "line": "23",
+    "schedule": "SB",
+    "memo": "X",
+    "decision": "excluded_memo_subtotal",
+    "role": "federal_contribution"
+  },
+  {
+    "name": "memo Y is not X",
+    "form": "F3X",
+    "line": "23",
+    "schedule": "SB",
+    "memo": "Y",
+    "decision": "included_non_memo_itemized_disbursement",
+    "role": "federal_contribution"
+  },
+  {
+    "name": "missing line",
+    "form": "F3X",
+    "line": null,
+    "schedule": "SB",
+    "memo": null,
+    "decision": "unresolved_reporting",
+    "role": "unresolved"
+  },
+  {
+    "name": "empty line",
+    "form": "F3X",
+    "line": "",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "unresolved_reporting",
+    "role": "unresolved"
+  },
+  {
+    "name": "unknown alias",
+    "form": "F3X",
+    "line": "21",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "unresolved_reporting",
+    "role": "unresolved"
+  },
+  {
+    "name": "no case folding",
+    "form": "F3X",
+    "line": "28c",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "unresolved_reporting",
+    "role": "unresolved"
+  },
+  {
+    "name": "wrong schedule",
+    "form": "F3X",
+    "line": "23",
+    "schedule": "SE",
+    "memo": null,
+    "decision": "unresolved_reporting",
+    "role": "unresolved"
+  },
+  {
+    "name": "convention",
+    "form": "F4",
+    "line": "21A",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "separate_reporting_scope",
+    "role": "convention_expenditure"
+  },
+  {
+    "name": "convention loan",
+    "form": "F4",
+    "line": "23A",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "separate_reporting_scope",
+    "role": "loan_made"
+  },
+  {
+    "name": "convention memo",
+    "form": "F4",
+    "line": "21A",
+    "schedule": "SB",
+    "memo": "X",
+    "decision": "excluded_memo_subtotal",
+    "role": "convention_expenditure"
+  },
+  {
+    "name": "electioneering",
+    "form": "F9",
+    "line": "F93",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "separate_reporting_scope",
+    "role": "electioneering_disbursement"
+  },
+  {
+    "name": "levin transfer",
+    "form": "F3X",
+    "line": "SL4C",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "separate_reporting_scope",
+    "role": "levin_transfer"
+  },
+  {
+    "name": "levin other",
+    "form": "F3X",
+    "line": "SL5",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "separate_reporting_scope",
+    "role": "levin_other_disbursement"
+  },
+  {
+    "name": "IE on SB",
+    "form": "F3X",
+    "line": "24",
+    "schedule": "SB",
+    "memo": null,
+    "decision": "separate_reporting_scope",
+    "role": "independent_expenditure"
+  }
+]

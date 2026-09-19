@@ -1,0 +1,415 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "lda/printable-documents",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "lda",
+    "name": "Lobbying Disclosure Act public disclosure system",
+    "base_url": "https://lda.gov/"
+  },
+  "dataset": {
+    "id": "printable-documents",
+    "name": "LDA printable filing documents",
+    "semantic_domain": "federal_lobbying_source_document",
+    "description": "Publisher-rendered LD-1, LD-2, and LD-203 HTML or PDF documents preserving form-level and as-filed evidence that can differ from API JSON."
+  },
+  "authority": [
+    {
+      "kind": "api",
+      "url": "https://lda.gov/system/public/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "openapi",
+      "url": "https://lda.gov/api/openapi/v1/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6c5f13c470bf1b4b09071db32d10df72372210fd2c2be921214e3c94f47dde8a"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://lda.gov/api/redoc/v1/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "terms",
+      "url": "https://lda.gov/api/tos/",
+      "retrieved_on": "2026-08-27"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "none",
+      "environment_variable": null,
+      "header": null,
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "ld1_ld2_printable",
+        "method": "GET",
+        "url": "https://lda.gov/filings/public/filing/{filing_uuid}/print/",
+        "response_root": "exact response bytes"
+      },
+      {
+        "name": "ld203_printable",
+        "method": "GET",
+        "url": "https://lda.gov/filings/public/contribution/{filing_uuid}/print/",
+        "response_root": "exact response bytes"
+      }
+    ],
+    "pagination": "None. One document URL is published per filing UUID.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "filing_uuid",
+        "source": "filing_document_url on the corresponding API record",
+        "purpose": "Capture and compare the source document for each new or changed filing version."
+      }
+    ],
+    "retry_policy": "Bound retries with response-size and redirect limits; never replace a prior document digest after a failed or wrong-content response."
+  },
+  "physical_schema": {
+    "media_type": "text/html",
+    "record_schema": null,
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Preserve empty form controls, unchecked controls, absent sections, blank text, and parser failures as distinct states.",
+    "schema_fingerprint": "Content type, document title, form kind, normalized DOM element and control paths, and this contract version."
+  },
+  "identity": {
+    "publisher_record_key": "filing_uuid + document representation",
+    "occurrence_locator": "snapshot digest + filing_uuid + representation + retrieval ordinal",
+    "record_version": "filing_uuid + media type + SHA-256 of exact response bytes",
+    "duplicate_policy": "Retain every distinct byte version; a changed document under a known filing UUID creates a new immutable document version and blocks unchecked projection.",
+    "children": [
+      {
+        "object": "form_field",
+        "locator": "document version + form kind + source line number or named control + deterministic DOM path",
+        "content_digest": true
+      },
+      {
+        "object": "repeating_form_section",
+        "locator": "document version + source section number + one-based section ordinal",
+        "content_digest": true
+      }
+    ]
+  },
+  "semantics": {
+    "time_fields": [
+      {
+        "path": "LD-1 line 1",
+        "meaning": "As-filed registration effective date."
+      },
+      {
+        "path": "LD-2 line 8",
+        "meaning": "As-filed reporting year and checked reporting period."
+      },
+      {
+        "path": "LD-2 line 10",
+        "meaning": "As-filed termination checkbox and termination date."
+      },
+      {
+        "path": "LD-203 reporting period",
+        "meaning": "As-filed semiannual year and checked period."
+      },
+      {
+        "path": "LD-203 contribution item date",
+        "meaning": "As-filed date for one contribution or expense item."
+      },
+      {
+        "path": "signature date",
+        "meaning": "As-rendered filing signature timestamp; retain separately from API dt_posted and Legal Tender retrieval time."
+      }
+    ],
+    "money_fields": [
+      {
+        "path": "LD-2 lines 12 and 13",
+        "meaning": "Checked under-threshold band or reported income/expense point, qualified by reporting method and the precision rule effective for the period.",
+        "unit": "USD source-defined band or lossless reported decimal"
+      },
+      {
+        "path": "LD-1 foreign-entity contribution",
+        "meaning": "As-filed foreign-entity contribution.",
+        "unit": "USD decimal"
+      },
+      {
+        "path": "LD-1 foreign-entity ownership",
+        "meaning": "As-filed foreign ownership percentage.",
+        "unit": "decimal percent"
+      },
+      {
+        "path": "LD-203 contribution item amount",
+        "meaning": "As-filed item amount.",
+        "unit": "USD decimal"
+      }
+    ],
+    "code_fields": [
+      {
+        "path": "form title and controls",
+        "meaning": "LD-1, LD-2, or LD-203 form kind and checked filing state."
+      },
+      {
+        "path": "LD-1 line 11 and LD-2 line 15",
+        "meaning": "As-filed general issue codes."
+      },
+      {
+        "path": "LD-2 line 14",
+        "meaning": "As-filed expense calculation method checkbox."
+      },
+      {
+        "path": "LD-203 contribution type label",
+        "meaning": "As-rendered label; API code and pinned constants remain the canonical machine code evidence."
+      }
+    ],
+    "rules": [
+      "Preserve exact document bytes independently from API JSON.",
+      "As-filed names, addresses, contacts, agency text, amount-band controls, and form structure are document assertions; current nested API masters do not replace them.",
+      "A null API income or expense is not zero when the printable form checks the less-than-5000 band.",
+      "A printed numeric income or expense is a reported point whose economic precision remains governed by the applicable reporting method and period; lossless parsing does not make it a ledger amount.",
+      "One LD-1 form-level issue-code list and shared specific-issue section must not become duplicate activities merely because the API emits one object per code.",
+      "API government-entity IDs and constant names remain standardized publisher assertions; printable agency text remains separate as-filed evidence.",
+      "A truncated printable LD-203 item label does not replace the API contribution type code.",
+      "The printable LD-203 form does not expose original-versus-amendment status in the sampled pair; retain API filing_type as separate evidence.",
+      "No HTML parser output may replace or mutate the exact source document."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "Each API filing UUID resolves to one printable URL, but the bytes can change in place and must be re-observed by digest.",
+    "effective_projection": "The sampled LD-2 amendment family renders complete forms, but one family is insufficient to accept a universal full-replacement rule. LD-203 amendment status depends on API evidence in the sampled pair."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "transport",
+        "severity": "block",
+        "rule": "Status, media type, redirects, byte length, and digest satisfy the document acquisition contract."
+      },
+      {
+        "id": "form_kind",
+        "severity": "block",
+        "rule": "The document title and required form controls identify LD-1, LD-2, or LD-203 as expected from the API endpoint."
+      },
+      {
+        "id": "filing_association",
+        "severity": "block",
+        "rule": "The requested URL and corresponding API record identify the same filing UUID and representation."
+      },
+      {
+        "id": "field_conservation",
+        "severity": "block",
+        "rule": "Every recognized form control or repeating section becomes a field assertion or explicit parse issue."
+      },
+      {
+        "id": "cross_representation",
+        "severity": "partial",
+        "rule": "API/document differences publish as explicit comparison states and never resolve silently."
+      },
+      {
+        "id": "document_change",
+        "severity": "block",
+        "rule": "Changed bytes under one filing UUID require review or replay before derived document fields publish."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/registration.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/filing/7866327b-c892-4430-b9f0-1f0f679c58c6/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b8681bca9754d595693db94a2f0eb555e0cce8f91863a11e88c2c8bf4fbf8d97",
+      "scenarios": [
+        "LD-1 as-filed registrant and client fields",
+        "multiple issue codes sharing one form section",
+        "historical names differ from current API masters"
+      ]
+    },
+    {
+      "path": "fixtures/quarterly-report.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/filing/467e4a97-6351-4902-8ffa-dd51632e156b/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "7d004a08ebeb0618295bfd6f09ea6ce440711f63c264874b819d468366e7cc26",
+      "scenarios": [
+        "ordinary LD-2 income and activity",
+        "exact API/document agreement"
+      ]
+    },
+    {
+      "path": "fixtures/no-activity-with-income.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/filing/3e3453a3-0d92-4f65-883f-e2a13cfdb11f/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "cd90d0bca70a5cccc19eeec77df779d73ef9f49bd866dade147570ff7f48c515",
+      "scenarios": [
+        "no-lobbying-issue checkbox",
+        "non-zero income",
+        "empty activity section"
+      ]
+    },
+    {
+      "path": "fixtures/termination-with-activity.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/filing/24aa3971-815e-40ca-a63f-455ff0090c03/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6f98c0a5d78979f1e9030fb9d79ac9c8bcfe682dcdfe91ac12e56794a1dbcf45",
+      "scenarios": [
+        "termination checkbox and date",
+        "reported expenses",
+        "activity retained"
+      ]
+    },
+    {
+      "path": "fixtures/amendment-family-original.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/filing/d05eac1f-0651-48a8-b34f-d57b6d40cd06/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b2a67b33be51925928886c994c6d8221882ddd07afd88dc9694fd2c2361de006",
+      "scenarios": [
+        "LD-2 original in amendment family",
+        "under-threshold expense checkbox"
+      ]
+    },
+    {
+      "path": "fixtures/amendment.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/filing/7466c7ee-8bd1-4496-94df-5d5322d25e2d/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "7ad89cef812d3b088aa43a6df97f55f9291afa5a88c3376e90ccfba679e374c4",
+      "scenarios": [
+        "LD-2 amendment checkbox",
+        "under-threshold expense absent from API amount",
+        "as-filed agency strings"
+      ]
+    },
+    {
+      "path": "fixtures/amendment-family-second.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/filing/502bf3ec-6897-4d1e-a684-b1b7f578fa04/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "4e98026ca5d429523f3429ee020bc7fd6477f7e0dcbe19ea2d7794972b9ef803",
+      "scenarios": [
+        "later full-form LD-2 amendment",
+        "two activity sections"
+      ]
+    },
+    {
+      "path": "fixtures/amendment-family-third.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/filing/ad68a692-6a5b-4562-b468-48262b8bcba0/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b5c360a6390dda63af0436c717391f02066d48ff0d550304e186a852d1519a28",
+      "scenarios": [
+        "latest sampled full-form LD-2 amendment",
+        "changed activity text"
+      ]
+    },
+    {
+      "path": "fixtures/organization-no-contributions.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/contribution/b0510c89-2cfb-441b-8fe7-0b1c9cc1347c/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "adb1fa7efaf506cff7c443c95cf3ce2cf3e22b2ec018e42ac2286f17852958f8",
+      "scenarios": [
+        "LD-203 organization filer",
+        "explicit no-contributions checkbox"
+      ]
+    },
+    {
+      "path": "fixtures/feca.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/contribution/7e49564c-a88e-4947-bc51-b243435491ec/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "686263bc16920c655d2f97c25eef7de2cf54148e1c0c4486410a6a2ecada1f54",
+      "scenarios": [
+        "LD-203 lobbyist filer",
+        "FECA item",
+        "reported item date and amount"
+      ]
+    },
+    {
+      "path": "fixtures/honorary-expense.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/contribution/fbd99564-ca4b-47ca-95d8-4d941a9c90a4/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "9b6b33c8048a39008f583525801638c69f3b4f73c9be6d991c1f90f2376fa794",
+      "scenarios": [
+        "historical employer name differs from current API master",
+        "mixed honorary-expense and FECA items",
+        "source item order is not chronological"
+      ]
+    },
+    {
+      "path": "fixtures/meeting-expense.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/contribution/285616b7-ce63-49f4-9957-40429ecce19b/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "10c992108445e8c36a273f9fab2887ccde7783d3715648a0abbd9b965a876321",
+      "scenarios": [
+        "meeting-expense item"
+      ]
+    },
+    {
+      "path": "fixtures/presidential-library-expense.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/contribution/232ecd2c-3f5e-4917-9622-8a65d8087ddb/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6236171fa31fd06a138058ed1fda7569576db078958176264b6d310a2e63630a",
+      "scenarios": [
+        "presidential-library-expense item"
+      ]
+    },
+    {
+      "path": "fixtures/inaugural-committee.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/contribution/ef5bb479-667c-4494-a310-a5eff2cfe1f0/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "d7d6e7837f5e46896587bac24d717f8c88ae52625067c74b1f1cd0188b8f097b",
+      "scenarios": [
+        "presidential-inaugural item",
+        "print label truncated relative to API constant",
+        "non-empty PAC list"
+      ]
+    },
+    {
+      "path": "fixtures/ld203-amendment-family-original.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/contribution/78ed0d57-66eb-40bd-b596-f958d22dc52d/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "a40fe56e70170d5e151f69fb67a8ad038774ecc4040bd9a6f1bb589b4ee995ca",
+      "scenarios": [
+        "LD-203 original",
+        "no-contributions state"
+      ]
+    },
+    {
+      "path": "fixtures/ld203-amendment-family-amendment.html",
+      "representation": "exact_bytes",
+      "source_url": "https://lda.gov/filings/public/contribution/b3221ac3-0285-413d-bc85-4045984228cb/print/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "195bff9e21ed0ab22484a75f1509d1673348c540639ec053d4215e222e364be0",
+      "scenarios": [
+        "LD-203 amendment",
+        "printable form does not expose amendment status"
+      ]
+    }
+  ],
+  "use": {
+    "retention": "Preserve every exact document byte version and its retrieval manifest indefinitely.",
+    "citation_date_required": true,
+    "disclaimer": "Senate Office of Public Records cannot vouch for the data or analyses derived from these data after the data have been retrieved from LDA.gov."
+  },
+  "outputs": {
+    "fact_types": [
+      "lda.printable_document.v1",
+      "lda.document_field_assertion.v1",
+      "lda.api_document_comparison.v1"
+    ],
+    "change_dimensions": [
+      "filing_uuid",
+      "form_kind",
+      "document_digest",
+      "source_section"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/candidate-itemized-individual-receipts/v1/decision.schema.json",
+  "title": "Processed Schedule A itemized-individual receipt decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "calculation_contract", "calculation_version",
+    "fact_id", "natural_key", "cycle", "recipient_committee_id",
+    "received_on", "state", "amount_minor_units"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.itemized-individual-receipt-decision.v1"},
+    "calculation_contract": {"const": "fec/candidate-itemized-individual-receipts"},
+    "calculation_version": {"const": "1.0.0"},
+    "fact_id": {"type": "string", "minLength": 1},
+    "natural_key": {"type": "string", "minLength": 1},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "recipient_committee_id": {"type": ["string", "null"], "pattern": "^C[0-9]{8}$"},
+    "received_on": {"type": ["string", "null"], "format": "date"},
+    "state": {
+      "enum": [
+        "included", "excluded_non_individual", "excluded_memo_subtotal",
+        "unresolved_individual_class", "unresolved_amount"
+      ]
+    },
+    "amount_minor_units": {"type": ["string", "null"], "pattern": "^-?(0|[1-9][0-9]*)$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "included"}}},
+      "then": {"properties": {"amount_minor_units": {"type": "string"}}},
+      "else": {"properties": {"amount_minor_units": {"type": "null"}}}
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/facts/fec/classic/v1/manifest.schema.json",
+  "title": "Published classic FEC normalized fact set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "fact_set_id", "dataset", "fact_type",
+    "cycle", "source_contract", "source_release_id",
+    "source_release_manifest_sha256", "occurrence_set_id",
+    "occurrence_manifest_sha256", "run_id", "state", "normalizer_version",
+    "fact_schema_version", "published_at", "counts", "facts", "checks"
+  ],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.classic-fact-set.v1"},
+    "fact_set_id": {"$ref": "#/$defs/digest"},
+    "dataset": {"enum": ["candidate-master", "committee-master", "candidate-committee-linkage", "all-candidates-summary", "current-campaigns-summary"]},
+    "fact_type": {"enum": ["fec.candidate_assertion.v1", "fec.committee_assertion.v1", "fec.candidate_committee_linkage.v1", "fec.candidate_summary_all.v1", "fec.campaign_summary.v1"]},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_contract": {"enum": ["fec/candidate-master@1.0.0", "fec/committee-master@1.0.0", "fec/candidate-committee-linkage@1.0.0", "fec/all-candidates-summary@1.0.0", "fec/current-campaigns-summary@1.0.0"]},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "source_release_manifest_sha256": {"$ref": "#/$defs/digest"},
+    "occurrence_set_id": {"$ref": "#/$defs/digest"},
+    "occurrence_manifest_sha256": {"$ref": "#/$defs/digest"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "published"},
+    "normalizer_version": {"const": "legal-tender.fec.classic-normalizer.v1"},
+    "fact_schema_version": {"const": "legal-tender.fec.classic-fact.v1"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_occurrences", "facts", "valid_facts", "invalid_facts", "excluded_occurrences", "source_invalid_occurrences", "source_duplicate_occurrences"],
+      "properties": {
+        "source_occurrences": {"type": "integer", "minimum": 0},
+        "facts": {"type": "integer", "minimum": 0},
+        "valid_facts": {"type": "integer", "minimum": 0},
+        "invalid_facts": {"type": "integer", "minimum": 0},
+        "excluded_occurrences": {"type": "integer", "minimum": 0},
+        "source_invalid_occurrences": {"type": "integer", "minimum": 0},
+        "source_duplicate_occurrences": {"type": "integer", "minimum": 0}
+      }
+    },
+    "facts": {"$ref": "#/$defs/artifact"},
+    "checks": {"type": "array", "minItems": 5, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "storage_key"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "compression": {"const": "zstd"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "warning"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

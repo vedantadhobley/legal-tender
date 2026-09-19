@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "committee_id": "C00111111",
+      "state": "historical_registration",
+      "endpoint_roles": ["source"],
+      "terminal_identity_eligible": false,
+      "historical_assertion_cycles": ["2018"]
+    },
+    {
+      "committee_id": "C00222222",
+      "state": "alternate_release_registration",
+      "endpoint_roles": ["recipient"],
+      "terminal_identity_eligible": false,
+      "same_cycle_assertion_count": 1
+    },
+    {
+      "committee_id": "C00333333",
+      "state": "unresolved_reported_id",
+      "endpoint_roles": ["source"],
+      "terminal_identity_eligible": false,
+      "registration_assertion_count": 0
+    }
+  ],
+  "expected": {
+    "decisions": 3,
+    "historical_registrations": 1,
+    "alternate_release_registrations": 1,
+    "unresolved_reported_ids": 1,
+    "terminal_identity_eligible": 0,
+    "terminal_identity_ineligible": 3
+  }
+}
+

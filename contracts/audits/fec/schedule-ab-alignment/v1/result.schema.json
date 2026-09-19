@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/audits/fec/schedule-ab-alignment/v1/result.schema.json",
+  "title": "FEC Schedule A/B alignment audit result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "probe_version", "status", "cycle", "started_at",
+    "completed_at", "elapsed_seconds", "inputs", "configuration", "counts",
+    "candidate_states", "schedule_b_disposition", "schedule_b_verification",
+    "checks", "caveats"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.audit.fec.schedule-ab-alignment.v1"},
+    "probe_version": {"const": "legal-tender.audit.fec.schedule-ab-alignment.v1"},
+    "status": {"enum": ["diagnostic_not_reconciliation", "partial_diagnostic_not_reconciliation"]},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "elapsed_seconds": {"type": "number", "minimum": 0},
+    "inputs": {"$ref": "#/$defs/inputs"},
+    "configuration": {"$ref": "#/$defs/configuration"},
+    "counts": {"$ref": "#/$defs/counts"},
+    "candidate_states": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/candidateState"}
+    },
+    "schedule_b_disposition": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/namedCount"}
+    },
+    "schedule_b_verification": {"$ref": "#/$defs/scheduleBVerification"},
+    "checks": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/check"}
+    },
+    "caveats": {"type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schedule_a", "schedule_b", "alignment"],
+      "properties": {
+        "schedule_a": {"$ref": "#/$defs/scheduleAInput"},
+        "schedule_b": {"$ref": "#/$defs/scheduleBInput"},
+        "alignment": {"$ref": "#/$defs/alignment"}
+      }
+    },
+    "scheduleAInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_set_id", "fact_manifest_sha256", "source_release_id",
+        "release_manifest_sha256", "source_version_id",
+        "source_artifact_sha256", "last_modified", "rows", "shards"
+      ],
+      "properties": {
+        "fact_set_id": {"$ref": "#/$defs/digest"},
+        "fact_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "source_release_id": {"type": "string", "minLength": 1},
+        "release_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "source_version_id": {"type": "string", "minLength": 1},
+        "source_artifact_sha256": {"$ref": "#/$defs/digest"},
+        "last_modified": {"type": "string", "minLength": 1},
+        "rows": {"type": "integer", "minimum": 0},
+        "shards": {"type": "integer", "minimum": 1}
+      }
+    },
+    "scheduleBInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observation_schema_version", "observed_at", "source_version_id",
+        "source_artifact_sha256", "last_modified", "artifact_bytes", "relation"
+      ],
+      "properties": {
+        "observation_schema_version": {"type": "string", "minLength": 1},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "source_version_id": {"type": "string", "minLength": 1},
+        "source_artifact_sha256": {"$ref": "#/$defs/digest"},
+        "last_modified": {"type": "string", "format": "date-time"},
+        "artifact_bytes": {"type": "integer", "minimum": 1},
+        "relation": {"type": "string", "minLength": 1}
+      }
+    },
+    "alignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schedule_a_publisher_date", "schedule_b_publisher_date", "same_publisher_date", "basis"],
+      "properties": {
+        "schedule_a_publisher_date": {"type": "string", "format": "date"},
+        "schedule_b_publisher_date": {"type": "string", "format": "date"},
+        "same_publisher_date": {"type": "boolean"},
+        "basis": {"type": "string", "minLength": 1}
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schedule_a_cohort_policy", "exact_key", "compatible_key", "conflict_key",
+        "candidate_precedence", "workers", "max_schedule_b_rows"
+      ],
+      "properties": {
+        "schedule_a_cohort_policy": {"type": "string", "minLength": 1},
+        "exact_key": {"type": "string", "minLength": 1},
+        "compatible_key": {"type": "string", "minLength": 1},
+        "conflict_key": {"type": "string", "minLength": 1},
+        "candidate_precedence": {"type": "array", "items": {"type": "string"}},
+        "workers": {"type": "integer", "minimum": 1},
+        "max_schedule_b_rows": {"type": "integer", "minimum": 0}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schedule_a_source_rows", "schedule_a_flow_rows", "schedule_a_indexable_rows",
+        "schedule_a_without_date_rows", "schedule_a_exact_signatures",
+        "schedule_a_endpoint_pairs", "schedule_b_source_rows", "schedule_b_eligible_rows",
+        "schedule_b_ineligible_rows", "schedule_b_known_endpoint_rows",
+        "schedule_b_outside_endpoint_rows"
+      ],
+      "properties": {
+        "schedule_a_source_rows": {"$ref": "#/$defs/count"},
+        "schedule_a_flow_rows": {"$ref": "#/$defs/count"},
+        "schedule_a_indexable_rows": {"$ref": "#/$defs/count"},
+        "schedule_a_without_date_rows": {"$ref": "#/$defs/count"},
+        "schedule_a_exact_signatures": {"$ref": "#/$defs/count"},
+        "schedule_a_endpoint_pairs": {"$ref": "#/$defs/count"},
+        "schedule_b_source_rows": {"$ref": "#/$defs/count"},
+        "schedule_b_eligible_rows": {"$ref": "#/$defs/count"},
+        "schedule_b_ineligible_rows": {"$ref": "#/$defs/count"},
+        "schedule_b_known_endpoint_rows": {"$ref": "#/$defs/count"},
+        "schedule_b_outside_endpoint_rows": {"$ref": "#/$defs/count"}
+      }
+    },
+    "candidateState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state", "signature_groups", "schedule_a_rows", "schedule_b_rows",
+        "schedule_a_amount_minor_units", "schedule_b_amount_minor_units"
+      ],
+      "properties": {
+        "state": {"enum": ["exact", "compatible_date_disagreement", "conflicting_amount", "ambiguous", "schedule_a_only"]},
+        "signature_groups": {"$ref": "#/$defs/count"},
+        "schedule_a_rows": {"$ref": "#/$defs/count"},
+        "schedule_b_rows": {"$ref": "#/$defs/count"},
+        "schedule_a_amount_minor_units": {"$ref": "#/$defs/minorUnits"},
+        "schedule_b_amount_minor_units": {"$ref": "#/$defs/minorUnits"}
+      }
+    },
+    "namedCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "rows"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "rows": {"$ref": "#/$defs/count"}
+      }
+    },
+    "scheduleBVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "complete", "expected_period", "rows", "valid_rows",
+        "invalid_rows", "unique_sub_ids", "duplicate_sub_id_rows", "null_amounts",
+        "negative_amounts", "fractional_amounts", "null_disbursement_dates",
+        "field_coverage", "periods", "disbursement_types", "action_codes", "memo_codes",
+        "filing_forms", "elapsed_milliseconds"
+      ],
+      "properties": {
+        "schema_version": {"const": "legal-tender.schedule-b-verification.v1"},
+        "complete": {"type": "boolean"},
+        "expected_period": {"type": "string", "pattern": "^[0-9]{4}$"},
+        "rows": {"$ref": "#/$defs/count"},
+        "valid_rows": {"$ref": "#/$defs/count"},
+        "invalid_rows": {"$ref": "#/$defs/count"},
+        "unique_sub_ids": {"$ref": "#/$defs/count"},
+        "duplicate_sub_id_rows": {"$ref": "#/$defs/count"},
+        "bytes": {"$ref": "#/$defs/count"},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "null_amounts": {"$ref": "#/$defs/count"},
+        "negative_amounts": {"$ref": "#/$defs/count"},
+        "fractional_amounts": {"$ref": "#/$defs/count"},
+        "null_disbursement_dates": {"$ref": "#/$defs/count"},
+        "field_coverage": {"$ref": "#/$defs/scheduleBCoverage"},
+        "periods": {"$ref": "#/$defs/valueCounts"},
+        "disbursement_types": {"$ref": "#/$defs/valueCounts"},
+        "action_codes": {"$ref": "#/$defs/valueCounts"},
+        "memo_codes": {"$ref": "#/$defs/valueCounts"},
+        "filing_forms": {"$ref": "#/$defs/valueCounts"},
+        "elapsed_milliseconds": {"type": "integer", "minimum": 0},
+        "issues": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "scheduleBCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filer_committee_id", "raw_recipient_committee_id",
+        "clean_recipient_committee_id", "matching_recipient_committee_ids",
+        "conflicting_recipient_committee_ids", "candidate_id", "disbursement_date",
+        "communication_date", "purpose", "category", "transaction_id",
+        "back_reference_transaction_id", "original_submission_id"
+      ],
+      "properties": {
+        "filer_committee_id": {"$ref": "#/$defs/count"},
+        "raw_recipient_committee_id": {"$ref": "#/$defs/count"},
+        "clean_recipient_committee_id": {"$ref": "#/$defs/count"},
+        "matching_recipient_committee_ids": {"$ref": "#/$defs/count"},
+        "conflicting_recipient_committee_ids": {"$ref": "#/$defs/count"},
+        "candidate_id": {"$ref": "#/$defs/count"},
+        "disbursement_date": {"$ref": "#/$defs/count"},
+        "communication_date": {"$ref": "#/$defs/count"},
+        "purpose": {"$ref": "#/$defs/count"},
+        "category": {"$ref": "#/$defs/count"},
+        "transaction_id": {"$ref": "#/$defs/count"},
+        "back_reference_transaction_id": {"$ref": "#/$defs/count"},
+        "original_submission_id": {"$ref": "#/$defs/count"}
+      }
+    },
+    "valueCounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "rows"],
+        "properties": {
+          "value": {"type": "string"},
+          "rows": {"$ref": "#/$defs/count"}
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "observe"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    },
+    "count": {"type": "integer", "minimum": 0},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "minorUnits": {"type": "string", "pattern": "^-?[0-9]+$"}
+  }
+}

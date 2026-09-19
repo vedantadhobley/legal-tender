@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/common/money-measure/v1/schema.json",
+  "title": "Legal Tender money measure API value",
+  "description": "Language-neutral monetary result contract. Minor-unit values are signed base-10 strings so JSON clients never lose integer precision.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "semantic_role",
+    "currency",
+    "amount",
+    "measurement",
+    "uncertainty",
+    "issues"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "semantic_role": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "amount": {
+      "$ref": "#/$defs/amount"
+    },
+    "measurement": {
+      "$ref": "#/$defs/measurement"
+    },
+    "uncertainty": {
+      "$ref": "#/$defs/uncertainty"
+    },
+    "issues": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.-]*$"
+      }
+    }
+  },
+  "$defs": {
+    "minorUnits": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)$"
+    },
+    "positiveMinorUnits": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "amount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "lower_minor_units",
+        "upper_minor_units",
+        "lower_inclusive",
+        "upper_inclusive"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "point",
+            "bounded",
+            "lower_bounded",
+            "upper_bounded",
+            "unbounded",
+            "not_applicable",
+            "invalid"
+          ]
+        },
+        "lower_minor_units": {
+          "oneOf": [
+            { "$ref": "#/$defs/minorUnits" },
+            { "type": "null" }
+          ]
+        },
+        "upper_minor_units": {
+          "oneOf": [
+            { "$ref": "#/$defs/minorUnits" },
+            { "type": "null" }
+          ]
+        },
+        "lower_inclusive": {
+          "type": ["boolean", "null"]
+        },
+        "upper_inclusive": {
+          "type": ["boolean", "null"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "state": { "const": "point" } },
+            "required": ["state"]
+          },
+          "then": {
+            "properties": {
+              "lower_minor_units": { "$ref": "#/$defs/minorUnits" },
+              "upper_minor_units": { "$ref": "#/$defs/minorUnits" },
+              "lower_inclusive": { "const": true },
+              "upper_inclusive": { "const": true }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "state": { "const": "bounded" } },
+            "required": ["state"]
+          },
+          "then": {
+            "properties": {
+              "lower_minor_units": { "$ref": "#/$defs/minorUnits" },
+              "upper_minor_units": { "$ref": "#/$defs/minorUnits" },
+              "lower_inclusive": { "type": "boolean" },
+              "upper_inclusive": { "type": "boolean" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "state": { "const": "lower_bounded" } },
+            "required": ["state"]
+          },
+          "then": {
+            "properties": {
+              "lower_minor_units": { "$ref": "#/$defs/minorUnits" },
+              "upper_minor_units": { "type": "null" },
+              "lower_inclusive": { "type": "boolean" },
+              "upper_inclusive": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "state": { "const": "upper_bounded" } },
+            "required": ["state"]
+          },
+          "then": {
+            "properties": {
+              "lower_minor_units": { "type": "null" },
+              "upper_minor_units": { "$ref": "#/$defs/minorUnits" },
+              "lower_inclusive": { "type": "null" },
+              "upper_inclusive": { "type": "boolean" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": ["unbounded", "not_applicable", "invalid"]
+              }
+            },
+            "required": ["state"]
+          },
+          "then": {
+            "properties": {
+              "lower_minor_units": { "type": "null" },
+              "upper_minor_units": { "type": "null" },
+              "lower_inclusive": { "type": "null" },
+              "upper_inclusive": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basis",
+        "kind",
+        "observation_state",
+        "reported_minor_units",
+        "precision_increment_minor_units",
+        "accounting_method",
+        "source_rule_version"
+      ],
+      "properties": {
+        "basis": {
+          "enum": ["source_reported", "calculated"]
+        },
+        "kind": {
+          "enum": [
+            "reported_point",
+            "reported_estimate",
+            "rounded_estimate",
+            "threshold_band",
+            "reported_valuation",
+            "method_specific_reported_value",
+            "summary_value",
+            "calculated_sum",
+            "calculated_interval",
+            "calculated_allocation",
+            "reconciliation_difference",
+            "unknown"
+          ]
+        },
+        "observation_state": {
+          "type": ["string", "null"],
+          "enum": [
+            "reported_value",
+            "threshold_band",
+            "source_blank",
+            "not_applicable",
+            "invalid",
+            "unobserved",
+            null
+          ]
+        },
+        "reported_minor_units": {
+          "oneOf": [
+            { "$ref": "#/$defs/minorUnits" },
+            { "type": "null" }
+          ]
+        },
+        "precision_increment_minor_units": {
+          "oneOf": [
+            { "$ref": "#/$defs/positiveMinorUnits" },
+            { "type": "null" }
+          ]
+        },
+        "accounting_method": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "source_rule_version": {
+          "type": ["string", "null"],
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "basis": { "const": "source_reported" } },
+            "required": ["basis"]
+          },
+          "then": {
+            "properties": {
+              "observation_state": {
+                "enum": [
+                  "reported_value",
+                  "threshold_band",
+                  "source_blank",
+                  "not_applicable",
+                  "invalid",
+                  "unobserved"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "reported_point",
+                  "reported_estimate",
+                  "rounded_estimate",
+                  "reported_valuation",
+                  "method_specific_reported_value",
+                  "summary_value"
+                ]
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "reported_minor_units": { "$ref": "#/$defs/minorUnits" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "rounded_estimate" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "precision_increment_minor_units": {
+                "$ref": "#/$defs/positiveMinorUnits"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coverage", "attribution", "revision", "identity", "evidence"],
+      "properties": {
+        "coverage": {
+          "enum": ["complete", "partial", "incompatible", "unknown", "not_applicable"]
+        },
+        "attribution": {
+          "enum": [
+            "direct",
+            "exclusive_calculated",
+            "proportional_calculated",
+            "mixed",
+            "unresolved",
+            "not_applicable"
+          ]
+        },
+        "revision": {
+          "enum": [
+            "publisher_effective",
+            "publisher_processed_snapshot",
+            "all_versions",
+            "provisional_inferred",
+            "unresolved",
+            "not_applicable"
+          ]
+        },
+        "identity": {
+          "enum": ["resolved", "partial", "unresolved", "not_applicable"]
+        },
+        "evidence": {
+          "enum": ["reported", "calculated", "reconciled", "contextual"]
+        }
+      }
+    }
+  }
+}

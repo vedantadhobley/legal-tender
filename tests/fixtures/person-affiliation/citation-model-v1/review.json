@@ -1,0 +1,81 @@
+{
+  "Profile": {"model": "gpt-oss-120b", "reasoning_effort": "medium", "max_tokens": 4096},
+  "Metadata": {
+    "models.json": "cc7da7b0bb17a05d3c5113152952dff0d47c8854f147ef7a56d1a5167930c308",
+    "completed.json": "01df48f31a5c86387d93e369f666fe39815f04ae5cbed28ceec632dd9ee57201"
+  },
+  "Cases": [
+    {
+      "ID": "apple-cook", "SHA256": "eab96d464d56fd9f4c821f551d656d7525d454c74d2b4cf234a9d65ef7848a7f", "Valid": true,
+      "Selection": "All IDs are valid, but organization selection .S2 is Apple in, not the complete organization name alone. A mechanically valid quote is not necessarily the intended endpoint.",
+      "Binding": "Named subject retained; the COO is labeled coreference, while company-pronoun readings in the first entry are labeled direct. No FEC identity is implied.",
+      "Classification": "Director, executive chair, CEO and COO proposals appear. Executive chair is classified executive rather than explicitly preserving board-chair membership; classification still needs review.",
+      "Context": "All complete selected entries and supplied context remain. No correction or contradictory wording in this selected input.",
+      "NameTime": "CEO clause retains the disclosed years; the COO clause drops the introductory time wording, which remains in full context. No inferred tenure interval. Unlike the prior run, generation completes."
+    },
+    {
+      "ID": "nvidia-huang", "SHA256": "53e426d0a47d10dab639595e23c2918566dbda69a187fb8f6a23f9bd507392b6", "Valid": false,
+      "Selection": "All thirteen ranges are valid and choose source text, including the historical job clauses without the earlier splicing. The whole answer fails because every interpretation has an empty evidence array. No range is used to salvage a role report.",
+      "Binding": "The full named subject is reused, but past-job statements are marked direct despite short-name context. Empty evidence prevents the required antecedent/reference checks.",
+      "Classification": "Raw output proposes founder, combined president/CEO, board member, prior employee roles and separate award activities. It still combines executive titles despite the split instruction.",
+      "Context": "No corrective text in this input. A complete response at 4092 completion tokens is rejected for references, not truncation.",
+      "NameTime": "Founder, prior-job and award years remain in the selected clauses. Company selections omit terminal abbreviation periods; no canonical name or tenure interpretation follows."
+    },
+    {
+      "ID": "salesforce-benioff", "SHA256": "b398be3d8a6f7138d254731405321a6f44987e492ff83f868f66b27bdc173e74", "Valid": true,
+      "Selection": "Full person/organization names and role phrases are selected correctly. The repeated Salesforce text now has an explicit source occurrence.",
+      "Binding": "The founder pronoun is labeled coreference to the short surname, but no explicit equivalence connects that surname to the full-name anchor. This is not accepted identity resolution.",
+      "Classification": "The five reviewed Salesforce, Oracle and Liberty Software roles have plausible classes. Incidental software sale is not employment.",
+      "Context": "Full original entries remain available. No correction or conflict is introduced.",
+      "NameTime": "The Oracle duration stays in its selected clause. The Liberty Software clause omits the age wording, preserved only in complete context; no calendar date is invented."
+    },
+    {
+      "ID": "fresh-bound-pronoun", "SHA256": "082ccd4b0244bc4133863f1fb69cbfa6e5602775d7d93c66bb567749b6015ad8", "Valid": false,
+      "Selection": "Raw selections preserve role clauses but the required endpoint IDs are absent from the evidence lists; whole answer rejected.",
+      "Binding": "CTO endpoints are only She and its, not the named person and organization antecedents. The normalized label names them but that does not establish a source binding.",
+      "Classification": "CTO is executive and joined is interpreted as employee. Volunteering produces no asserted employment role.",
+      "Context": "Source context remains in the capture, but invalid references produce no derived report. No automatic repair adds missing IDs.",
+      "NameTime": "The source role/date wording is not rewritten. Naming the endpoints in a normalized label cannot replace literal antecedent selection."
+    },
+    {
+      "ID": "fresh-ambiguous-pronoun", "SHA256": "22e6b57fd61ac9d26ddae5d7379707242aeec298d7364e99b471ae3bcb65e731", "Valid": true,
+      "Selection": "Source ranges are valid; the CFO subject selects only She. It does not retain the two named alternatives in that interpretation.",
+      "Binding": "Binding remains ambiguous and selects neither person, but is less informative than the earlier answer that explicitly kept both possible names.",
+      "Classification": "Attendance stays activity and CFO stays executive. All normalized labels are empty, so explicit role-name normalization is not demonstrated.",
+      "Context": "Full reception and CFO entries are retained and the role stays binding_ambiguous; no accepted affiliation.",
+      "NameTime": "Both names are present in other selections and in complete context, not joined into the CFO evidence. No invented date."
+    },
+    {
+      "ID": "fresh-targeted-correction", "SHA256": "49f54fd2e8d027374f20ca94c84b8c37bb899de0a49399dfe116ba9200d31c62", "Valid": true,
+      "Selection": "Complete CEO, foundation-director and correction clauses are selected with exact Go-owned whitespace. All person/organization anchors are source-backed.",
+      "Binding": "Director coreference uses the named person; organizations remain distinct. The correction uses an ambiguous binding label despite its explicit organization, but does not select a different target.",
+      "Classification": "CEO and board director remain separate role proposals; the correction is not a role.",
+      "Context": "Retraction targets only the CEO assertion. Go keeps original asserted status, context-blocks that target, and leaves the foundation role unverified rather than retracting it.",
+      "NameTime": "No source quote is rewritten, unlike the earlier nonbreaking-space failure. No date inference."
+    },
+    {
+      "ID": "fresh-name-and-succession", "SHA256": "779edb4332065280c9596742407cdb5741566107485968fb5d6d8c5fcf0516ad", "Valid": false,
+      "Selection": "Selections are retained, but all evidence lists are empty and the whole answer is rejected.",
+      "Binding": "Later roles point at the pronoun rather than the named antecedent. Marking them coreference does not supply the missing reference.",
+      "Classification": "Raw founder, CEO and board-chair classes are distinct; no ownership inferred from founding.",
+      "Context": "No false contradiction between succeeding roles. Empty evidence prevents a derived report, and no model output is repaired.",
+      "NameTime": "The full parenthetical name is selected. No separate name_form proposal is emitted; succession wording remains in source."
+    },
+    {
+      "ID": "fresh-contradiction", "SHA256": "cb826165cad641d7f3dc203c487197d6bd83ccbc4578c324f5f0fba17aede578", "Valid": false,
+      "Selection": "Unassessed: gateway returned HTTP 429 capacity_exceeded after 60.010 seconds; there is no model answer.",
+      "Binding": "Unassessed because inference capacity was unavailable. This is not a model semantic failure.",
+      "Classification": "Unassessed; do not infer an extraction result from the absence of a model response.",
+      "Context": "No retry, infrastructure change or partial report. Prior contradiction evidence remains unchanged.",
+      "NameTime": "No answer or usage totals available for this request. Exclude it from paired token-cost comparisons."
+    },
+    {
+      "ID": "fresh-conditional-instruction", "SHA256": "0f9cddb95c781315052a14a9dbfdce00d41b4e745eba96fde91e480c077ad21c", "Valid": false,
+      "Selection": "Raw selection spans the complete condition, role, date and no-appointment statement; endpoints select the source names. Empty evidence still rejects the whole answer.",
+      "Binding": "Raw proposal directly binds the named person and organization, but required evidence references are absent.",
+      "Classification": "Hypothetical president only; the source instruction does not create an asserted CEO role.",
+      "Context": "Conditional status is preserved in raw output. No repair fills its empty evidence array or approves an appointment.",
+      "NameTime": "The complete selected clause retains 2026/2027 wording and the absent appointment; no tenure interval or current role accepted."
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/candidate-committee-upstream/v1/result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "calculation_id", "policy", "cycle", "candidate_id", "state", "scope", "ledger", "time_semantics", "attribution_state", "terminal_attribution_eligible", "inputs", "committee_relationships", "accounting", "candidate_observations", "upstream_source_row_ordinals", "nodes", "cyclic_components", "not_covered"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.candidate-committee-upstream.v1"},
+    "calculation_id": {"$ref": "#/$defs/digest"},
+    "policy": {"const": "fec/candidate-committee-upstream-evidence@1.0.0"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{3}[02468]$"},
+    "candidate_id": {"type": "string", "pattern": "^[HSP][0-9A-Z]{8}$"},
+    "state": {"const": "complete_selected_cohort_trace"},
+    "scope": {"const": "receiver_reported_committee_receipts_only"},
+    "ledger": {"const": "schedule_a"},
+    "time_semantics": {"const": "selected_source_cycle_connectivity_not_chronological_allocation"},
+    "attribution_state": {"const": "unresolved_funding_basis"},
+    "terminal_attribution_eligible": {"const": false},
+    "inputs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bundle_id", "bundle_sha256", "reconciliation", "sources", "committee_master", "linkages"],
+      "properties": {
+        "bundle_id": {"$ref": "#/$defs/digest"},
+        "bundle_sha256": {"$ref": "#/$defs/digest"},
+        "reconciliation": {"$ref": "https://legal-tender.local/contracts/bundles/fec/committee-flow-evidence/v1/manifest.schema.json#/properties/calculation"},
+        "sources": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json#/properties/input"},
+        "committee_master": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json#/$defs/input"},
+        "linkages": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json#/$defs/input"}
+      }
+    },
+    "committee_relationships": {"type": "array", "minItems": 1, "items": {"$ref": "https://legal-tender.local/contracts/calculations/fec/candidate-itemized-individual-receipts/v1/result.schema.json#/$defs/relationship"}},
+    "accounting": {
+      "type": "object", "additionalProperties": false,
+      "required": ["candidate_linked_observations", "external_to_authorized_scope", "within_authorized_scope", "unresolved_authorization_boundary", "terminal_allocated_minor_units", "unresolved_attribution"],
+      "properties": {
+        "candidate_linked_observations": {"$ref": "#/$defs/amount"},
+        "external_to_authorized_scope": {"$ref": "#/$defs/amount"},
+        "within_authorized_scope": {"$ref": "#/$defs/amount"},
+        "unresolved_authorization_boundary": {"$ref": "#/$defs/amount"},
+        "terminal_allocated_minor_units": {"const": "0"},
+        "unresolved_attribution": {"$ref": "#/$defs/amount"}
+      }
+    },
+    "candidate_observations": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["observation", "disposition"],
+      "properties": {
+        "observation": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/observation.schema.json"},
+        "disposition": {"enum": ["external_to_authorized_scope", "within_authorized_scope", "unresolved_authorization_boundary"]}
+      }
+    }},
+    "upstream_source_row_ordinals": {"type": "array", "uniqueItems": true, "items": {"type": "integer", "minimum": 1}},
+    "nodes": {"type": "array", "minItems": 1, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["committee_id", "candidate_authorized", "master_fact_id", "minimum_hops_to_authorized_scope", "witness_source_row_ordinal", "selected_incoming_observations", "cyclic_component_id", "attribution_boundary_reasons", "terminal_attribution_eligible"],
+      "properties": {
+        "committee_id": {"$ref": "#/$defs/committee"},
+        "candidate_authorized": {"type": "boolean"},
+        "master_fact_id": {"type": ["string", "null"], "minLength": 1},
+        "minimum_hops_to_authorized_scope": {"type": "integer", "minimum": 0},
+        "witness_source_row_ordinal": {"type": ["integer", "null"], "minimum": 1},
+        "selected_incoming_observations": {"type": "integer", "minimum": 0},
+        "cyclic_component_id": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+        "attribution_boundary_reasons": {"type": "array", "uniqueItems": true, "items": {"enum": ["missing_same_cycle_committee_master", "cyclic_reported_connectivity", "unresolved_candidate_authorization", "complete_funding_basis_not_established", "no_selected_incoming_committee_observations"]}},
+        "terminal_attribution_eligible": {"const": false}
+      }
+    }},
+    "cyclic_components": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["component_id", "committee_ids"],
+      "properties": {
+        "component_id": {"$ref": "#/$defs/digest"},
+        "committee_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/committee"}}
+      }
+    }},
+    "not_covered": {"const": ["individual_and_other_noncommittee_receipts", "complete_candidate_receipts", "complete_committee_funding_denominators", "opening_balances_and_cross_cycle_flows", "economic_payment_identity", "chronological_fund_availability", "terminal_donor_identity_and_classification", "independent_expenditures", "schedule_b_amount_allocation"]}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "committee": {"type": "string", "pattern": "^C[0-9]{8}$"},
+    "money": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "amount": {
+      "type": "object", "additionalProperties": false,
+      "required": ["records", "positive_records", "negative_records", "zero_records", "signed_minor_units", "positive_minor_units", "negative_minor_units"],
+      "properties": {
+        "records": {"type": "integer", "minimum": 0},
+        "positive_records": {"type": "integer", "minimum": 0},
+        "negative_records": {"type": "integer", "minimum": 0},
+        "zero_records": {"type": "integer", "minimum": 0},
+        "signed_minor_units": {"$ref": "#/$defs/money"},
+        "positive_minor_units": {"type": "string", "pattern": "^(0|[1-9][0-9]*)$"},
+        "negative_minor_units": {"type": "string", "pattern": "^(0|-[1-9][0-9]*)$"}
+      }
+    }
+  }
+}

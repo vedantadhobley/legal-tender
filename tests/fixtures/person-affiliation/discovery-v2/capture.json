@@ -1,0 +1,404 @@
+{
+  "contract": "wikimedia/affiliation-discovery@1.0.0",
+  "build_sha256": "de1d0dd3e0883e8a9c9aea9e0c95d24e387ac837dcacb3cd51ca8f8141dee59e",
+  "user_agent": "LegalTender/affiliation-discovery-review (https://github.com/vedantadhobley/legal-tender)",
+  "queries_sha256": "f02ec67652315e3d70a03fdf5ca2d3041832354af7dbb8be3490c89851a0bccd",
+  "entries": [
+    {
+      "query_index": 0,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22DAVID%22+%22DUFFIELD%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:18.805367732Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1101",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:18 GMT"
+        },
+        "bytes": 1101,
+        "sha256": "a40d9b314c591b0ddf87814665aa2687a7c7ee57b342681d80133ab58fe52183",
+        "body": "a40d9b314c591b0ddf87814665aa2687a7c7ee57b342681d80133ab58fe52183.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q107863870%7CQ25935968%7CQ5171564%7CQ5233095%7CQ5287721\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:21.39484685Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:21 GMT"
+        },
+        "bytes": 63584,
+        "sha256": "23c2de7fbc79c259cb9327b6921625393d8c85af1543f32beb088590ccf126cf",
+        "body": "23c2de7fbc79c259cb9327b6921625393d8c85af1543f32beb088590ccf126cf.body"
+      }
+    },
+    {
+      "query_index": 1,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22JOHN%22+%22CHAMBERS%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:22.564291645Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1099",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:22 GMT"
+        },
+        "bytes": 1099,
+        "sha256": "0f307393fb777d6fa54874f8e6c25e74e534e84fbdfb2351d06521d1b6c0d30e",
+        "body": "0f307393fb777d6fa54874f8e6c25e74e534e84fbdfb2351d06521d1b6c0d30e.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q1060700%7CQ1204764%7CQ1393271%7CQ3283501%7CQ93784\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:23.72427108Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:23 GMT"
+        },
+        "bytes": 150079,
+        "sha256": "6ab52bed62f76ebd2511d67b80f4c1eec64ee37d95d7f67cbe0bcb13b09c7dc4",
+        "body": "6ab52bed62f76ebd2511d67b80f4c1eec64ee37d95d7f67cbe0bcb13b09c7dc4.body"
+      }
+    },
+    {
+      "query_index": 2,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22MICHAEL%22+%22O%22+%22BRIEN%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:24.875125473Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1091",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:24 GMT"
+        },
+        "bytes": 1091,
+        "sha256": "067ac4cb1241bf4ec9f05d0041fb8d36c4b1792af7beb6295b091bcf9875856d",
+        "body": "067ac4cb1241bf4ec9f05d0041fb8d36c4b1792af7beb6295b091bcf9875856d.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q1009495%7CQ1166562%7CQ3017220%7CQ53231596%7CQ6778901\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:26.057022828Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:26 GMT"
+        },
+        "bytes": 141901,
+        "sha256": "9702286029ba2353135329fdd6d04efc0309dda1d6922de9d90c38d61d0ec0d4",
+        "body": "9702286029ba2353135329fdd6d04efc0309dda1d6922de9d90c38d61d0ec0d4.body"
+      }
+    },
+    {
+      "query_index": 3,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22DAVID%22+%22DUFFIELD%22+%22RIDGELINE%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:27.230082645Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "236",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:27 GMT"
+        },
+        "bytes": 236,
+        "sha256": "d4089d8c50655d036a0b010d04379900b43679972e05707eee3fc3f73dec9b27",
+        "body": "d4089d8c50655d036a0b010d04379900b43679972e05707eee3fc3f73dec9b27.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q5233095\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:28.33665923Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:28 GMT"
+        },
+        "bytes": 9028,
+        "sha256": "ea947abfb39019c93d4295e4385d99dd18fdd2e38aaa108f6158818ef9aee42f",
+        "body": "ea947abfb39019c93d4295e4385d99dd18fdd2e38aaa108f6158818ef9aee42f.body"
+      }
+    },
+    {
+      "query_index": 4,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22DAVID%22+%22DUFFIELD%22+%22RIDGELINE%22+%22INC%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:29.40702351Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "236",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:29 GMT"
+        },
+        "bytes": 236,
+        "sha256": "d4089d8c50655d036a0b010d04379900b43679972e05707eee3fc3f73dec9b27",
+        "body": "d4089d8c50655d036a0b010d04379900b43679972e05707eee3fc3f73dec9b27.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q5233095\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:30.593727522Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:30 GMT"
+        },
+        "bytes": 9028,
+        "sha256": "ea947abfb39019c93d4295e4385d99dd18fdd2e38aaa108f6158818ef9aee42f",
+        "body": "ea947abfb39019c93d4295e4385d99dd18fdd2e38aaa108f6158818ef9aee42f.body"
+      }
+    },
+    {
+      "query_index": 5,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22JOHN%22+%22CHAMBERS%22+%22JC%22+%222%22+%22VENTURES%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:31.691697563Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1061",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:31 GMT"
+        },
+        "bytes": 1061,
+        "sha256": "e0663e560e91d4e633c08714790321b040b1083bde2cc8b74fe79f48bc289f87",
+        "body": "e0663e560e91d4e633c08714790321b040b1083bde2cc8b74fe79f48bc289f87.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q1055882%7CQ24896516%7CQ279446%7CQ3381897%7CQ370233\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:32.893317679Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:32 GMT"
+        },
+        "bytes": 311308,
+        "sha256": "a9f1800630560c2ee2c7d2d59cdc00c2d8396bc0faff6486ea486be85a90105c",
+        "body": "a9f1800630560c2ee2c7d2d59cdc00c2d8396bc0faff6486ea486be85a90105c.body"
+      }
+    },
+    {
+      "query_index": 6,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22JOHN%22+%22CHAMBERS%22+%22JC2VENTURES%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:34.122572872Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "22",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:34 GMT"
+        },
+        "bytes": 22,
+        "sha256": "4a165b1e1a667cd2588c1dd91ac1fcbad9590ae7c62e028d1372e7d72f012340",
+        "body": "4a165b1e1a667cd2588c1dd91ac1fcbad9590ae7c62e028d1372e7d72f012340.body"
+      }
+    },
+    {
+      "query_index": 7,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22MICHAEL%22+%22O%22+%22BRIEN%22+%22VALLEY%22+%22TECH%22+%22SERVICES%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:35.315687314Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "497",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:35 GMT"
+        },
+        "bytes": 497,
+        "sha256": "8c16cd59a08f4c31ca060c24119642bc504c5d0eb0e599876558ecfd8aac1a74",
+        "body": "8c16cd59a08f4c31ca060c24119642bc504c5d0eb0e599876558ecfd8aac1a74.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q31346863%7CQ7890307\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:36.468539879Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:36 GMT"
+        },
+        "bytes": 8332,
+        "sha256": "501bdd5da4b2b328de62a0f2a1a56766a4fec472e4a3d433a40558a340d41e6b",
+        "body": "501bdd5da4b2b328de62a0f2a1a56766a4fec472e4a3d433a40558a340d41e6b.body"
+      }
+    },
+    {
+      "query_index": 8,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22MICHAEL%22+%22O%22+%22BRIEN%22+%22VALLEY%22+%22TECH%22+%22SERVICES%22+%22INC%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:37.529021277Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "249",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:37 GMT"
+        },
+        "bytes": 249,
+        "sha256": "baf2fc9b6b88cee2ac183d5fa1f615beabed04c6ebaa2e17a5da1f41b4cf7500",
+        "body": "baf2fc9b6b88cee2ac183d5fa1f615beabed04c6ebaa2e17a5da1f41b4cf7500.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q31346863\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:38.633890428Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:38 GMT"
+        },
+        "bytes": 3672,
+        "sha256": "735c9007c0189b90057b885b15cb861ae9cefa63e42361c9f186aec518fce960",
+        "body": "735c9007c0189b90057b885b15cb861ae9cefa63e42361c9f186aec518fce960.body"
+      }
+    },
+    {
+      "query_index": 9,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22JC%22+%222%22+%22VENTURES%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:39.73820284Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1077",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:39 GMT"
+        },
+        "bytes": 1077,
+        "sha256": "0fcec6fa8d8c858dfe88085f9d4fe0e06643cecb2fd6111d6beb26be3ef6ab88",
+        "body": "0fcec6fa8d8c858dfe88085f9d4fe0e06643cecb2fd6111d6beb26be3ef6ab88.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q1479817%7CQ1680143%7CQ2123099%7CQ391143%7CQ7790296\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:40.914108484Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:40 GMT"
+        },
+        "bytes": 164114,
+        "sha256": "8f4ac2fe6b1d599afb68f869c52372a5f6f05c4345f7723c813298b74a095ca3",
+        "body": "8f4ac2fe6b1d599afb68f869c52372a5f6f05c4345f7723c813298b74a095ca3.body"
+      }
+    },
+    {
+      "query_index": 10,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22JC2VENTURES%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:42.035899399Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "22",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:42 GMT"
+        },
+        "bytes": 22,
+        "sha256": "4a165b1e1a667cd2588c1dd91ac1fcbad9590ae7c62e028d1372e7d72f012340",
+        "body": "4a165b1e1a667cd2588c1dd91ac1fcbad9590ae7c62e028d1372e7d72f012340.body"
+      }
+    },
+    {
+      "query_index": 11,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22RIDGELINE%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:43.125076972Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1105",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:43 GMT"
+        },
+        "bytes": 1105,
+        "sha256": "8d247c1005a7dad09441155e7d081baea3632cccc128bb89741e88c50f7146a2",
+        "body": "8d247c1005a7dad09441155e7d081baea3632cccc128bb89741e88c50f7146a2.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q113244958%7CQ1626665%7CQ16920955%7CQ3480795%7CQ740445\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:44.281922859Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:44 GMT"
+        },
+        "bytes": 48122,
+        "sha256": "f2005bcb7575555dab538c4e90605d4ca901e43e879911b5138e530656ee62e6",
+        "body": "f2005bcb7575555dab538c4e90605d4ca901e43e879911b5138e530656ee62e6.body"
+      }
+    },
+    {
+      "query_index": 12,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22RIDGELINE%22+%22INC%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:45.525756174Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1095",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:45 GMT"
+        },
+        "bytes": 1095,
+        "sha256": "4c3c67b82fa6061ac871af38c2fb3162ca442ec5c2e1341611b7924194b63b98",
+        "body": "4c3c67b82fa6061ac871af38c2fb3162ca442ec5c2e1341611b7924194b63b98.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q1626564%7CQ4744011%7CQ5233095%7CQ5892830%7CQ7855864\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:46.718884407Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:46 GMT"
+        },
+        "bytes": 44086,
+        "sha256": "70550b265085b63444770915cf00c183292bc32856da77e411186b1f3b6a4f3f",
+        "body": "70550b265085b63444770915cf00c183292bc32856da77e411186b1f3b6a4f3f.body"
+      }
+    },
+    {
+      "query_index": 13,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22VALLEY%22+%22TECH%22+%22SERVICES%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:47.853024746Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1125",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:47 GMT"
+        },
+        "bytes": 1125,
+        "sha256": "ba3a31b8c6db6bfc5098df7c8bd38a683cbfa573367425c007302ee352cad584",
+        "body": "ba3a31b8c6db6bfc5098df7c8bd38a683cbfa573367425c007302ee352cad584.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q1132207%7CQ14715746%7CQ16927657%7CQ18388277%7CQ5328863\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:49.032546721Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:49 GMT"
+        },
+        "bytes": 38656,
+        "sha256": "08db8b4e1313bcca30e3d8a9e413f68ce88f62c5768be5adcad0c382ab74c437",
+        "body": "08db8b4e1313bcca30e3d8a9e413f68ce88f62c5768be5adcad0c382ab74c437.body"
+      }
+    },
+    {
+      "query_index": 14,
+      "search": {
+        "url": "https://en.wikipedia.org/w/api.php?action=query\u0026format=json\u0026formatversion=2\u0026generator=search\u0026gsrlimit=5\u0026gsrnamespace=0\u0026gsrsearch=%22VALLEY%22+%22TECH%22+%22SERVICES%22+%22INC%22\u0026maxlag=5\u0026ppprop=wikibase_item%7Cdisambiguation\u0026prop=pageprops%7Crevisions\u0026rvprop=ids%7Ctimestamp",
+        "observed_at": "2026-09-15T22:52:50.169115847Z",
+        "status": 200,
+        "headers": {
+          "Content-Length": "1078",
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:50 GMT"
+        },
+        "bytes": 1078,
+        "sha256": "eae59648e07df2fe69e95f9d4d6a0390b7a01c666f0caea6b6a150989eabf7ad",
+        "body": "eae59648e07df2fe69e95f9d4d6a0390b7a01c666f0caea6b6a150989eabf7ad.body"
+      },
+      "entities": {
+        "url": "https://www.wikidata.org/w/api.php?action=wbgetentities\u0026format=json\u0026formatversion=2\u0026ids=Q18388277%7CQ5221533%7CQ683771%7CQ7433040%7CQ7907618\u0026languages=en\u0026maxlag=5\u0026props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks\u0026sitefilter=enwiki",
+        "observed_at": "2026-09-15T22:52:51.339873161Z",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Date": "Tue, 15 Sep 2026 22:52:51 GMT"
+        },
+        "bytes": 64696,
+        "sha256": "bddceccb4000e7f162b2e0173aaeee4f01dabcb306366c3de09d31d2aaf6afc7",
+        "body": "bddceccb4000e7f162b2e0173aaeee4f01dabcb306366c3de09d31d2aaf6afc7.body"
+      }
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/effective-schedule-a",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "question": "Which Schedule A assertions are present in the selected complete electronic filing, and which stable report-life transaction IDs were added, modified, removed, or carried forward from its predecessor?",
+  "inputs": [
+    {
+      "contract": "fec/efile-report-family@1.0.0",
+      "role": "A selected effective document, its immediate predecessor when present, family identity, and immutable selection lineage.",
+      "required": true,
+      "version_policy": "Pin the exact report-family result digest. Any new family observation creates a new projection result."
+    },
+    {
+      "contract": "fec/efile-schedule-a@1.0.0",
+      "role": "Every losslessly parsed Schedule A occurrence in the selected document and its predecessor.",
+      "required": true,
+      "version_policy": "Pin document, layout, parser, and occurrence versions. Replay under a new input manifest if any changes."
+    },
+    {
+      "contract": "fec/efile-format@1.0.0",
+      "role": "The ordered 45-field logical Schedule A layout used for semantic row comparison.",
+      "required": true,
+      "version_policy": "Pin the exact layout contract. A field-order or canonical-presence change requires a new digest method and contract version."
+    }
+  ],
+  "identity": {
+    "result_key": "report-family result digest + record family SA + calculation version",
+    "input_manifest": "Report-family result digest, effective and prior document digests, complete selected Schedule A occurrence manifests, and parser/layout versions.",
+    "method_version": "contract_version plus the named logical-row and row-set digest methods.",
+    "result_digest": "SHA-256 of deterministic UTF-8 JSON result bytes. Logical-row and row-set digests are separate content identities defined by this contract."
+  },
+  "method": {
+    "ordered_steps": [
+      "Require a publishable selected report-family result. If family selection is blocked, emit blocked_family and no effective row set.",
+      "Read every Schedule A occurrence from the selected document as one complete row set. Never overlay the selected amendment onto rows from its predecessor.",
+      "Validate every selected Schedule A row and require one non-empty transaction_id that is unique within the complete selected document. Preserve failures as unresolved source evidence but block the effective projection; never construct a fallback key from contributor, date, amount, ordinal, or row bytes.",
+      "Construct row_key as report_family_id + ':SA:' + the exact transaction_id. The row form type is content and may change without changing row identity.",
+      "Calculate logical-row SHA-256 over exactly 45 ordered source fields. Start with UTF-8 bytes fec.schedule_a.logical_row.v1 followed by one zero byte. For each field append one zero byte when the logical field is omitted/null; otherwise append one byte, a four-byte unsigned big-endian byte length, and the exact accepted decoded field text encoded as UTF-8. Empty text is present with length zero. Exclude framing, terminators, ordinals, parent identity, and extra fields.",
+      "Match current and predecessor rows only by row_key. Emit added for current-only, removed for predecessor-only, modified when both logical digests differ, representation_changed when logical digests agree but physical-row digests differ, and carried_forward_identical when both logical and physical row digests agree.",
+      "Calculate the semantic row-set digest by starting with UTF-8 bytes fec.schedule_a.logical_row_set.v1 followed by one zero byte, then for each row sorted bytewise by UTF-8 row_key append its four-byte unsigned big-endian key length, key bytes, and raw 32-byte logical digest.",
+      "Emit lineage_changed when the selected source occurrence set or document changes. Emit semantic_changed only when the semantic row-set digest changes. Derive downstream keys solely from added, modified, and removed logical rows."
+    ],
+    "decision_states": [
+      {"id": "projected", "publishable": true, "meaning": "The selected document defines one complete effective Schedule A row set with stable unique transaction IDs."},
+      {"id": "blocked_family", "publishable": false, "meaning": "No effective filing was selected for the report family."},
+      {"id": "blocked_duplicate_transaction_id", "publishable": false, "meaning": "More than one selected occurrence claims the same report-life Schedule A transaction ID."},
+      {"id": "blocked_missing_transaction_id", "publishable": false, "meaning": "At least one selected Schedule A occurrence has no usable report-life transaction ID."},
+      {"id": "blocked_invalid_row", "publishable": false, "meaning": "At least one selected Schedule A occurrence failed a blocking byte, layout, or record-type check."}
+    ],
+    "invariants": [
+      "An electronic amendment is a complete report replacement, not a patch. Absence from the selected document means removed from this effective as-filed view.",
+      "Original, amendment, and repeated row occurrences remain immutable evidence even when a logical row version is reused.",
+      "A carried-forward row belongs to the current filing occurrence. Equal content permits logical-fact reuse but never reassigns source lineage to the predecessor.",
+      "Physical framing and semantic content have separate digests so harmless representation changes do not trigger monetary or graph recomputation.",
+      "Changed contribution_aggregate, memo, occupation, form type, or any other one of the 45 fields is a semantic modification even when contribution_amount is unchanged.",
+      "This calculation selects row presence and versions only. It does not decide memo counting, conduit attribution, entity identity, terminal source, or graph edge meaning."
+    ]
+  },
+  "output": {
+    "result_schema": "result.schema.json",
+    "grain": "One immutable complete Schedule A projection per selected report-family result and calculation version, with one state per current or removed report-life transaction ID.",
+    "fact_types": ["effective_as_filed_schedule_a_row", "schedule_a_row_change", "schedule_a_projection_change_set"],
+    "publication_states": [
+      {"id": "projected", "publishable": true, "meaning": "The row set can feed separately versioned counting, reconciliation, and graph calculations."},
+      {"id": "blocked_family", "publishable": false, "meaning": "Preserve family evidence but expose no current raw Schedule A view."},
+      {"id": "blocked_duplicate_transaction_id", "publishable": false, "meaning": "Expose duplicate evidence and require resolution; never pick an occurrence."},
+      {"id": "blocked_missing_transaction_id", "publishable": false, "meaning": "Expose missing-key evidence and require resolution; never invent identity."},
+      {"id": "blocked_invalid_row", "publishable": false, "meaning": "Expose exact invalid rows and issues; publish no complete projection."}
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "A changed family result, document, parser, layout, or occurrence manifest creates a new immutable projection. The prior result remains replayable.",
+    "method_change_policy": "Any change to row identity, digest framing, comparison states, or blocking behavior requires a new contract and digest-method version.",
+    "history_policy": "Retain every physical occurrence, logical digest, effective row set, change state, and result input manifest indefinitely. Removal changes only effective presence."
+  },
+  "quality": {
+    "checks": [
+      {"id": "selected_family", "severity": "block", "rule": "The input family result is publishable and names exactly one accepted effective document."},
+      {"id": "complete_replacement", "severity": "block", "rule": "Every Schedule A occurrence in the selected document is accounted for exactly once; no predecessor row is copied into the current set."},
+      {"id": "transaction_id_present", "severity": "block", "rule": "Every selected Schedule A occurrence has a non-empty transaction ID accepted by the source contract."},
+      {"id": "transaction_id_unique", "severity": "block", "rule": "No transaction ID occurs more than once within the selected document's Schedule A row set."},
+      {"id": "row_conservation", "severity": "block", "rule": "current count equals added plus modified plus representation_changed plus carried_forward_identical; prior count equals removed plus modified plus representation_changed plus carried_forward_identical."},
+      {"id": "digest_replay", "severity": "block", "rule": "Every logical digest and both row-set digests reproduce from pinned source occurrences and the named digest method."},
+      {"id": "change_fields", "severity": "block", "rule": "Each modified row lists exactly the differing logical fields in 45-field layout order; carried and representation-only rows list none."},
+      {"id": "source_occurrence", "severity": "block", "rule": "Every current row points to the selected document and every prior or removed row points to its predecessor; source occurrence digests and ordinals resolve."},
+      {"id": "extra_empty_fields", "severity": "observe", "rule": "Preserved extra empty fields may produce a source issue but do not enter the logical digest; any extra non-empty field remains blocked by the source contract."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/first-amendment-change-set.json",
+      "representation": "canonical_json",
+      "sha256": "ac9a4d0e97ed3a4498ccb0fad45cd31e628283f4ae5120dffb5c61ff12c97df2",
+      "input_paths": [
+        "../../efile-report-family/v1/fixtures/selected-first-amendment.json",
+        "../../../../sources/fec/efile-documents/v1/fixtures/1997074.fec",
+        "../../../../sources/fec/efile-documents/v1/fixtures/2009982.fec",
+        "../../../../sources/fec/efile-format/v1/schedule-a-fields.json"
+      ],
+      "scenarios": [
+        "complete amendment replaces original",
+        "23 prior and 25 current Schedule A rows",
+        "2 added, 5 modified, 0 removed, and 18 carried-forward rows",
+        "identical memo row keeps distinct source occurrences",
+        "changed accumulator, occupation capitalization, and source-empty district fields",
+        "semantic change set targets one committee and 2026 period"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": ["report_family_result", "effective_file_number", "document_version", "physical_record_version", "layout_version"],
+    "semantic_change_dimensions": ["row_presence", "logical_row_digest", "semantic_row_set_digest"],
+    "downstream_keys": ["report_family_id", "committee_id", "transaction_id", "contribution_date", "target_two_year_period"],
+    "no_change_policy": "Always retain the new family and occurrence lineage. If the semantic row-set digest is unchanged, publish the lineage-only result and skip monetary, reconciliation-content, entity, and graph recomputation. If it changed, recompute only keys derived from added, modified, and removed rows; carried-forward identical and representation-only rows update provenance without expensive domain recomputation."
+  },
+  "use": {
+    "retention": "Retain complete current and removed row states, content digests, source occurrence locators, and input manifests for every observation-boundary result.",
+    "disclaimer": "This is a provisional as-filed electronic Schedule A view. It excludes paper filings and later FEC processing and does not itself state which rows count toward a total or represent terminal economic sources."
+  }
+}

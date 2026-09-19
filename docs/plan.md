@@ -1,5 +1,10 @@
 # Plan: Professionalize legal-tender for production + agent-first operation
 
+> **Status:** Historical Python-system plan. It is no longer the active rebuild
+> plan. The Go redesign starts at the [design routing index](./design/README.md)
+> and [product contract](./design/product-contract.md). Preserve this document
+> as evidence for the legacy functional specification and disposition pass.
+
 This is the master plan for transforming legal-tender from "personal project iteratively built with various AI models" into a production-ready codebase where Claude (or any agent) can operate confidently with the right context every session.
 
 The Karpathy framing is the philosophical north star: **the docs in the repo are the LLM's working memory**, and the discipline is keeping them current alongside the code. Obsidian, Khoj, basic-memory MCP, etc. are tools that serve this — not the goal itself.

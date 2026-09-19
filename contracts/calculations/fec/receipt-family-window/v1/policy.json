@@ -1,0 +1,22 @@
+{
+  "version": "legal-tender.fec.receipt-family-window.v1",
+  "upstream_version": "legal-tender.fec.receipt-family-absence.v1",
+  "map_version": "legal-tender.fec.receipt-family-map.v1",
+  "scope": "single_committee_exact_requested_window_reported_occurrence_comparison_not_financial_total",
+  "families": {
+    "F3": ["party_contributions", "other_committee_contributions", "authorized_transfers", "candidate_made_or_guaranteed_loans", "other_loans"],
+    "F3X": ["party_contributions", "other_committee_contributions", "affiliated_or_party_transfers", "loans_received"]
+  },
+  "verification": "reverify_original_metadata_summary_and_pinned_complete_profile_through_absence_boundary; no_saved_decisions_or_caller_membership",
+  "membership": "every_intersecting_observed_chain_candidate_per_exact_endpoint_form_family; include_missing_document_references; retain_superseded_and_unresolved_evidence_in_reviewed",
+  "reported_operand": "whole_inside_period_with_scope_and_exact_family_cover_metadata_binding",
+  "comparison_operand": ["qualified_nonempty_nonmemo_occurrence_subtotal_equal_or_different", "qualified_reported_zero_without_occurrences_from_absence_v1"],
+  "time": "inclusive_requested_calendar_dates_not_receipt_dates; no_fixed_cycle_dates; no_clipping_or_prorating_report_amounts",
+  "coverage": "independent_reported_and_comparison_memberships; complete_window_requires_qualified_partition_every_candidate_and_each_requested_day_exactly_once",
+  "partial_sums": "exact_signed_observations_over_their_own_explicit_members; null_if_no_operands; not_full_window_totals_not_lower_bounds_and_not_subtracted_across_unequal_scopes",
+  "difference": "reported_window_minus_comparison_window_only_when_both_qualify; preserve_report_differences_even_if_they_cancel_at_window_level",
+  "numeric": "arbitrary_precision_integer_minor_units; no_float_no_fanout_or_nested_total_addition",
+  "preservation": "embed_absence_output_unchanged; never_fill_old_null_detail_or_synthesize_receipts",
+  "limits": ["no_family_summary_comparisons", "no_cross_form_or_family_combined_total", "no_thresholded_cover_only_or_other_schedule_expansion", "no_financial_membership_or_cash_role_acceptance"],
+  "guards": {"financial_use_eligible": false, "terminal_attribution_eligible": false}
+}

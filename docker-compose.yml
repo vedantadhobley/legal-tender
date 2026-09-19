@@ -37,6 +37,7 @@ services:
     environment:
       DAGSTER_HOME: /app
       PYTHONPATH: /app
+      GOMEMLIMIT: "12GiB"
       # Storage paths
       LEGAL_TENDER_STORAGE: /storage
       LEGAL_TENDER_RAW_DIR: /storage/raw
@@ -61,6 +62,7 @@ services:
         condition: service_healthy
       arangodb:
         condition: service_healthy
+    mem_limit: 16g
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/server_info"]
@@ -83,6 +85,7 @@ services:
     environment:
       DAGSTER_HOME: /app
       PYTHONPATH: /app
+      GOMEMLIMIT: "12GiB"
       # Storage paths
       LEGAL_TENDER_STORAGE: /storage
       LEGAL_TENDER_RAW_DIR: /storage/raw
@@ -107,6 +110,7 @@ services:
         condition: service_healthy
       dagster-webserver:
         condition: service_healthy
+    mem_limit: 16g
     restart: unless-stopped
     networks:
       - legal-tender-prod

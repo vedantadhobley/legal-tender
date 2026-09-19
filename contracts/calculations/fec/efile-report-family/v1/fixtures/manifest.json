@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../../../calculation-fixture-manifest.schema.json",
+  "calculation_contract": "../contract.json",
+  "transformation": "Assemble only explicit listing and HDR amendment assertions, validate one closed linear family, and select its unique leaf without mutating source evidence.",
+  "fixtures": [
+    {
+      "path": "selected-first-amendment.json",
+      "sha256": "52eae400d6f9592820c8773fdc5f9ec6febc5e23a1c2396e9be0b2932d73d99f",
+      "input_paths": [
+        "../../../../../sources/fec/efile-listings/v1/fixtures/original.json",
+        "../../../../../sources/fec/efile-listings/v1/fixtures/amendment.json",
+        "../../../../../sources/fec/efile-documents/v1/fixtures/1997074.fec",
+        "../../../../../sources/fec/efile-documents/v1/fixtures/2009982.fec"
+      ],
+      "scenarios": [
+        "one original and one amendment",
+        "HDR root assertion plus immediate listing predecessor",
+        "asymmetric amendment_chain projection",
+        "complete family selects amendment 2009982"
+      ]
+    }
+  ]
+}

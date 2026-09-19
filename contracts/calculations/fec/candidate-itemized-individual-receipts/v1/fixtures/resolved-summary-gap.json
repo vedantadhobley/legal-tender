@@ -1,0 +1,103 @@
+{
+  "schema_version": "legal-tender.fec.candidate-itemized-individual-receipts.v1",
+  "calculation_contract": "fec/candidate-itemized-individual-receipts",
+  "calculation_version": "1.0.0",
+  "candidate_id": "H0AA00005",
+  "cycle": "2024",
+  "state": "complete",
+  "component": "fec_itemized_individual_receipts",
+  "money_measure": {
+    "$schema": "../../../../common/money-measure/v1/schema.json",
+    "schema_version": "1.0.0",
+    "semantic_role": "itemized_individual_receipts",
+    "currency": "USD",
+    "amount": {
+      "state": "point",
+      "lower_minor_units": "100",
+      "upper_minor_units": "100",
+      "lower_inclusive": true,
+      "upper_inclusive": true
+    },
+    "measurement": {
+      "basis": "calculated",
+      "kind": "calculated_sum",
+      "observation_state": null,
+      "reported_minor_units": null,
+      "precision_increment_minor_units": null,
+      "accounting_method": "fec/candidate-itemized-individual-receipts@1.0.0",
+      "source_rule_version": "1.0.0"
+    },
+    "uncertainty": {
+      "coverage": "complete",
+      "attribution": "direct",
+      "revision": "publisher_processed_snapshot",
+      "identity": "resolved",
+      "evidence": "calculated"
+    },
+    "issues": []
+  },
+  "included_records": {
+    "records": 1,
+    "positive": 1,
+    "negative": 0,
+    "zero": 0
+  },
+  "excluded_records": {},
+  "unresolved_records": {},
+  "committee_relationships": [
+    {
+      "committee_id": "C00000005",
+      "state": "authorized",
+      "designation_codes": ["A"],
+      "supporting_fact_ids": ["link-1"]
+    }
+  ],
+  "committee_subtotals": [
+    {
+      "committee_id": "C00000005",
+      "amount_minor_units": "100",
+      "included_records": {
+        "records": 1,
+        "positive": 1,
+        "negative": 0,
+        "zero": 0
+      }
+    }
+  ],
+  "source_summaries": [
+    {
+      "fact_id": "summary-1",
+      "fact_type": "fec.candidate_summary_all.v1",
+      "dataset": "all-candidates-summary",
+      "coverage_through": "2024-12-31",
+      "total_individual_contributions": {
+        "raw_value": "2.50",
+        "reported_minor_units": "250",
+        "observation_state": "reported_value"
+      },
+      "total_receipts": {
+        "raw_value": "10.00",
+        "reported_minor_units": "1000",
+        "observation_state": "reported_value"
+      }
+    }
+  ],
+  "reconciliations": [
+    {
+      "summary_fact_id": "summary-1",
+      "summary_fact_type": "fec.candidate_summary_all.v1",
+      "comparison_field": "TTL_INDIV_CONTRIB",
+      "comparison_class": "individual_detail_gap",
+      "coverage_state": "date_bounded",
+      "coverage_through": "2024-12-31",
+      "summary_minor_units": "250",
+      "resolved_detail_minor_units": "100",
+      "difference_minor_units": "150",
+      "included_detail_records": 1,
+      "unresolved_detail_records": 0,
+      "excluded_outside_coverage_records": 0,
+      "issues": []
+    }
+  ],
+  "issues": []
+}

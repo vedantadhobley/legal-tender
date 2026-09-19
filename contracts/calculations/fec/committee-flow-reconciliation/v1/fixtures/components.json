@@ -1,0 +1,141 @@
+[
+  {
+    "name": "unique exact",
+    "a": [
+      {
+        "source_row_ordinal": 1,
+        "sub_id": "reported-1",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "contribution",
+        "transaction_type": "18K",
+        "reporting_role": "fixture",
+        "date_days": 20000,
+        "signed_amount_minor_units": "100"
+      }
+    ],
+    "b": [
+      {
+        "source_row_ordinal": 1,
+        "sub_id": "reported-1",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "contribution",
+        "transaction_type": "18K",
+        "reporting_role": "fixture",
+        "date_days": 20000,
+        "signed_amount_minor_units": "100"
+      }
+    ],
+    "states": [
+      "corroborated_exact_signature"
+    ]
+  },
+  {
+    "name": "no greedy pairing",
+    "a": [
+      {
+        "source_row_ordinal": 1,
+        "sub_id": "reported-1",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "contribution",
+        "transaction_type": "18K",
+        "reporting_role": "fixture",
+        "date_days": 20000,
+        "signed_amount_minor_units": "100"
+      },
+      {
+        "source_row_ordinal": 2,
+        "sub_id": "reported-2",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "contribution",
+        "transaction_type": "18K",
+        "reporting_role": "fixture",
+        "date_days": 20001,
+        "signed_amount_minor_units": "100"
+      }
+    ],
+    "b": [
+      {
+        "source_row_ordinal": 1,
+        "sub_id": "reported-1",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "contribution",
+        "transaction_type": "18K",
+        "reporting_role": "fixture",
+        "date_days": 20000,
+        "signed_amount_minor_units": "100"
+      }
+    ],
+    "states": [
+      "ambiguous_candidates"
+    ]
+  },
+  {
+    "name": "in kind is not cash",
+    "a": [
+      {
+        "source_row_ordinal": 1,
+        "sub_id": "reported-1",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "contribution",
+        "transaction_type": "18K",
+        "reporting_role": "fixture",
+        "date_days": 20000,
+        "signed_amount_minor_units": "100"
+      }
+    ],
+    "b": [
+      {
+        "source_row_ordinal": 1,
+        "sub_id": "reported-1",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "in_kind",
+        "transaction_type": "18K",
+        "reporting_role": "fixture",
+        "date_days": 20000,
+        "signed_amount_minor_units": "100"
+      }
+    ],
+    "states": [
+      "conflicting_role"
+    ]
+  },
+  {
+    "name": "signed disagreement",
+    "a": [
+      {
+        "source_row_ordinal": 1,
+        "sub_id": "reported-1",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "contribution",
+        "transaction_type": "18K",
+        "reporting_role": "fixture",
+        "date_days": 20000,
+        "signed_amount_minor_units": "100"
+      }
+    ],
+    "b": [
+      {
+        "source_row_ordinal": 1,
+        "sub_id": "reported-1",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "contribution",
+        "transaction_type": "18K",
+        "reporting_role": "fixture",
+        "date_days": 20000,
+        "signed_amount_minor_units": "-100"
+      }
+    ],
+    "states": [
+      "conflicting_amount"
+    ]
+  }
+]

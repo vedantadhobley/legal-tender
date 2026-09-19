@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/schedule-a/v1/archive-observation.schema.json",
+  "title": "FEC processed Schedule A dump archive observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "observation_id", "observed_at", "source", "range_probe",
+    "archive", "toolchain", "catalog", "parent_relation",
+    "selected_partition", "evidence_state", "limitations"
+  ],
+  "properties": {
+    "$schema": {"const": "../../archive-observation.schema.json"},
+    "observation_id": {"type": "string", "minLength": 1},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request_url", "final_url", "http_status", "last_modified", "etag",
+        "version_id", "accept_ranges", "content_type", "content_length",
+        "server_side_encryption"
+      ],
+      "properties": {
+        "request_url": {"type": "string", "format": "uri"},
+        "final_url": {"type": "string", "format": "uri"},
+        "http_status": {"const": 200},
+        "last_modified": {"type": "string", "format": "date-time"},
+        "etag": {"type": "string", "minLength": 1},
+        "version_id": {"type": "string", "minLength": 1},
+        "accept_ranges": {"const": "bytes"},
+        "content_type": {"type": "string", "minLength": 1},
+        "content_length": {"type": "integer", "minimum": 1},
+        "server_side_encryption": {"type": "string", "minLength": 1}
+      }
+    },
+    "range_probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["first_byte", "last_byte", "byte_count", "sha256", "contains_complete_catalog", "contains_pre_data_ddl"],
+      "properties": {
+        "first_byte": {"const": 0},
+        "last_byte": {"type": "integer", "minimum": 0},
+        "byte_count": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "contains_complete_catalog": {"type": "boolean"},
+        "contains_pre_data_ddl": {"type": "boolean"}
+      }
+    },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "magic", "format", "dump_version", "compression", "integer_bytes",
+        "offset_bytes", "database_name", "created_at", "database_version",
+        "pg_dump_version", "toc_entry_count", "listed_entry_count"
+      ],
+      "properties": {
+        "magic": {"const": "PGDMP"},
+        "format": {"const": "CUSTOM"},
+        "dump_version": {"type": "string", "minLength": 1},
+        "compression": {"type": "integer", "minimum": 0},
+        "integer_bytes": {"type": "integer", "minimum": 1},
+        "offset_bytes": {"type": "integer", "minimum": 1},
+        "database_name": {"type": "string", "minLength": 1},
+        "created_at": {"type": "string", "format": "date-time"},
+        "database_version": {"type": "string", "minLength": 1},
+        "pg_dump_version": {"type": "string", "minLength": 1},
+        "toc_entry_count": {"type": "integer", "minimum": 1},
+        "listed_entry_count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["container_image", "image_digest", "platform", "pg_restore_version", "memory_limit_bytes", "cpu_limit", "network"],
+      "properties": {
+        "container_image": {"type": "string", "minLength": 1},
+        "image_digest": {"$ref": "#/$defs/sha256WithPrefix"},
+        "platform": {"type": "string", "minLength": 1},
+        "pg_restore_version": {"type": "string", "minLength": 1},
+        "memory_limit_bytes": {"type": "integer", "minimum": 1},
+        "cpu_limit": {"type": "number", "exclusiveMinimum": 0},
+        "network": {"const": "none"}
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "entry_type_counts", "relations"],
+      "properties": {
+        "schema": {"const": "disclosure"},
+        "entry_type_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["table", "default", "table_data", "constraint", "index", "trigger"],
+          "properties": {
+            "table": {"type": "integer", "minimum": 0},
+            "default": {"type": "integer", "minimum": 0},
+            "table_data": {"type": "integer", "minimum": 0},
+            "constraint": {"type": "integer", "minimum": 0},
+            "index": {"type": "integer", "minimum": 0},
+            "trigger": {"type": "integer", "minimum": 0}
+          }
+        },
+        "relations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/relation"}
+        }
+      }
+    },
+    "parent_relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "table_toc_entry_id", "table_data_toc_entry_id", "field_count", "fields"],
+      "properties": {
+        "name": {"const": "fec_fitem_sched_a"},
+        "table_toc_entry_id": {"type": "integer", "minimum": 1},
+        "table_data_toc_entry_id": {"type": "integer", "minimum": 1},
+        "field_count": {"const": 81},
+        "fields": {
+          "type": "array",
+          "minItems": 81,
+          "maxItems": 81,
+          "items": {"$ref": "#/$defs/field"}
+        }
+      }
+    },
+    "selected_partition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "inherits", "table_toc_entry_id", "table_data_toc_entry_id", "accepted_periods", "check_constraint"],
+      "properties": {
+        "name": {"const": "fec_fitem_sched_a_2025_2026"},
+        "inherits": {"const": "fec_fitem_sched_a"},
+        "table_toc_entry_id": {"type": "integer", "minimum": 1},
+        "table_data_toc_entry_id": {"type": "integer", "minimum": 1},
+        "accepted_periods": {"const": [2025, 2026]},
+        "check_constraint": {"type": "string", "minLength": 1}
+      }
+    },
+    "complete_archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "byte_count", "sha256", "validated_at",
+        "pg_restore_inventory_succeeded"
+      ],
+      "properties": {
+        "byte_count": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "validated_at": {"type": "string", "format": "date-time"},
+        "pg_restore_inventory_succeeded": {"const": true}
+      }
+    },
+    "selected_extracts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/selectedExtract"}
+    },
+    "evidence_state": {
+      "enum": ["catalog_and_schema_only", "complete_archive", "complete_selected_partition", "complete_target_partitions"]
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "evidence_state": {"enum": ["complete_archive", "complete_selected_partition", "complete_target_partitions"]}
+        },
+        "required": ["evidence_state"]
+      },
+      "then": {"required": ["complete_archive"]}
+    },
+    {
+      "if": {
+        "properties": {
+          "evidence_state": {"enum": ["complete_selected_partition", "complete_target_partitions"]}
+        },
+        "required": ["evidence_state"]
+      },
+      "then": {"required": ["selected_extracts"]}
+    },
+    {
+      "if": {
+        "properties": {"evidence_state": {"const": "complete_target_partitions"}},
+        "required": ["evidence_state"]
+      },
+      "then": {
+        "properties": {
+          "selected_extracts": {"minItems": 4, "maxItems": 4}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "sha256WithPrefix": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "table_toc_entry_id", "table_data_toc_entry_id", "object_oid"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "table_toc_entry_id": {"type": "integer", "minimum": 1},
+        "table_data_toc_entry_id": {"type": "integer", "minimum": 1},
+        "object_oid": {"type": "integer", "minimum": 1}
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordinal", "name", "postgres_type", "nullable", "default"],
+      "properties": {
+        "ordinal": {"type": "integer", "minimum": 1, "maximum": 81},
+        "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "postgres_type": {"type": "string", "minLength": 1},
+        "nullable": {"type": "boolean"},
+        "default": {"type": ["string", "null"]}
+      }
+    },
+    "selectedExtract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relation", "accepted_periods", "representation",
+        "copy_section_count", "field_count", "row_count", "byte_count",
+        "sha256", "started_at", "finished_at", "elapsed_seconds",
+        "pg_restore_exit_code", "compressed_artifact"
+      ],
+      "properties": {
+        "relation": {
+          "type": "string",
+          "pattern": "^disclosure\\.fec_fitem_sched_a_[0-9]{4}_[0-9]{4}$"
+        },
+        "accepted_periods": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"type": "integer", "minimum": 1975, "maximum": 9999}
+        },
+        "representation": {"const": "postgresql_copy_text_data_rows"},
+        "copy_section_count": {"const": 1},
+        "field_count": {"const": 81},
+        "row_count": {"type": "integer", "minimum": 0},
+        "byte_count": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "started_at": {"type": "string", "format": "date-time"},
+        "finished_at": {"type": "string", "format": "date-time"},
+        "elapsed_seconds": {"type": "integer", "minimum": 0},
+        "pg_restore_exit_code": {"const": 0},
+        "compressed_artifact": {"$ref": "#/$defs/compressedArtifact"}
+      }
+    },
+    "compressedArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "compression", "level", "byte_count", "sha256",
+        "frame_test_succeeded", "decompressed_sha256", "validated_at",
+        "elapsed_seconds"
+      ],
+      "properties": {
+        "compression": {"const": "zstd"},
+        "level": {"const": 3},
+        "byte_count": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "frame_test_succeeded": {"const": true},
+        "decompressed_sha256": {"$ref": "#/$defs/sha256"},
+        "validated_at": {"type": "string", "format": "date-time"},
+        "elapsed_seconds": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

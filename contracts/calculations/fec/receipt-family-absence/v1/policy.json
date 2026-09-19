@@ -1,0 +1,46 @@
+{
+  "version": "legal-tender.fec.receipt-family-absence.v1",
+  "upstream_comparison_version": "legal-tender.fec.receipt-family-comparison.v1",
+  "map_version": "legal-tender.fec.receipt-family-map.v1",
+  "census_version": "legal-tender.fec.electronic-sa-line-census.v1",
+  "schema_sha256": "9d3775d73e9398144b0e0267415ba53e1b5c6a326110b327ce2cd58d233bf3d6",
+  "families": {
+    "F3": ["party_contributions", "other_committee_contributions", "authorized_transfers", "candidate_made_or_guaranteed_loans", "other_loans"],
+    "F3X": ["party_contributions", "other_committee_contributions", "affiliated_or_party_transfers", "loans_received"]
+  },
+  "scope": "additive_per_report_qualified_reported_zero_not_synthetic_receipt_detail",
+  "required": [
+    "reverified_bound_original_and_metadata_field_both_explicit_exact_zero",
+    "qualified_form_filer_report_period_and_observed_chain_candidate",
+    "sha256_pinned_complete_v2_profile_revalidated_against_exact_summary_release",
+    "complete_original_layout_census_without_scope_or_record_issues",
+    "original_and_profile_all_schedule_a_line_counts_agree_for_this_report",
+    "no_occurrences_for_exact_family_line_in_either_inventory_including_memos"
+  ],
+  "census": {
+    "scope": "record_family_and_schedule_a_line_inventory_not_non_sa_financial_validation",
+    "framing": "complete_strict_ASCII_records_LF_terminator_0x1c_separator_no_padding_or_truncation",
+    "schedule_a": {"sheet": "Sch A", "fields": 45, "tag": "SA_plus_reviewed_form_specific_leaf_line"},
+    "other_records": [
+      {"sheet": "Sch B", "fields": 44, "tag_pattern": "^SB[0-9][0-9A-Z]{0,5}$"},
+      {"sheet": "Sch C", "fields": 38, "tag_pattern": "^SC/[0-9]{1,2}$"},
+      {"sheet": "Text", "fields": 6, "tag_pattern": "^TEXT$"}
+    ],
+    "filer": "field_2_equals_exact_cover_filer_for_every_record",
+    "unknown": "any_other_tag_unknown_sa_line_wrong_width_or_unreadable_record_blocks_absence"
+  },
+  "blocked": [
+    "missing_blank_conflicting_positive_or_negative_reported_field",
+    "profile_only_or_original_only_absence",
+    "memo_only_zero_amount_or_positive_negative_cancellation_population",
+    "partial_superseded_wrong_scope_or_incomplete_original",
+    "unreviewed_profile_form_schedule_or_line",
+    "thresholded_cover_only_other_schedule_or_unsupported_form_family"
+  ],
+  "preservation": "embed_prior_comparison_unchanged; absent_detail_stays_null_in_v1; no_new_receipts_donors_or_repairs",
+  "guards": {
+    "family_window_comparison_ready": false,
+    "financial_use_eligible": false,
+    "terminal_attribution_eligible": false
+  }
+}

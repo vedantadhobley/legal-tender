@@ -1,0 +1,159 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/report-metadata",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "fec",
+    "name": "Federal Election Commission",
+    "base_url": "https://www.fec.gov/"
+  },
+  "dataset": {
+    "id": "report-metadata",
+    "name": "Processed report metadata assertions",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "Endpoint-scoped report identity, period, amendment and financial-field assertions. Separate from bulk transaction ingestion; not effective report selection."
+  },
+  "authority": [
+    {
+      "kind": "openapi",
+      "url": "https://api.open.fec.gov/swagger/",
+      "retrieved_on": "2026-09-10",
+      "sha256": "0cca7f2af73270b35d7276e53d99b56b2f8f9970b33cb5d36a85fdb8b773caed"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "api_token",
+      "environment_variable": "ELECTION_API_KEY",
+      "header": "X-Api-Key",
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "/v1/filings/",
+        "method": "GET",
+        "url": "https://api.open.fec.gov/v1/filings/",
+        "response_root": "Complete api_version, pagination and results response"
+      },
+      {
+        "name": "/v1/reports/house-senate/",
+        "method": "GET",
+        "url": "https://api.open.fec.gov/v1/reports/house-senate/",
+        "response_root": "Complete api_version, pagination and results response"
+      },
+      {
+        "name": "/v1/reports/pac-party/",
+        "method": "GET",
+        "url": "https://api.open.fec.gov/v1/reports/pac-party/",
+        "response_root": "Complete api_version, pagination and results response"
+      }
+    ],
+    "pagination": "Contiguous saved pages from page 1 under one explicit scope. Exact-count satisfaction and a final empty page are different observations; neither proves an atomic snapshot or complete amendment history. Approximate counts cannot close traversal; changing counters and repeated file IDs block review.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "endpoint_capture",
+        "source": "Credential-free capture.schema.json plus exact response/header digests and explicit observation-time basis.",
+        "purpose": "Keep each endpoint's observation ancestry independent of all bulk releases."
+      }
+    ],
+    "retry_policy": "Manual Go capture requires explicit page/request/attempt/source-byte budgets, capped at 16 pages, 48 requests, 3 attempts/page and 16 MiB; 4 MiB/body and 128 KiB/headers. Serial requests wait at least one second. Retry transport/truncation and 429/500/502/503/504 within budgets; honor Retry-After or defer above 30 seconds/unknown delay. Request timeout 30 seconds, run timeout five minutes. Retain bounded failed bodies and credential-free attempt records; suppress detected credential echoes. Old-report reconciliation and recurring acquisition remain draft."
+  },
+  "physical_schema": {
+    "media_type": "application/json",
+    "source_format": "json_api",
+    "encoding": "Strict UTF-8 JSON; reject duplicate object keys, unpaired surrogates and excessive nesting. Keep number lexemes, nulls and source string types.",
+    "record_schema": "record.schema.json",
+    "envelope_schema": "page.schema.json",
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Preserve every present null, including fields without Swagger x-nullable. Missing keys are blocking shape issues. Invalid file/committee identities stay raw and block review.",
+    "schema_fingerprint": "Pinned Swagger plus closed endpoint field sets in record.schema.json and compiled Go shapes. Nine explicitly listed monetary fields accept observed number or string representations; report amendment chains accept number/string members. Neither exception normalizes a value."
+  },
+  "identity": {
+    "publisher_record_key": "file_number within one endpoint capture; never a first/last-wins map",
+    "occurrence_locator": "Endpoint capture digest + exact body digest + one-based results ordinal",
+    "record_version": "SHA-256 of exact raw result-object bytes before JSON re-encoding",
+    "duplicate_policy": "Keep every occurrence. Repeated file numbers within one capture block singleton use. Same file across endpoints remains separate assertions.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {
+        "path": "coverage_start_date, coverage_end_date",
+        "meaning": "Preserve reported dates/date-time text without guessing timezone or financial scope."
+      },
+      {
+        "path": "receipt_date, update_date",
+        "meaning": "Keep received and processed-update assertions independent from coverage, cycle and observation time."
+      },
+      {
+        "path": "observed_at, time_basis",
+        "meaning": "Explicit client clock or retained HTTP Date; never relabel server time as a client observation."
+      }
+    ],
+    "money_fields": [],
+    "code_fields": [],
+    "rules": [
+      "Preserve all raw endpoint fields. This reader normalizes only valid positive file IDs and committee-ID syntax; no money, dates, flags or amendment references are converted.",
+      "Retain negative/self predecessor references, source nulls, number/string chain elements, conflicting flags and missing requested IDs.",
+      "Do not infer complete financial replacement, cash, unique transactions, absent filings or terminal allocation. Both readiness guards remain false.",
+      "No fetching, source pointer, fact publication, graph, or Dagster asset is introduced by the local reviewer."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "Mutable processed endpoints may update old report assertions; endpoint fields can disagree in meaning and value.",
+    "effective_projection": "Not implemented. Report-family closure, attachment handling, history refresh and reporting-scope acceptance are separate gates."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "capture_identity",
+        "severity": "block",
+        "rule": "Verify explicit scope, observed-time basis, successful JSON HTTP headers, exact size/digests, confined paths and read budgets."
+      },
+      {
+        "id": "record_shape",
+        "severity": "block",
+        "rule": "Preserve all rows and report missing/unknown fields, unreviewed types or invalid keys. Duplicate JSON keys reject parsing, not source retention."
+      },
+      {
+        "id": "pagination",
+        "severity": "block",
+        "rule": "Require contiguous pages; preserve exactness, reject changing counters, count contradictions and repeated file numbers."
+      },
+      {
+        "id": "financial_readiness",
+        "severity": "partial",
+        "rule": "All outputs remain history-incomplete and financially unselected, even after query traversal."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/filings-record.json",
+      "representation": "canonical_json",
+      "scenarios": [
+        "Synthetic full-field metadata record; negative predecessor, nulls, false and zero are distinct."
+      ]
+    }
+  ],
+  "use": {
+    "retention": "Retain original complete/bounded response bodies and credential-free attempt evidence separately from bulk releases. Go capture stores decoded header values, omits authentication/cookie headers, and explicitly suppresses detected credential echoes; it does not claim original wire header casing/order. Successful descriptors are immutable local files. Local review never changes artifacts.",
+    "citation_date_required": true,
+    "disclaimer": "Processed publisher metadata assertions, not accepted financial report membership. Bounded manual Go capture is implemented; acquisition remains draft pending history/refresh reconciliation and population coverage."
+  },
+  "outputs": {
+    "fact_types": [
+      "processed_report_metadata_observation"
+    ],
+    "change_dimensions": [
+      "endpoint_capture",
+      "file_number",
+      "committee_id",
+      "reported_cycle",
+      "reported_coverage",
+      "source_assertion"
+    ]
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/receiver-flow-committee-identity-coverage",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "question": "What exact registration evidence exists for each committee ID referenced by the receiver-reported flow graph but absent from its selected cycle committee master?",
+  "inputs": [
+    {
+      "contract": "fec/receiver-reported-committee-flow-projection@1.0.0",
+      "role": "The exact flow calculation, referenced endpoint population, and selected current-cycle committee master.",
+      "required": true,
+      "version_policy": "Pin the immutable v1 readiness bundle, calculation manifest, result artifact, and selected committee-master fact set."
+    },
+    {
+      "contract": "fec.committee_master.v1",
+      "role": "Exact-ID registration assertions from explicit alternate-release, normalized historical, and official historical bulk inputs.",
+      "required": true,
+      "version_policy": "Pin every normalized fact-set digest and every raw archive storage key, archive digest, member, row digest, and parse issue."
+    }
+  ],
+  "identity": {
+    "result_key": "reported committee ID + graph cycle + exact flow-bundle identity + exact registration-evidence identities + method version",
+    "input_manifest": "The exact v1 flow bundle, flow calculation, selected master, comparison masters, normalized histories, and raw historical archives.",
+    "method_version": "legal-tender.fec.receiver-flow-committee-identity-coverage-method.v1",
+    "result_digest": "SHA-256 over the versioned calculation identity; each decision ID additionally binds the committee ID and explicit state."
+  },
+  "method": {
+    "ordered_steps": [
+      "Verify the complete v1 flow bundle and reconstruct every exact reported committee endpoint absent from its selected committee master.",
+      "Join registration assertions only by the exact reported FEC committee ID. Never use a name to repair or replace an ID.",
+      "Publish historical_registration when exact official historical evidence exists, preserving all historical and alternate-release assertions.",
+      "Publish alternate_release_registration when exact evidence exists only in a different same-cycle release.",
+      "Publish unresolved_reported_id when no audited committee master contains the exact reported ID.",
+      "Mark every gap decision terminal-identity-ineligible; current-cycle committee masters are the only eligible identity state at this boundary."
+    ],
+    "decision_states": [
+      {"id": "historical_registration", "publishable": true, "meaning": "The exact reported ID occurs in at least one official historical committee master; assertions remain historical evidence rather than current canonical fields."},
+      {"id": "alternate_release_registration", "publishable": true, "meaning": "The exact reported ID occurs only in a different same-cycle release and remains outside the selected master."},
+      {"id": "unresolved_reported_id", "publishable": true, "meaning": "The exact reported ID is absent from every explicitly audited committee-master source."}
+    ],
+    "invariants": [
+      "Every graph endpoint has exactly one coverage state: selected current-cycle master or one published gap decision.",
+      "Historical names and attributes are assertions, not canonical replacements for the selected cycle.",
+      "Name similarity, contributor name, linkage, and candidate summary data cannot manufacture committee identity.",
+      "Historical, alternate-release, and unresolved states cannot stop terminal-source traversal.",
+      "Every raw historical assertion retains exact archive and row evidence, including parse issues."
+    ]
+  },
+  "output": {
+    "result_schema": "decision.schema.json",
+    "grain": "One immutable decision per exact reported committee ID absent from the selected current-cycle committee master.",
+    "fact_types": ["receiver_flow_committee_identity_coverage_decision"],
+    "publication_states": [
+      {"id": "published", "publishable": true, "meaning": "Every selected-master gap has one exact-ID evidence state and terminal eligibility is conserved."},
+      {"id": "blocked_integrity", "publishable": false, "meaning": "Input lineage, registration evidence, decision membership, or state conservation failed verification."}
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "A changed flow bundle or registration-evidence identity creates a new immutable calculation for that cycle.",
+    "method_change_policy": "Any change to exact-ID matching, state precedence, evidence retention, or terminal eligibility requires a new calculation version.",
+    "history_policy": "Retain every immutable calculation, decision artifact, source manifest, and raw official historical archive indefinitely."
+  },
+  "quality": {
+    "checks": [
+      {"id": "input_lineage", "severity": "block", "rule": "Every selected and comparison source passes immutable-manifest and complete backing verification."},
+      {"id": "gap_membership", "severity": "block", "rule": "Current-cycle masters plus gap decisions equal all referenced graph committees."},
+      {"id": "decision_conservation", "severity": "block", "rule": "Every gap has exactly one state and one decision record."},
+      {"id": "terminal_identity_guard", "severity": "block", "rule": "Only selected current-cycle master identities are terminal-identity-eligible."},
+      {"id": "exact_id_only", "severity": "block", "rule": "No name or contextual field can repair a reported committee ID."},
+      {"id": "source_grain_preserved", "severity": "block", "rule": "Official registration assertions retain exact cycle, source, row, field, and issue evidence."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/policy-cases.json",
+      "representation": "synthetic_json",
+      "sha256": "56a0a95e22754971dd0c4501c04fb1f8e1ce258863751c22baef2a9dce442848",
+      "input_paths": ["../../../../facts/fec/classic/v1/fact.schema.json"],
+      "scenarios": ["historical exact-ID evidence", "alternate-release exact-ID evidence", "unresolved reported ID", "terminal-identity exclusion"]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": ["flow bundle", "selected committee master", "comparison committee master", "historical committee master archive"],
+    "semantic_change_dimensions": ["reported committee ID", "registration assertion membership", "evidence issue state"],
+    "downstream_keys": ["cycle", "committee_id"],
+    "no_change_policy": "Identical evidence identities and method version reuse the immutable calculation; candidate linkage and summary changes do not invalidate identity decisions."
+  },
+  "use": {
+    "retention": "Retain explicit uncertainty in the graph and expose registration assertions to investigative consumers without collapsing them into current canonical identity.",
+    "disclaimer": "Registration evidence establishes only that an exact FEC committee ID appeared in an official committee master. It does not establish corporate control, ideology, candidate control, illegality, corruption, or beneficial ownership."
+  }
+}

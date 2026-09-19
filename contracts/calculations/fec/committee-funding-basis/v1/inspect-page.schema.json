@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/inspect-page.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy",
+    "source_page",
+    "decisions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.receipt-source-evidence-page.v1"
+    },
+    "policy": {
+      "const": "fec/reported-receipt-source-evidence@1.0.0"
+    },
+    "source_page": {
+      "$ref": "page.schema.json"
+    },
+    "decisions": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "evidence-decision.schema.json"
+      }
+    }
+  }
+}

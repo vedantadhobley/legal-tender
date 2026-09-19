@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/audits/fec/storage-review/v1/result.schema.json",
+  "title": "Read-only FEC storage scenario, not acquisition authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "candidate_release_id", "acquisition", "acquisition_issues", "staging_scenario"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.storage-review.v1"},
+    "candidate_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "prior_release_id": {"type": "string", "minLength": 1},
+    "acquisition": {"$ref": "#/$defs/acquisition"},
+    "acquisition_issues": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "source_id": {"type": "string"},
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "staging_scenario": {
+      "type": "object", "additionalProperties": false,
+      "required": ["basis", "complete", "fits_budget", "new_output_bytes", "new_schedule_a_output_bytes", "hot_bytes_with_reserve", "required_free_bytes", "hot_cap_excess_bytes", "free_space_shortfall_bytes", "outputs"],
+      "properties": {
+        "basis": {"const": "prior_sizes_new_content_full_reserve"},
+        "complete": {"type": "boolean"},
+        "fits_budget": {"type": "boolean"},
+        "new_output_bytes": {"$ref": "#/$defs/bytes"},
+        "new_schedule_a_output_bytes": {"$ref": "#/$defs/bytes"},
+        "hot_bytes_with_reserve": {"$ref": "#/$defs/bytes"},
+        "required_free_bytes": {"$ref": "#/$defs/bytes"},
+        "hot_cap_excess_bytes": {"$ref": "#/$defs/bytes"},
+        "free_space_shortfall_bytes": {"$ref": "#/$defs/bytes"},
+        "outputs": {"type": "array", "maxItems": 25, "items": {"$ref": "#/$defs/output"}}
+      },
+      "allOf": [{
+        "if": {"properties": {"fits_budget": {"const": true}}},
+        "then": {"properties": {"complete": {"const": true}, "hot_cap_excess_bytes": {"const": 0}, "free_space_shortfall_bytes": {"const": 0}}}
+      }]
+    }
+  },
+  "$defs": {
+    "bytes": {"type": "integer", "minimum": 0, "maximum": 18446744073709551615},
+    "output": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_id", "selection", "period", "basis"],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "selection": {"type": "string", "minLength": 1},
+        "period": {"type": "string", "minLength": 1},
+        "basis": {"enum": ["unknown", "unchanged_source", "prior_size_new_content"]},
+        "new_compressed_bytes": {"$ref": "#/$defs/bytes"}
+      },
+      "allOf": [
+        {"if": {"properties": {"basis": {"const": "unknown"}}}, "then": {"not": {"required": ["new_compressed_bytes"]}}, "else": {"required": ["new_compressed_bytes"]}},
+        {"if": {"properties": {"basis": {"const": "unchanged_source"}}}, "then": {"properties": {"new_compressed_bytes": {"const": 0}}}}
+      ]
+    },
+    "acquisition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schedule_a_hot_bytes_before", "candidate_download_bytes", "remaining_download_bytes", "projected_schedule_a_hot_bytes", "schedule_a_hot_cap_bytes", "free_bytes_before", "free_floor_bytes", "working_margin_bytes", "largest_extract_working_bytes", "passed"],
+      "properties": {
+        "schedule_a_hot_bytes_before": {"$ref": "#/$defs/bytes"},
+        "candidate_download_bytes": {"$ref": "#/$defs/bytes"},
+        "remaining_download_bytes": {"$ref": "#/$defs/bytes"},
+        "projected_schedule_a_hot_bytes": {"$ref": "#/$defs/bytes"},
+        "schedule_a_hot_cap_bytes": {"$ref": "#/$defs/bytes"},
+        "free_bytes_before": {"$ref": "#/$defs/bytes"},
+        "free_floor_bytes": {"$ref": "#/$defs/bytes"},
+        "working_margin_bytes": {"$ref": "#/$defs/bytes"},
+        "largest_extract_working_bytes": {"$ref": "#/$defs/bytes"},
+        "passed": {"type": "boolean"}
+      }
+    }
+  }
+}

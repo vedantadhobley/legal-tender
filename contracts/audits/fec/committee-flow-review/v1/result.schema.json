@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/audits/fec/committee-flow-review/v1/result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "result_sha256",
+    "calculation_set_id",
+    "shapes",
+    "one_to_one_date_differences",
+    "examples",
+    "source_examples",
+    "verified_source_shards",
+    "graph_eligible"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.committee-flow-review.v1"
+    },
+    "result_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "calculation_set_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "shapes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "components",
+          "schedule_a",
+          "schedule_b",
+          "shared_exact_signatures",
+          "one_per_side_exact_signatures"
+        ],
+        "properties": {
+          "key": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "schedule_a_types",
+              "schedule_b_types",
+              "cardinality",
+              "has_shared_exact_signature"
+            ],
+            "properties": {
+              "state": {
+                "type": "string"
+              },
+              "schedule_a_types": {
+                "type": "string"
+              },
+              "schedule_b_types": {
+                "type": "string"
+              },
+              "cardinality": {
+                "enum": [
+                  "0:1",
+                  "1:0",
+                  "1:1",
+                  "1:many",
+                  "many:1",
+                  "many:many"
+                ]
+              },
+              "has_shared_exact_signature": {
+                "type": "boolean"
+              }
+            }
+          },
+          "components": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "schedule_a": {
+            "$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json#/$defs/measures"
+          },
+          "schedule_b": {
+            "$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json#/$defs/measures"
+          },
+          "shared_exact_signatures": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "one_per_side_exact_signatures": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "one_to_one_date_differences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "a_minus_b_days",
+          "components"
+        ],
+        "properties": {
+          "a_minus_b_days": {
+            "type": "integer"
+          },
+          "components": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "selection_reasons",
+          "assertion",
+          "schedule_a_observations",
+          "schedule_b_observations",
+          "schedule_a_examples_truncated",
+          "schedule_b_examples_truncated"
+        ],
+        "properties": {
+          "selection_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "assertion": {
+            "$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/assertion.schema.json"
+          },
+          "schedule_a_observations": {
+            "type": "array",
+            "items": {
+              "$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/observation.schema.json"
+            },
+            "maxItems": 4
+          },
+          "schedule_b_observations": {
+            "type": "array",
+            "items": {
+              "$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/observation.schema.json"
+            },
+            "maxItems": 4
+          },
+          "schedule_a_examples_truncated": {
+            "type": "boolean"
+          },
+          "schedule_b_examples_truncated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "maxItems": 128
+    },
+    "source_examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "side",
+          "fact_set_id",
+          "source_row_ordinal",
+          "shard_sha256",
+          "fields"
+        ],
+        "properties": {
+          "side": {
+            "enum": [
+              "schedule_a",
+              "schedule_b"
+            ]
+          },
+          "fact_set_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_row_ordinal": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "shard_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "fields": {
+            "type": "object",
+            "minProperties": 98,
+            "maxProperties": 99,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "verified_source_shards": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "graph_eligible": {
+      "const": false
+    }
+  }
+}

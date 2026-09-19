@@ -1,0 +1,163 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/schedule-a-api",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "fec",
+    "name": "Federal Election Commission",
+    "base_url": "https://www.fec.gov/"
+  },
+  "dataset": {
+    "id": "schedule-a-api",
+    "name": "Targeted processed Schedule A API observations",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "Exact-field OpenFEC observations used for targeted lookup, fixture capture, processing-lag evidence, and comparison sampling; not the complete processed baseline."
+  },
+  "authority": [
+    {
+      "kind": "openapi",
+      "url": "https://api.open.fec.gov/swagger/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b933e5ba144a9b3b63b19b902e7ad4d4032507022826d93ddde6dca5918b9485"
+    },
+    {
+      "kind": "api",
+      "url": "https://api.open.fec.gov/v1/schedules/schedule_a/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://github.com/fecgov/openFEC/wiki/Schedule-A-column-documentation",
+      "retrieved_on": "2026-08-27"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "api_token",
+      "environment_variable": "ELECTION_API_KEY",
+      "header": "X-Api-Key",
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "processed Schedule A targeted observation",
+        "method": "GET",
+        "url": "https://api.open.fec.gov/v1/schedules/schedule_a/{?committee_id,image_number,min_image_number,max_image_number,two_year_transaction_period,min_load_date,max_load_date,last_contribution_receipt_date,last_index,per_page,sort}",
+        "response_root": "results plus keyset pagination envelope"
+      }
+    ],
+    "pagination": "Keyset pagination. Preserve count, exactness, last_contribution_receipt_date, last_index, per_page, and every response page. The endpoint does not advertise file_number as a filter; filing-scoped fixtures use the preserved listing image range plus committee and transaction period, then verify every returned file_number.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "api_observation",
+        "source": "Credential-free request parameters, retrieval timestamp, response headers, response-body digest, and all keyset pages.",
+        "purpose": "Identify exactly what the mutable processed API exposed at one observation boundary."
+      },
+      {
+        "name": "two_year_transaction_period",
+        "source": "Exact query parameter and value returned on every result.",
+        "purpose": "Bound targeted lookup and map observations to downstream period calculations without replacing receipt or report time."
+      }
+    ],
+    "retry_policy": "Use bounded retries and publisher rate-limit headers. Retain failed requests. A zero-result observation is accepted only with HTTP success, exact count, complete pagination, the complete request parameter set, and an observation timestamp; it means no rows were returned then, not that rows can never appear."
+  },
+  "physical_schema": {
+    "media_type": "application/json",
+    "source_format": "json_api",
+    "encoding": "UTF-8 JSON; parse numbers with their lexical representation intact before any domain conversion.",
+    "delimiter": null,
+    "line_ending": null,
+    "quote_policy": "not_applicable",
+    "empty_record_policy": "Every result becomes an API occurrence or an explicit issue. A successful exact zero-result page remains first-class processing-lag evidence.",
+    "header_model": "not_applicable",
+    "container_members": [],
+    "relations": [],
+    "record_schema": "record.schema.json",
+    "envelope_schema": "page.schema.json",
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Preserve absent, null, empty text, false, zero, and empty nested objects or arrays independently. The observed API permits null original_sub_id although its pinned Swagger definition marks that field as a non-null string; observed source values take precedence and the mismatch remains documented.",
+    "schema_fingerprint": "Pinned OpenFEC Swagger SHA-256 b933e5ba144a9b3b63b19b902e7ad4d4032507022826d93ddde6dca5918b9485 plus the 81 observed Schedule A result fields and API keyset envelope."
+  },
+  "identity": {
+    "publisher_record_key": "sub_id within the observed processed API projection",
+    "occurrence_locator": "response-body SHA-256 + zero-based results ordinal",
+    "record_version": "API observation ID + sub_id + SHA-256 of the complete canonical result object",
+    "duplicate_policy": "Preserve every page occurrence. Equal sub_id and equal content may deduplicate only inside one complete observation index. Conflicting content, repeated result placement, or one sub_id with several file numbers remains explicit and blocks use as reconciliation evidence.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "contribution_receipt_date", "meaning": "Processed reported receipt date."},
+      {"path": "report_year", "meaning": "Filing report year."},
+      {"path": "two_year_transaction_period", "meaning": "Processed transaction period, independent of report and receipt dates."},
+      {"path": "load_date", "meaning": "Publisher processing timestamp without an explicit source offset in observed results."},
+      {"path": "api_observation", "meaning": "Legal Tender request and response time; it bounds what the mutable API exposed."}
+    ],
+    "money_fields": [
+      {"path": "contribution_receipt_amount", "meaning": "Processed Schedule A receipt amount for this source record; counting still depends on a named calculation.", "unit": "USD JSON number preserved lexically, then lossless reported_point"},
+      {"path": "contributor_aggregate_ytd", "meaning": "Processed contributor accumulator. It is comparison content, not another receipt flow.", "unit": "USD JSON number preserved lexically, then lossless reported accumulator"}
+    ],
+    "code_fields": [
+      {"path": "amendment_indicator", "meaning": "Processed action code; observed A means ADD and does not identify the as-filed cover disposition."},
+      {"path": "file_number", "meaning": "Processed row filing number returned by the API; verify it after image-range selection because it is not an advertised filter."},
+      {"path": "transaction_id + back_reference_transaction_id", "meaning": "Processed filing transaction references retained for reconciliation; neither is a global event ID."},
+      {"path": "memo_code + memoed_subtotal", "meaning": "Processed memo assertion and API helper; preserve both."},
+      {"path": "filing_form + schedule_type + line_number + report_type", "meaning": "Processed filing placement and report assertions."}
+    ],
+    "rules": [
+      "This endpoint is targeted processed evidence, not the complete processed Schedule A baseline and not a routine bulk incremental feed.",
+      "Preserve complete response pages and all top-level result fields before mapping selected values to the 81-field processed relation contract.",
+      "Preserve nested committee and contributor master expansions as returned, but exclude them from Schedule A record identity and reconciliation comparison because they are mutable convenience joins.",
+      "Never interpret an exact zero-result image-range observation as permanent absence. It is a time-bounded raw_only_pending_processing candidate until a later processed snapshot or observation closes it.",
+      "Do not treat amendment_indicator as the raw document's new, amendment, or termination disposition. The exact original filing fixture returns amendment_indicator A/ADD for every processed row although its raw cover is F3XN.",
+      "Do not invent dump-only values, tsvectors, SQL nullability, relation ordinals, or processed snapshot completeness from an API response.",
+      "Use file_number, committee_id, transaction_id, image_number, form/line, date, amount, back references, and content only as explicit reconciliation signals. A separate calculation owns match decisions.",
+      "Keep API observation, load, receipt, report, election, and raw filing times independent."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The API is a mutable projection of processed FEC data. Rows can appear, change, disappear, or gain publisher coding after a raw filing is received.",
+    "effective_projection": "API observations may support targeted reconciliation states but cannot establish complete processed coverage. Accepted publication still requires a pinned processed dump snapshot and its relation contract."
+  },
+  "quality": {
+    "checks": [
+      {"id": "page_schema", "severity": "block", "rule": "Every accepted response conforms to page.schema.json and every result exposes the complete contracted top-level field set."},
+      {"id": "request_manifest", "severity": "block", "rule": "Credential-free parameters, observation time, status, response headers, body digest, and retry evidence are retained."},
+      {"id": "keyset_complete", "severity": "block", "rule": "is_count_exact is true, every keyset page is present exactly once, and conserved result count equals pagination.count."},
+      {"id": "filing_binding", "severity": "block", "rule": "Every non-empty result in a filing image-range observation has the expected committee ID, transaction period, and file_number; unrelated rows remain preserved as issues rather than silently filtered."},
+      {"id": "sub_id", "severity": "block", "rule": "Every result has one non-empty decimal sub_id unique within the complete observation."},
+      {"id": "swagger_drift", "severity": "partial", "rule": "Unknown top-level fields and observed type/nullability differences from pinned Swagger require review without losing the response."},
+      {"id": "nested_master", "severity": "observe", "rule": "Mutable committee and contributor expansions remain stored but cannot affect Schedule A row identity or content comparison."},
+      {"id": "zero_result", "severity": "observe", "rule": "A complete zero-result page is retained with its exact filing image range and becomes pending evidence, never permanent nonexistence."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/original-filing-images.json",
+      "representation": "canonical_json",
+      "source_url": "https://api.open.fec.gov/v1/schedules/schedule_a/?committee_id=C00392928&min_image_number=202607159885305174&max_image_number=202607159885305254&two_year_transaction_period=2026&per_page=100",
+      "retrieved_on": "2026-08-27",
+      "sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+      "scenarios": ["23 exact processed rows for raw original file 1997074", "listing image-range selection", "unique sub_id and transaction_id", "processed action A/ADD on raw F3XN source", "mutable nested committee and contributor expansions"]
+    },
+    {
+      "path": "fixtures/amendment-not-yet-processed.json",
+      "representation": "canonical_json",
+      "source_url": "https://api.open.fec.gov/v1/schedules/schedule_a/?committee_id=C00392928&min_image_number=202608279903415525&max_image_number=202608279903415608&two_year_transaction_period=2026&per_page=100",
+      "retrieved_on": "2026-08-27",
+      "sha256": "dacb02c589f913cb10140a33966f41aab2f1b1139ad62988859b5dc3adc7ca38",
+      "scenarios": ["complete exact zero-result observation", "raw amendment file 2009982 not yet exposed by processed API", "time-bounded processing lag rather than permanent absence"]
+    }
+  ],
+  "use": {
+    "retention": "Retain exact response bytes and transport metadata at runtime. Contract fixtures retain every API value in stable indented JSON without credentials. Keep zero-result observations and later superseding observations indefinitely.",
+    "citation_date_required": true,
+    "disclaimer": "A targeted API observation describes the mutable processed rows returned for one query at one time. It neither proves complete processed coverage nor replaces raw filings or a pinned processed dump snapshot."
+  },
+  "outputs": {
+    "fact_types": ["processed_schedule_a_api_observation", "processed_schedule_a_api_occurrence"],
+    "change_dimensions": ["api_observation", "sub_id", "file_number", "load_date", "two_year_transaction_period", "result_version"]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/candidate-committee-linkage@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "Each fixture is one exact 2024 ccl.txt physical row mapped positionally to the publisher's ordered header, then serialized as sorted, indented JSON. Source strings are unchanged.",
+  "fixtures": [
+    {"path": "current-election.json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "retrieved_on": "2026-06-21", "sha256": "79a5a8d77458719f7b919d4907d762b672853581b5523faf268e883bc7ecaaea", "scenarios": ["principal committee designation", "candidate election equals FEC period", "linkage identity"]},
+    {"path": "prior-candidate-election.json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "retrieved_on": "2026-06-21", "sha256": "6f90ddceb85c6953b54d68f9b391c3f2e91818ce1bef2a7191b20c0807a174d5", "scenarios": ["candidate election predates FEC period", "joint-fundraising designation", "period dimensions remain separate"]}
+  ]
+}

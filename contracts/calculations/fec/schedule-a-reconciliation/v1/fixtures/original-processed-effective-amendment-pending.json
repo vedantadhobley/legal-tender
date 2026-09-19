@@ -1,0 +1,1582 @@
+{
+  "calculation_contract": "fec/schedule-a-reconciliation",
+  "calculation_version": "1.0.0",
+  "result_state": "provisional_targeted_observation",
+  "field_mapping_sha256": "eeb0a8c5e5f8105e5ba622409d1cde8d5577f95812540121d897c2137ceefc0e",
+  "processed_input": {
+    "contract": "fec/schedule-a-api",
+    "contract_version": "1.0.0",
+    "source_class": "targeted_api_observation",
+    "coverage_state": "targeted_image_ranges_only",
+    "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+    "empty_observation_sha256": "dacb02c589f913cb10140a33966f41aab2f1b1139ad62988859b5dc3adc7ca38",
+    "observation_date": "2026-08-27",
+    "two_year_transaction_period": 2026,
+    "result_count": 23,
+    "processed_file_numbers": [
+      1997074
+    ],
+    "selected_load_dates": [
+      "2026-07-17T03:08:24"
+    ],
+    "queried_image_ranges": [
+      {
+        "file_number": 1997074,
+        "beginning_image_number": "202607159885305174",
+        "ending_image_number": "202607159885305254",
+        "returned_count": 23
+      },
+      {
+        "file_number": 2009982,
+        "beginning_image_number": "202608279903415525",
+        "ending_image_number": "202608279903415608",
+        "returned_count": 0
+      }
+    ]
+  },
+  "raw_input": {
+    "effective_projection_sha256": "ac9a4d0e97ed3a4498ccb0fad45cd31e628283f4ae5120dffb5c61ff12c97df2",
+    "report_family_id": "fec:efile-report:1997074",
+    "committee_id": "C00392928",
+    "root_file_number": 1997074,
+    "effective_file_number": 2009982,
+    "prior_file_number": 1997074,
+    "effective_row_count": 25
+  },
+  "revision_alignment": {
+    "state": "processed_lags_raw",
+    "processed_selected_file_number": 1997074,
+    "raw_effective_file_number": 2009982,
+    "evidence": [
+      "All 23 returned processed rows identify file 1997074.",
+      "The exact image range for amendment file 2009982 returned zero processed rows on 2026-08-27.",
+      "The complete raw report family selects amendment file 2009982 as effective."
+    ]
+  },
+  "direct_source_matches": [
+    {
+      "raw_transaction_id": "IA21291",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 3,
+        "physical_record_sha256": "4ab644b3084fa63d10ed3a64b85fe459c67cda432740a777d5c19a75fce93e05"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 22,
+        "sub_id": "4071620261534530958",
+        "file_number": 1997074,
+        "image_number": "202607159885305179",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 6,
+        "equal_absent": 30,
+        "equal_representation": 7,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "DA4957",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 4,
+        "physical_record_sha256": "06ed121c503d0d23a7ae8414e475004d158f8cb5f5e7fc6e05e30986c0c89fb3"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 21,
+        "sub_id": "4071620261534530959",
+        "file_number": 1997074,
+        "image_number": "202607159885305179",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 19,
+        "equal_representation": 12,
+        "processed_enriched": 2,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [
+        "election_code",
+        "donor_committee_fec_id"
+      ],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21226IDTA4957",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 5,
+        "physical_record_sha256": "abdcb9b9036dc0e4fd7842954d97c92517fca14da048cdee8adf50b2933f8733"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 20,
+        "sub_id": "4071620261534530960",
+        "file_number": 1997074,
+        "image_number": "202607159885305179",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount",
+        "back_reference"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 11,
+        "equal_absent": 25,
+        "equal_representation": 7,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "DA4955",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 6,
+        "physical_record_sha256": "27c555dd284c661b322155a5fa2ed40cb0a1b5de1ce4f62b9fbffe92dcbcf07b"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 19,
+        "sub_id": "4071620261534530961",
+        "file_number": 1997074,
+        "image_number": "202607159885305181",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 19,
+        "equal_representation": 12,
+        "processed_enriched": 2,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [
+        "election_code",
+        "donor_committee_fec_id"
+      ],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21226IDTA4955",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 7,
+        "physical_record_sha256": "ac60500d5bc4149d3fea8ccd575fb1d2f2d2fc7641ffa7cc97735f59071126d1"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 18,
+        "sub_id": "4071620261534530962",
+        "file_number": 1997074,
+        "image_number": "202607159885305181",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount",
+        "back_reference"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 11,
+        "equal_absent": 25,
+        "equal_representation": 7,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21292",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 8,
+        "physical_record_sha256": "bfaec809d5c4124fb5f11a2b0d4c51cd20824c201511303685d4de8a4114ef9a"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 17,
+        "sub_id": "4071620261534530963",
+        "file_number": 1997074,
+        "image_number": "202607159885305181",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 6,
+        "equal_absent": 26,
+        "equal_representation": 9,
+        "processed_enriched": 1,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [
+        "election_code"
+      ],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "DA4958",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 9,
+        "physical_record_sha256": "e0f0e4d860d9256ca98b120857e916c5d104a5b6115bb2b289429c189552690a"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 16,
+        "sub_id": "4071620261534530964",
+        "file_number": 1997074,
+        "image_number": "202607159885305183",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 19,
+        "equal_representation": 12,
+        "processed_enriched": 2,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [
+        "election_code",
+        "donor_committee_fec_id"
+      ],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21289IDTA4958",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 10,
+        "physical_record_sha256": "780141314e5584de5bc9a9cff98e19081f1b9f08b0f620e8cdba75b07fdf0f74"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 13,
+        "sub_id": "4071620261534530965",
+        "file_number": 1997074,
+        "image_number": "202607159885305183",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount",
+        "back_reference"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 11,
+        "equal_absent": 25,
+        "equal_representation": 7,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21293",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 11,
+        "physical_record_sha256": "85f1d2938a97deb7c618ec0c160c2fe13c83e0eec883314384ff01dbe9f3c0f8"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 15,
+        "sub_id": "4071620261534530966",
+        "file_number": 1997074,
+        "image_number": "202607159885305183",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 6,
+        "equal_absent": 26,
+        "equal_representation": 9,
+        "processed_enriched": 1,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [
+        "election_code"
+      ],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "DA4959",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 12,
+        "physical_record_sha256": "2ba842b930525163e1a0eca44e5f32736ef9d83cb5e753612c8586c8b7f3f519"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 14,
+        "sub_id": "4071620261534530967",
+        "file_number": 1997074,
+        "image_number": "202607159885305185",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 21,
+        "equal_representation": 12,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21289IDTA4959",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 13,
+        "physical_record_sha256": "bb076034af5e8969e70913ae3d6db755b1703910f2a1cbbaecb7c2f0a2aaad66"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 12,
+        "sub_id": "4071620261534530968",
+        "file_number": 1997074,
+        "image_number": "202607159885305185",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount",
+        "back_reference"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 11,
+        "equal_absent": 25,
+        "equal_representation": 7,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21294",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 14,
+        "physical_record_sha256": "6d30cd683fbcb9e24847ed29e7563a8115cf45fa88d82f4ec2484823e87a8530"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 11,
+        "sub_id": "4071620261534530969",
+        "file_number": 1997074,
+        "image_number": "202607159885305185",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 6,
+        "equal_absent": 26,
+        "equal_representation": 9,
+        "processed_enriched": 1,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [
+        "election_code"
+      ],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "DA4939",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 15,
+        "physical_record_sha256": "30b15edf4c4c924eab049b809e0474397c1214a5bed64399ccb288294ce70807"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 6,
+        "sub_id": "4071620261534530970",
+        "file_number": 1997074,
+        "image_number": "202607159885305187",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 19,
+        "equal_representation": 12,
+        "processed_enriched": 2,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [
+        "election_code",
+        "donor_committee_fec_id"
+      ],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21353IDTA4939",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 16,
+        "physical_record_sha256": "9527bd20c5661ab2d77cdcf8918e38c563a6d74951c3e8071754f1bdc938c19c"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 4,
+        "sub_id": "4071620261534530971",
+        "file_number": 1997074,
+        "image_number": "202607159885305187",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount",
+        "back_reference"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 11,
+        "equal_absent": 25,
+        "equal_representation": 7,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "DA4937",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 17,
+        "physical_record_sha256": "15421cd1b3815b12615123ed36e013a589815ccff94b48956d54ef4d2d29d981"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 5,
+        "sub_id": "4071620261534530972",
+        "file_number": 1997074,
+        "image_number": "202607159885305187",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 19,
+        "equal_representation": 12,
+        "processed_enriched": 2,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [
+        "election_code",
+        "donor_committee_fec_id"
+      ],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21353IDTA4937",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 18,
+        "physical_record_sha256": "6e6e403ba78ac0452e61f2cbc403b12ec70171be627f3d0ac1183b28daa71446"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 3,
+        "sub_id": "4071620261534530973",
+        "file_number": 1997074,
+        "image_number": "202607159885305190",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount",
+        "back_reference"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 11,
+        "equal_absent": 25,
+        "equal_representation": 7,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "DA4950",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 19,
+        "physical_record_sha256": "d62af329afe34bfd36d2c71115fc54b9b4523191202cf52ad65b6431ea26ae73"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 2,
+        "sub_id": "4071620261534530974",
+        "file_number": 1997074,
+        "image_number": "202607159885305190",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 8,
+        "equal_absent": 20,
+        "equal_representation": 12,
+        "processed_enriched": 2,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 1,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [
+        "election_code",
+        "donor_committee_fec_id"
+      ],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21354IDTA4950",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 20,
+        "physical_record_sha256": "1d1d667bebd4eb9d225098e33ebf64515c2598acf723ff561235a54c2fc6793e"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 1,
+        "sub_id": "4071620261534530975",
+        "file_number": 1997074,
+        "image_number": "202607159885305190",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount",
+        "back_reference"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 11,
+        "equal_absent": 25,
+        "equal_representation": 7,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21313",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 21,
+        "physical_record_sha256": "d7046d1d352d2a34426db0ba7714b7b46aed3a5cfaa6b228776dbc310c415ad9"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 10,
+        "sub_id": "4071620261534530976",
+        "file_number": 1997074,
+        "image_number": "202607159885305193",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 28,
+        "equal_representation": 6,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21314",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 22,
+        "physical_record_sha256": "22869e0f77bc89b404f65de201db8858d4d378b912c87ea3bef7ffb9e4dae5bf"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 9,
+        "sub_id": "4071620261534530977",
+        "file_number": 1997074,
+        "image_number": "202607159885305193",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 28,
+        "equal_representation": 6,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21404",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 23,
+        "physical_record_sha256": "24149fa7915226de9d5c9c745b10d522b47c6125c52ae1a7f29f42ff9631bcb8"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 8,
+        "sub_id": "4071620261534530978",
+        "file_number": 1997074,
+        "image_number": "202607159885305193",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 28,
+        "equal_representation": 6,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21414",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 24,
+        "physical_record_sha256": "607dbf629a272d72a2507a1d1f50088ffedf9140e6ad65a86f625a9e7aab2386"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 7,
+        "sub_id": "4071620261534530979",
+        "file_number": 1997074,
+        "image_number": "202607159885305194",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 28,
+        "equal_representation": 6,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    },
+    {
+      "raw_transaction_id": "IA21405",
+      "relationship_state": "corroborated",
+      "raw_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 25,
+        "physical_record_sha256": "691c3a8788a2cb6dd1d6ae2fe7cf1e4bca3570838be041b1a54afc9e8a07401f"
+      },
+      "processed_occurrence": {
+        "evidence_sha256": "aab54c781b7ffe4de2e6b93e81e2361ef97576cb8439dad691b2f667231efa12",
+        "result_ordinal": 0,
+        "sub_id": "4071620261534530980",
+        "file_number": 1997074,
+        "image_number": "202607159885305194",
+        "load_date": "2026-07-17T03:08:24"
+      },
+      "identity_signals": [
+        "committee_id",
+        "file_number",
+        "transaction_id",
+        "form_and_line",
+        "date_and_amount"
+      ],
+      "comparison_counts": {
+        "comparable_field_count": 43,
+        "equal_exact": 9,
+        "equal_absent": 28,
+        "equal_representation": 6,
+        "processed_enriched": 0,
+        "processed_omitted": 0,
+        "different": 0,
+        "not_applicable": 0,
+        "unmapped": 2
+      },
+      "processed_enriched_fields": [],
+      "processed_omitted_fields": [],
+      "different_fields": [],
+      "unmapped_raw_fields": [
+        "election_other_description",
+        "account_system_code"
+      ]
+    }
+  ],
+  "effective_rows": [
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4937",
+      "transaction_id": "DA4937",
+      "current_change_state": "modified",
+      "reconciliation_state": "raw_only_pending_processing",
+      "processed_support_state": "prior_filing_different_content",
+      "processed_sub_ids": [
+        "4071620261534530972"
+      ],
+      "changed_fields": [
+        "contribution_aggregate",
+        "donor_candidate_district"
+      ],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 17,
+        "physical_record_sha256": "747e12e331162b9382dfdc40d04f203cd4fb23052d4b9add9c5feedb050173b5"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4939",
+      "transaction_id": "DA4939",
+      "current_change_state": "modified",
+      "reconciliation_state": "raw_only_pending_processing",
+      "processed_support_state": "prior_filing_different_content",
+      "processed_sub_ids": [
+        "4071620261534530970"
+      ],
+      "changed_fields": [
+        "contribution_aggregate",
+        "contributor_occupation",
+        "donor_candidate_district"
+      ],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 15,
+        "physical_record_sha256": "eb3400e6c34312293265478c0563c7c7e8ac4f1b4f0fa90c65e6cc08113caed6"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4945",
+      "transaction_id": "DA4945",
+      "current_change_state": "added",
+      "reconciliation_state": "raw_only_pending_processing",
+      "processed_support_state": "none",
+      "processed_sub_ids": [],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 19,
+        "physical_record_sha256": "207d9a0a0b35020b14b822812c0dd3cd166bf423401b8dc507865278b83c2567"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4950",
+      "transaction_id": "DA4950",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530974"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 21,
+        "physical_record_sha256": "d62af329afe34bfd36d2c71115fc54b9b4523191202cf52ad65b6431ea26ae73"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4955",
+      "transaction_id": "DA4955",
+      "current_change_state": "modified",
+      "reconciliation_state": "raw_only_pending_processing",
+      "processed_support_state": "prior_filing_different_content",
+      "processed_sub_ids": [
+        "4071620261534530961"
+      ],
+      "changed_fields": [
+        "contribution_aggregate",
+        "donor_candidate_district"
+      ],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 6,
+        "physical_record_sha256": "7a605ecfa3225229154255ea050aaf7050bb2916b75f637fc5c4cce9b5df3a02"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4957",
+      "transaction_id": "DA4957",
+      "current_change_state": "modified",
+      "reconciliation_state": "raw_only_pending_processing",
+      "processed_support_state": "prior_filing_different_content",
+      "processed_sub_ids": [
+        "4071620261534530959"
+      ],
+      "changed_fields": [
+        "contribution_aggregate",
+        "contributor_occupation",
+        "donor_candidate_district"
+      ],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 4,
+        "physical_record_sha256": "cba91d93bc11ba41b3510add7233e471409ba0720b41814721b484c6bdc5d46b"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4958",
+      "transaction_id": "DA4958",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530964"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 9,
+        "physical_record_sha256": "e0f0e4d860d9256ca98b120857e916c5d104a5b6115bb2b289429c189552690a"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4959",
+      "transaction_id": "DA4959",
+      "current_change_state": "modified",
+      "reconciliation_state": "raw_only_pending_processing",
+      "processed_support_state": "prior_filing_different_content",
+      "processed_sub_ids": [
+        "4071620261534530967"
+      ],
+      "changed_fields": [
+        "contribution_aggregate",
+        "contributor_occupation",
+        "donor_candidate_district"
+      ],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 12,
+        "physical_record_sha256": "8e66d375844834ade33f80f6dd29da452385ab50341152999c7f0d51a6c4ad0b"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21226IDTA4955",
+      "transaction_id": "IA21226IDTA4955",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530962"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 7,
+        "physical_record_sha256": "ac60500d5bc4149d3fea8ccd575fb1d2f2d2fc7641ffa7cc97735f59071126d1"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21226IDTA4957",
+      "transaction_id": "IA21226IDTA4957",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530960"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 5,
+        "physical_record_sha256": "abdcb9b9036dc0e4fd7842954d97c92517fca14da048cdee8adf50b2933f8733"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21289IDTA4958",
+      "transaction_id": "IA21289IDTA4958",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530965"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 10,
+        "physical_record_sha256": "780141314e5584de5bc9a9cff98e19081f1b9f08b0f620e8cdba75b07fdf0f74"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21289IDTA4959",
+      "transaction_id": "IA21289IDTA4959",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530968"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 13,
+        "physical_record_sha256": "bb076034af5e8969e70913ae3d6db755b1703910f2a1cbbaecb7c2f0a2aaad66"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21291",
+      "transaction_id": "IA21291",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530958"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 3,
+        "physical_record_sha256": "4ab644b3084fa63d10ed3a64b85fe459c67cda432740a777d5c19a75fce93e05"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21292",
+      "transaction_id": "IA21292",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530963"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 8,
+        "physical_record_sha256": "bfaec809d5c4124fb5f11a2b0d4c51cd20824c201511303685d4de8a4114ef9a"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21293",
+      "transaction_id": "IA21293",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530966"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 11,
+        "physical_record_sha256": "85f1d2938a97deb7c618ec0c160c2fe13c83e0eec883314384ff01dbe9f3c0f8"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21294",
+      "transaction_id": "IA21294",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530969"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 14,
+        "physical_record_sha256": "6d30cd683fbcb9e24847ed29e7563a8115cf45fa88d82f4ec2484823e87a8530"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21313",
+      "transaction_id": "IA21313",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530976"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 23,
+        "physical_record_sha256": "d7046d1d352d2a34426db0ba7714b7b46aed3a5cfaa6b228776dbc310c415ad9"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21314",
+      "transaction_id": "IA21314",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530977"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 24,
+        "physical_record_sha256": "22869e0f77bc89b404f65de201db8858d4d378b912c87ea3bef7ffb9e4dae5bf"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21353IDTA4937",
+      "transaction_id": "IA21353IDTA4937",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530973"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 18,
+        "physical_record_sha256": "6e6e403ba78ac0452e61f2cbc403b12ec70171be627f3d0ac1183b28daa71446"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21353IDTA4939",
+      "transaction_id": "IA21353IDTA4939",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530971"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 16,
+        "physical_record_sha256": "9527bd20c5661ab2d77cdcf8918e38c563a6d74951c3e8071754f1bdc938c19c"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21354IDTA4945",
+      "transaction_id": "IA21354IDTA4945",
+      "current_change_state": "added",
+      "reconciliation_state": "raw_only_pending_processing",
+      "processed_support_state": "none",
+      "processed_sub_ids": [],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 20,
+        "physical_record_sha256": "a763629ead8285a53d309ac534b79556a53dceaf2a3fbc2575e3615f84882fc9"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21354IDTA4950",
+      "transaction_id": "IA21354IDTA4950",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530975"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 22,
+        "physical_record_sha256": "1d1d667bebd4eb9d225098e33ebf64515c2598acf723ff561235a54c2fc6793e"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21404",
+      "transaction_id": "IA21404",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530978"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 25,
+        "physical_record_sha256": "24149fa7915226de9d5c9c745b10d522b47c6125c52ae1a7f29f42ff9631bcb8"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21405",
+      "transaction_id": "IA21405",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530980"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 27,
+        "physical_record_sha256": "691c3a8788a2cb6dd1d6ae2fe7cf1e4bca3570838be041b1a54afc9e8a07401f"
+      }
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21414",
+      "transaction_id": "IA21414",
+      "current_change_state": "carried_forward_identical",
+      "reconciliation_state": "corroborated",
+      "processed_support_state": "prior_filing_identical_content",
+      "processed_sub_ids": [
+        "4071620261534530979"
+      ],
+      "changed_fields": [],
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 26,
+        "physical_record_sha256": "607dbf629a272d72a2507a1d1f50088ffedf9140e6ad65a86f625a9e7aab2386"
+      }
+    }
+  ],
+  "processed_only": [],
+  "unresolved_groups": [],
+  "summary": {
+    "raw_source_rows": 23,
+    "processed_rows": 23,
+    "direct_corroborated": 23,
+    "direct_representation_only": 0,
+    "direct_processed_changed": 0,
+    "direct_conflict": 0,
+    "direct_unresolved": 0,
+    "effective_rows": 25,
+    "effective_corroborated": 18,
+    "effective_raw_only_pending_processing": 7,
+    "effective_processed_changed": 0,
+    "effective_conflict": 0,
+    "effective_unresolved": 0,
+    "processed_only": 0
+  },
+  "change_set": {
+    "pending_row_keys": [
+      "fec:efile-report:1997074:SA:DA4937",
+      "fec:efile-report:1997074:SA:DA4939",
+      "fec:efile-report:1997074:SA:DA4945",
+      "fec:efile-report:1997074:SA:DA4955",
+      "fec:efile-report:1997074:SA:DA4957",
+      "fec:efile-report:1997074:SA:DA4959",
+      "fec:efile-report:1997074:SA:IA21354IDTA4945"
+    ],
+    "conflict_row_keys": [],
+    "affected_committee_ids": [
+      "C00392928"
+    ],
+    "target_two_year_periods": [
+      2026
+    ]
+  },
+  "publication": {
+    "diagnostic_only": true,
+    "eligible_for_user_totals": false,
+    "reason": "This exact targeted API observation is not a complete processed partition, and the processed projection still lags the selected raw amendment."
+  },
+  "issues": [
+    {
+      "code": "targeted_observation_not_snapshot",
+      "severity": "partial",
+      "detail": "The Schedule A API fixture covers two exact filing image ranges, not the complete 2026 processed relation partition."
+    },
+    {
+      "code": "processed_lags_raw",
+      "severity": "partial",
+      "detail": "Processed evidence corroborates original file 1997074, while effective raw amendment 2009982 has seven added or materially modified rows without same-content processed support."
+    },
+    {
+      "code": "processed_action_not_cover_disposition",
+      "severity": "observe",
+      "detail": "Every processed row reports amendment_indicator A/ADD although raw file 1997074 has an F3XN new-report cover."
+    },
+    {
+      "code": "swagger_original_sub_id_nullability",
+      "severity": "observe",
+      "detail": "The pinned Swagger declares original_sub_id non-null, but this exact response contains null values; source observations retain the actual values."
+    }
+  ]
+}

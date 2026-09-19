@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/schedule-a/compact/v1/manifest.schema.json",
+  "title": "Published compact processed Schedule A occurrence set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "occurrence_set_id", "source_release_id",
+    "source_release_manifest_sha256", "source_artifact_sha256", "staged_output_sha256",
+    "relation", "cycle", "run_id", "state", "parser_version", "semantic_schema_version",
+    "publisher_version", "index_schema_version", "occurrence_encoding", "change_mode",
+    "published_at", "configuration", "counts", "changes", "source_replay",
+    "index_partitions", "row_exceptions", "deltas", "checks"
+  ],
+  "properties": {
+    "$schema": {"type": "string", "format": "uri-reference"},
+    "schema_version": {"const": "legal-tender.fec.schedule-a-compact-occurrence-set.v1"},
+    "occurrence_set_id": {"$ref": "#/$defs/digest"},
+    "prior_occurrence_set_id": {"$ref": "#/$defs/digest"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "source_release_manifest_sha256": {"$ref": "#/$defs/digest"},
+    "source_artifact_sha256": {"$ref": "#/$defs/digest"},
+    "staged_output_sha256": {"$ref": "#/$defs/digest"},
+    "relation": {"type": "string", "pattern": "^disclosure\\.fec_fitem_sched_a_[0-9]{4}_[0-9]{4}$"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "published"},
+    "parser_version": {"const": "legal-tender.fec.schedule-a-occurrence-parser.v2"},
+    "semantic_schema_version": {"const": "legal-tender.fec.schedule-a-semantic-digest.v1"},
+    "publisher_version": {"const": "legal-tender.fec.schedule-a-compact-occurrence-publisher.v1"},
+    "index_schema_version": {"const": "legal-tender.fec.schedule-a-compact-key-index.v1"},
+    "occurrence_encoding": {"const": "dense-source-row-ordinal-v1"},
+    "change_mode": {"enum": ["bootstrap-dense-membership", "explicit-inter-release-delta"]},
+    "published_at": {"type": "string", "format": "date-time"},
+    "configuration": {"$ref": "#/$defs/configuration"},
+    "counts": {"$ref": "#/$defs/counts"},
+    "changes": {"$ref": "#/$defs/changes"},
+    "source_replay": {"$ref": "#/$defs/source_replay"},
+    "index_partitions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/partition"}},
+    "row_exceptions": {"$ref": "#/$defs/json_artifact"},
+    "deltas": {"$ref": "#/$defs/json_artifact"},
+    "checks": {"type": "array", "minItems": 6, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "configuration": {
+      "type": "object", "additionalProperties": false,
+      "required": ["partitions", "partition_hash", "index_record_bytes", "index_encoding"],
+      "properties": {
+        "partitions": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "partition_hash": {"const": "fnv1a32-sub-id-decimal-mod-v1"},
+        "index_record_bytes": {"const": 48},
+        "index_encoding": {"const": "uint64-be-sub-id,uint64-be-row-ordinal,sha256-semantic-digest"}
+      }
+    },
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["total", "valid", "invalid", "keyed", "unique_keys", "invalid_keys", "duplicate_keys", "duplicate_occurrences"],
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "valid": {"type": "integer", "minimum": 0},
+        "invalid": {"type": "integer", "minimum": 0},
+        "keyed": {"type": "integer", "minimum": 0},
+        "unique_keys": {"type": "integer", "minimum": 0},
+        "invalid_keys": {"type": "integer", "minimum": 0},
+        "duplicate_keys": {"type": "integer", "minimum": 0},
+        "duplicate_occurrences": {"type": "integer", "minimum": 0}
+      }
+    },
+    "changes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["added", "changed", "absent", "unchanged", "invalid"],
+      "properties": {
+        "added": {"type": "integer", "minimum": 0},
+        "changed": {"type": "integer", "minimum": 0},
+        "absent": {"type": "integer", "minimum": 0},
+        "unchanged": {"type": "integer", "minimum": 0},
+        "invalid": {"type": "integer", "minimum": 0}
+      }
+    },
+    "source_replay": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rows", "compressed_bytes", "compressed_sha256", "uncompressed_bytes", "uncompressed_sha256"],
+      "properties": {
+        "rows": {"type": "integer", "minimum": 0},
+        "compressed_bytes": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "uncompressed_bytes": {"type": "integer", "minimum": 1},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "partition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["partition", "index", "key_exceptions"],
+      "properties": {
+        "partition": {"type": "integer", "minimum": 0},
+        "first_sub_id": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "last_sub_id": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "index": {"$ref": "#/$defs/binary_artifact"},
+        "key_exceptions": {"$ref": "#/$defs/json_artifact"}
+      }
+    },
+    "binary_artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_count", "record_bytes", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "encoding", "storage_key"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0},
+        "record_bytes": {"const": 48},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "compression": {"const": "zstd"},
+        "encoding": {"const": "uint64-be-sub-id,uint64-be-row-ordinal,sha256-semantic-digest"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "json_artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "storage_key"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "compression": {"const": "zstd"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "warning"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

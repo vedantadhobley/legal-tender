@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "lda/clients@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "The public API response was parsed as JSON and reserialized with sorted object keys and two-space indentation. Values and array order are unchanged; HTTP headers and original whitespace are not part of this fixture.",
+  "fixtures": [
+    {
+      "path": "client.json",
+      "source_url": "https://lda.gov/api/v1/clients/58116/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "580e54efdf3fb82e1a99e8a2c4bbf71c73690ac36cc947ba5ecb9ea8e6c0fe75",
+      "scenarios": [
+        "client master",
+        "numeric client_id despite OpenAPI string type",
+        "nested registrant relationship"
+      ]
+    }
+  ]
+}

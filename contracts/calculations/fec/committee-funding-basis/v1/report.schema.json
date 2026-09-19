@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/report.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "policy", "inventory_calculation_id", "cycle", "input", "committee_id", "file_num", "scope", "receipts", "references", "associations", "terminal_attribution_eligible"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.receipt-report-evidence.v1"},
+    "policy": {"const": "fec/same-report-earmark-memo-association@1.0.0"},
+    "inventory_calculation_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "input": {"$ref": "result.schema.json#/$defs/input"},
+    "committee_id": {"type": "string", "pattern": "^C[0-9]{8}$"},
+    "file_num": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "scope": {"const": "published_schedule_a_cycle_report"},
+    "terminal_attribution_eligible": {"const": false},
+    "receipts": {"type": "array", "maxItems": 10000, "items": {"$ref": "page.schema.json#/properties/receipts/items"}},
+    "references": {"type": "array", "maxItems": 10000, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_row_ordinal", "state", "target_source_row_ordinal"],
+      "properties": {
+        "source_row_ordinal": {"type": "integer", "minimum": 1},
+        "state": {"enum": ["no_report_reference", "incomplete_report_reference", "duplicate_source_transaction_id", "ambiguous_target_transaction_id", "missing_reference_schedule", "target_absent_from_cycle_report", "self_reference", "reference_schedule_mismatch", "exact_same_report_reference"]},
+        "target_source_row_ordinal": {"type": ["integer", "null"], "minimum": 1}
+      },
+      "allOf": [{"if": {"properties": {"state": {"const": "exact_same_report_reference"}}}, "then": {"properties": {"target_source_row_ordinal": {"type": "integer"}}}, "else": {"properties": {"target_source_row_ordinal": {"type": "null"}}}}]
+    }},
+    "associations": {"type": "array", "maxItems": 10000, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["earmark_source_row_ordinal", "state", "related_source_row_ordinals", "reported_conduit_committee_id", "related_amount_comparison", "additional_amount_minor_units", "terminal_attribution_eligible"],
+      "properties": {
+        "earmark_source_row_ordinal": {"type": "integer", "minimum": 1},
+        "state": {"enum": ["no_exact_related_memo", "ambiguous_or_incomplete_reference_evidence", "multiple_related_records_unresolved", "shared_related_record_unresolved", "original_contributor_role_unresolved", "related_role_unresolved", "related_committee_id_unresolved", "conflicting_committee_evidence", "reported_earmark_memo_association"]},
+        "related_source_row_ordinals": {"type": "array", "uniqueItems": true, "maxItems": 10000, "items": {"type": "integer", "minimum": 1}},
+        "reported_conduit_committee_id": {"type": ["string", "null"], "pattern": "^C[0-9]{8}$"},
+        "related_amount_comparison": {"enum": ["not_assessed", "unknown_reported_amount", "same_reported_amount", "different_reported_amount"]},
+        "additional_amount_minor_units": {"const": "0"},
+        "terminal_attribution_eligible": {"const": false}
+      },
+      "allOf": [{"if": {"properties": {"state": {"const": "reported_earmark_memo_association"}}}, "then": {"properties": {"reported_conduit_committee_id": {"type": "string"}, "related_source_row_ordinals": {"minItems": 1, "maxItems": 1}, "related_amount_comparison": {"not": {"const": "not_assessed"}}}}, "else": {"properties": {"reported_conduit_committee_id": {"type": "null"}}}}]
+    }}
+  }
+}

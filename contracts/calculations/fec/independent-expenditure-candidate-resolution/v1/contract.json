@@ -1,0 +1,106 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/independent-expenditure-candidate-resolution",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "question": "Which candidate entity, if any, can each attributed effective Schedule E fact identify from its reported candidate reference and the same-release candidate master?",
+  "inputs": [
+    {
+      "contract": "fec/effective-independent-expenditures@1.0.0",
+      "role": "The exact attributed effective Schedule E membership and signed amount to resolve without loss.",
+      "required": true,
+      "version_policy": "Pin the exact calculation-set manifest and its immutable Schedule E fact-set ancestry."
+    },
+    {
+      "contract": "fec.candidate_assertion.v1",
+      "role": "Every candidate-master assertion from the same cycle and coordinated FEC source release.",
+      "required": true,
+      "version_policy": "Pin the exact candidate-master fact-set manifest. Historical aliases require a separately versioned input."
+    }
+  ],
+  "identity": {
+    "result_key": "effective Schedule E fact ID + exact input identities + calculation version",
+    "input_manifest": "Exact effective calculation, Schedule E fact set, and same-release candidate-master fact set, including immutable manifest digests.",
+    "method_version": "fec/independent-expenditure-candidate-resolution@1.0.0 plus candidate-resolution-method.v2 and the named publisher version",
+    "result_digest": "SHA-256 over canonical calculation identity fields and deterministic per-fact decision evidence."
+  },
+  "method": {
+    "ordered_steps": [
+      "Verify the immutable effective calculation, its Schedule E fact ancestry, and the same-cycle candidate-master fact set. Require one coordinated source release.",
+      "Replay the effective membership predicate and select exactly the attributed facts, preserving every signed amount and source-fact ID.",
+      "Normalize candidate names as an uppercase Unicode alphanumeric token multiset. Build an office context requiring P; S plus state; or H plus state and normalized district.",
+      "Confirm a reported ID only when that ID has the exact context in candidate master. Otherwise resolve only when exactly one candidate ID has that exact context.",
+      "When a reported ID exists in candidate master but context cannot corroborate it, retain that ID in an explicit unverified state. Publish ambiguous and absent-ID no-match cases without a resolved candidate ID.",
+      "Conserve decision counts and signed minor units exactly across all five states."
+    ],
+    "decision_states": [
+      {"id": "confirmed", "publishable": true, "meaning": "The reported candidate ID has an exact candidate-master name and office context assertion."},
+      {"id": "resolved", "publishable": true, "meaning": "Exactly one different candidate ID has the exact reported name and office context."},
+      {"id": "unverified", "publishable": true, "meaning": "The reported candidate ID exists in candidate master and is retained, but reported context cannot corroborate it."},
+      {"id": "ambiguous", "publishable": false, "meaning": "More than one candidate ID has the exact reported name and office context."},
+      {"id": "unresolved", "publishable": false, "meaning": "The reported context is insufficient, or the reported ID is absent and no exact context candidate exists."}
+    ],
+    "invariants": [
+      "Every attributed effective Schedule E fact receives exactly one decision and retains its exact signed amount.",
+      "The reported candidate ID is immutable evidence. Resolution adds a nullable resolved ID; it never rewrites the source fact.",
+      "Confirmed, resolved, and unverified states carry a resolved candidate ID. Only one unique exact context may replace the reported ID.",
+      "No fuzzy, nickname, semantic, LLM, committee-name, pas2, or cross-cycle matching participates in v1.",
+      "Candidate election year remains evidence and does not choose candidate identity.",
+      "Support and opposition remain separate and are independent expenditures, not candidate-controlled receipts or personal payments."
+    ]
+  },
+  "output": {
+    "result_schema": "decision.schema.json",
+    "grain": "One dense candidate-reference decision per attributed effective Schedule E fact.",
+    "fact_types": ["independent_expenditure_candidate_resolution"],
+    "publication_states": [
+      {"id": "published", "publishable": true, "meaning": "All input facts were classified once and signed amounts conserve exactly."},
+      {"id": "blocked_integrity", "publishable": false, "meaning": "Input identity, backing bytes, replayed membership, decision membership, or signed conservation failed verification."}
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "A changed effective calculation or candidate-master fact-set identity creates a new immutable calculation for only that cycle.",
+    "method_change_policy": "Any change to normalization, office context, decision order, historical input, or resolution evidence requires a new calculation version.",
+    "history_policy": "Retain all source facts, per-fact decisions, exact input identities, and superseded calculation manifests indefinitely."
+  },
+  "quality": {
+    "checks": [
+      {"id": "input_lineage", "severity": "block", "rule": "All exact input manifests and backing artifacts pass digest and membership verification."},
+      {"id": "cycle_release_coherence", "severity": "block", "rule": "Effective, Schedule E, and candidate-master inputs share one cycle and coordinated source release."},
+      {"id": "effective_membership_replay", "severity": "block", "rule": "Replaying the accepted effective predicate reproduces every attributed fact exactly once."},
+      {"id": "decision_conservation", "severity": "block", "rule": "Every attributed effective fact is exactly one of confirmed, resolved, unverified, ambiguous, or unresolved."},
+      {"id": "signed_conservation", "severity": "block", "rule": "Signed effective cents equal the sum of signed cents in all five states."},
+      {"id": "no_silent_resolution", "severity": "block", "rule": "Only one unique exact context may replace a reported ID; a present uncorroborated ID remains explicit as unverified."},
+      {"id": "unresolved_preservation", "severity": "block", "rule": "Every non-projectable decision retains its amount and source-fact identity."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/policy-cases.json",
+      "representation": "synthetic_json",
+      "sha256": "1755750b6c000243099f525f3914dc4e8fac8edad8bf64f526243f94f21c1119",
+      "input_paths": [
+        "../../../../facts/fec/schedule-e/v1/fact.schema.json",
+        "../../../../facts/fec/classic/v1/fact.schema.json"
+      ],
+      "scenarios": [
+        "reported ID confirmed by exact context",
+        "missing reported ID repaired by one exact context",
+        "multiple exact-context candidates remain ambiguous",
+        "present reported ID with uncorroborated context remains projectable but unverified",
+        "no exact candidate and insufficient context remain unresolved",
+        "signed amount conservation across every decision state"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": ["effective Schedule E calculation", "Schedule E fact set", "candidate-master fact set"],
+    "semantic_change_dimensions": ["reported candidate ID", "candidate name", "office", "office state", "office district", "candidate-master assertion"],
+    "downstream_keys": ["cycle", "fact_id", "resolved_candidate_id", "spender_committee_id", "support_oppose"],
+    "no_change_policy": "Identical input identities and method version reuse the immutable decision artifact. A changed cycle input recomputes only that cycle and downstream graph projections whose resolved membership changes."
+  },
+  "use": {
+    "retention": "Retain every decision outside the graph; project confirmed, resolved, and unverified identities with their quality state while surfacing ambiguous and unresolved amounts as explicit coverage metrics.",
+    "disclaimer": "Resolution identifies an FEC candidate entity for reported independent spending. It does not prove coordination, influence, corruption, a donation, or a personal payment to the candidate."
+  }
+}

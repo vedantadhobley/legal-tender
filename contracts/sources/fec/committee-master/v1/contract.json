@@ -1,0 +1,101 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/committee-master",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id": "fec", "name": "Federal Election Commission", "base_url": "https://www.fec.gov/"},
+  "dataset": {
+    "id": "committee-master",
+    "name": "Committee master file",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "Registration attributes for FEC committees, including raw designation, type, organization type, connected-organization name, and candidate reference fields."
+  },
+  "authority": [
+    {"kind": "documentation", "url": "https://www.fec.gov/campaign-finance-data/committee-master-file-description/", "retrieved_on": "2026-08-27"},
+    {"kind": "documentation", "url": "https://www.fec.gov/files/bulk-downloads/data_dictionaries/cm_header_file.csv", "retrieved_on": "2026-08-27", "sha256": "9b5bfd7764a5e07871d4b0bf31d05f9589eda262d02956718b5d2c272e76ab83"}
+  ],
+  "acquisition": {
+    "authentication": {"class": "none", "environment_variable": null, "header": null, "scheme": null},
+    "endpoints": [
+      {"name": "two-year bulk archive", "method": "GET", "url": "https://www.fec.gov/files/bulk-downloads/{two_year_period}/cm{cycle_suffix}.zip", "response_root": "cm.txt"}
+    ],
+    "pagination": "None. Each requested two-year period is one complete ZIP snapshot.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {"name": "two_year_period", "source": "Requested bulk URL path; cycle_suffix is the period's final two digits.", "purpose": "Snapshot acquisition, replay, and downstream assertion scope; the source record has no reporting-period column."}
+    ],
+    "retry_policy": "Bound retries for transport failures; follow redirects; publish only after validating the HTTP result, ZIP integrity, exact member name, archive digest, row width, and record count."
+  },
+  "physical_schema": {
+    "media_type": "application/vnd.fec.pipe-delimited+zip",
+    "source_format": "delimited_archive",
+    "encoding": "UTF-8",
+    "delimiter": "|",
+    "line_ending": "LF with a required final LF in the verified 2020, 2022, 2024, and 2026 artifacts",
+    "quote_policy": "none",
+    "empty_record_policy": "An empty physical line becomes an explicit record-boundary issue; it is never silently skipped.",
+    "header_model": "external_publisher_header",
+    "container_members": ["cm.txt"],
+    "relations": [],
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "reject",
+    "null_policy": "Preserve every empty source field as the empty string. Absence of ORG_TP, CONNECTED_ORG_NM, party, or CAND_ID is not a negative assertion.",
+    "schema_fingerprint": "15 ordered fields: CMTE_ID|CMTE_NM|TRES_NM|CMTE_ST1|CMTE_ST2|CMTE_CITY|CMTE_ST|CMTE_ZIP|CMTE_DSGN|CMTE_TP|CMTE_PTY_AFFILIATION|CMTE_FILING_FREQ|ORG_TP|CONNECTED_ORG_NM|CAND_ID"
+  },
+  "identity": {
+    "publisher_record_key": "CMTE_ID within source_partition.two_year_period",
+    "occurrence_locator": "archive SHA-256 + exact member name + one-based physical line number",
+    "record_version": "occurrence locator + SHA-256 of the exact source line",
+    "duplicate_policy": "Preserve every physical occurrence. Conflicting values for one committee and snapshot block any singleton committee projection.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "source_partition.two_year_period", "meaning": "The requested FEC bulk snapshot period. The committee record itself contains no transaction or effective date."}
+    ],
+    "money_fields": [],
+    "code_fields": [
+      {"path": "CMTE_DSGN", "meaning": "Raw committee designation code."},
+      {"path": "CMTE_TP", "meaning": "Raw committee type code."},
+      {"path": "CMTE_PTY_AFFILIATION", "meaning": "Raw party-affiliation code."},
+      {"path": "CMTE_FILING_FREQ", "meaning": "Raw filing-frequency code."},
+      {"path": "ORG_TP", "meaning": "Raw organization type code; an empty value stays unknown."}
+    ],
+    "rules": [
+      "Do not derive graph identity from committee name, connected-organization name, address, or treasurer.",
+      "Keep CONNECTED_ORG_NM as a source assertion, not a resolved corporation edge.",
+      "Keep CAND_ID as a source field; candidate-to-committee relationship facts come from the linkage file with their own provenance.",
+      "Do not classify a terminal funding source from one code or name substring during source normalization.",
+      "Preserve source values before code interpretation, entity resolution, or committee classification."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The FEC replaces each two-year committee archive with a current snapshot and publishes no row-level revision identifier in this file.",
+    "effective_projection": "Blocked while draft. Retain immutable acquired snapshots; a current committee profile must identify the selected snapshot and surface conflicts."
+  },
+  "quality": {
+    "checks": [
+      {"id": "archive_identity", "severity": "block", "rule": "The archive digest, requested period, exact cm.txt member, retrieval time, and response metadata are present."},
+      {"id": "row_width", "severity": "block", "rule": "Every physical line has exactly 15 fields; short rows are not padded and extra fields are not truncated."},
+      {"id": "strict_decode", "severity": "block", "rule": "Every source byte decodes under the accepted encoding; invalid bytes are retained as failed raw evidence, never silently dropped."},
+      {"id": "occurrence_conservation", "severity": "block", "rule": "Every non-empty physical line becomes one record occurrence or one explicit issue."},
+      {"id": "duplicate_key", "severity": "block", "rule": "Conflicting records for one CMTE_ID and source period remain separate and block a singleton projection."},
+      {"id": "schema_drift", "severity": "block", "rule": "Member name, field order, or field count changes require contract review."}
+    ]
+  },
+  "fixtures": [
+    {"path": "fixtures/connected-organization.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "retrieved_on": "2026-06-21", "sha256": "33ebe9118824878568ec408b1cecad0d76b6c8f19f10b73cbd4e43d7e8642c31", "scenarios": ["connected organization", "corporation organization code", "source-empty candidate ID"]},
+    {"path": "fixtures/source-empty-codes.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "retrieved_on": "2026-06-21", "sha256": "f7dd74a70e4664a6986e738691272b56bab1932900a3e96321d8466e1b49f5b0", "scenarios": ["source-empty organization type", "source-empty party", "second address line"]},
+    {"path": "fixtures/connected-organization.txt", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "retrieved_on": "2026-06-21", "sha256": "ee27b4201a46347ffbdf67f2724d1d1091d188a4d988f56e61aec43af7529fcd", "scenarios": ["exact pipe-delimited committee row", "connected-organization text", "terminating LF"]},
+    {"path": "fixtures/source-empty-codes.txt", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "retrieved_on": "2026-06-21", "sha256": "b5bd968e374a8c5c5cbc45814a8a9ae22a325f1e4ca201dd6fc5cc183ed0c0bb", "scenarios": ["exact empty physical code fields", "15 fields", "terminating LF"]}
+  ],
+  "use": {
+    "retention": "Retain the exact archive, HTTP metadata, archive digest, member inventory, record occurrences, and issues indefinitely; derived profiles and graph assertions are rebuildable.",
+    "citation_date_required": true,
+    "disclaimer": "Committee master fields are registration assertions from a captured FEC snapshot. Names, codes, and connected-organization text do not alone prove control, beneficial ownership, or money flow."
+  },
+  "outputs": {
+    "fact_types": ["committee_source_assertion"],
+    "change_dimensions": ["source_snapshot", "committee_attributes", "connected_organization_text"]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "scope": "Development-selected research snapshots and reviewed interpretations, not automatic discovery, prose-role extraction, donor identity acceptance or an accuracy benchmark. Sources were downloaded as complete public HTML with curl; these are not production capture manifests. No response headers or private operator contact are included.",
+  "sources": [
+    {
+      "id": "sprinklr-proxy-2023",
+      "file": "sprinklr-proxy-2023.html",
+      "url": "https://investors.sprinklr.com/financial-information/all-sec-filings/content/0001140361-23-023208/ny20007009x1_def14a.htm",
+      "requested_url": "https://investors.sprinklr.com/financial-information/all-sec-filings/content/0001140361-23-023208/ny20007009x1_def14a.htm",
+      "observed_on": "2026-09-16",
+      "http_status": 200,
+      "bytes": 1740511,
+      "sha256": "b5e6824dbb523caab10ee6cf66a83cc60e8591dfdae201a382bb36cf3579e18a",
+      "reviewed_person_name": "John Chambers",
+      "reviewed_organization_name": "JC2 Ventures",
+      "role_text": "Chief Executive Officer of JC2 Ventures",
+      "subject_text": "John Chambers",
+      "document_date_text": "May 5, 2023",
+      "reviewed_as_of": "2023-05-05",
+      "date_basis": "Review interprets the present-tense director biography in the dated proxy as a point assertion, not a tenure interval. The filing date alone is not a role date. September 2017 describes the Sprinklr board role; January 2018 describes JC2 founding, not an explicit CEO appointment.",
+      "other_date_texts": ["September 2017", "January 2018", "July 2015"],
+      "appearance_ids": ["jc2-receipt-1", "jc2-receipt-2"],
+      "want_person_name_correspondence": true,
+      "want_employer_rule": "digit_letter_boundaries",
+      "want_days_before_receipt": 148
+    },
+    {
+      "id": "ridgeline-co-ceo",
+      "file": "ridgeline-co-ceo.html",
+      "url": "https://ridgeline.ai/company/news/ridgeline-names-dave-blair-co-ceo-expands-executive-leadership-team",
+      "requested_url": "https://ridgeline.ai/news/ridgeline-names-dave-blair-co-ceo-expands-executive-leadership-team",
+      "observed_on": "2026-09-16",
+      "http_status": 200,
+      "bytes": 133429,
+      "sha256": "8ddee61251a09af95c31c5be9aef3552a8566cbac8ec01ca8a878a5ce73945a0",
+      "reviewed_person_name": "Dave Duffield",
+      "reviewed_organization_name": "Ridgeline",
+      "role_text": "now co-CEO Dave Duffield",
+      "subject_text": "Dave Duffield",
+      "document_date_text": "Sept. 5, 2023",
+      "reviewed_as_of": "2023-09-05",
+      "date_basis": "The datelined announcement explicitly describes the role then. It does not promise continuation through a later receipt. The visible page date and JSON-LD modification date are not role dates. Search-index text at the old URL showed a different page date and was not retained as an HTTP source body.",
+      "other_date_texts": ["August 6, 2026"],
+      "json_ld_dates": {"datePublished": "2023-09-05", "dateModified": "2026-08-06T07:26:15.018Z"},
+      "appearance_ids": ["ridgeline-receipt"],
+      "want_person_name_correspondence": false,
+      "want_employer_rule": "legal_suffix_variant",
+      "want_days_before_receipt": 25
+    }
+  ]
+}

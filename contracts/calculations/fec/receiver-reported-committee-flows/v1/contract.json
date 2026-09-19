@@ -1,0 +1,109 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/receiver-reported-committee-flows",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "question": "What signed money did one exactly identified FEC committee report receiving from another exactly identified FEC committee in one cycle, separated by the receipt's statutory role?",
+  "inputs": [
+    {
+      "contract": "fec.schedule_a_processed.v1",
+      "role": "Every lossless processed Schedule A occurrence in one selected cycle, including exact raw and cleaned contributor IDs, receipt type, memo state, amount observation, and recipient committee ID.",
+      "required": true,
+      "version_policy": "Pin the exact digest-verified Schedule A columnar fact-set manifest and its source-release ancestry."
+    }
+  ],
+  "identity": {
+    "result_key": "source committee ID + recipient committee ID + receipt role + FEC cycle + exact Schedule A fact-set identity + calculation version",
+    "input_manifest": "Exact Schedule A columnar fact-set ID, immutable manifest SHA-256, source release, physical schema, and every shard digest.",
+    "method_version": "fec/receiver-reported-committee-flows@1.0.0 plus legal-tender.fec.receiver-reported-committee-flow-policy.v1 and publisher version",
+    "result_digest": "SHA-256 over canonical calculation identity fields and deterministic result keys."
+  },
+  "method": {
+    "ordered_steps": [
+      "Require one complete, immutable, digest-verified processed Schedule A fact set for one cycle.",
+      "Classify every occurrence once in this order: valid normalization; valid recipient committee ID; source identity agreement; non-memo subtotal; exact reported amount; receipt-type role.",
+      "Accept a source identity only when contbr_id and clean_contbr_id are both exact C plus eight-digit IDs and are equal. Preserve one-sided and conflicting identities as unresolved exceptions.",
+      "Map exact receipt types to registered-filer contribution, registered-filer in-kind contribution, affiliated transfer in, refund or repayment received, outbound, semantic memo, earmarked, noncommittee receipt, or unresolved. Names, entity type, and is_individual are diagnostics and never override the receipt type.",
+      "Include only the four inbound roles. Keep in-kind separate from cash-like roles, retain signed negative and zero amounts, and never add Schedule B sender reports to the receiver-reported amount.",
+      "Group included occurrences by source committee ID, recipient committee ID, receipt role, and cycle. Publish exact signed minor units and positive, negative, and zero occurrence counts.",
+      "Publish the compact predicate, sparse unresolved exceptions, grouped results, source-shape diagnostics, and exact row and amount conservation totals."
+    ],
+    "decision_states": [
+      {"id": "invalid_normalization", "publishable": false, "meaning": "The processed occurrence failed source normalization and cannot enter a flow result."},
+      {"id": "unresolved_recipient_committee_id", "publishable": false, "meaning": "The receiving filer is not an exact FEC committee ID."},
+      {"id": "excluded_no_source_committee_id", "publishable": true, "meaning": "Neither contributor identity field contains an exact FEC committee ID; this is not committee-to-committee flow."},
+      {"id": "unresolved_one_sided_source_committee_id", "publishable": false, "meaning": "Only the raw or cleaned contributor identity is an exact committee ID, so source identity is not corroborated."},
+      {"id": "unresolved_conflicting_source_committee_ids", "publishable": false, "meaning": "Raw and cleaned contributor IDs are valid but disagree."},
+      {"id": "excluded_memo_subtotal", "publishable": true, "meaning": "The publisher marks the occurrence as a memo subtotal that must not add another amount."},
+      {"id": "unresolved_amount", "publishable": false, "meaning": "The candidate occurrence has no exact reported signed amount."},
+      {"id": "excluded_outbound_receipt_role", "publishable": true, "meaning": "The Schedule A occurrence describes an outgoing or intermediary-out role, not money received from the identified contributor."},
+      {"id": "excluded_semantic_memo_receipt_role", "publishable": true, "meaning": "The receipt type is a semantic memo role even when the memo subtotal flag is absent."},
+      {"id": "excluded_earmarked_receipt_role", "publishable": true, "meaning": "The occurrence reports earmarked or conduit evidence and belongs to later source attribution, not a direct committee-flow edge."},
+      {"id": "excluded_noncommittee_receipt_role", "publishable": true, "meaning": "The receipt type describes a noncommittee receipt and does not become committee flow merely because a contributor field resembles a committee ID."},
+      {"id": "unresolved_receipt_role", "publishable": false, "meaning": "The receipt type is absent or not mapped by this contract; no graph direction is inferred."},
+      {"id": "included_receiver_reported_committee_flow", "publishable": true, "meaning": "The receiver reported an exact signed amount from one corroborated committee source in an accepted inbound receipt role."}
+    ],
+    "invariants": [
+      "Schedule A is receiver-reported evidence. Schedule B is independent reconciliation evidence and never adds a second amount to the same flow calculation.",
+      "Every source occurrence has exactly one terminal decision. Decision order is semantic and versioned.",
+      "Raw and cleaned contributor IDs must agree exactly. Name matching, entity type, is_individual, and committee-master membership cannot manufacture a source ID.",
+      "Receipt-type role defines direction. A C-shaped contributor ID alone does not define committee flow.",
+      "In-kind contributions remain a separate receipt role so consumers can include or exclude them explicitly.",
+      "Earmarked records remain available for later conduit attribution and never become direct committee-flow edges here.",
+      "Negative and zero included amounts remain included. All arithmetic uses exact signed minor units.",
+      "Unknown receipt roles and unresolved identities remain measurable and queryable; the graph never silently coerces them into an edge."
+    ]
+  },
+  "output": {
+    "result_schema": "result.schema.json",
+    "grain": "One compact membership manifest per exact Schedule A cycle fact set, one sparse exception per unresolved candidate occurrence, and one result per source committee, recipient committee, receipt role, and cycle.",
+    "fact_types": ["receiver_reported_committee_flow_membership", "receiver_reported_committee_flow_exception", "receiver_reported_committee_flow_component"],
+    "publication_states": [
+      {"id": "published", "publishable": true, "meaning": "Every input occurrence was classified once and exact signed amounts conserve through grouped results and explicit non-result states."},
+      {"id": "blocked_integrity", "publishable": false, "meaning": "Input identity, artifact bytes, decision membership, result grouping, or conservation failed verification."}
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "A changed Schedule A fact-set identity creates a new immutable calculation for only that cycle.",
+    "method_change_policy": "Any change to decision order, source-ID agreement, receipt-code mapping, memo handling, amount membership, group key, or arithmetic requires a new calculation version.",
+    "history_policy": "Retain every source fact, compact predicate, sparse exception, grouped result, source-shape profile, exact input identity, and superseded calculation manifest indefinitely."
+  },
+  "quality": {
+    "checks": [
+      {"id": "input_lineage", "severity": "block", "rule": "The immutable manifest and every Parquet shard digest match one accepted Schedule A fact set and cycle."},
+      {"id": "decision_conservation", "severity": "block", "rule": "Every Schedule A occurrence enters exactly one terminal decision."},
+      {"id": "signed_conservation", "severity": "block", "rule": "Every known signed amount appears exactly once in included, excluded, or unresolved totals; included cents equal the sum of all results."},
+      {"id": "result_conservation", "severity": "block", "rule": "Every included occurrence contributes exactly once to one source-recipient-role result."},
+      {"id": "source_identity_observation", "severity": "observe", "rule": "One-sided and conflicting contributor IDs are counted with exact signed money exposure."},
+      {"id": "receipt_role_observation", "severity": "observe", "rule": "Every exact-ID candidate occurrence is profiled by receipt type and description; unknown roles remain explicit."},
+      {"id": "publisher_helper_observation", "severity": "observe", "rule": "Entity-type and is_individual disagreements are measured but never change routing."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/policy-cases.json",
+      "representation": "synthetic_json",
+      "sha256": "39a950efd9e45dbfe2731d03a18f94cada68786125afcefc1f061681ee9c7278",
+      "input_paths": ["../../../../facts/fec/schedule-a/columnar/v1/physical-schema.json"],
+      "scenarios": [
+        "four distinct included receipt roles",
+        "signed negative and in-kind amounts",
+        "memo, outbound, semantic-memo, earmarked, and noncommittee exclusions",
+        "missing and generic receipt-role exceptions",
+        "one-sided and conflicting source IDs",
+        "invalid recipient, amount, and normalization",
+        "entity-type and is_individual neutrality"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": ["Schedule A fact set"],
+    "semantic_change_dimensions": ["normalization state", "recipient committee ID", "raw contributor ID", "clean contributor ID", "memo subtotal", "amount", "receipt type"],
+    "downstream_keys": ["cycle", "source_committee_id", "recipient_committee_id", "receipt_role"],
+    "no_change_policy": "An identical fact-set identity and calculation version reuse the immutable result. A changed cycle fact set recomputes only that cycle and downstream graph projections whose results or exceptions change."
+  },
+  "use": {
+    "retention": "Retain exact Schedule A evidence outside the graph and publish grouped receiver-reported committee-flow components plus unresolved money and identity coverage.",
+    "disclaimer": "These are amounts reported by receiving FEC filers. They are not personal payments to a candidate, do not prove influence or corruption, and do not by themselves establish that two differently named committees are the same organization."
+  }
+}

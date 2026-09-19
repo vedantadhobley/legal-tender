@@ -1,0 +1,162 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/candidate-master",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "fec",
+    "name": "Federal Election Commission",
+    "base_url": "https://www.fec.gov/"
+  },
+  "dataset": {
+    "id": "candidate-master",
+    "name": "Candidate master file",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "Basic candidate registration attributes published as one pipe-delimited record per included candidate in a two-year bulk snapshot."
+  },
+  "authority": [
+    {
+      "kind": "documentation",
+      "url": "https://www.fec.gov/campaign-finance-data/candidate-master-file-description/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://www.fec.gov/files/bulk-downloads/data_dictionaries/cn_header_file.csv",
+      "retrieved_on": "2026-08-27",
+      "sha256": "86fe00a87b53fb442608ff695a82f321f49e70718bc815a08a070a120412da0c"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "none",
+      "environment_variable": null,
+      "header": null,
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "two-year bulk archive",
+        "method": "GET",
+        "url": "https://www.fec.gov/files/bulk-downloads/{two_year_period}/cn{cycle_suffix}.zip",
+        "response_root": "cn.txt"
+      }
+    ],
+    "pagination": "None. Each requested two-year period is one complete ZIP snapshot.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "two_year_period",
+        "source": "Requested bulk URL path; cycle_suffix is the period's final two digits.",
+        "purpose": "Snapshot acquisition, replay, and downstream assertion scope. It is not taken from CAND_ELECTION_YR."
+      }
+    ],
+    "retry_policy": "Bound retries for transport failures; follow redirects; publish only after validating the HTTP result, ZIP integrity, exact member name, archive digest, row width, and record count."
+  },
+  "physical_schema": {
+    "media_type": "application/vnd.fec.pipe-delimited+zip",
+    "source_format": "delimited_archive",
+    "encoding": "UTF-8",
+    "delimiter": "|",
+    "line_ending": "LF with a required final LF in the verified 2020, 2022, 2024, and 2026 artifacts",
+    "quote_policy": "none",
+    "empty_record_policy": "An empty physical line becomes an explicit record-boundary issue; it is never silently skipped.",
+    "header_model": "external_publisher_header",
+    "container_members": ["cn.txt"],
+    "relations": [],
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "reject",
+    "null_policy": "Preserve every empty source field as the empty string. Do not convert it to null, zero, an inferred code, or an inherited value at the source boundary.",
+    "schema_fingerprint": "15 ordered fields: CAND_ID|CAND_NAME|CAND_PTY_AFFILIATION|CAND_ELECTION_YR|CAND_OFFICE_ST|CAND_OFFICE|CAND_OFFICE_DISTRICT|CAND_ICI|CAND_STATUS|CAND_PCC|CAND_ST1|CAND_ST2|CAND_CITY|CAND_ST|CAND_ZIP"
+  },
+  "identity": {
+    "publisher_record_key": "CAND_ID within source_partition.two_year_period",
+    "occurrence_locator": "archive SHA-256 + exact member name + one-based physical line number",
+    "record_version": "occurrence locator + SHA-256 of the exact source line",
+    "duplicate_policy": "Preserve every physical occurrence. Repeated CAND_ID values are evidence; conflicting values block any single-record projection for that candidate and partition.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {
+        "path": "source_partition.two_year_period",
+        "meaning": "The requested FEC bulk snapshot period. This is acquisition scope, not a fact date."
+      },
+      {
+        "path": "CAND_ELECTION_YR",
+        "meaning": "The candidate's election year reported in this source record; it can differ from the snapshot period."
+      }
+    ],
+    "money_fields": [],
+    "code_fields": [
+      {"path": "CAND_OFFICE", "meaning": "Raw FEC office code."},
+      {"path": "CAND_ICI", "meaning": "Raw incumbent/challenger/open-seat code."},
+      {"path": "CAND_STATUS", "meaning": "Raw candidate status code."},
+      {"path": "CAND_PTY_AFFILIATION", "meaning": "Raw party-affiliation code."}
+    ],
+    "rules": [
+      "Keep the source snapshot period and CAND_ELECTION_YR as separate dimensions.",
+      "Do not use names, addresses, party, or principal committee IDs as entity identity.",
+      "Preserve the source spelling and punctuation before any search normalization.",
+      "A candidate record is an assertion from one accepted snapshot, not a timeless candidate profile.",
+      "Do not discard a record because its CAND_ELECTION_YR differs from the requested snapshot period."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The FEC replaces each two-year bulk archive with a current snapshot and does not expose row-level revision identifiers in this file.",
+    "effective_projection": "Blocked while draft. Retain every acquired archive as an immutable snapshot; any current-view selection must name its snapshot and resolve duplicate-key conflicts explicitly."
+  },
+  "quality": {
+    "checks": [
+      {"id": "archive_identity", "severity": "block", "rule": "The archive digest, requested period, exact cn.txt member, retrieval time, and response metadata are present."},
+      {"id": "row_width", "severity": "block", "rule": "Every physical line has exactly 15 fields; short rows are not padded and extra fields are not truncated."},
+      {"id": "strict_decode", "severity": "block", "rule": "Every source byte decodes under the accepted encoding; invalid bytes are retained as failed raw evidence, never silently dropped."},
+      {"id": "occurrence_conservation", "severity": "block", "rule": "Every non-empty physical line becomes one record occurrence or one explicit issue."},
+      {"id": "duplicate_key", "severity": "block", "rule": "Conflicting records for one CAND_ID and source period remain separate and block a singleton projection."},
+      {"id": "schema_drift", "severity": "block", "rule": "Member name, field order, or field count changes require contract review."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/current-candidate.json",
+      "representation": "canonical_json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip",
+      "retrieved_on": "2026-06-21",
+      "sha256": "6462072ffda1c503429216125f0c0c9fa26805cb640ec9710c6e2724afc5aae4",
+      "scenarios": ["candidate election year equals snapshot period", "complete address", "empty second address line"]
+    },
+    {
+      "path": "fixtures/partial-address.json",
+      "representation": "canonical_json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip",
+      "retrieved_on": "2026-06-21",
+      "sha256": "62bda1cd3265f751dc8ee9e4f55281e4b80de3dda8881cb8f6fa0cedb3c350b9",
+      "scenarios": ["candidate election year differs from snapshot period", "source-empty address fields", "candidate status code"]
+    },
+    {
+      "path": "fixtures/current-candidate.txt",
+      "representation": "exact_bytes",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip",
+      "retrieved_on": "2026-06-21",
+      "sha256": "285cc1c955ff6aa42b84117817e9907b862f447b6c0c0f51005959a7ce66dc07",
+      "scenarios": ["exact pipe-delimited candidate row", "15 fields", "terminating LF"]
+    },
+    {
+      "path": "fixtures/partial-address.txt",
+      "representation": "exact_bytes",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip",
+      "retrieved_on": "2026-06-21",
+      "sha256": "60baa580f403a219139b4e296a51b62ea7b7ce473f5d6943369d8d662fd50ae9",
+      "scenarios": ["exact empty physical fields", "15 fields", "terminating LF"]
+    }
+  ],
+  "use": {
+    "retention": "Retain the exact archive, HTTP metadata, archive digest, member inventory, record occurrences, and issues indefinitely; derived projections are rebuildable.",
+    "citation_date_required": true,
+    "disclaimer": "Candidate master data reports FEC registration attributes for a captured source snapshot. It does not by itself establish candidacy status, financial activity, or election outcome outside that scope."
+  },
+  "outputs": {
+    "fact_types": ["candidate_source_assertion"],
+    "change_dimensions": ["source_snapshot", "candidate_attributes", "principal_campaign_committee"]
+  }
+}

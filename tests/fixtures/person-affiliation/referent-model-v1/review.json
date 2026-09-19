@@ -1,0 +1,177 @@
+{
+  "method": "manual-review-of-fixed-referent-trial.v1",
+  "cases_sha256": "b92b7b8541c4e1149b06392e4acf4a5e8c68534f997930f0aa0af3db18068cc9",
+  "prompt_sha256": "1988bd1c16fa5d2c413c66ac2834788483f414a162b7750081c3f30267c891c1",
+  "request_timeout_seconds": 900,
+  "models": [
+    {
+      "directory": "gemma-4-31b-20260919-long",
+      "profile": {
+        "model": "gemma-4-31b",
+        "reasoning_effort": "none",
+        "max_tokens": 8192
+      },
+      "completed_sha256": "a1412b30a503a047625346a668ce956336de8879dcc657a0a67296c53f5e88b1",
+      "http_200": 8,
+      "structural_valid": 4,
+      "semantic_checks_met": 6,
+      "usable": 3,
+      "elapsed_ms": 933862,
+      "prompt_tokens": 18834,
+      "cached_prompt_tokens": 11083,
+      "completion_tokens": 9803,
+      "cases": [
+        {
+          "id": "microsoft-hood",
+          "sha256": "58a8907996c0d0acc5c3cb75dfc3ef454b2c93e52b5e84b264ebafa63c1ff3e6",
+          "structural_valid": false,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "Separate roles and no false employer survive in the raw answer, but focus and endpoint surfaces are not selection IDs. The surname referents also retain the short Hood mention as an alternative instead of proposing the supported full Amy Hood mention."
+        },
+        {
+          "id": "amd-su",
+          "sha256": "c8493e8dcd36e5993c5025c087f833dc988883992346f824e7b0733594bfca7f",
+          "structural_valid": false,
+          "semantic_checks_met": true,
+          "usable": false,
+          "findings": "The raw answer separates AMD, Freescale, IBM and Texas Instruments roles and proposes the full Lisa T. Su mention as the referent for short Su surfaces. It is rejected because interpretation focus and surface fields contain literal or numeric values rather than supplied selection IDs."
+        },
+        {
+          "id": "fresh-mcclure",
+          "sha256": "866246528ff65331066065923535540ff598d4c3eec57ad0f3375906070fed0f",
+          "structural_valid": false,
+          "semantic_checks_met": true,
+          "usable": false,
+          "findings": "The raw answer separates Accenture history, Goldman board service and the visitor-board membership, keeps the visitor role unknown and omits education as employment. It is rejected because focus and surface fields do not reference the emitted selections."
+        },
+        {
+          "id": "grounding-multiple-roles",
+          "sha256": "95d8b3ca65fd24c11280dba53807b2b92e10aa470e8e699aad87adc41903497d",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "President, CFO, CEO and denied founder remain separate with correct employers, status, literal surfaces and Elena Ruiz referents."
+        },
+        {
+          "id": "grounding-council-scope",
+          "sha256": "d43edadcc4508be2298c831b5a13876efeb21dc08d802adaf5b4bd4874587901",
+          "structural_valid": true,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "The answer omits the asserted advisory-council membership and invents a correction that retracts the separately denied governing-board role. Bare Seabrook director stays unknown and Wren attendance creates no role."
+        },
+        {
+          "id": "grounding-ambiguous-conditional",
+          "sha256": "5f860286bdbe8d3703fed0a24cbd9020851364cdde0f66af925b7ceafa8b2e66",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "The literal Voss grounding stays separate from ambiguous Luca and Leila referents. The CFO remains hypothetical, and the visit creates no employment role."
+        },
+        {
+          "id": "grounding-anonymous-correction",
+          "sha256": "f2d44d456f29fde5c79ca26d3ddc09589573771253c351b424fca032773f2805",
+          "structural_valid": false,
+          "semantic_checks_met": true,
+          "usable": false,
+          "findings": "The raw answer keeps the person unresolved, proposes Yarrow and targets only the CFO claim for withdrawal while ignoring the source instruction. It is rejected because the correction uses a role ID in additional_evidence, which accepts only evidence selection IDs."
+        },
+        {
+          "id": "grounding-nearby-names",
+          "sha256": "c1cc3f42a6444b6f278368ba4efe224cfbad5183e3037d45bc797457119bd449",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "Only Inez at Ash receives a role, secretary remains unknown, and Paolo and Tamarack receive no employment relation."
+        }
+      ]
+    },
+    {
+      "directory": "gpt-oss-120b-20260919-long",
+      "profile": {
+        "model": "gpt-oss-120b",
+        "reasoning_effort": "medium",
+        "max_tokens": 8192
+      },
+      "completed_sha256": "deaf2dfd772f72f572fb56738ddad64d7c3211c2e167ee4e6c1ffcf291895f83",
+      "http_200": 8,
+      "structural_valid": 4,
+      "semantic_checks_met": 4,
+      "usable": 2,
+      "elapsed_ms": 460415,
+      "prompt_tokens": 18012,
+      "cached_prompt_tokens": 17518,
+      "completion_tokens": 22781,
+      "cases": [
+        {
+          "id": "microsoft-hood",
+          "sha256": "4157d16ad26244f6cd25562c1406ac4efb9587046ba30bef77e4a1160576cd1e",
+          "structural_valid": false,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "The answer emits selections and referents but no interpretations, leaving every referent dangling."
+        },
+        {
+          "id": "amd-su",
+          "sha256": "a66d8d000796b92877fbf8583f601a1848e393c3a1633c6b396b28d62f822b82",
+          "structural_valid": false,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "The answer emits selections and eleven referent records but no interpretations. Its referent alternatives also treat the full and surname mentions as competing people throughout."
+        },
+        {
+          "id": "fresh-mcclure",
+          "sha256": "e528caaaa8a068454df267ab16a4394e2ec9495514f2ec02bd2cc8c3aaf6da49",
+          "structural_valid": true,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "The answer separates several roles and keeps visitor-board scope unknown, but it leaves every person and organization referent unassessed and overstates several finance titles as executive."
+        },
+        {
+          "id": "grounding-multiple-roles",
+          "sha256": "21833642d03982e3cf281497c2b83a5d5edb04fda23d30aa99811f6629239848",
+          "structural_valid": true,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "All four requested roles and referents are present, but the answer invents a correction from the founder negation and retracts the already denied founder claim."
+        },
+        {
+          "id": "grounding-council-scope",
+          "sha256": "f3d28dd571d7acafff8263d482834a72a933e34b38525dca002c493e6d71936b",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "Advisory membership, denied governing-board membership and Seabrook director remain distinct and conservatively unknown. Wren attendance creates no role."
+        },
+        {
+          "id": "grounding-ambiguous-conditional",
+          "sha256": "0d3a2f50777ce1ceaae8b4ec6103c6d1d7ed09df7493549315560c1fd73c4757",
+          "structural_valid": false,
+          "semantic_checks_met": true,
+          "usable": false,
+          "findings": "The raw answer keeps the CFO hypothetical and retains Luca and Leila as semantic alternatives, but the grounding itself lists multiple subjects while labeling the binding coreference instead of ambiguous."
+        },
+        {
+          "id": "grounding-anonymous-correction",
+          "sha256": "73927a1a36fb4a48c02eda9322fe62e14873d0a0e8c8652432965cdfaf4d36b5",
+          "structural_valid": false,
+          "semantic_checks_met": true,
+          "usable": false,
+          "findings": "The raw answer keeps the person unresolved, proposes Yarrow and explicitly targets only the CFO claim while ignoring the instruction. The correction incorrectly claims direct binding without endpoint surfaces and also cites a role ID as evidence."
+        },
+        {
+          "id": "grounding-nearby-names",
+          "sha256": "eb4630fdc4fb855c2095d7f62f288bf017e08844ea1ae9f5f2515789db093245",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "Only Inez at Ash receives a secretary employee role; no executive rank or Paolo/Tamarack employment is inferred."
+        }
+      ]
+    }
+  ],
+  "identity_approved": false,
+  "graph_publication_approved": false,
+  "financial_attribution": false
+}

@@ -1,0 +1,365 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "lda/filings",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "lda",
+    "name": "Lobbying Disclosure Act public disclosure system",
+    "base_url": "https://lda.gov/"
+  },
+  "dataset": {
+    "id": "filings",
+    "name": "LD-1 and LD-2 filings",
+    "semantic_domain": "federal_lobbying",
+    "description": "Registration and lobbying-activity filing versions with filing-level money, participants, activities, and related disclosures."
+  },
+  "authority": [
+    {
+      "kind": "api",
+      "url": "https://lda.gov/api/v1/filings/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "openapi",
+      "url": "https://lda.gov/api/openapi/v1/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6c5f13c470bf1b4b09071db32d10df72372210fd2c2be921214e3c94f47dde8a"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://lda.gov/api/redoc/v1/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "terms",
+      "url": "https://lda.gov/api/tos/",
+      "retrieved_on": "2026-08-27"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "api_token",
+      "environment_variable": "LOBBYING_API_KEY",
+      "header": "Authorization",
+      "scheme": "Token"
+    },
+    "endpoints": [
+      {
+        "name": "list",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/filings/",
+        "response_root": "results[]"
+      },
+      {
+        "name": "detail",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/filings/{filing_uuid}/",
+        "response_root": "$"
+      }
+    ],
+    "pagination": "Offset pages reached through next URLs; accepted page size is 25; a query parameter is required beyond page one; partitions require a convergence pass.",
+    "rate_limit_per_minute": 120,
+    "partitions": [
+      {
+        "name": "filing_year",
+        "source": "filing_year query parameter",
+        "purpose": "Complete and reconciliation backfills."
+      },
+      {
+        "name": "posted_date",
+        "source": "dt_posted selected with strict before/after filters and filtered locally",
+        "purpose": "Overlapping incremental discovery only; not fact identity or reporting time."
+      }
+    ],
+    "retry_policy": "Bound retries, honor Retry-After on 429, checkpoint complete pages, and never publish a failed page as an empty result."
+  },
+  "physical_schema": {
+    "media_type": "application/json",
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Preserve absent, explicit null, empty string, empty array, and invalid typed values as distinct states.",
+    "schema_fingerprint": "Sorted observed JSON paths with JSON kinds and array cardinality, plus this contract version and the reviewed OpenAPI override set."
+  },
+  "identity": {
+    "publisher_record_key": "filing_uuid",
+    "occurrence_locator": "snapshot digest + normalized request + page number + one-based results ordinal",
+    "record_version": "filing_uuid + SHA-256 of canonical record JSON",
+    "duplicate_policy": "Preserve every occurrence; conflicting content for one UUID creates separate record versions and blocks the affected projection.",
+    "children": [
+      {
+        "object": "lobbying_activity",
+        "locator": "filing_uuid + /lobbying_activities/{zero-based-index}",
+        "content_digest": true
+      },
+      {
+        "object": "activity_lobbyist",
+        "locator": "filing_uuid + activity JSON path + /lobbyists/{zero-based-index}",
+        "content_digest": true
+      },
+      {
+        "object": "activity_government_entity",
+        "locator": "filing_uuid + activity JSON path + /government_entities/{zero-based-index}",
+        "content_digest": true
+      },
+      {
+        "object": "conviction_disclosure",
+        "locator": "filing_uuid + /conviction_disclosures/{zero-based-index}",
+        "content_digest": true
+      },
+      {
+        "object": "foreign_entity",
+        "locator": "filing_uuid + /foreign_entities/{zero-based-index}",
+        "content_digest": true
+      },
+      {
+        "object": "affiliated_organization",
+        "locator": "filing_uuid + /affiliated_organizations/{zero-based-index}",
+        "content_digest": true
+      }
+    ]
+  },
+  "semantics": {
+    "time_fields": [
+      {
+        "path": "filing_year + filing_period",
+        "meaning": "Publisher reporting interval; preserve source code and display."
+      },
+      {
+        "path": "dt_posted",
+        "meaning": "Publisher posting timestamp with source UTC offset."
+      },
+      {
+        "path": "termination_date",
+        "meaning": "Reported relationship termination date; does not erase the filing."
+      },
+      {
+        "path": "client.effective_date",
+        "meaning": "Effective date asserted for the client relationship."
+      },
+      {
+        "path": "registrant.dt_updated",
+        "meaning": "Current nested registrant master update timestamp, not historical filing time."
+      },
+      {
+        "path": "conviction_disclosures[].date",
+        "meaning": "Reported conviction date."
+      }
+    ],
+    "money_fields": [
+      {
+        "path": "income",
+        "meaning": "Source-reported lobbying income point when the API supplies a decimal; its measurement is a method- and period-specific good-faith estimate, while API null remains ambiguous until document evidence establishes an amount state.",
+        "unit": "USD lossless reported decimal or document-qualified band"
+      },
+      {
+        "path": "expenses",
+        "meaning": "Source-reported lobbying expense point when the API supplies a decimal; its measurement and precision depend on the reporting method and period, while API null remains ambiguous until document evidence establishes an amount state.",
+        "unit": "USD lossless reported decimal or document-qualified band"
+      },
+      {
+        "path": "foreign_entities[].contribution",
+        "meaning": "Reported foreign-entity contribution.",
+        "unit": "USD decimal string"
+      },
+      {
+        "path": "foreign_entities[].ownership_percentage",
+        "meaning": "Reported foreign ownership percentage.",
+        "unit": "decimal percent"
+      }
+    ],
+    "code_fields": [
+      {
+        "path": "filing_type",
+        "meaning": "Filing state and period family from the pinned filing-types constants snapshot."
+      },
+      {
+        "path": "filing_period",
+        "meaning": "Publisher reporting-period code."
+      },
+      {
+        "path": "expenses_method",
+        "meaning": "Raw expense calculation method; observed uppercase codes conflict with lowercase OpenAPI enums."
+      },
+      {
+        "path": "lobbying_activities[].general_issue_code",
+        "meaning": "General lobbying issue code from the pinned constants snapshot."
+      }
+    ],
+    "rules": [
+      "Do not add income and expenses into one universal amount.",
+      "Do not infer daily transactions from filing-period amounts.",
+      "Preserve reported_value, threshold_band, source_blank, not_applicable, invalid, and unobserved money states; record printable-document absence as the unobserved reason, and never turn API null or a checked under-5000 band into zero or an invented point amount.",
+      "Treat a losslessly parsed API decimal as a reported point, not proof of exact economic money; retain reporting method, effective precision rule, and any derived interval separately.",
+      "Preserve filing-level as-filed registrant fields and printable-document assertions separately from nested mutable master profiles.",
+      "Preserve API lobbying-activity occurrences separately from printable form groups; an LD-1 API object per issue code can duplicate one shared form section and must not cause double-counting.",
+      "Preserve standardized API government-entity IDs and labels separately from agency text printed as filed.",
+      "Classify pre-2021-02-14 government-entity associations as filing_scope unless stronger source evidence establishes activity scope.",
+      "A no-activity or termination code does not delete money or other disclosed content."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "Originals, amendments, terminations, termination amendments, and no-activity variants have distinct filing UUIDs; no amends_filing_uuid is published.",
+    "effective_projection": "Blocked while draft. Preserve every version; any later effective chain is a named inference validated against printable documents."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "filing_uuid",
+        "severity": "block",
+        "rule": "Every normalized filing has a valid non-null UUID."
+      },
+      {
+        "id": "occurrence_conservation",
+        "severity": "block",
+        "rule": "Every results occurrence becomes a record version or an explicit issue."
+      },
+      {
+        "id": "conditional_money",
+        "severity": "block",
+        "rule": "Income, expenses, and expense method retain raw API values, measurement rules, and document-qualified amount states without being combined or imputed."
+      },
+      {
+        "id": "document_comparison",
+        "severity": "partial",
+        "rule": "Missing documents and API/document differences publish as explicit unobserved, representation-only, normalized-difference, or conflict states."
+      },
+      {
+        "id": "child_conservation",
+        "severity": "block",
+        "rule": "Every child-array element retains its JSON locator and content digest."
+      },
+      {
+        "id": "government_entity_scope",
+        "severity": "block",
+        "rule": "Legacy imported government entities never publish as activity-scoped relationships."
+      },
+      {
+        "id": "unknown_field",
+        "severity": "observe",
+        "rule": "Additive unknown fields are captured and included in schema-drift evidence."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/registration.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/filings/7866327b-c892-4430-b9f0-1f0f679c58c6/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "cd0629aaf3d8ff540295d3745c86801006140b0e86abe0fd5852dd6bb57902c9",
+      "scenarios": [
+        "LD-1 registration",
+        "multiple lobbying activities",
+        "null income and expenses"
+      ]
+    },
+    {
+      "path": "fixtures/quarterly-report.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/filings/467e4a97-6351-4902-8ffa-dd51632e156b/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "34b653709e0f280a623c299460c86a109a188ac0cf5770a722d32f5c8a3e1202",
+      "scenarios": [
+        "ordinary LD-2 quarterly report",
+        "income filer",
+        "nested activity"
+      ]
+    },
+    {
+      "path": "fixtures/no-activity-with-income.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/filings/3e3453a3-0d92-4f65-883f-e2a13cfdb11f/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "af376ac3ca3131e4511fb823c8702bb3b773ad7d0749481e3f9b59205a46d8d2",
+      "scenarios": [
+        "no-activity filing",
+        "empty activity array",
+        "non-zero income"
+      ]
+    },
+    {
+      "path": "fixtures/termination-with-activity.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/filings/24aa3971-815e-40ca-a63f-455ff0090c03/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "ecca47c7012ffe7f3d045bbc285bba9c9c3154fc84246e7270c5d276400e04f9",
+      "scenarios": [
+        "termination date",
+        "reported expenses",
+        "activity retained"
+      ]
+    },
+    {
+      "path": "fixtures/amendment.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/filings/7466c7ee-8bd1-4496-94df-5d5322d25e2d/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6b1b4a22d996e698de3c3a7d89caf7e70fbf44af85d6d383a6a24c209347f22f",
+      "scenarios": [
+        "amendment filing",
+        "uppercase expense-method code",
+        "distinct filing UUID"
+      ]
+    },
+    {
+      "path": "fixtures/amendment-family-original.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/filings/d05eac1f-0651-48a8-b34f-d57b6d40cd06/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "8b27215accd4f1dcce575e259cef1600244e4b71fbd7a569a28cfa769aff74e0",
+      "scenarios": [
+        "LD-2 amendment-family original",
+        "API null expense with printable under-threshold state",
+        "complete form-version comparison"
+      ]
+    },
+    {
+      "path": "fixtures/amendment-family-second.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/filings/502bf3ec-6897-4d1e-a684-b1b7f578fa04/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "99acef991307678086535d8315a80024fa9eb004b6f5d75086eac3d0a9686893",
+      "scenarios": [
+        "LD-2 amendment-family intermediate version",
+        "API null expense with printable under-threshold state",
+        "changed complete activity sections"
+      ]
+    },
+    {
+      "path": "fixtures/amendment-family-third.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/filings/ad68a692-6a5b-4562-b468-48262b8bcba0/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "144220c55fbabf78f8886282f50dfd61516203f093a85a6acb20bbebc683b30e",
+      "scenarios": [
+        "LD-2 amendment-family later version",
+        "API null expense with printable under-threshold state",
+        "changed complete activity sections"
+      ]
+    }
+  ],
+  "use": {
+    "retention": "Preserve complete API responses, record occurrences, source documents selected by policy, and every accepted version indefinitely.",
+    "citation_date_required": true,
+    "disclaimer": "Senate Office of Public Records cannot vouch for the data or analyses derived from these data after the data have been retrieved from LDA.gov."
+  },
+  "outputs": {
+    "fact_types": [
+      "lda.filing.v1",
+      "lda.lobbying_activity.v1",
+      "lda.conviction_disclosure.v1",
+      "lda.foreign_entity_disclosure.v1",
+      "lda.affiliated_organization_disclosure.v1"
+    ],
+    "change_dimensions": [
+      "filing_uuid",
+      "filing_year",
+      "filing_period",
+      "registrant_id",
+      "client_id",
+      "lobbyist_id",
+      "government_entity_id"
+    ]
+  }
+}

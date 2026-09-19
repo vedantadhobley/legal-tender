@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/receiver-reported-committee-flows/v1/exception.schema.json",
+  "title": "Receiver-reported committee-flow sparse exception",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "exception_id", "calculation_set_id", "natural_key", "source_row_ordinal", "state", "amount_minor_units", "recipient_committee_id", "contributor_id", "clean_contributor_id", "receipt_type_code", "reason_codes"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.receiver-reported-committee-flow-exception.v1"},
+    "exception_id": {"$ref": "#/$defs/digest"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "natural_key": {"type": "string", "pattern": "^fec:schedule-a:[0-9]{4}:[0-9]+$"},
+    "source_row_ordinal": {"type": "integer", "minimum": 1},
+    "state": {"enum": ["invalid_normalization", "unresolved_recipient_committee_id", "unresolved_one_sided_source_committee_id", "unresolved_conflicting_source_committee_ids", "unresolved_amount", "unresolved_receipt_role"]},
+    "amount_minor_units": {"type": ["string", "null"], "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "recipient_committee_id": {"type": ["string", "null"]},
+    "contributor_id": {"type": ["string", "null"]},
+    "clean_contributor_id": {"type": ["string", "null"]},
+    "receipt_type_code": {"type": ["string", "null"]},
+    "reason_codes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": ["normalization_invalid", "recipient_committee_id_invalid", "source_committee_id_raw_only", "source_committee_id_clean_only", "source_committee_ids_conflict", "amount_source_null", "amount_invalid", "receipt_type_missing", "receipt_type_unmapped"]}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

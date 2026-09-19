@@ -1,0 +1,28 @@
+[
+  {"ID":"microsoft-hood","Group":"regression","Names":[
+    {"kind":"person","text":"Amy Hood"},{"kind":"person","text":"Hood"},{"kind":"person","text":"Satya Nadella"},
+    {"kind":"organization","text":"Microsoft"},{"kind":"organization","text":"Activision Blizzard"},{"kind":"organization","text":"LinkedIn"},{"kind":"organization","text":"GitHub"},{"kind":"organization","text":"Duke University"},{"kind":"organization","text":"Harvard University"}
+  ]},
+  {"ID":"amd-su","Group":"regression","Names":[
+    {"kind":"person","text":"Lisa T. Su"},{"kind":"person","text":"Su"},
+    {"kind":"organization","text":"AMD"},{"kind":"organization","text":"Freescale Semiconductor, Inc."},{"kind":"organization","text":"Freescale"},{"kind":"organization","text":"IBM"},{"kind":"organization","text":"Texas Instruments Incorporated"}
+  ]},
+  {"ID":"new-pronoun-employer-change","Group":"regression","Names":[
+    {"kind":"person","text":"Nadia Torres"},{"kind":"organization","text":"Copper Instruments"},{"kind":"organization","text":"Larch Robotics"}
+  ]},
+  {"ID":"new-correction-and-conflict","Group":"regression","Names":[
+    {"kind":"person","text":"Owen Price"},{"kind":"organization","text":"Vale Devices"},{"kind":"organization","text":"Elm Museum"}
+  ]},
+  {"ID":"fresh-mcclure","Group":"fresh","Names":[
+    {"kind":"person","text":"KC McClure"},{"kind":"person","text":"McClure"},
+    {"kind":"organization","text":"Accenture"},{"kind":"organization","text":"The Goldman Sachs Group, Inc."},{"kind":"organization","text":"Smeal College of Business"},{"kind":"organization","text":"Pennsylvania State University"}
+  ]},
+  {"ID":"fresh-name-punctuation","Group":"fresh","Names":[
+    {"kind":"person","text":"Mei-Ling O’Neil"},{"kind":"person","text":"Óscar Núñez"},{"kind":"person","text":"O’Neil"},
+    {"kind":"organization","text":"A&B Holdings, Inc."},{"kind":"organization","text":"ABH"}
+  ]},
+  {"ID":"fresh-shared-surname","Group":"fresh","Names":[
+    {"kind":"person","text":"Lina Shah"},{"kind":"person","text":"Lara Shah"},{"kind":"person","text":"Shah"},{"kind":"organization","text":"Northglass Labs"}
+  ]},
+  {"ID":"fresh-no-names-instruction","Group":"fresh","Names":[]}
+]

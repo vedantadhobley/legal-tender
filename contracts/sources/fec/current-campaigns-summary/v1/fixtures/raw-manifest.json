@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/current-campaigns-summary@1.0.0",
+  "representation": "exact_bytes",
+  "transformation": "Each file is one exact physical line copied from the 2024 webl24.txt member, including its terminating LF byte. Numeric lexemes and empty fields are unchanged.",
+  "fixtures": [
+    {"path": "candidate-loan.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "retrieved_on": "2026-06-21", "sha256": "09c280b065cc615f0ef4fffce6cbf0b41fb1eb9d94e44a412ff253b184bae69e", "scenarios": ["exact pipe-delimited current-campaign row", "30 fields", "terminating LF"]},
+    {"path": "partial-campaign.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "retrieved_on": "2026-06-21", "sha256": "cab8c77fa90ca85520fdaf9cb5113f558597159090e7466aaf8c0b34749e45a4", "scenarios": ["exact decimal lexemes", "30 fields", "terminating LF"]}
+  ]
+}

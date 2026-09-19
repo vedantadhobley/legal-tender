@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/all-candidates-summary@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "Each fixture is one exact 2024 weball24.txt physical row mapped positionally to the ordered local FEC header evidence, then serialized as sorted, indented JSON. Numeric lexemes and empty strings are unchanged; the contract remains draft pending stronger publisher-header provenance.",
+  "fixtures": [
+    {"path": "current-coverage.json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/weball24.zip", "retrieved_on": "2026-06-21", "sha256": "b25385e53a182e35d704a42cf7b612a1500b8eafee3b28dce850780ced64c88a", "scenarios": ["coverage ends with source period", "authorized transfers", "individual and committee categories"]},
+    {"path": "prior-coverage-negative-refund.json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/weball24.zip", "retrieved_on": "2026-06-21", "sha256": "c1ee837e7b5e022a4bc366ad13d19969b320f76ffd73c6be74575f582c4f9d8a", "scenarios": ["coverage ends before source period", "negative refund", "record retained across period boundary"]}
+  ]
+}

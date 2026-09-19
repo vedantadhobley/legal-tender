@@ -1,7 +1,16 @@
-# Lobbying Integration — Design
+# Lobbying Integration — Legacy Design
 
-> **Status:** design doc, not yet implemented. Captures the shape of the work
-> and the design decisions that need to be made before coding.
+> **Status:** unimplemented Python-era design and redesign evidence. Do not
+> implement this document as the Go target. Desired behavior now lives in the
+> [product contract](./design/product-contract.md#lobbying-view) and
+> [lobbying question catalog](./design/investigative-questions.md#lobbying-questions).
+> Current official-source acquisition is proposed in the
+> [federal lobbying source design](./design/lobbying-source-ingestion.md).
+> The accepted long-term role of lobbying, bills, votes, campaign money, and
+> beneficiary inference is the
+> [legislative-influence design](./design/legislative-influence.md).
+> The `lda.senate.gov` API named below was replaced by `lda.gov`; the old host's
+> announced sunset was July 31, 2026.
 
 The project's working title is "trace every dollar to its origin." Lobbying
 data is the obvious adjacent dataset. This doc lays out what lobbying data
@@ -11,8 +20,8 @@ required to integrate it cleanly without overstating what we know.
 ## What lobbying data is
 
 The Lobbying Disclosure Act of 1995 (LDA) requires registered lobbyists and
-their employers to file quarterly reports with the Senate Office of Public
-Records. The Senate exposes these as a JSON API: `lda.senate.gov/api/v1/`.
+their employers to file quarterly reports. The current unified JSON API is
+`https://lda.gov/api/v1/`.
 
 A typical LDA filing (Form LD-2) contains:
 
@@ -45,9 +54,10 @@ client and a topic but no direct candidate edge.
 
 ## What we have already
 
-- `src/api/lobbying_api.py` (63 LOC) — thin client wrapping
-  `lda.senate.gov/api/v1/filings/`. Two functions: `search_filings(...)`,
-  `get_filing(filing_id)`. Used nowhere else in the codebase.
+- `src/api/lobbying_api.py` (63 LOC) — obsolete thin client wrapping the old
+  `lda.senate.gov/api/v1/filings/` endpoint and unsupported offset/limit-style
+  pagination. Two functions: `search_filings(...)`, `get_filing(filing_id)`.
+  Used nowhere else in the codebase.
 - `src/api/congress_api.py` — Congress.gov API client. Could provide
   committee assignments per member per cycle.
 - `src/assets/mapping/member_fec_mapping.py` — already maps Congress.gov

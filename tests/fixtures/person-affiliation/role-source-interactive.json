@@ -1,0 +1,18 @@
+{
+  "version": "role-source-interactive-review.v1",
+  "scope": "One user-approved interactive review request, not a scheduled capture or automatic identity selector. Full response headers remain private; only safe response fields are projected here.",
+  "guidance_url": "https://www.mediawiki.org/wiki/Manual:Maxlag_parameter",
+  "request_mode": "interactive_maxlag_omitted",
+  "source_url": "https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&formatversion=2&ids=Q1393271%7CQ173395%7CQ8034666&languages=en&props=info%7Clabels%7Cdescriptions%7Caliases%7Cclaims%7Csitelinks&sitefilter=enwiki",
+  "expected_ids": ["Q1393271", "Q173395", "Q8034666"],
+  "selection": "The same explicit John Chambers, Cisco and Workday review items as the earlier background-mode attempts. JC2 Ventures, its similar-name team member, Ridgeline and the reported engineer were not separately discovered or fetched. Workday is not a substitute for Ridgeline.",
+  "response_date": "2026-09-15T21:46:51Z",
+  "http_status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "body": {
+    "path": "wikidata-interactive-1.json",
+    "bytes": 615656,
+    "sha256": "5683ad0692e124dcd9d87bcdc81b7448def720f632a2e4e4b66b8aae4f490076"
+  },
+  "outcome": "Usable entity response; the unchanged Go extractor preserves 31 selected statement occurrences. Offline tests compare with the unchanged reviewed corpus, distinguishing one historical-role agreement from unobserved title and incomplete-discovery gaps. No FEC identity or financial approval. Background capture still sends maxlag=5 and stops on backoff."
+}

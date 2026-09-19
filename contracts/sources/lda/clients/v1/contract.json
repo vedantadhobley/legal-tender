@@ -1,0 +1,159 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "lda/clients",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "lda",
+    "name": "Lobbying Disclosure Act public disclosure system",
+    "base_url": "https://lda.gov/"
+  },
+  "dataset": {
+    "id": "clients",
+    "name": "LDA clients",
+    "semantic_domain": "federal_lobbying_identity",
+    "description": "Current client master profiles and their registrant relationships."
+  },
+  "authority": [
+    {
+      "kind": "api",
+      "url": "https://lda.gov/api/v1/clients/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "openapi",
+      "url": "https://lda.gov/api/openapi/v1/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6c5f13c470bf1b4b09071db32d10df72372210fd2c2be921214e3c94f47dde8a"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://lda.gov/api/redoc/v1/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "terms",
+      "url": "https://lda.gov/api/tos/",
+      "retrieved_on": "2026-08-27"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "api_token",
+      "environment_variable": "LOBBYING_API_KEY",
+      "header": "Authorization",
+      "scheme": "Token"
+    },
+    "endpoints": [
+      {
+        "name": "list",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/clients/",
+        "response_root": "results[]"
+      },
+      {
+        "name": "detail",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/clients/{id}/",
+        "response_root": "$"
+      }
+    ],
+    "pagination": "Offset pages reached through next URLs with an accepted page size of 25.",
+    "rate_limit_per_minute": 120,
+    "partitions": [
+      {
+        "name": "snapshot_date",
+        "source": "Legal Tender retrieval date",
+        "purpose": "Immutable complete master snapshot."
+      }
+    ],
+    "retry_policy": "Bound retries, honor Retry-After on 429, and publish only a complete converged snapshot."
+  },
+  "physical_schema": {
+    "media_type": "application/json",
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Preserve absent, explicit null, empty string, and invalid typed values as distinct states.",
+    "schema_fingerprint": "Sorted observed JSON paths with JSON kinds, plus this contract version and reviewed OpenAPI overrides."
+  },
+  "identity": {
+    "publisher_record_key": "id",
+    "occurrence_locator": "snapshot digest + normalized request + page number + one-based results ordinal",
+    "record_version": "source-scoped id + SHA-256 of canonical record JSON",
+    "duplicate_policy": "Preserve every occurrence; conflicting content for one ID creates separate versions and blocks the current-profile projection.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {
+        "path": "effective_date",
+        "meaning": "Effective date asserted for the client and registrant relationship."
+      }
+    ],
+    "money_fields": [],
+    "code_fields": [],
+    "rules": [
+      "Accept client_id as string or integer physically because real responses conflict with OpenAPI.",
+      "Normalize source identifiers to opaque text only after preserving the original JSON kind.",
+      "Do not merge a client and registrant or an external organization by name."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The endpoint exposes mutable current profiles rather than historical profile versions.",
+    "effective_projection": "Every Legal Tender snapshot remains immutable; current display state is an explicit latest-observation projection."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "source_id",
+        "severity": "block",
+        "rule": "Every normalized master record has a non-null source-scoped id."
+      },
+      {
+        "id": "snapshot_conservation",
+        "severity": "block",
+        "rule": "Every results occurrence becomes a record version or an explicit issue."
+      },
+      {
+        "id": "duplicate_id",
+        "severity": "block",
+        "rule": "Conflicting content for one ID inside one converged snapshot blocks publication."
+      },
+      {
+        "id": "unknown_field",
+        "severity": "observe",
+        "rule": "Additive unknown fields remain captured and enter schema-drift evidence."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/client.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/clients/58116/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "580e54efdf3fb82e1a99e8a2c4bbf71c73690ac36cc947ba5ecb9ea8e6c0fe75",
+      "scenarios": [
+        "client master",
+        "numeric client_id despite OpenAPI string type",
+        "nested registrant relationship"
+      ]
+    }
+  ],
+  "use": {
+    "retention": "Preserve complete API responses, record occurrences, source documents selected by policy, and every accepted version indefinitely.",
+    "citation_date_required": true,
+    "disclaimer": "Senate Office of Public Records cannot vouch for the data or analyses derived from these data after the data have been retrieved from LDA.gov."
+  },
+  "outputs": {
+    "fact_types": [
+      "lda.client_profile.v1",
+      "lda.client_registrant_assertion.v1"
+    ],
+    "change_dimensions": [
+      "client_id",
+      "registrant_id",
+      "effective_date"
+    ]
+  }
+}

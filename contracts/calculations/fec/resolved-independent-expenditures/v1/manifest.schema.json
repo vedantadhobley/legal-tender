@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/resolved-independent-expenditures/v1/manifest.schema.json",
+  "title": "Published resolved independent-expenditure calculation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "calculation_set_id", "calculation",
+    "calculation_version", "publisher_version", "result_schema_version",
+    "exception_schema_version", "cycle", "source_release_id",
+    "input_candidate_resolution", "run_id", "state", "published_at",
+    "grouping_policy", "counts", "amounts", "results", "exceptions", "checks"
+  ],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.resolved-independent-expenditure-set.v1"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "calculation": {"const": "fec/resolved-independent-expenditures"},
+    "calculation_version": {"const": "1.0.0"},
+    "publisher_version": {"const": "legal-tender.fec.resolved-independent-expenditure-publisher.v1"},
+    "result_schema_version": {"const": "legal-tender.fec.resolved-independent-expenditure-spender-candidate.v1"},
+    "exception_schema_version": {"const": "legal-tender.fec.resolved-independent-expenditure-exception.v1"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "input_candidate_resolution": {"$ref": "#/$defs/input_reference"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "published"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "grouping_policy": {"$ref": "#/$defs/grouping_policy"},
+    "counts": {"$ref": "#/$defs/counts"},
+    "amounts": {"$ref": "#/$defs/amounts"},
+    "results": {"$ref": "#/$defs/artifact"},
+    "exceptions": {"$ref": "#/$defs/artifact"},
+    "checks": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "signed_integer": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "input_reference": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "calculation", "calculation_version", "calculation_set_id", "manifest_sha256", "decision_schema_version", "decisions_sha256"],
+      "properties": {
+        "role": {"const": "independent_expenditure_candidate_resolution"},
+        "calculation": {"const": "fec/independent-expenditure-candidate-resolution"},
+        "calculation_version": {"const": "1.0.0"},
+        "calculation_set_id": {"$ref": "#/$defs/digest"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"},
+        "decision_schema_version": {"const": "legal-tender.fec.independent-expenditure-candidate-resolution.v1"},
+        "decisions_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "grouping_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "group_by", "projected_states", "exception_states"],
+      "properties": {
+        "version": {"const": "legal-tender.fec.resolved-independent-expenditure-grouping-policy.v1"},
+        "group_by": {"const": ["spender_committee_id", "resolved_candidate_id", "support_oppose"]},
+        "projected_states": {"const": ["confirmed", "resolved", "unverified"]},
+        "exception_states": {"const": ["ambiguous", "unresolved"]}
+      }
+    },
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_decisions", "projectable_decisions", "unprojectable_decisions", "confirmed", "resolved", "unverified", "ambiguous", "unresolved", "result_groups", "exceptions"],
+      "properties": {
+        "source_decisions": {"type": "integer", "minimum": 0},
+        "projectable_decisions": {"type": "integer", "minimum": 0},
+        "unprojectable_decisions": {"type": "integer", "minimum": 0},
+        "confirmed": {"type": "integer", "minimum": 0},
+        "resolved": {"type": "integer", "minimum": 0},
+        "unverified": {"type": "integer", "minimum": 0},
+        "ambiguous": {"type": "integer", "minimum": 0},
+        "unresolved": {"type": "integer", "minimum": 0},
+        "result_groups": {"type": "integer", "minimum": 0},
+        "exceptions": {"type": "integer", "minimum": 0}
+      }
+    },
+    "amounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_minor_units", "projectable_minor_units", "unprojectable_minor_units", "confirmed_minor_units", "resolved_minor_units", "unverified_minor_units", "ambiguous_minor_units", "unresolved_minor_units"],
+      "properties": {
+        "source_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "projectable_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "unprojectable_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "confirmed_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "resolved_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "unverified_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "ambiguous_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "unresolved_minor_units": {"$ref": "#/$defs/signed_integer"}
+      }
+    },
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "storage_key"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "compression": {"const": "zstd"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"type": "boolean"},
+        "severity": {"const": "block"},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

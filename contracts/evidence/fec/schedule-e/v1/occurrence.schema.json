@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/schedule-e/v1/occurrence.schema.json",
+  "title": "Processed Schedule E source-record occurrence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "occurrence_id", "row_ordinal", "raw_byte_offset",
+    "raw_byte_length", "raw_content_sha256", "natural_key",
+    "publisher_record_reference", "record_version_id", "cycle", "state"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.schedule-e-occurrence.v1"},
+    "occurrence_id": {"$ref": "#/$defs/digest"},
+    "row_ordinal": {"type": "integer", "minimum": 1},
+    "raw_byte_offset": {"type": "integer", "minimum": 0},
+    "raw_byte_length": {"type": "integer", "minimum": 1},
+    "raw_content_sha256": {"$ref": "#/$defs/digest"},
+    "natural_key": {"type": "string", "pattern": "^fec:schedule-e:[0-9]{4}:[0-9]+$"},
+    "publisher_record_reference": {"type": "string", "pattern": "^[0-9]+$"},
+    "record_version_id": {"$ref": "#/$defs/digest"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "state": {"const": "valid"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

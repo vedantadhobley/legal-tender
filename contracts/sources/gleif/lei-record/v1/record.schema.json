@@ -1,0 +1,26 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"GLEIF exact-LEI response boundary; compiled parser further checks identity and interpreted fields",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["data","meta"],
+  "properties":{
+    "data":{
+      "type":"object","additionalProperties":false,
+      "required":["type","id","attributes","links","relationships"],
+      "properties":{
+        "type":{"const":"lei-records"},
+        "id":{"type":"string","pattern":"^[0-9A-Z]{18}[0-9]{2}$"},
+        "attributes":{"type":"object","additionalProperties":false,"required":["lei","entity","registration"],"properties":{
+          "lei":{"type":"string","pattern":"^[0-9A-Z]{18}[0-9]{2}$"},
+          "entity":{"type":"object","required":["legalName","otherNames","transliteratedOtherNames","status"]},
+          "registration":{"type":"object","required":["status","lastUpdateDate","nextRenewalDate"]},
+          "bic":{},"mic":{},"ocid":{},"qcc":{},"gem":{},"spglobal":{},"conformityFlag":{}
+        }},
+        "links":{"type":"object","additionalProperties":false,"required":["self"],"properties":{"self":{"type":"string","format":"uri"}}},
+        "relationships":{"type":"object"}
+      }
+    },
+    "meta":{"type":"object","additionalProperties":false,"required":["goldenCopy"],"properties":{"goldenCopy":{"type":"object","additionalProperties":false,"required":["publishDate"],"properties":{"publishDate":{"type":"string","format":"date-time"}}}}}
+  }
+}

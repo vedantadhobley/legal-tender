@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/receiver-reported-committee-flows/v1/result.schema.json",
+  "title": "Receiver-reported committee-flow result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "result_id", "calculation_set_id", "cycle",
+    "source_committee_id", "recipient_committee_id", "receipt_role",
+    "signed_amount_minor_units", "receipt_count", "positive_count",
+    "negative_count", "zero_count"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.receiver-reported-committee-flow.v1"},
+    "result_id": {"$ref": "#/$defs/digest"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_committee_id": {"$ref": "#/$defs/committeeID"},
+    "recipient_committee_id": {"$ref": "#/$defs/committeeID"},
+    "receipt_role": {"enum": ["registered_filer_contribution", "registered_filer_in_kind_contribution", "affiliated_transfer_in", "refund_or_repayment_received"]},
+    "signed_amount_minor_units": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "receipt_count": {"type": "integer", "minimum": 1},
+    "positive_count": {"type": "integer", "minimum": 0},
+    "negative_count": {"type": "integer", "minimum": 0},
+    "zero_count": {"type": "integer", "minimum": 0}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "committeeID": {"type": "string", "pattern": "^C[0-9]{8}$"}
+  },
+  "allOf": [
+    {
+      "properties": {
+        "receipt_count": {
+          "description": "Must equal positive_count + negative_count + zero_count; enforced by the Go publisher."
+        }
+      }
+    }
+  ]
+}

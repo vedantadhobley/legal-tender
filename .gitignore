@@ -206,18 +206,17 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Dagster (runtime directories only - config files are tracked)
-.dagster/
-.telemetry/
-.logs_queue/
-.nux/
-compute_logs/
-storage/
-history/
-schedules/
-!src/schedules/
-logs/
-logs*/
+# Dagster (repository-root runtime directories only - config files are tracked)
+/.dagster/
+/.telemetry/
+/.logs_queue/
+/.nux/
+/compute_logs/
+/storage/
+/history/
+/schedules/
+/logs/
+/logs*/
 *.db
 *.db-shm
 *.db-wal

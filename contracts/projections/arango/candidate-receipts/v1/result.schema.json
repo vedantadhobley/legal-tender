@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/projections/arango/candidate-receipts/v1/result.schema.json",
+  "title": "ArangoDB candidate-receipt projection probe result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "projection_version", "projection_id", "state",
+    "cycle", "database", "graph", "run_id", "observed_at", "inputs",
+    "expected_counts", "observed_counts", "reused_projection",
+    "missing_master_facts", "storage",
+    "representative_candidate_id", "queries", "checks"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.arango.candidate-receipts-probe-result.v1"},
+    "projection_version": {"const": "legal-tender.arango.candidate-receipts-projection.v1"},
+    "projection_id": {"$ref": "#/$defs/digest"},
+    "state": {"enum": ["ready", "partial"]},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "database": {"type": "string", "pattern": "^lt_probe_[0-9]{4}_[0-9a-f]{16}$"},
+    "graph": {"const": "candidate_receipts"},
+    "run_id": {"type": "string", "minLength": 1},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "inputs": {"$ref": "#/$defs/inputs"},
+    "expected_counts": {"$ref": "#/$defs/counts"},
+    "observed_counts": {"$ref": "#/$defs/counts"},
+    "reused_projection": {"type": "boolean"},
+    "missing_master_facts": {"$ref": "#/$defs/missing"},
+    "storage": {"$ref": "#/$defs/storage"},
+    "representative_candidate_id": {"type": "string", "pattern": "^[A-Z0-9]+$"},
+    "queries": {
+      "type": "array",
+      "minItems": 2,
+      "items": {"$ref": "#/$defs/query"}
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 6,
+      "items": {"$ref": "#/$defs/check"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_release_id", "fact_bundle_id", "fact_bundle_manifest_sha256",
+        "calculation_set_id", "calculation_manifest_sha256",
+        "candidate_fact_set_id", "candidate_manifest_sha256",
+        "committee_fact_set_id", "committee_manifest_sha256"
+      ],
+      "properties": {
+        "source_release_id": {"type": "string", "pattern": "^fec-[0-9a-f]{64}$"},
+        "fact_bundle_id": {"$ref": "#/$defs/digest"},
+        "fact_bundle_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "calculation_set_id": {"$ref": "#/$defs/digest"},
+        "calculation_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "candidate_fact_set_id": {"$ref": "#/$defs/digest"},
+        "candidate_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "committee_fact_set_id": {"$ref": "#/$defs/digest"},
+        "committee_manifest_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entities", "candidates", "committees", "candidate_results",
+        "candidate_committee_relationships", "receipt_components"
+      ],
+      "properties": {
+        "entities": {"type": "integer", "minimum": 0},
+        "candidates": {"type": "integer", "minimum": 0},
+        "committees": {"type": "integer", "minimum": 0},
+        "candidate_results": {"type": "integer", "minimum": 0},
+        "candidate_committee_relationships": {"type": "integer", "minimum": 0},
+        "receipt_components": {"type": "integer", "minimum": 0}
+      }
+    },
+    "missing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidates", "committees"],
+      "properties": {
+        "candidates": {"type": "integer", "minimum": 0},
+        "committees": {"type": "integer", "minimum": 0}
+      }
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collections", "document_bytes", "index_bytes", "combined_bytes"],
+      "properties": {
+        "collections": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {"$ref": "#/$defs/collectionMetrics"}
+        },
+        "document_bytes": {"type": "integer", "minimum": 1},
+        "index_bytes": {"type": "integer", "minimum": 1},
+        "combined_bytes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "collectionMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "documents", "document_bytes", "index_count", "index_bytes", "cache_bytes"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "documents": {"type": "integer", "minimum": 0},
+        "document_bytes": {"type": "integer", "minimum": 0},
+        "index_count": {"type": "integer", "minimum": 1},
+        "index_bytes": {"type": "integer", "minimum": 0},
+        "cache_bytes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "repetitions", "result_rows", "minimum_micros",
+        "median_micros", "p95_micros", "maximum_micros"
+      ],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "repetitions": {"type": "integer", "minimum": 1},
+        "result_rows": {"type": "integer", "minimum": 1},
+        "minimum_micros": {"type": "integer", "minimum": 0},
+        "median_micros": {"type": "integer", "minimum": 0},
+        "p95_micros": {"type": "integer", "minimum": 0},
+        "maximum_micros": {"type": "integer", "minimum": 0}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "warn"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

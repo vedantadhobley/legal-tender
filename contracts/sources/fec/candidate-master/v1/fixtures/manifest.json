@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/candidate-master@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "Each fixture is one exact 2024 cn.txt physical row mapped positionally to the publisher's ordered header, then serialized as sorted, indented JSON. Empty pipe-delimited fields remain empty strings. The raw archive and line locator remain runtime evidence, not fixture bytes.",
+  "fixtures": [
+    {
+      "path": "current-candidate.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip",
+      "retrieved_on": "2026-06-21",
+      "sha256": "6462072ffda1c503429216125f0c0c9fa26805cb640ec9710c6e2724afc5aae4",
+      "scenarios": ["candidate election year equals snapshot period", "complete address", "empty second address line"]
+    },
+    {
+      "path": "partial-address.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip",
+      "retrieved_on": "2026-06-21",
+      "sha256": "62bda1cd3265f751dc8ee9e4f55281e4b80de3dda8881cb8f6fa0cedb3c350b9",
+      "scenarios": ["candidate election year differs from snapshot period", "source-empty address fields", "candidate status code"]
+    }
+  ]
+}

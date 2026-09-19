@@ -2,7 +2,9 @@ python-arango>=7.5.0
 # Python dependencies
 requests
 python-dotenv
-dagster
-dagster-webserver
-dagster-postgres
+dagster==1.13.20
+dagster-webserver==1.13.20
+dagster-postgres==0.29.20
+jsonschema>=4.23,<5
+referencing>=0.37,<1
 psutil

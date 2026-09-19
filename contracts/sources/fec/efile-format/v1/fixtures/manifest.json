@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "../dispatch.json",
+  "representation": "canonical_json",
+  "transformation": "Each exact first-record byte fragment is encoded as lowercase hexadecimal with its terminator intact. The manifest digest covers the JSON fixture; the nested sha256 covers the decoded source bytes.",
+  "fixtures": [
+    {
+      "path": "hdr-8.3.json",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/1483193.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "2c6ed251f4ad117b614208cc4bb4489aca5e2b2b057cc36f52a177c92cf8a2ee",
+      "scenarios": ["HDR 8.3 with CRLF", "exact bytes represented as hexadecimal"]
+    },
+    {
+      "path": "hdr-8.4.json",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/1780795.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "f5aa33dcfd73675c8805c6b029cb1c74abdba514b96c8736d59eb7d3486692cc",
+      "scenarios": ["HDR 8.4 with bare LF", "exact bytes represented as hexadecimal"]
+    },
+    {
+      "path": "hdr-8.5.json",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2010008.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "386897732983008fe92d51a12a946a4079cc56392b6d3afc38ea4bec5f86717e",
+      "scenarios": ["HDR 8.5 with omitted trailing fields and bare LF", "exact bytes represented as hexadecimal"]
+    }
+  ]
+}

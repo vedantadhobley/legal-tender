@@ -1,0 +1,33 @@
+{
+  "first_name": "BRETT",
+  "id": 38841,
+  "last_name": "GARSON",
+  "middle_name": null,
+  "nickname": null,
+  "prefix": null,
+  "prefix_display": null,
+  "registrant": {
+    "address_1": "750 First Street NE",
+    "address_2": "SUITE 1130",
+    "address_3": null,
+    "address_4": null,
+    "city": "WASHINGTON",
+    "contact_name": "AMY R. WILLIAMS",
+    "contact_telephone": "+1 202-835-0740",
+    "country": "US",
+    "country_display": "United States of America",
+    "description": "Government affairs",
+    "dt_updated": "2026-07-18T20:19:36.811212-04:00",
+    "house_registrant_id": 32416,
+    "id": 35707,
+    "name": "SMITH GARSON",
+    "ppb_country": "US",
+    "ppb_country_display": "United States of America",
+    "state": "DC",
+    "state_display": "District of Columbia",
+    "url": "https://lda.gov/api/v1/registrants/35707/",
+    "zip": "20002"
+  },
+  "suffix": null,
+  "suffix_display": null
+}

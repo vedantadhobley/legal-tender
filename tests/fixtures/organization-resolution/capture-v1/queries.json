@@ -1,0 +1,293 @@
+{
+  "schema_version": "organization-queries.v1",
+  "selection": "first_distinct_nonblank_connected_org_text_lexical.v1",
+  "build_sha256": "1cb8fdb56840717d051d3e8104a94808332dfe9850e7446b3458feeb06decbb2",
+  "queries": [
+    {
+      "reported_text": "1199 SEIU UNITED HEALTHCARE WORKERS EAST",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "2d513f16e71f724491d73b3aec5d3900e7689c38e30268a128b415afb0689b79",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "4db1d15d165726afdd57c079d04590db8d7622f85dd86ad3ab85214613ab43ea",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "11TH CONGRESSIONAL DISTRICT REPUBLICAN PARTY",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "372a9ff06cb341b9659e688f748e4fceb27ff05d8c42366aacf8b8b4c5d94949",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "1ST SOURCE CORPORATION",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "68b22c730846529a613889f0b3e8f16d28ab74383f7bc936220deb8b27d8e08d",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2018 SENATORS CLASSIC COMMITTEE",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "8831e3642a908718e263d5c5184bb6935003119b24385070d25996ded3e3a6e7",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2019 SENATORS CLASSIC COMMITTEE",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "48d3fbcac79bc6bf9a090a6b47b91a85869e4e0d1c69b9b2ee4101b29712dc44",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2022 FOUNDERS COMMITTEE",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "0b236706b606c33565fdb88d7a0482a5fb8206e7f2d09affa01acba51dbeb7f9",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "295de48fd02f9f083375ecab0f6428011b57eba7d58be25d0c6a443c500652c3",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2023 SENATORS CLASSIC COMMITTEE",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "1d62e1465d2a0ca9127b482de9e067dcaff910609a19741f632afbab7c4bd043",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2024 REPUBLICAN SENATE VICTORY",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "1a74581bf7d2f4bf36c9e22ed8dd46cefb4d704cc609caabf91e0d7787552ec7",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "70d125bb1b96886975cc2edc932cd84a44801d99389cfceb07c0d1a013c450c4",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "c4658171668c47906a14410eaa1e93c51690f8f17ad786711ee2bd6f1215ac68",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2024 RNC VICTORY",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "c26d70a026ec7a36eabfb7558fafae7eb54fd262cd09f644cd2a3b66f5a611bb",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2024 RNC VICTORY (JFC)",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "dad9dd29bf294c9f01f1f05bf57bbf25f0ca94982f727cce855221893ef98af8",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2024 SENATORS CLASSIC COMMITTEE",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "02f2ce181e9beb1d86556cd0adb98d90ce35b806d4ba5cf6d514b2a83253204d",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "562481fa9a1de62580a8aa81992661e55b7b68c836c04b8f752838ac5f45d7b2",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2024 THUNE REPUBLICAN SENATE VICTORY",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "459c61492629e600440a281f680249db141731092ff83326a9bce728003070f4",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "8a6778de61529cbf3089dc2221f5bd3c89a7bd4edb65c94970a87d0931897d0c",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2024 VOTER MOBILIZATION FUND",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "9369ffa9393221e3e0e4e5373ea38db32207f90ce9bac5e7a5b9b96e1ffc0b49",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "2A DEFENSE FUND",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "58bf4f22ce8dcf9d8d1b1654a3e3590b94c7c987e2304717da4d8763b55bb0f2",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "94dceef5bf5d6950e75f81cf8cf48aef0430a8595ce3fc90e926a125c973bad5",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "314 ACTION FUND",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "38d808e43b4ea1fee141c3ae95c2f187c61b7e3619d6c42d70cf6020373c36c4",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "314 ACTION IMPACT SLATE",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "186fff56858122042691b9f884eb2ded124a86b5bf683fc0856332b931904a26",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "71d6f10e3a44bae116cae8c4c8be9e7ab6de116b6b93a74b4afac75b8cb45ee7",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "9d827f093f7a47838a13b9ee744686face010854d2b953c857bff1b39fb61c7d",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "fa076c2c312be145d7b738176f0629fa38adc46a964f73af6d6f2ed9aaeaf881",
+          "field": "CONNECTED_ORG_NM"
+        },
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "fd2bf964281bc2466006a1b7e9de57cdf99a40da59c1d2957673a4d35247b183",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "314 ACTION VICTORY FUND",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "b8c2089c23580dbc77b47fa383fc9cf5986adb29067449dd6979f9de78acf9de",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "340B HEALTH",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "a932904b91595a9c86377a6b2c9d7c5a2ff5c3929306113274b6abae5f418d03",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "3M COMPANY",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "4fb3facf4e1de6ebea2b0772160c5c3b95e1bdfb5d99266ecb25be8e46f85d42",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    },
+    {
+      "reported_text": "7TH INNING STRETCH",
+      "references": [
+        {
+          "fact_set_id": "e6699bdf7174bf3865060b14e1025fa45852bac54fd50b5a4b3743d1dd97ac1d",
+          "manifest_sha256": "e64a74911d279e2afec9adef864ec9218f37c091f85aac6488fec1f72b0a4f30",
+          "fact_id": "e93e8ba0394bdf7f72732b177639130868d3ecc8b358ead79027946e1059123f",
+          "field": "CONNECTED_ORG_NM"
+        }
+      ]
+    }
+  ]
+}

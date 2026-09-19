@@ -1,0 +1,827 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_contract",
+    "parser_version",
+    "complete",
+    "expected",
+    "header_sha256",
+    "header_bytes",
+    "record_bytes",
+    "rows",
+    "rows_with_issues",
+    "fields_sha256",
+    "typed_values_sha256",
+    "money",
+    "dates",
+    "identifiers",
+    "intervals",
+    "multiplicity",
+    "diagnostic_equations",
+    "issue_counts",
+    "issue_examples",
+    "max_issue_examples_per_code",
+    "code_interpretation",
+    "terminal_attribution_eligible"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.committee-summary-verification.v1"
+    },
+    "source_contract": {
+      "const": "fec/committee-summary@1.0.0"
+    },
+    "parser_version": {
+      "const": "legal-tender.fec.committee-summary-reader.v1"
+    },
+    "complete": {
+      "const": true
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cycle",
+        "bytes",
+        "sha256"
+      ],
+      "properties": {
+        "cycle": {
+          "type": "string",
+          "pattern": "^[0-9]{3}[02468]$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "header_sha256": {
+      "const": "f8e539448b8271b6fc975f0982b5426cf2d1dc08425d0685fdf8f8f7b31de0b9"
+    },
+    "header_bytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "record_bytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "rows": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100000
+    },
+    "rows_with_issues": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fields_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "typed_values_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "INDV_CONTB",
+        "PTY_CMTE_CONTB",
+        "OTH_CMTE_CONTB",
+        "TTL_CONTB",
+        "TRANF_FROM_OTHER_AUTH_CMTE",
+        "OFFSETS_TO_OP_EXP",
+        "OTHER_RECEIPTS",
+        "TTL_RECEIPTS",
+        "TRANF_TO_OTHER_AUTH_CMTE",
+        "OTH_LOAN_REPYMTS",
+        "INDV_REF",
+        "POL_PTY_CMTE_REF",
+        "TTL_CONTB_REF",
+        "OTHER_DISB",
+        "TTL_DISB",
+        "NET_CONTB",
+        "NET_OP_EXP",
+        "COH_BOP",
+        "COH_COP",
+        "DEBTS_OWED_BY_CMTE",
+        "DEBTS_OWED_TO_CMTE",
+        "INDV_ITEM_CONTB",
+        "INDV_UNITEM_CONTB",
+        "OTH_LOANS",
+        "TRANF_FROM_NONFED_ACCT",
+        "TRANF_FROM_NONFED_LEVIN",
+        "TTL_NONFED_TRANF",
+        "LOAN_REPYMTS_RECEIVED",
+        "OFFSETS_TO_FNDRSG",
+        "OFFSETS_TO_LEGAL_ACCTG",
+        "FED_CAND_CONTB_REF",
+        "TTL_FED_RECEIPTS",
+        "SHARED_FED_OP_EXP",
+        "SHARED_NONFED_OP_EXP",
+        "OTHER_FED_OP_EXP",
+        "TTL_OP_EXP",
+        "FED_CAND_CMTE_CONTB",
+        "INDT_EXP",
+        "COORD_EXP_BY_PTY_CMTE",
+        "LOANS_MADE",
+        "SHARED_FED_ACTVY_FED_SHR",
+        "SHARED_FED_ACTVY_NONFED",
+        "NON_ALLOC_FED_ELECT_ACTVY",
+        "TTL_FED_ELECT_ACTVY",
+        "TTL_FED_DISB",
+        "CAND_CNTB",
+        "CAND_LOAN",
+        "TTL_LOANS",
+        "OP_EXP",
+        "CAND_LOAN_REPYMNT",
+        "TTL_LOAN_REPYMTS",
+        "OTH_CMTE_REF",
+        "TTL_OFFSETS_TO_OP_EXP",
+        "EXEMPT_LEGAL_ACCTG_DISB",
+        "FNDRSG_DISB",
+        "ITEM_REF_REB_RET",
+        "SUBTTL_REF_REB_RET",
+        "UNITEM_REF_REB_RET",
+        "ITEM_OTHER_REF_REB_RET",
+        "UNITEM_OTHER_REF_REB_RET",
+        "SUBTTL_OTHER_REF_REB_RET",
+        "ITEM_OTHER_INCOME",
+        "UNITEM_OTHER_INCOME",
+        "EXP_PRIOR_YRS_SUBJECT_LIM",
+        "EXP_SUBJECT_LIMITS",
+        "FED_FUNDS",
+        "ITEM_CONVN_EXP_DISB",
+        "ITEM_OTHER_DISB",
+        "SUBTTL_CONVN_EXP_DISB",
+        "TTL_EXP_SUBJECT_LIMITS",
+        "UNITEM_CONVN_EXP_DISB",
+        "UNITEM_OTHER_DISB",
+        "TTL_COMMUNICATION_COST",
+        "COH_BOY",
+        "COH_COY"
+      ],
+      "properties": {
+        "INDV_CONTB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "PTY_CMTE_CONTB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OTH_CMTE_CONTB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_CONTB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TRANF_FROM_OTHER_AUTH_CMTE": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OFFSETS_TO_OP_EXP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OTHER_RECEIPTS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_RECEIPTS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TRANF_TO_OTHER_AUTH_CMTE": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OTH_LOAN_REPYMTS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "INDV_REF": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "POL_PTY_CMTE_REF": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_CONTB_REF": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OTHER_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "NET_CONTB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "NET_OP_EXP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "COH_BOP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "COH_COP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "DEBTS_OWED_BY_CMTE": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "DEBTS_OWED_TO_CMTE": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "INDV_ITEM_CONTB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "INDV_UNITEM_CONTB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OTH_LOANS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TRANF_FROM_NONFED_ACCT": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TRANF_FROM_NONFED_LEVIN": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_NONFED_TRANF": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "LOAN_REPYMTS_RECEIVED": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OFFSETS_TO_FNDRSG": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OFFSETS_TO_LEGAL_ACCTG": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "FED_CAND_CONTB_REF": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_FED_RECEIPTS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "SHARED_FED_OP_EXP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "SHARED_NONFED_OP_EXP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OTHER_FED_OP_EXP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_OP_EXP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "FED_CAND_CMTE_CONTB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "INDT_EXP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "COORD_EXP_BY_PTY_CMTE": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "LOANS_MADE": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "SHARED_FED_ACTVY_FED_SHR": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "SHARED_FED_ACTVY_NONFED": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "NON_ALLOC_FED_ELECT_ACTVY": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_FED_ELECT_ACTVY": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_FED_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "CAND_CNTB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "CAND_LOAN": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_LOANS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OP_EXP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "CAND_LOAN_REPYMNT": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_LOAN_REPYMTS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "OTH_CMTE_REF": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_OFFSETS_TO_OP_EXP": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "EXEMPT_LEGAL_ACCTG_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "FNDRSG_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "ITEM_REF_REB_RET": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "SUBTTL_REF_REB_RET": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "UNITEM_REF_REB_RET": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "ITEM_OTHER_REF_REB_RET": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "UNITEM_OTHER_REF_REB_RET": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "SUBTTL_OTHER_REF_REB_RET": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "ITEM_OTHER_INCOME": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "UNITEM_OTHER_INCOME": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "EXP_PRIOR_YRS_SUBJECT_LIM": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "EXP_SUBJECT_LIMITS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "FED_FUNDS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "ITEM_CONVN_EXP_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "ITEM_OTHER_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "SUBTTL_CONVN_EXP_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_EXP_SUBJECT_LIMITS": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "UNITEM_CONVN_EXP_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "UNITEM_OTHER_DISB": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "TTL_COMMUNICATION_COST": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "COH_BOY": {
+          "$ref": "#/$defs/money_profile"
+        },
+        "COH_COY": {
+          "$ref": "#/$defs/money_profile"
+        }
+      }
+    },
+    "dates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "CVG_START_DT",
+        "CVG_END_DT"
+      ],
+      "properties": {
+        "CVG_START_DT": {
+          "$ref": "#/$defs/value_profile"
+        },
+        "CVG_END_DT": {
+          "$ref": "#/$defs/value_profile"
+        }
+      }
+    },
+    "identifiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "CMTE_ID",
+        "CAND_ID",
+        "FEC_ELECTION_YR"
+      ],
+      "properties": {
+        "CMTE_ID": {
+          "$ref": "#/$defs/value_profile"
+        },
+        "CAND_ID": {
+          "$ref": "#/$defs/value_profile"
+        },
+        "FEC_ELECTION_YR": {
+          "$ref": "#/$defs/value_profile"
+        }
+      }
+    },
+    "intervals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid_endpoints",
+        "unavailable_endpoints",
+        "reversed",
+        "start_before_cycle",
+        "end_after_cycle",
+        "start_after_cycle_start"
+      ],
+      "properties": {
+        "valid_endpoints": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unavailable_endpoints": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reversed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "start_before_cycle": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_after_cycle": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "start_after_cycle_start": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "multiplicity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "committee_ids",
+        "unindexed_committee_rows",
+        "repeated_committee_ids",
+        "repeated_committee_occurrences",
+        "repeated_committee_extra_rows",
+        "equal_non_candidate_groups",
+        "conflicting_non_candidate_groups",
+        "composite_keys",
+        "unindexed_composite_rows",
+        "duplicate_composite_extra_rows",
+        "conflicting_composite_keys",
+        "exact_duplicate_extra_rows"
+      ],
+      "properties": {
+        "committee_ids": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unindexed_committee_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "repeated_committee_ids": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "repeated_committee_occurrences": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "repeated_committee_extra_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "equal_non_candidate_groups": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conflicting_non_candidate_groups": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "composite_keys": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unindexed_composite_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duplicate_composite_extra_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conflicting_composite_keys": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exact_duplicate_extra_rows": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "diagnostic_equations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cash",
+        "individual"
+      ],
+      "properties": {
+        "cash": {
+          "$ref": "#/$defs/equation"
+        },
+        "individual": {
+          "$ref": "#/$defs/equation"
+        }
+      }
+    },
+    "issue_counts": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/issue_code"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "issue_examples": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/issue_code"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 10,
+        "items": {
+          "$ref": "#/$defs/issue_example"
+        }
+      }
+    },
+    "max_issue_examples_per_code": {
+      "const": 10
+    },
+    "code_interpretation": {
+      "const": "preserved_not_interpreted"
+    },
+    "terminal_attribution_eligible": {
+      "const": false
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/audits/fec/committee-summary-verification/v1/result.schema.json",
+  "title": "Complete committee-summary source verification, not financial publication",
+  "$defs": {
+    "money_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid",
+        "blank",
+        "invalid",
+        "positive",
+        "negative",
+        "zero",
+        "leading_decimal"
+      ],
+      "properties": {
+        "valid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blank": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positive": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "negative": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zero": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "leading_decimal": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "value_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid",
+        "blank",
+        "invalid"
+      ],
+      "properties": {
+        "valid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blank": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "equation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "equal",
+        "different",
+        "missing",
+        "invalid"
+      ],
+      "properties": {
+        "equal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "different": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "issue_code": {
+      "enum": [
+        "invalid_money_syntax",
+        "money_minor_unit_overflow",
+        "invalid_date",
+        "invalid_identity",
+        "cycle_mismatch",
+        "reversed_interval"
+      ]
+    },
+    "issue_example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ordinal",
+        "offset",
+        "raw_sha256",
+        "code",
+        "field"
+      ],
+      "properties": {
+        "ordinal": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "raw_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "code": {
+          "$ref": "#/$defs/issue_code"
+        },
+        "field": {
+          "enum": [
+            "Link_Image",
+            "CMTE_ID",
+            "CMTE_NM",
+            "CMTE_TP",
+            "CMTE_DSGN",
+            "CMTE_FILING_FREQ",
+            "CMTE_ST1",
+            "CMTE_ST2",
+            "CMTE_CITY",
+            "CMTE_ST",
+            "CMTE_ZIP",
+            "TRES_NM",
+            "CAND_ID",
+            "FEC_ELECTION_YR",
+            "INDV_CONTB",
+            "PTY_CMTE_CONTB",
+            "OTH_CMTE_CONTB",
+            "TTL_CONTB",
+            "TRANF_FROM_OTHER_AUTH_CMTE",
+            "OFFSETS_TO_OP_EXP",
+            "OTHER_RECEIPTS",
+            "TTL_RECEIPTS",
+            "TRANF_TO_OTHER_AUTH_CMTE",
+            "OTH_LOAN_REPYMTS",
+            "INDV_REF",
+            "POL_PTY_CMTE_REF",
+            "TTL_CONTB_REF",
+            "OTHER_DISB",
+            "TTL_DISB",
+            "NET_CONTB",
+            "NET_OP_EXP",
+            "COH_BOP",
+            "CVG_START_DT",
+            "COH_COP",
+            "CVG_END_DT",
+            "DEBTS_OWED_BY_CMTE",
+            "DEBTS_OWED_TO_CMTE",
+            "INDV_ITEM_CONTB",
+            "INDV_UNITEM_CONTB",
+            "OTH_LOANS",
+            "TRANF_FROM_NONFED_ACCT",
+            "TRANF_FROM_NONFED_LEVIN",
+            "TTL_NONFED_TRANF",
+            "LOAN_REPYMTS_RECEIVED",
+            "OFFSETS_TO_FNDRSG",
+            "OFFSETS_TO_LEGAL_ACCTG",
+            "FED_CAND_CONTB_REF",
+            "TTL_FED_RECEIPTS",
+            "SHARED_FED_OP_EXP",
+            "SHARED_NONFED_OP_EXP",
+            "OTHER_FED_OP_EXP",
+            "TTL_OP_EXP",
+            "FED_CAND_CMTE_CONTB",
+            "INDT_EXP",
+            "COORD_EXP_BY_PTY_CMTE",
+            "LOANS_MADE",
+            "SHARED_FED_ACTVY_FED_SHR",
+            "SHARED_FED_ACTVY_NONFED",
+            "NON_ALLOC_FED_ELECT_ACTVY",
+            "TTL_FED_ELECT_ACTVY",
+            "TTL_FED_DISB",
+            "CAND_CNTB",
+            "CAND_LOAN",
+            "TTL_LOANS",
+            "OP_EXP",
+            "CAND_LOAN_REPYMNT",
+            "TTL_LOAN_REPYMTS",
+            "OTH_CMTE_REF",
+            "TTL_OFFSETS_TO_OP_EXP",
+            "EXEMPT_LEGAL_ACCTG_DISB",
+            "FNDRSG_DISB",
+            "ITEM_REF_REB_RET",
+            "SUBTTL_REF_REB_RET",
+            "UNITEM_REF_REB_RET",
+            "ITEM_OTHER_REF_REB_RET",
+            "UNITEM_OTHER_REF_REB_RET",
+            "SUBTTL_OTHER_REF_REB_RET",
+            "ITEM_OTHER_INCOME",
+            "UNITEM_OTHER_INCOME",
+            "EXP_PRIOR_YRS_SUBJECT_LIM",
+            "EXP_SUBJECT_LIMITS",
+            "FED_FUNDS",
+            "ITEM_CONVN_EXP_DISB",
+            "ITEM_OTHER_DISB",
+            "SUBTTL_CONVN_EXP_DISB",
+            "TTL_EXP_SUBJECT_LIMITS",
+            "UNITEM_CONVN_EXP_DISB",
+            "UNITEM_OTHER_DISB",
+            "TTL_COMMUNICATION_COST",
+            "COH_BOY",
+            "COH_COY",
+            "ORG_TP"
+          ]
+        }
+      }
+    }
+  }
+}

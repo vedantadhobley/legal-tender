@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/resolved-independent-expenditures/v1/result.schema.json",
+  "title": "Resolved independent-expenditure spender-candidate result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "result_id", "calculation_set_id", "cycle",
+    "spender_committee_id", "candidate_id", "support_oppose",
+    "signed_amount_minor_units", "expenditure_count", "positive_count",
+    "negative_count", "zero_count", "resolution_counts", "resolution_amounts"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.resolved-independent-expenditure-spender-candidate.v1"},
+    "result_id": {"$ref": "#/$defs/digest"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "spender_committee_id": {"type": "string", "minLength": 1},
+    "candidate_id": {"type": "string", "minLength": 1},
+    "support_oppose": {"enum": ["S", "O"]},
+    "signed_amount_minor_units": {"$ref": "#/$defs/signed_integer"},
+    "expenditure_count": {"type": "integer", "minimum": 1},
+    "positive_count": {"type": "integer", "minimum": 0},
+    "negative_count": {"type": "integer", "minimum": 0},
+    "zero_count": {"type": "integer", "minimum": 0},
+    "resolution_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["confirmed", "resolved", "unverified"],
+      "properties": {
+        "confirmed": {"type": "integer", "minimum": 0},
+        "resolved": {"type": "integer", "minimum": 0},
+        "unverified": {"type": "integer", "minimum": 0}
+      },
+      "description": "The Go publisher enforces that these counts sum to expenditure_count."
+    },
+    "resolution_amounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["confirmed_minor_units", "resolved_minor_units", "unverified_minor_units"],
+      "properties": {
+        "confirmed_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "resolved_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "unverified_minor_units": {"$ref": "#/$defs/signed_integer"}
+      },
+      "description": "The Go publisher enforces that these signed components sum to signed_amount_minor_units."
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "signed_integer": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"}
+  }
+}

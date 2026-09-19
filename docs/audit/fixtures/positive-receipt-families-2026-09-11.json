@@ -1,0 +1,48 @@
+{
+  "version": "legal-tender.audit.positive-receipt-families.v1",
+  "cycle": "2024",
+  "profile_storage_key": "dumps/audits/fec/receipt-report-profile-v2/2026-09-10/attempt-01/profile.json",
+  "profile_sha256": "acce0a13f2d87abfe78beb66c6bd2ae60f82a53bf656b3745343966ae57f3647",
+  "summary_fact_set": "603d086eb26baa5a9a99d7a717ec5b7469098c173d2d3eabaa119c00d9b7f637",
+  "scope": "Source witnesses only; no report-metadata binding, amendment selection, cash eligibility or terminal allocation.",
+  "cases": [
+    {
+      "file": "1730162", "committee": "C00845032", "form": "F3", "retained": true,
+      "body": "dumps/audits/fec/receipt-memo-review/2026-09-10/attempt-01/1730162-electronic.fec",
+      "headers": "dumps/audits/fec/receipt-memo-review/2026-09-10/attempt-01/1730162-electronic.headers",
+      "body_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "headers_sha256": "6b13f14c4670c5435ac7dbb79766103cf2a5f5de2c1355f14941812e6a906373",
+      "targets": {"other_committee_contributions": "11000000", "authorized_transfers": "6636185"},
+      "expected_unreviewed_records": {"SD10": 11},
+      "expected_group_differences": [{"tag": "SA11AI", "memo": "", "processed_unknown_amount_rows": 2, "original_minus_processed_known_minor_units": "2"}]
+    },
+    {
+      "file": "1754019", "committee": "C00804807", "form": "F3", "retained": false,
+      "body": "1754019.fec", "headers": "1754019.fec.headers",
+      "body_sha256": "3c96b8f8079cb8d764f06f4fe514e9f614d77bb494864074c993ee3b44d3a963",
+      "headers_sha256": "67388e1d14d874724176702d64f351afbd31770dedb80793facd0c3b72656fbd",
+      "targets": {"other_loans": "3050000"}, "expected_group_differences": []
+    },
+    {
+      "file": "1709268", "committee": "C00787663", "form": "F3X", "retained": false,
+      "body": "1709268.fec", "headers": "1709268.fec.headers",
+      "body_sha256": "2e0257789478afb9a7b068251643f9105a0d2a72f8eb8974135aa40e76860dfd",
+      "headers_sha256": "e9774c2e922a8d50deffb268dcfeeade87259eb02d0ad72671a86f670c24110a",
+      "targets": {"loans_received": "35000"}, "expected_group_differences": []
+    },
+    {
+      "file": "1699218", "committee": "C00798553", "form": "F3", "retained": false,
+      "body": "1699218.fec", "headers": "1699218.fec.headers",
+      "body_sha256": "9efe7cc46b584790b40d8829958fcd99bbbcc38fb09e37cbe499ccd298f89123",
+      "headers_sha256": "f7a9d3a161e464e2ce32a179e6c4ec3e633f85c2d93884000ba5b4c5ebbd4f72",
+      "targets": {"party_contributions": "25000"}, "expected_group_differences": []
+    },
+    {
+      "file": "1700721", "committee": "C00532788", "form": "F3X", "retained": false,
+      "body": "1700721.fec", "headers": "1700721.fec.headers",
+      "body_sha256": "1a67005222e5077c743432d293d1b5dfe60f11cbe17aea185e56558df2bf951f",
+      "headers_sha256": "55fdea1b4a2f44adec697ce720f1dc1c999992a849e8cc78ff095d75c9d04f01",
+      "targets": {"party_contributions": "85668"}, "expected_group_differences": []
+    }
+  ]
+}

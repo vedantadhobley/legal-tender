@@ -1,0 +1,271 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "lda/constants",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "lda",
+    "name": "Lobbying Disclosure Act public disclosure system",
+    "base_url": "https://lda.gov/"
+  },
+  "dataset": {
+    "id": "constants",
+    "name": "LDA publisher code lists",
+    "semantic_domain": "federal_lobbying_reference",
+    "description": "Publisher labels for filing types, issue codes, government entities, geographies, lobbyist affixes, and contribution-item types."
+  },
+  "authority": [
+    {
+      "kind": "api",
+      "url": "https://lda.gov/api/v1/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "openapi",
+      "url": "https://lda.gov/api/openapi/v1/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6c5f13c470bf1b4b09071db32d10df72372210fd2c2be921214e3c94f47dde8a"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://lda.gov/api/redoc/v1/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "terms",
+      "url": "https://lda.gov/api/tos/",
+      "retrieved_on": "2026-08-27"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "api_token",
+      "environment_variable": "LOBBYING_API_KEY",
+      "header": "Authorization",
+      "scheme": "Token"
+    },
+    "endpoints": [
+      {
+        "name": "filing-types",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/constants/filing/filingtypes/",
+        "response_root": "$[]"
+      },
+      {
+        "name": "lobbying-activity-issues",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/constants/filing/lobbyingactivityissues/",
+        "response_root": "$[]"
+      },
+      {
+        "name": "government-entities",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/constants/filing/governmententities/",
+        "response_root": "$[]"
+      },
+      {
+        "name": "countries",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/constants/general/countries/",
+        "response_root": "$[]"
+      },
+      {
+        "name": "states",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/constants/general/states/",
+        "response_root": "$[]"
+      },
+      {
+        "name": "lobbyist-prefixes",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/constants/lobbyist/prefixes/",
+        "response_root": "$[]"
+      },
+      {
+        "name": "lobbyist-suffixes",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/constants/lobbyist/suffixes/",
+        "response_root": "$[]"
+      },
+      {
+        "name": "contribution-item-types",
+        "method": "GET",
+        "url": "https://lda.gov/api/v1/constants/contribution/itemtypes/",
+        "response_root": "$[]"
+      }
+    ],
+    "pagination": "Constants endpoints return one unpaginated JSON array.",
+    "rate_limit_per_minute": 120,
+    "partitions": [
+      {
+        "name": "retrieved_date",
+        "source": "Legal Tender retrieval date",
+        "purpose": "Immutable code-list snapshot and drift comparison."
+      }
+    ],
+    "retry_policy": "Capture every endpoint in one logical snapshot; any missing endpoint blocks the combined constants publication."
+  },
+  "physical_schema": {
+    "media_type": "application/json",
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Preserve source values exactly; missing name or code becomes an explicit issue.",
+    "schema_fingerprint": "Endpoint identity plus sorted object keys and JSON kinds, code membership, and this contract version."
+  },
+  "identity": {
+    "publisher_record_key": "endpoint + value, or endpoint + id for government entities",
+    "occurrence_locator": "snapshot digest + endpoint + one-based array ordinal",
+    "record_version": "endpoint + source key + SHA-256 of canonical item JSON",
+    "duplicate_policy": "Preserve duplicate occurrences and block conflicting names for one endpoint-scoped key.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [],
+    "money_fields": [],
+    "code_fields": [
+      {
+        "path": "value",
+        "meaning": "Publisher code within its endpoint namespace."
+      },
+      {
+        "path": "id",
+        "meaning": "Publisher numeric government-entity ID within the government-entities endpoint."
+      },
+      {
+        "path": "name",
+        "meaning": "Publisher display label; never a replacement for the source code."
+      }
+    ],
+    "rules": [
+      "Constants are immutable snapshots even though the publisher endpoint is mutable.",
+      "Unknown codes in a filing remain valid raw text with an issue until reviewed.",
+      "A display-name change creates a new constants record version."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The API exposes current code lists without historical version identifiers.",
+    "effective_projection": "Retain every retrieved snapshot; parser contracts reference an accepted snapshot digest."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "endpoint_complete",
+        "severity": "block",
+        "rule": "All eight accepted constants endpoints are present in one logical snapshot."
+      },
+      {
+        "id": "key_unique",
+        "severity": "block",
+        "rule": "Endpoint-scoped values or IDs are unique unless preserved as explicit conflicts."
+      },
+      {
+        "id": "display_present",
+        "severity": "block",
+        "rule": "Every accepted constant has a non-empty publisher display name."
+      },
+      {
+        "id": "membership_change",
+        "severity": "observe",
+        "rule": "Added, removed, or renamed constants emit schema-review evidence."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/filing-types.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/constants/filing/filingtypes/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "1ce517e2e684882c250491f892eea2864bed8b3c69f52c2b4a95117d6ceb958d",
+      "scenarios": [
+        "complete filing-type code list"
+      ]
+    },
+    {
+      "path": "fixtures/lobbying-activity-issues.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/constants/filing/lobbyingactivityissues/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "458193083e994c8eebe7d9ac8f988c57b52fce3d2069022e50c78e5719109380",
+      "scenarios": [
+        "complete lobbying-issue code list"
+      ]
+    },
+    {
+      "path": "fixtures/government-entities.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/constants/filing/governmententities/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "eb0a9e91d53ff763253bb0ad54f6cca8229a2d24bad9cacbc7e6c0cc6a050c03",
+      "scenarios": [
+        "government-entity ID and name list"
+      ]
+    },
+    {
+      "path": "fixtures/countries.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/constants/general/countries/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "3dee284cc1e7669c8c13362266245c9c757af3b5f574a5b7eb49191866e82b9a",
+      "scenarios": [
+        "complete country code list"
+      ]
+    },
+    {
+      "path": "fixtures/states.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/constants/general/states/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6b847f23a65727e53a8294b4ae7e0cce2866379386be4407778dc8880bb4b748",
+      "scenarios": [
+        "complete state and province code list"
+      ]
+    },
+    {
+      "path": "fixtures/lobbyist-prefixes.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/constants/lobbyist/prefixes/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "e764fd36e02b88ccd433155b2716447b486a1766669d82b60c8535c7d1f13dbf",
+      "scenarios": [
+        "complete lobbyist-prefix code list"
+      ]
+    },
+    {
+      "path": "fixtures/lobbyist-suffixes.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/constants/lobbyist/suffixes/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "865b9110af02003be69de4676a196298eb851db7de644e9487547f0fcd93afa1",
+      "scenarios": [
+        "complete lobbyist-suffix code list"
+      ]
+    },
+    {
+      "path": "fixtures/contribution-item-types.json",
+      "representation": "canonical_json",
+      "source_url": "https://lda.gov/api/v1/constants/contribution/itemtypes/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "417303874c13b8b30c746d00e4834665d7a85ef75725224b80c249f963d478fd",
+      "scenarios": [
+        "complete LD-203 contribution-item type list"
+      ]
+    }
+  ],
+  "use": {
+    "retention": "Preserve complete API responses, record occurrences, source documents selected by policy, and every accepted version indefinitely.",
+    "citation_date_required": true,
+    "disclaimer": "Senate Office of Public Records cannot vouch for the data or analyses derived from these data after the data have been retrieved from LDA.gov."
+  },
+  "outputs": {
+    "fact_types": [
+      "lda.constant_snapshot.v1",
+      "lda.constant_assertion.v1"
+    ],
+    "change_dimensions": [
+      "constants_endpoint",
+      "source_code",
+      "government_entity_id"
+    ]
+  }
+}

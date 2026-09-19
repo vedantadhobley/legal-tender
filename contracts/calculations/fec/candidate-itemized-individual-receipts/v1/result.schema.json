@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/candidate-itemized-individual-receipts/v1/result.schema.json",
+  "title": "Candidate itemized-individual receipt calculation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "calculation_contract", "calculation_version",
+    "candidate_id", "cycle", "state", "component", "money_measure",
+    "included_records", "excluded_records", "unresolved_records",
+    "committee_relationships", "committee_subtotals", "source_summaries",
+    "reconciliations", "issues"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.candidate-itemized-individual-receipts.v1"},
+    "calculation_contract": {"const": "fec/candidate-itemized-individual-receipts"},
+    "calculation_version": {"const": "1.0.0"},
+    "candidate_id": {"type": "string", "pattern": "^[HSP][0-9A-Z]{8}$"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "state": {"enum": ["complete", "partial", "not_comparable"]},
+    "component": {"const": "fec_itemized_individual_receipts"},
+    "money_measure": {"$ref": "../../../../common/money-measure/v1/schema.json"},
+    "included_records": {"$ref": "#/$defs/includedCounts"},
+    "excluded_records": {"$ref": "#/$defs/countMap"},
+    "unresolved_records": {"$ref": "#/$defs/countMap"},
+    "committee_relationships": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/relationship"}
+    },
+    "committee_subtotals": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/committeeSubtotal"}
+    },
+    "source_summaries": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/sourceSummary"}
+    },
+    "reconciliations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/reconciliation"}
+    },
+    "issues": {"$ref": "#/$defs/issues"}
+  },
+  "$defs": {
+    "minorUnits": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "optionalMinorUnits": {"type": ["string", "null"], "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "issues": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+    },
+    "includedCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["records", "positive", "negative", "zero"],
+      "properties": {
+        "records": {"type": "integer", "minimum": 0},
+        "positive": {"type": "integer", "minimum": 0},
+        "negative": {"type": "integer", "minimum": 0},
+        "zero": {"type": "integer", "minimum": 0}
+      }
+    },
+    "countMap": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["committee_id", "state", "designation_codes", "supporting_fact_ids"],
+      "properties": {
+        "committee_id": {"type": "string", "pattern": "^C[0-9]{8}$"},
+        "state": {"enum": ["authorized", "unauthorized", "unresolved"]},
+        "designation_codes": {
+          "type": "array", "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "supporting_fact_ids": {
+          "type": "array", "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "committeeSubtotal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["committee_id", "amount_minor_units", "included_records"],
+      "properties": {
+        "committee_id": {"type": "string", "pattern": "^C[0-9]{8}$"},
+        "amount_minor_units": {"$ref": "#/$defs/minorUnits"},
+        "included_records": {"$ref": "#/$defs/includedCounts"}
+      }
+    },
+    "summaryAmount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_value", "reported_minor_units", "observation_state"],
+      "properties": {
+        "raw_value": {"type": "string"},
+        "reported_minor_units": {"$ref": "#/$defs/optionalMinorUnits"},
+        "observation_state": {"enum": ["reported_value", "source_blank", "invalid"]}
+      }
+    },
+    "sourceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact_id", "fact_type", "dataset", "coverage_through", "total_individual_contributions", "total_receipts"],
+      "properties": {
+        "fact_id": {"type": "string", "minLength": 1},
+        "fact_type": {"enum": ["fec.candidate_summary_all.v1", "fec.campaign_summary.v1"]},
+        "dataset": {"enum": ["all-candidates-summary", "current-campaigns-summary"]},
+        "coverage_through": {"type": ["string", "null"], "format": "date"},
+        "total_individual_contributions": {"$ref": "#/$defs/summaryAmount"},
+        "total_receipts": {"$ref": "#/$defs/summaryAmount"}
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary_fact_id", "summary_fact_type", "comparison_field",
+        "comparison_class", "coverage_state", "coverage_through",
+        "summary_minor_units", "resolved_detail_minor_units",
+        "difference_minor_units", "included_detail_records",
+        "unresolved_detail_records", "excluded_outside_coverage_records",
+        "issues"
+      ],
+      "properties": {
+        "summary_fact_id": {"type": "string", "minLength": 1},
+        "summary_fact_type": {"enum": ["fec.candidate_summary_all.v1", "fec.campaign_summary.v1"]},
+        "comparison_field": {"const": "TTL_INDIV_CONTRIB"},
+        "comparison_class": {"const": "individual_detail_gap"},
+        "coverage_state": {"enum": ["source_aligned", "date_bounded", "not_comparable"]},
+        "coverage_through": {"type": ["string", "null"], "format": "date"},
+        "summary_minor_units": {"$ref": "#/$defs/optionalMinorUnits"},
+        "resolved_detail_minor_units": {"$ref": "#/$defs/optionalMinorUnits"},
+        "difference_minor_units": {"$ref": "#/$defs/optionalMinorUnits"},
+        "included_detail_records": {"type": "integer", "minimum": 0},
+        "unresolved_detail_records": {"type": "integer", "minimum": 0},
+        "excluded_outside_coverage_records": {"type": "integer", "minimum": 0},
+        "issues": {"$ref": "#/$defs/issues"}
+      }
+    }
+  }
+}

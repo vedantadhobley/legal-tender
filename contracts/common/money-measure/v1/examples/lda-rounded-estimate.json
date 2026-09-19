@@ -1,0 +1,30 @@
+{
+  "$schema": "../schema.json",
+  "schema_version": "1.0.0",
+  "semantic_role": "lobbying_income",
+  "currency": "USD",
+  "amount": {
+    "state": "point",
+    "lower_minor_units": "2000000",
+    "upper_minor_units": "2000000",
+    "lower_inclusive": true,
+    "upper_inclusive": true
+  },
+  "measurement": {
+    "basis": "source_reported",
+    "kind": "rounded_estimate",
+    "observation_state": "reported_value",
+    "reported_minor_units": "2000000",
+    "precision_increment_minor_units": "1000000",
+    "accounting_method": "lda_income",
+    "source_rule_version": "lda.money.v1"
+  },
+  "uncertainty": {
+    "coverage": "complete",
+    "attribution": "direct",
+    "revision": "all_versions",
+    "identity": "resolved",
+    "evidence": "reported"
+  },
+  "issues": ["lda.rounding_boundary_not_derived"]
+}

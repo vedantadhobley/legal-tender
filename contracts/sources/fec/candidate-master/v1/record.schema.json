@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/candidate-master/v1/record.schema.json",
+  "title": "FEC candidate master source record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "CAND_ID",
+    "CAND_NAME",
+    "CAND_PTY_AFFILIATION",
+    "CAND_ELECTION_YR",
+    "CAND_OFFICE_ST",
+    "CAND_OFFICE",
+    "CAND_OFFICE_DISTRICT",
+    "CAND_ICI",
+    "CAND_STATUS",
+    "CAND_PCC",
+    "CAND_ST1",
+    "CAND_ST2",
+    "CAND_CITY",
+    "CAND_ST",
+    "CAND_ZIP"
+  ],
+  "properties": {
+    "CAND_ID": {"type": "string", "pattern": "^[HPS][A-Z0-9]{8}$"},
+    "CAND_NAME": {"type": "string"},
+    "CAND_PTY_AFFILIATION": {"type": "string"},
+    "CAND_ELECTION_YR": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "CAND_OFFICE_ST": {"type": "string"},
+    "CAND_OFFICE": {"type": "string"},
+    "CAND_OFFICE_DISTRICT": {"type": "string"},
+    "CAND_ICI": {"type": "string"},
+    "CAND_STATUS": {"type": "string"},
+    "CAND_PCC": {"type": "string"},
+    "CAND_ST1": {"type": "string"},
+    "CAND_ST2": {"type": "string"},
+    "CAND_CITY": {"type": "string"},
+    "CAND_ST": {"type": "string"},
+    "CAND_ZIP": {"type": "string"}
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/effective-independent-expenditures",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "question": "What signed independent-expenditure amount did each identified spender report in support of or opposition to each identified candidate in one FEC cycle, after applying the FEC regular-report memo and amount rules?",
+  "inputs": [
+    {
+      "contract": "fec.schedule_e_independent_expenditure.v1",
+      "role": "Every lossless processed Schedule E fact in one selected cycle.",
+      "required": true,
+      "version_policy": "Pin the exact Schedule E fact-set manifest and its source-release ancestry."
+    }
+  ],
+  "identity": {
+    "result_key": "spender committee ID + candidate ID + support/oppose code + FEC cycle + exact Schedule E fact-set identity + calculation version",
+    "input_manifest": "Exact Schedule E fact-set ID, immutable manifest SHA-256, source release, source contract, normalizer, and fact schema.",
+    "method_version": "fec/effective-independent-expenditures@1.0.0 plus the named membership predicate and publisher versions",
+    "result_digest": "SHA-256 over canonical calculation identity fields and deterministic result keys."
+  },
+  "method": {
+    "ordered_steps": [
+      "Require one complete, digest-verified processed Schedule E fact set for one cycle. Reject any 24/48 report-type or F24 notice row because notices are a separate duplicate-prone source.",
+      "Treat every processed regular-report fact as an effective publisher row. Do not select by action code and do not collapse repeated spender-plus-transaction-ID keys.",
+      "Apply ordered membership rules: exclude memo code X; otherwise require valid exact reported minor units; otherwise include the signed amount.",
+      "For each included fact, require a spender committee ID, candidate ID, and support/oppose code S or O for attributed publication. Preserve missing route fields as an included-unattributed exception with its exact amount.",
+      "Group attributed rows by spender committee ID, candidate ID, support/oppose code, and cycle. Sum signed minor units with arbitrary-precision integer arithmetic and retain positive, negative, zero, and missing-expenditure-type counts.",
+      "Publish the compact predicate, sparse exceptions, deterministic grouped results, source-shape diagnostics, and exact conservation totals."
+    ],
+    "decision_states": [
+      {"id": "excluded_memo", "publishable": true, "meaning": "Memo code X excludes the row from the FEC-style aggregate while the source fact remains available for analysis."},
+      {"id": "unresolved_amount", "publishable": false, "meaning": "A non-memo row has no valid exact reported amount."},
+      {"id": "included_attributed", "publishable": true, "meaning": "The row has exact signed cents and identified spender, candidate, and S/O stance."},
+      {"id": "included_unattributed", "publishable": true, "meaning": "The exact signed amount counts as independent-expenditure activity but lacks one or more fields required for a spender-to-candidate result."}
+    ],
+    "invariants": [
+      "Processed Schedule E and the 24/48-hour notice feed remain separate sources; notice estimates and amended notices never add another amount here.",
+      "The processed regular-report relation is the FEC's most-recent filing row set. Action A, C, N, T, or null is evidence, not a local winner-selection rule.",
+      "SUB_ID and immutable fact identity preserve row grain. Repeated transaction IDs are measured but never deduplicated.",
+      "Memo X facts remain queryable but do not enter the aggregate, matching the FEC Schedule E aggregate implementation. Their known signed amount and any unresolved memo amount count remain separate diagnostics.",
+      "Negative and zero included amounts remain included. All arithmetic uses exact signed minor units and never binary floating point.",
+      "Missing expenditure type does not erase an otherwise valid Schedule E amount. Missing candidate or stance blocks attribution, not source activity conservation.",
+      "Expense, dissemination, filing, and publication times remain separate source fields. This cycle aggregate does not invent or substitute a transaction date.",
+      "Support and opposition remain separate results. Neither is a candidate-controlled receipt, and opposition spending is never candidate funding."
+    ]
+  },
+  "output": {
+    "result_schema": "result.schema.json",
+    "grain": "One compact membership manifest per exact Schedule E cycle fact set, one sparse exception per unresolved membership or route, and one result per spender, candidate, stance, and cycle.",
+    "fact_types": ["effective_independent_expenditure_membership", "effective_independent_expenditure_exception", "spender_candidate_independent_expenditure_component"],
+    "publication_states": [
+      {"id": "published", "publishable": true, "meaning": "All input facts were classified once, all known signed amounts conserve, and notices are absent."},
+      {"id": "blocked_notice_mixture", "publishable": false, "meaning": "A notice-like filing entered the processed regular-report fact set."},
+      {"id": "blocked_integrity", "publishable": false, "meaning": "Input identity, artifact bytes, fact membership, or conservation failed verification."}
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "A changed Schedule E fact-set identity creates a new immutable calculation for only that cycle.",
+    "method_change_policy": "Any change to memo handling, amount membership, notice separation, route requirements, group key, or arithmetic requires a new calculation version.",
+    "history_policy": "Retain every source fact, compact predicate, sparse exception, grouped result, source-shape profile, exact input identity, and superseded calculation manifest indefinitely."
+  },
+  "quality": {
+    "checks": [
+      {"id": "input_lineage", "severity": "block", "rule": "The immutable manifest and complete backing artifact match one accepted Schedule E fact set and cycle."},
+      {"id": "notice_separation", "severity": "block", "rule": "No fact has report type 24 or 48 or filing form F24."},
+      {"id": "decision_conservation", "severity": "block", "rule": "Every source fact is exactly one of included, excluded memo, or unresolved amount."},
+      {"id": "route_conservation", "severity": "block", "rule": "Every included fact is exactly attributed or unattributed."},
+      {"id": "signed_conservation", "severity": "block", "rule": "Included signed cents equal attributed plus unattributed signed cents, and attributed cents equal the sum of all results."},
+      {"id": "result_conservation", "severity": "block", "rule": "Every attributed row contributes exactly once to one deterministic spender-candidate-stance result."},
+      {"id": "repeated_key_observation", "severity": "observe", "rule": "Repeated spender-plus-transaction-ID keys are counted and retained without deduplication."},
+      {"id": "missing_type_observation", "severity": "observe", "rule": "Included rows without expenditure type remain counted and are reported explicitly."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/policy-cases.json",
+      "representation": "synthetic_json",
+      "sha256": "bf5efc1aa2bccfa35d9e536b04b0f520248117c9fcd377e95c7c95579966c124",
+      "input_paths": ["../../../../facts/fec/schedule-e/v1/fact.schema.json"],
+      "scenarios": [
+        "signed support and opposition amounts",
+        "memo-X exclusion",
+        "null-amount exception",
+        "missing-candidate route exception",
+        "repeated transaction key retention",
+        "action-code neutrality"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": ["Schedule E fact set"],
+    "semantic_change_dimensions": ["memo code", "amount", "spender ID", "candidate ID", "support/oppose code", "expenditure type", "filing form", "report type"],
+    "downstream_keys": ["cycle", "spender_committee_id", "candidate_id", "support_oppose"],
+    "no_change_policy": "An identical fact-set identity and calculation version reuse the immutable result. A changed cycle fact set recomputes only that cycle and downstream graph projections whose result or exception artifacts change."
+  },
+  "use": {
+    "retention": "Retain exact source facts outside the graph and publish grouped query-bearing outside-spending components plus unresolved amounts and routes.",
+    "disclaimer": "These are reported independent expenditures made without candidate coordination. They are not donations, candidate-controlled receipts, personal payments to a candidate, or proof that the spender influenced the candidate."
+  }
+}

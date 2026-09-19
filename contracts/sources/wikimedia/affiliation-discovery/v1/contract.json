@@ -1,0 +1,181 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "wikimedia/affiliation-discovery",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "wikimedia",
+    "name": "Wikimedia community projects",
+    "base_url": "https://www.wikimedia.org/"
+  },
+  "dataset": {
+    "id": "affiliation-discovery",
+    "name": "Reported-name/employer Wikipedia discovery",
+    "semantic_domain": "person_organization_candidate_evidence",
+    "description": "Exploratory source-derived search windows and linked structured statements, not person resolution or affiliation publication."
+  },
+  "authority": [
+    {
+      "kind": "documentation",
+      "url": "https://www.mediawiki.org/wiki/API:Search",
+      "retrieved_on": "2026-09-15"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://www.mediawiki.org/wiki/API:Pageprops",
+      "retrieved_on": "2026-09-15"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://www.mediawiki.org/wiki/API:Revisions",
+      "retrieved_on": "2026-09-15"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://www.mediawiki.org/wiki/Wikibase/API",
+      "retrieved_on": "2026-09-15"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://www.mediawiki.org/wiki/API:Etiquette",
+      "retrieved_on": "2026-09-15"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "none",
+      "environment_variable": null,
+      "header": null,
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "wikipedia_search",
+        "method": "GET",
+        "url": "https://en.wikipedia.org/w/api.php",
+        "response_root": "query.pages; generator=search, namespace 0, five hits, pageprops and revision identifiers/timestamps"
+      },
+      {
+        "name": "wikidata_entities",
+        "method": "GET",
+        "url": "https://www.wikidata.org/w/api.php",
+        "response_root": "entities; wbgetentities over exactly the observed page QIDs, English labels/descriptions/aliases, all claims and enwiki sitelinks"
+      }
+    ],
+    "pagination": "One five-hit Wikipedia window per generated search. The versioned Go planner derives separate person-name, person-name-plus-employer and employer searches. Retain continuation without following it; no inverse-property crawl or endpoint expansion.",
+    "rate_limit_per_minute": 60,
+    "partitions": [
+      {
+        "name": "capture",
+        "source": "Exact source-qualified appearance plan, query-policy and build identities",
+        "purpose": "Retain independent observation evidence without changing FEC releases or graph generations."
+      }
+    ],
+    "retry_policy": "No automatic retries. At most twenty queries and forty serial requests, at least one second apart, 30 seconds/request and five minutes/run. Four MiB/body, 64 MiB/run, 128 KiB/response headers. Fixed HTTPS origins, no redirects, no proxy inheritance, no credentials. Send descriptive user-agent and maxlag=5. Save bounded failed bodies and attempt metadata; stop network calls after the first HTTP, transport or schema failure. Restart explicitly into a new directory."
+  },
+  "physical_schema": {
+    "media_type": "application/json",
+    "source_format": "json_api",
+    "encoding": "Strict UTF-8 JSON; reject duplicate keys, unpaired surrogates, excessive depth and trailing JSON.",
+    "record_schema": "../../organization-candidates/v1/record.schema.json",
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Do not treat API failures as no matches. Missing items use the source missing flag. Incomplete page metadata blocks use. Raw null/empty forms remain in captured bytes.",
+    "schema_fingerprint": "Compiled closed envelopes and selected term/identity shapes in internal/source/wikimedia. Claims, sitelinks, limits and continuation retain opaque JSON under the explicit structural contract. Record each observed JSON path/type fingerprint in offline replay; never adopt remote schema changes automatically."
+  },
+  "identity": {
+    "publisher_record_key": "Wikipedia pageid plus revision metadata; Wikidata QID plus lastrevid. Neither is a FEC identity.",
+    "occurrence_locator": "Capture digest, query ordinal, exact request URL and response body digest; page ID or QID within that response.",
+    "record_version": "Exact response SHA-256 and publisher revision metadata. Cross-endpoint observations are not an atomic snapshot.",
+    "duplicate_policy": "Retain each distinct source-body/locator appearance. Reject duplicate source references. Share identical kind/text queries while preserving all appearance indexes; never merge donor identities. Preserve all returned pages and candidate QIDs, including alternatives, disambiguation pages and missing items.",
+    "children": [
+      {
+        "object": "Wikidata claims, qualifiers and references",
+        "locator": "Exact body plus QID/property/statement position",
+        "content_digest": false
+      }
+    ]
+  },
+  "semantics": {
+    "time_fields": [
+      {
+        "path": "observed_at",
+        "meaning": "Client request time, not validity of an employment or ownership relationship."
+      },
+      {
+        "path": "revisions.timestamp, modified, claim qualifiers",
+        "meaning": "Preserve publisher revision and qualified statement time separately from FEC source cycles."
+      }
+    ],
+    "money_fields": [],
+    "code_fields": [],
+    "rules": [
+      "Inputs contain only original name/employer strings and source-body digests/locators. Generic planning checks shape, not source authenticity. The diagnostic corpus adapter verifies pinned as-filed records; it does not use reviewed role labels to choose queries.",
+      "Keep raw null, blank and nonblank fields. Default reported-name-employer-searches.v1 renders search terms by replacing punctuation with spaces, retaining letter/number boundaries, token order, case and accents, and individually quoting tokens. This is query formatting, not person-name matching or a literal whole-name identity test.",
+      "Opt-in reported-name-employer-searches.v2 preserves every v1 query and adds explained employer-only digit/letter boundaries and one trailing legal-designator omission, using the existing bounded organization vocabulary. Preserve per-appearance derivations on shared queries; never change source strings, expand person names or silently raise the twenty-search budget. Replay recomputes the versioned plan.",
+      "Do not infer name order, initials, nicknames, spelling corrections, executive status from occupation, or donor importance from money. Missing name/employer remains explicit; no searchable terms means no request for that input.",
+      "At most twenty appearances and twenty generated searches. Sort by exact source reference and query kind/text. Shared requests retain every contributing appearance, not a presumed unique donor.",
+      "Follow only Wikipedia-returned page QIDs. Retain all page ranks/revisions and missing/disambiguation states; search rank is not identity confidence. A direct nondeprecated human-type assertion is observed evidence, not a resolved FEC identity.",
+      "Extract reported roles using wikimedia/role-statements@1.0.0 within each verified response. Preserve property direction, qualifiers, references and missing endpoint types. Do not merge item versions or fetch arbitrary statement endpoints.",
+      "No recursive person/inverse discovery, prose extraction, historical-role screening bridge, identity approval, affiliation graph write or terminal-dollar allocation. Capture usability never means exhaustive discovery.",
+      "Background capture always uses maxlag=5 and stops on source failure. No interactive override or automatic fallback is implemented. The earlier explicitly approved interactive review remains a separate observation."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "Mutable community-curated data and search indexes. Search and entity requests occur at different times.",
+    "effective_projection": "Offline replay only. No identity winner, cross-response item merge or recurring refresh."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "raw_integrity",
+        "severity": "block",
+        "rule": "Pin manifest and query digests; verify confined regular body files, size/hash, exact reconstructed requests and request/byte budgets."
+      },
+      {
+        "id": "source_shape",
+        "severity": "block",
+        "rule": "Retain invalid bodies, but do not use API errors, warnings, schema drift, incomplete entities or failed/truncated requests as negative search evidence."
+      },
+      {
+        "id": "identity_scope",
+        "severity": "partial",
+        "rule": "Retain candidate multiplicity, missing page/item/type evidence and unattempted searches; every identity, exhaustive-discovery, graph and financial approval remains false."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "../../../../../internal/source/wikimedia/testdata/search.json",
+      "representation": "synthetic_json",
+      "scenarios": [
+        "five-hit window with continuation",
+        "page QID and revision metadata"
+      ]
+    },
+    {
+      "path": "../../../../../internal/source/wikimedia/testdata/entities.json",
+      "representation": "synthetic_json",
+      "scenarios": [
+        "exact alias",
+        "qualified statement and reference retention"
+      ]
+    }
+  ],
+  "use": {
+    "retention": "Retain raw capture and exact source/build identities for offline replay. API failures are evidence of a failed observation, not entity absence.",
+    "citation_date_required": true,
+    "disclaimer": "Community-curated candidate evidence, not authoritative corporate identity or verified financial connection. Respect upstream licensing and attribution when displaying source content."
+  },
+  "outputs": {
+    "fact_types": [
+      "wikimedia.affiliation_candidate_observation.v1"
+    ],
+    "change_dimensions": [
+      "appearance_membership",
+      "query_policy",
+      "search_window",
+      "entity_revision",
+      "role_contract"
+    ]
+  }
+}

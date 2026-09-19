@@ -1,0 +1,14 @@
+{
+  "case_count": 9,
+  "financial_attribution": false,
+  "graph_publication_approved": false,
+  "identity_approved": false,
+  "model": "gpt-oss-120b",
+  "observed_at": "2026-09-17T06:17:58Z",
+  "profile": {
+    "model": "gpt-oss-120b",
+    "reasoning_effort": "medium",
+    "max_tokens": 4096
+  },
+  "prompt_sha256": "b02bf45cd1f9954f37f25a1fb7b04e99c90036246697d93f09e527f291b535d2"
+}

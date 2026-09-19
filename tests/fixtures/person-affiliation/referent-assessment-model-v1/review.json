@@ -1,0 +1,211 @@
+{
+  "method": "manual-review-of-grounding-bound-assessment.v1",
+  "cases_sha256": "b7eecf3237bd6a0d12e9deace1d0f4eb3db87a189687fd12e351cb0da4f7d642",
+  "prompt_sha256": "01b739b0d3b31374bb8f8c97a234b2634c43ba42569f36e15efc5e978191683f",
+  "request_timeout_seconds": 900,
+  "models": [
+    {
+      "directory": "gemma-4-31b-20260919",
+      "profile": {
+        "model": "gemma-4-31b",
+        "reasoning_effort": "none",
+        "max_tokens": 4096
+      },
+      "completed_sha256": "baa9955a360bdfd15a00904395be7af6b64ab5454bab61b17bdf665da1cdfe21",
+      "http_200": 10,
+      "structural_valid": 9,
+      "semantic_checks_met": 6,
+      "usable": 6,
+      "real_source_usable": 1,
+      "elapsed_ms": 277712,
+      "prompt_tokens": 14693,
+      "cached_prompt_tokens": 3916,
+      "completion_tokens": 2443,
+      "cases": [
+        {
+          "id": "microsoft-hood",
+          "sha256": "255cc020b353f8dcc85cbb676c475193adafb2855b87941cd5c329911b3bcf91",
+          "structural_valid": true,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "The answer is structurally valid and keeps Microsoft and Nadella separate, but the surname-grounded CFO role proposes the short Hood mention instead of the supported full Amy Hood mention. It does not choose any unrelated organization. The referent failure remains unverified and no identity is approved."
+        },
+        {
+          "id": "amd-su",
+          "sha256": "05923a08bd8add10259853ead8a5767434449f669ae4a0832cc69ddfd1d0dd92",
+          "structural_valid": true,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "Every person endpoint proposes the full Lisa T. Su mention and the distinct employer candidates remain bounded. The short Freescale role marks the full and short organization mentions ambiguous even though they are name forms in one supplied history, so the expected full-name referent is not proposed."
+        },
+        {
+          "id": "fresh-mcclure",
+          "sha256": "5e645ce981a22eca8a954b3763464163dea632fb8e27852e02d767d4a5f5cec5",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "All three supplied roles propose KC McClure and their separate Accenture, Goldman and Board of Visitors candidates. The result does not substitute the parent college or university and does not repair the upstream punctuation omission. This is one bounded real-source success, not identity acceptance."
+        },
+        {
+          "id": "grounding-multiple-roles",
+          "sha256": "b6b071867896859a2ed26df0727f917658beebdf5dc056af85a313cb54dd3cdd",
+          "structural_valid": false,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "All eight endpoint choices declare proposed with empty candidate arrays. Go rejects the whole answer for state/cardinality mismatch; no partial role assessment is retained."
+        },
+        {
+          "id": "grounding-council-scope",
+          "sha256": "30778b53de4dd846779de5927f273cfa60dc7a35bab260931f8b55707c1379a8",
+          "structural_valid": true,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "The advisory council and Seabrook roles use the intended separate people and organizations without adding Wren. The denied governing-board role proposes Mina but leaves its explicitly stated institute unresolved, preserving the earlier grounding coverage miss instead of assessing the available Beacon candidate."
+        },
+        {
+          "id": "grounding-ambiguous-conditional",
+          "sha256": "3eb27df8bc0d4f725e277f177dab8bd35647fbc089f50562e8a6ef3ddc95ece6",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "The subject retains Luca Voss and Leila Voss as alternatives and the organization proposes Juniper Energy. The immutable grounding remains hypothetical; the short Voss mention is not treated as a resolved person."
+        },
+        {
+          "id": "grounding-anonymous-correction",
+          "sha256": "3f0a76b7efb2363600f72c162e0be598a40b661e59b0dd044a7107a881c48e81",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "The unnamed person is unresolved, Yarrow Systems is proposed, and the correction targets only the supplied CFO role. Go derives one retraction without rewriting the asserted source claim."
+        },
+        {
+          "id": "grounding-nearby-names",
+          "sha256": "e747fbebd140ee740db1f3494ae41344224ff96e71e0ad7014b68d4ef802d038",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "The only role proposes Inez Rao and Ash Works. Paolo Wu and Tamarack Power remain unused despite their nearby occurrence."
+        },
+        {
+          "id": "new-pronoun-employer-change",
+          "sha256": "72796d94c36a4d87f2bfe9981b9fc75bc52581e800f450dd6926edb03ebbe72f",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "Both pronoun subjects propose Nadia Torres while the two roles keep Copper Instruments and Larch Robotics separate. The response contains no field that can rewrite grounding or time context."
+        },
+        {
+          "id": "new-correction-and-conflict",
+          "sha256": "9f73f22779bc2c773f567189065879d8edc288af94ac69b8e33134829060ce11",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "The two CEO claims and trustee role receive the intended separate person/organization referents. The correction targets only the asserted CEO role, leaving the denial and museum role untouched."
+        }
+      ]
+    },
+    {
+      "directory": "gpt-oss-120b-20260919",
+      "profile": {
+        "model": "gpt-oss-120b",
+        "reasoning_effort": "medium",
+        "max_tokens": 4096
+      },
+      "completed_sha256": "6c218f62864deb80332bb22ae1e85a31813f588faf9d79f42e00f27c49c0058b",
+      "http_200": 10,
+      "structural_valid": 9,
+      "semantic_checks_met": 6,
+      "usable": 6,
+      "real_source_usable": 1,
+      "elapsed_ms": 214030,
+      "prompt_tokens": 13548,
+      "cached_prompt_tokens": 4383,
+      "completion_tokens": 9729,
+      "cases": [
+        {
+          "id": "microsoft-hood",
+          "sha256": "6e41985eab67a58f7efb2342239cb659cd1c62669e90d6b845d203a1a96f923c",
+          "structural_valid": true,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "The answer is structurally valid and keeps Microsoft and Nadella separate, but the surname-grounded CFO role proposes the short Hood mention instead of the supported full Amy Hood mention. No unrelated organization is selected; the remaining referent failure is not an approved identity."
+        },
+        {
+          "id": "amd-su",
+          "sha256": "9e83fed5ff93dbed8ce387bc99fa2e085e7c87f19578a5b2a903fd14652b5b9f",
+          "structural_valid": true,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "Every person endpoint proposes the full Lisa T. Su mention and employer candidates remain separated. The short Freescale role proposes only the short organization mention rather than its supported full-name antecedent, so the expected organization referent remains unmet."
+        },
+        {
+          "id": "fresh-mcclure",
+          "sha256": "5d21814fce95ad81550ef9ffd80a3f7eb3193801bded56e7c0a79e1ff6dd641e",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "All three supplied roles propose KC McClure and their separate Accenture, Goldman and Board of Visitors candidates. The response does not substitute parent institutions or repair the upstream punctuation omission. This remains unverified evidence."
+        },
+        {
+          "id": "grounding-multiple-roles",
+          "sha256": "b6d409b9fbc7b47553c36a76426bde92b58ff63fa346f82c27bbd710dd479a2a",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "All four roles propose Elena Ruiz, with Cedar Mobility and Linden Analytics kept separate. The denied founder role is assessed without changing its immutable denied status."
+        },
+        {
+          "id": "grounding-council-scope",
+          "sha256": "40583fdc8d7da4f714992fc9e2eca20c0a3cd3ab211d5c7db1a0cf0bc18d677c",
+          "structural_valid": true,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "The advisory council and Seabrook roles use separate intended candidates and do not add Wren. Both endpoints of the denied governing-board role are left unresolved even though Mina and the institute are explicit in the source, so assessment coverage is incomplete."
+        },
+        {
+          "id": "grounding-ambiguous-conditional",
+          "sha256": "bcf1ae36e2dfe5ef7191787a3308796733ece450510b1ca9b3000d98dc8c9bb1",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "The subject retains Luca Voss and Leila Voss as alternatives and the organization proposes Juniper Energy. The short Voss mention is not treated as a resolved person."
+        },
+        {
+          "id": "grounding-anonymous-correction",
+          "sha256": "bc7ba59b4df55e7baa441cb05286045b359c1ead5daafda736ab7bdb2e10d7ce",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "The unnamed person is unresolved, Yarrow Systems is proposed, and the correction targets only the supplied CFO role. One derived retraction leaves the original assertion unchanged."
+        },
+        {
+          "id": "grounding-nearby-names",
+          "sha256": "c28c01b852dfbf36f0ba20341267a159582059456cad2a479e8ab2715bcae9da",
+          "structural_valid": false,
+          "semantic_checks_met": false,
+          "usable": false,
+          "findings": "The response puts Inez Rao and Ash Works in candidate arrays while declaring both endpoints unresolved. Go rejects the state/cardinality contradiction and retains no partial assessment."
+        },
+        {
+          "id": "new-pronoun-employer-change",
+          "sha256": "b7da0e7d4686d484a3c02b5304c8633ee5a26a0c3279a970234c0df455e02495",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "Both pronoun subjects propose Nadia Torres while Copper Instruments and Larch Robotics remain separate. The model cannot rewrite the supplied grounding or time context."
+        },
+        {
+          "id": "new-correction-and-conflict",
+          "sha256": "b91d165351b38cb0299ae6da3b6e47ea00e0f35f026e7570f155534538ddf6d1",
+          "structural_valid": true,
+          "semantic_checks_met": true,
+          "usable": true,
+          "findings": "The two CEO claims and trustee role receive the intended separate referents. The correction targets only the asserted CEO role and leaves the denial and museum role untouched."
+        }
+      ]
+    }
+  ],
+  "identity_approved": false,
+  "graph_publication_approved": false,
+  "financial_attribution": false
+}

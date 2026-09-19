@@ -1,0 +1,29 @@
+{
+  "contract": "fec/report-period-membership@1.0.0",
+  "version": "legal-tender.fec.report-period-membership-review.v1",
+  "status": "accepted-bounded-source-membership-diagnostic",
+  "inputs": "One reverified, unfiltered, single-committee report-endpoint capture and an explicit inclusive date window. No caller-selected file IDs, trusted assessment, or cross-endpoint winner.",
+  "forms_by_endpoint": {"/v1/reports/pac-party/": "Form 3X", "/v1/reports/house-senate/": "Form 3"},
+  "publisher_membership": "Record is_amended=false as the endpoint's not-amended assertion. Keep true and null distinct. This list is not accepted financial membership.",
+  "cohort": "Exact report form, type, year, coverage start and end within one committee capture. Same dates are not proof of an amendment family. Every source row belongs to one cohort or the ungrouped list.",
+  "chain_candidate": {
+    "scope": "All cohort members must declare e-file. Paper/mixed/unknown origin is unresolved, not a zero replacement or fallback to an older electronic report.",
+    "status": "Exactly one explicit is_amended=false member; all others explicitly true. most_recent, file order, receipt date and previous_file_number do not choose a winner.",
+    "identity": "Nonempty unique positive integral amendment-chain IDs, raw number or string, plain decimal with optional all-zero fractional digits. Last ID must identify that record. Negative, exponent, empty, duplicate or malformed references stay unresolved.",
+    "closure": "The candidate chain contains exactly every observed cohort member once. Each member's own chain equals the corresponding prefix. Missing references, changed-scope links, contradictory order and disconnected same-period versions block the cohort.",
+    "meaning": "Consistent source-reported chain within this capture, not independent financial replacement, complete history, or original cover verification."
+  },
+  "coverage": {
+    "window": "Required canonical YYYY-MM-DD start/end, inclusive, ordered, at most 36600 days. Not implicitly derived from query cycle, receipt dates or the first/last available report.",
+    "algorithm": "Half-open day-boundary event sweep over inclusive report dates; separate publisher and chain-candidate timelines. Counts are interval membership, not monetary amounts.",
+    "states": "Retain uncovered, singly covered and multiply covered segments, exact day conservation, and cross-boundary source indexes. No inferred inactive periods or zero reports.",
+    "observed_partition_ready": "No partial traversal, unlocated/invalid scope relevant to the window, unresolved intersecting cohorts, gaps, overlaps or crossing reports. Exact-count satisfaction supports only a bounded observed partition, not atomic capture or complete history.",
+    "cross_boundary": "Clip dates for coverage diagnostics only. Never prorate or clip a report's money."
+  },
+  "guards": {"financial_membership_ready": false, "cycle_total_ready": false},
+  "official_context": [
+    "https://www.fec.gov/help-candidates-and-committees/filing-amendments/",
+    "https://raw.githubusercontent.com/fecgov/openFEC/develop/webservices/resources/reports.py"
+  ],
+  "non_goals": ["amount aggregation", "paper correction overlay", "report correction", "full amendment history", "cash continuity", "corporate or terminal identity", "source/fact publication", "bulk rescan", "API capture", "graph or Dagster mutation"]
+}

@@ -1,0 +1,23 @@
+{
+  "version": "legal-tender.fec.summary-report-window.v1",
+  "purpose": "reported scalar comparison, not synchronized reconciliation or funding qualification",
+  "source_alignment": "independent_snapshots",
+  "delta": "summary_minus_window_exact_signed_minor_units",
+  "flow_scope": "cycle_start_through_summary_end; first report and window must start at cycle boundary",
+  "opening_scope": "cycle_start_stock; CVG_START_DT is not a replacement cash date",
+  "closing_scope": "summary_end_stock; exact matching endpoint",
+  "summary_fields": ["INDV_ITEM_CONTB", "INDV_UNITEM_CONTB", "INDV_CONTB", "TTL_RECEIPTS", "TTL_DISB", "COH_BOP", "COH_COP"],
+  "field_conflicts": "block affected field across every variant",
+  "scope_conflicts": ["CMTE_TP", "CMTE_DSGN", "CVG_START_DT", "CVG_END_DT"],
+  "arithmetic_discrepancies": "preserve without blocking unrelated reported scalar comparisons",
+  "missing_values": "null, never zero or a substituted partial sum",
+  "guards": {
+    "same_report_membership_proven": false,
+    "financial_use_eligible": false,
+    "terminal_attribution_eligible": false
+  },
+  "references": [
+    "https://www.fec.gov/campaign-finance-data/committee-summary-file-description/",
+    "https://www.fec.gov/campaign-finance-data/committee-type-code-descriptions/"
+  ]
+}

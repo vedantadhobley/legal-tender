@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/report-metadata/v1/capture.schema.json",
+  "title": "Local metadata capture; no secrets or implicit filters",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "schema_sha256",
+    "endpoint",
+    "query",
+    "pages"
+  ],
+  "properties": {
+    "contract": {
+      "const": "fec/report-metadata@1.0.0"
+    },
+    "schema_sha256": {
+      "const": "0cca7f2af73270b35d7276e53d99b56b2f8f9970b33cb5d36a85fdb8b773caed"
+    },
+    "endpoint": {
+      "enum": [
+        "/v1/filings/",
+        "/v1/reports/house-senate/",
+        "/v1/reports/pac-party/"
+      ]
+    },
+    "query": {
+      "$ref": "#/$defs/query"
+    },
+    "pages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/page"
+      }
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4194304
+        }
+      }
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "per_page"
+      ],
+      "properties": {
+        "file_numbers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "committee_id": {
+          "type": "string",
+          "pattern": "^C[0-9]{8}$"
+        },
+        "cycle": {
+          "type": "integer",
+          "minimum": 1976,
+          "maximum": 9998,
+          "multipleOf": 2
+        },
+        "per_page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "file_numbers"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "committee_id"
+                ]
+              },
+              {
+                "required": [
+                  "cycle"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "committee_id",
+            "cycle"
+          ],
+          "not": {
+            "required": [
+              "file_numbers"
+            ]
+          }
+        }
+      ]
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "observed_at",
+        "time_basis",
+        "body",
+        "headers"
+      ],
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "time_basis": {
+          "enum": [
+            "http_date",
+            "client_clock"
+          ]
+        },
+        "body": {
+          "$ref": "#/$defs/artifact"
+        },
+        "headers": {
+          "$ref": "#/$defs/artifact"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "query": {
+            "required": [
+              "file_numbers"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "endpoint": {
+            "const": "/v1/filings/"
+          }
+        }
+      }
+    }
+  ]
+}

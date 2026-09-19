@@ -37,6 +37,9 @@ services:
       DAGSTER_HOME: /workspace
       PYTHONPATH: /workspace
       PYTHONUNBUFFERED: "1"
+      # Bound Go heap separately from the container so Python/Dagster and
+      # kernel-charged file cache retain headroom during bulk FEC work.
+      GOMEMLIMIT: "12GiB"
       # Storage paths (inside container, mapped to ~/workspace/data/legal-tender/)
       LEGAL_TENDER_STORAGE: /storage
       LEGAL_TENDER_RAW_DIR: /storage/raw
@@ -62,6 +65,10 @@ services:
         condition: service_healthy
       arangodb:
         condition: service_healthy
+    # Also inherited by `docker compose run` one-shot Go pipeline workers.
+    # Bulk acquisition otherwise charges tens of GiB of reclaimable write
+    # cache to an uncapped container on the shared host.
+    mem_limit: 16g
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/server_info"]

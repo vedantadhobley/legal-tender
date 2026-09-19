@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "../contract.json",
+  "representation": "exact_bytes",
+  "transformation": "Exact byte range from the parent .fec document, including field separators and record terminator. No decoding or normalization.",
+  "fixtures": [
+    {
+      "path": "2010008-row-3.fecrow",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2010008.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "2348cc558d56bf9fbcaa66152e39a82ed85210a3d4c3ec3d091689a29cbfeb65",
+      "scenarios": ["exact physical row including LF terminator", "ordinary organization receipt"]
+    },
+    {
+      "path": "1997074-row-5.fecrow",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/1997074.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "abdcb9b9036dc0e4fd7842954d97c92517fca14da048cdee8adf50b2933f8733",
+      "scenarios": ["exact original memo row", "extra trailing empty field"]
+    },
+    {
+      "path": "2009982-row-5.fecrow",
+      "source_url": "https://docquery.fec.gov/dcdev/posted/2009982.fec",
+      "retrieved_on": "2026-08-27",
+      "sha256": "abdcb9b9036dc0e4fd7842954d97c92517fca14da048cdee8adf50b2933f8733",
+      "scenarios": ["exact amendment memo row", "byte-identical row retained as another occurrence"]
+    }
+  ]
+}

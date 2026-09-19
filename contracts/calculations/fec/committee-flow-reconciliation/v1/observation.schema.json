@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/observation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_row_ordinal",
+    "sub_id",
+    "sender_committee_id",
+    "reported_recipient_committee_id",
+    "flow_role",
+    "transaction_type",
+    "reporting_role",
+    "date_days",
+    "signed_amount_minor_units"
+  ],
+  "properties": {
+    "source_row_ordinal": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sub_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sender_committee_id": {
+      "type": "string",
+      "pattern": "^C[0-9]{8}$"
+    },
+    "reported_recipient_committee_id": {
+      "type": "string",
+      "pattern": "^C[0-9]{8}$"
+    },
+    "flow_role": {
+      "enum": [
+        "contribution",
+        "in_kind",
+        "affiliated_transfer",
+        "refund_or_repayment",
+        "loan"
+      ]
+    },
+    "transaction_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reporting_role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "date_days": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "signed_amount_minor_units": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)$"
+    }
+  }
+}

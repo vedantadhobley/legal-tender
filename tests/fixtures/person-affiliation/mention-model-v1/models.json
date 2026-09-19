@@ -1,0 +1,677 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gemma-4-12b",
+      "object": "model",
+      "owned_by": "nexus",
+      "workload": "chat",
+      "contract_version": 5,
+      "capabilities": {
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "sampling": {
+          "temperature": {
+            "default": 1,
+            "minimum": 0,
+            "maximum": 2
+          },
+          "top_p": {
+            "default": 0.95,
+            "minimum": 0,
+            "maximum": 1
+          },
+          "top_k": {
+            "default": 64,
+            "minimum": 0
+          },
+          "min_p": {
+            "default": 0,
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "max_tokens": {
+          "default": 4096,
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "seed": {
+          "minimum": 0,
+          "maximum": 4294967295,
+          "random_when_omitted": true
+        },
+        "stop": {
+          "max_sequences": 8,
+          "max_sequence_length": 256
+        },
+        "stream": {
+          "default": false,
+          "options": [
+            "include_usage"
+          ]
+        },
+        "reasoning_effort": {
+          "supported": [
+            "none",
+            "high"
+          ],
+          "default": "none"
+        },
+        "response_format": {
+          "supported": [
+            "text",
+            "json_object",
+            "json_schema"
+          ],
+          "default": "text"
+        },
+        "tools": {
+          "supported": true,
+          "types": [
+            "function"
+          ],
+          "parallel_tool_calls": false,
+          "requires_response_format": "text"
+        }
+      }
+    },
+    {
+      "id": "whisper-large-v3-turbo",
+      "object": "model",
+      "owned_by": "nexus",
+      "workload": "transcription",
+      "contract_version": 5,
+      "capabilities": {
+        "input_modalities": [
+          "audio"
+        ],
+        "tasks": [
+          "transcription",
+          "translation"
+        ],
+        "language": {
+          "supported": [
+            "en",
+            "zh",
+            "de",
+            "es",
+            "ru",
+            "ko",
+            "fr",
+            "ja",
+            "pt",
+            "tr",
+            "pl",
+            "ca",
+            "nl",
+            "ar",
+            "sv",
+            "it",
+            "id",
+            "hi",
+            "fi",
+            "vi",
+            "he",
+            "uk",
+            "el",
+            "ms",
+            "cs",
+            "ro",
+            "da",
+            "hu",
+            "ta",
+            "no",
+            "th",
+            "ur",
+            "hr",
+            "bg",
+            "lt",
+            "la",
+            "mi",
+            "ml",
+            "cy",
+            "sk",
+            "te",
+            "fa",
+            "lv",
+            "bn",
+            "sr",
+            "az",
+            "sl",
+            "kn",
+            "et",
+            "mk",
+            "br",
+            "eu",
+            "is",
+            "hy",
+            "ne",
+            "mn",
+            "bs",
+            "kk",
+            "sq",
+            "sw",
+            "gl",
+            "mr",
+            "pa",
+            "si",
+            "km",
+            "sn",
+            "yo",
+            "so",
+            "af",
+            "oc",
+            "ka",
+            "be",
+            "tg",
+            "sd",
+            "gu",
+            "am",
+            "yi",
+            "lo",
+            "uz",
+            "fo",
+            "ht",
+            "ps",
+            "tk",
+            "nn",
+            "mt",
+            "sa",
+            "lb",
+            "my",
+            "bo",
+            "tl",
+            "mg",
+            "as",
+            "tt",
+            "ln",
+            "ha",
+            "ba",
+            "jv",
+            "su"
+          ],
+          "default_behavior": "auto_detect"
+        },
+        "prompt": {
+          "max_bytes": 4096
+        },
+        "temperature": {
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "response_format": {
+          "supported": [
+            "json",
+            "verbose_json",
+            "text",
+            "srt",
+            "vtt"
+          ],
+          "default": "json"
+        }
+      }
+    },
+    {
+      "id": "gpt-oss-120b",
+      "object": "model",
+      "owned_by": "joi",
+      "workload": "chat",
+      "contract_version": 5,
+      "capabilities": {
+        "input_modalities": [
+          "text"
+        ],
+        "responses": {
+          "state": "stateless",
+          "previous_response_id": false,
+          "store": "false_only",
+          "fields": [
+            "input",
+            "instructions",
+            "reasoning.effort",
+            "max_output_tokens",
+            "temperature",
+            "top_p",
+            "stream",
+            "text.format",
+            "tools",
+            "tool_choice",
+            "parallel_tool_calls",
+            "store"
+          ],
+          "input_item_types": [
+            "message",
+            "function_call",
+            "function_call_output",
+            "reasoning"
+          ]
+        },
+        "sampling": {
+          "temperature": {
+            "default": 1,
+            "minimum": 0,
+            "maximum": 2
+          },
+          "top_p": {
+            "default": 1,
+            "minimum": 0,
+            "maximum": 1
+          },
+          "top_k": {
+            "default": 0,
+            "minimum": 0
+          },
+          "min_p": {
+            "default": 0,
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "max_tokens": {
+          "default": 4096,
+          "minimum": 1,
+          "maximum": 12288
+        },
+        "seed": {
+          "minimum": 0,
+          "maximum": 4294967295,
+          "random_when_omitted": true
+        },
+        "stop": {
+          "max_sequences": 8,
+          "max_sequence_length": 256
+        },
+        "stream": {
+          "default": false,
+          "options": [
+            "include_usage"
+          ]
+        },
+        "reasoning_effort": {
+          "supported": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": "medium"
+        },
+        "response_format": {
+          "supported": [
+            "text",
+            "json_object",
+            "json_schema"
+          ],
+          "default": "text"
+        },
+        "tools": {
+          "supported": true,
+          "types": [
+            "function"
+          ],
+          "parallel_tool_calls": false,
+          "requires_response_format": "text"
+        }
+      }
+    },
+    {
+      "id": "bge-m3",
+      "object": "model",
+      "owned_by": "nexus",
+      "workload": "embedding",
+      "contract_version": 5,
+      "capabilities": {
+        "input_modalities": [
+          "text"
+        ],
+        "encoding_format": {
+          "supported": [
+            "float"
+          ],
+          "default": "float"
+        },
+        "dimensions": 1024
+      }
+    }
+  ],
+  "configured_models": [
+    {
+      "id": "gemma-4-12b",
+      "ready": true,
+      "owned_by": "nexus",
+      "workload": "chat",
+      "contract_version": 5,
+      "capabilities": {
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "sampling": {
+          "temperature": {
+            "default": 1,
+            "minimum": 0,
+            "maximum": 2
+          },
+          "top_p": {
+            "default": 0.95,
+            "minimum": 0,
+            "maximum": 1
+          },
+          "top_k": {
+            "default": 64,
+            "minimum": 0
+          },
+          "min_p": {
+            "default": 0,
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "max_tokens": {
+          "default": 4096,
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "seed": {
+          "minimum": 0,
+          "maximum": 4294967295,
+          "random_when_omitted": true
+        },
+        "stop": {
+          "max_sequences": 8,
+          "max_sequence_length": 256
+        },
+        "stream": {
+          "default": false,
+          "options": [
+            "include_usage"
+          ]
+        },
+        "reasoning_effort": {
+          "supported": [
+            "none",
+            "high"
+          ],
+          "default": "none"
+        },
+        "response_format": {
+          "supported": [
+            "text",
+            "json_object",
+            "json_schema"
+          ],
+          "default": "text"
+        },
+        "tools": {
+          "supported": true,
+          "types": [
+            "function"
+          ],
+          "parallel_tool_calls": false,
+          "requires_response_format": "text"
+        }
+      }
+    },
+    {
+      "id": "whisper-large-v3-turbo",
+      "ready": true,
+      "owned_by": "nexus",
+      "workload": "transcription",
+      "contract_version": 5,
+      "capabilities": {
+        "input_modalities": [
+          "audio"
+        ],
+        "tasks": [
+          "transcription",
+          "translation"
+        ],
+        "language": {
+          "supported": [
+            "en",
+            "zh",
+            "de",
+            "es",
+            "ru",
+            "ko",
+            "fr",
+            "ja",
+            "pt",
+            "tr",
+            "pl",
+            "ca",
+            "nl",
+            "ar",
+            "sv",
+            "it",
+            "id",
+            "hi",
+            "fi",
+            "vi",
+            "he",
+            "uk",
+            "el",
+            "ms",
+            "cs",
+            "ro",
+            "da",
+            "hu",
+            "ta",
+            "no",
+            "th",
+            "ur",
+            "hr",
+            "bg",
+            "lt",
+            "la",
+            "mi",
+            "ml",
+            "cy",
+            "sk",
+            "te",
+            "fa",
+            "lv",
+            "bn",
+            "sr",
+            "az",
+            "sl",
+            "kn",
+            "et",
+            "mk",
+            "br",
+            "eu",
+            "is",
+            "hy",
+            "ne",
+            "mn",
+            "bs",
+            "kk",
+            "sq",
+            "sw",
+            "gl",
+            "mr",
+            "pa",
+            "si",
+            "km",
+            "sn",
+            "yo",
+            "so",
+            "af",
+            "oc",
+            "ka",
+            "be",
+            "tg",
+            "sd",
+            "gu",
+            "am",
+            "yi",
+            "lo",
+            "uz",
+            "fo",
+            "ht",
+            "ps",
+            "tk",
+            "nn",
+            "mt",
+            "sa",
+            "lb",
+            "my",
+            "bo",
+            "tl",
+            "mg",
+            "as",
+            "tt",
+            "ln",
+            "ha",
+            "ba",
+            "jv",
+            "su"
+          ],
+          "default_behavior": "auto_detect"
+        },
+        "prompt": {
+          "max_bytes": 4096
+        },
+        "temperature": {
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "response_format": {
+          "supported": [
+            "json",
+            "verbose_json",
+            "text",
+            "srt",
+            "vtt"
+          ],
+          "default": "json"
+        }
+      }
+    },
+    {
+      "id": "gpt-oss-120b",
+      "ready": true,
+      "owned_by": "joi",
+      "workload": "chat",
+      "contract_version": 5,
+      "capabilities": {
+        "input_modalities": [
+          "text"
+        ],
+        "responses": {
+          "state": "stateless",
+          "previous_response_id": false,
+          "store": "false_only",
+          "fields": [
+            "input",
+            "instructions",
+            "reasoning.effort",
+            "max_output_tokens",
+            "temperature",
+            "top_p",
+            "stream",
+            "text.format",
+            "tools",
+            "tool_choice",
+            "parallel_tool_calls",
+            "store"
+          ],
+          "input_item_types": [
+            "message",
+            "function_call",
+            "function_call_output",
+            "reasoning"
+          ]
+        },
+        "sampling": {
+          "temperature": {
+            "default": 1,
+            "minimum": 0,
+            "maximum": 2
+          },
+          "top_p": {
+            "default": 1,
+            "minimum": 0,
+            "maximum": 1
+          },
+          "top_k": {
+            "default": 0,
+            "minimum": 0
+          },
+          "min_p": {
+            "default": 0,
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "max_tokens": {
+          "default": 4096,
+          "minimum": 1,
+          "maximum": 12288
+        },
+        "seed": {
+          "minimum": 0,
+          "maximum": 4294967295,
+          "random_when_omitted": true
+        },
+        "stop": {
+          "max_sequences": 8,
+          "max_sequence_length": 256
+        },
+        "stream": {
+          "default": false,
+          "options": [
+            "include_usage"
+          ]
+        },
+        "reasoning_effort": {
+          "supported": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": "medium"
+        },
+        "response_format": {
+          "supported": [
+            "text",
+            "json_object",
+            "json_schema"
+          ],
+          "default": "text"
+        },
+        "tools": {
+          "supported": true,
+          "types": [
+            "function"
+          ],
+          "parallel_tool_calls": false,
+          "requires_response_format": "text"
+        }
+      }
+    },
+    {
+      "id": "bge-m3",
+      "ready": true,
+      "owned_by": "nexus",
+      "workload": "embedding",
+      "contract_version": 5,
+      "capabilities": {
+        "input_modalities": [
+          "text"
+        ],
+        "encoding_format": {
+          "supported": [
+            "float"
+          ],
+          "default": "float"
+        },
+        "dimensions": 1024
+      }
+    }
+  ]
+}

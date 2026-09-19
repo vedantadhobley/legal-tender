@@ -1,0 +1,17 @@
+{
+  "policy": "fec/exact-committee-summary-assertions@1.0.0",
+  "grouping": "same_source_fact_set_cycle_committee_and_exact_non_candidate_source_fields",
+  "excluded_grouping_fields": ["CAND_ID"],
+  "conflicts": "retain_all_variants_and_members_no_financial_selection",
+  "invalid_committee_or_cycle_identity": "retain_each_occurrence_unindexed",
+  "raw_values": "no_trimming_zero_filling_numeric_reformatting_or_date_clipping",
+  "diagnostics": "left_minus_right_in_exact_signed_minor_units_not_corrections",
+  "equations": {
+    "cash": [["COH_BOP", 1], ["TTL_RECEIPTS", 1], ["TTL_DISB", -1], ["COH_COP", -1]],
+    "cash_federal_columns": [["COH_BOP", 1], ["TTL_FED_RECEIPTS", 1], ["TTL_FED_DISB", -1], ["COH_COP", -1]],
+    "individual": [["INDV_ITEM_CONTB", 1], ["INDV_UNITEM_CONTB", 1], ["INDV_CONTB", -1]]
+  },
+  "cash_federal_columns": "sensitivity_diagnostic_not_a_form_specific_cash_identity_or_fallback",
+  "financial_use_eligible": false,
+  "terminal_attribution_eligible": false
+}

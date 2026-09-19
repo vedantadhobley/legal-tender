@@ -1,0 +1,126 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/current-campaigns-summary",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id": "fec", "name": "Federal Election Commission", "base_url": "https://www.fec.gov/"},
+  "dataset": {
+    "id": "current-campaigns-summary",
+    "name": "Current campaigns House and Senate summary file",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "FEC processed financial summary rows for current House and Senate campaigns, using the same physical columns as the all-candidates summary but a distinct publisher population."
+  },
+  "authority": [
+    {"kind": "documentation", "url": "https://www.fec.gov/campaign-finance-data/current-campaigns-house-and-senate-file-description/", "retrieved_on": "2026-08-28"}
+  ],
+  "acquisition": {
+    "authentication": {"class": "none", "environment_variable": null, "header": null, "scheme": null},
+    "endpoints": [
+      {"name": "two-year bulk archive", "method": "GET", "url": "https://www.fec.gov/files/bulk-downloads/{two_year_period}/webl{cycle_suffix}.zip", "response_root": "webl{cycle_suffix}.txt"}
+    ],
+    "pagination": "None. Each requested two-year period is one complete ZIP snapshot.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {"name": "two_year_period", "source": "Requested bulk URL path; cycle_suffix is the period's final two digits.", "purpose": "Acquisition, reconciliation, and replay boundary. It does not replace the row-level CVG_END_DT."}
+    ],
+    "retry_policy": "Bound retries for transport failures; follow redirects; publish only after validating the HTTP result, ZIP integrity, exact substituted member name, archive digest, row width, and record count."
+  },
+  "physical_schema": {
+    "media_type": "application/vnd.fec.pipe-delimited+zip",
+    "source_format": "delimited_archive",
+    "encoding": "UTF-8",
+    "delimiter": "|",
+    "line_ending": "LF with a required final LF in the verified 2020, 2022, 2024, and 2026 artifacts",
+    "quote_policy": "none",
+    "empty_record_policy": "An empty physical line becomes an explicit record-boundary issue; it is never silently skipped.",
+    "header_model": "external_publisher_header",
+    "container_members": ["webl{cycle_suffix}.txt"],
+    "relations": [],
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "reject",
+    "null_policy": "Preserve empty fields as empty strings and numeric lexemes exactly as published. Empty, zero, and negative values are distinct; no source value is converted through binary floating point.",
+    "schema_fingerprint": "The official FEC file-format table enumerates these 30 ordered positions: CAND_ID|CAND_NAME|CAND_ICI|PTY_CD|CAND_PTY_AFFILIATION|TTL_RECEIPTS|TRANS_FROM_AUTH|TTL_DISB|TRANS_TO_AUTH|COH_BOP|COH_COP|CAND_CONTRIB|CAND_LOANS|OTHER_LOANS|CAND_LOAN_REPAY|OTHER_LOAN_REPAY|DEBTS_OWED_BY|TTL_INDIV_CONTRIB|CAND_OFFICE_ST|CAND_OFFICE_DISTRICT|SPEC_ELECTION|PRIM_ELECTION|RUN_ELECTION|GEN_ELECTION|GEN_ELECTION_PRECENT|OTHER_POL_CMTE_CONTRIB|POL_PTY_CONTRIB|CVG_END_DT|INDIV_REFUNDS|CMTE_REFUNDS"
+  },
+  "identity": {
+    "publisher_record_key": "CAND_ID within source_partition.two_year_period",
+    "occurrence_locator": "archive SHA-256 + exact member name + one-based physical line number",
+    "record_version": "occurrence locator + SHA-256 of the exact source line",
+    "duplicate_policy": "Preserve every physical occurrence. A repeated candidate key with conflicting content blocks any singleton summary projection.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "source_partition.two_year_period", "meaning": "Requested FEC bulk period and acquisition boundary."},
+      {"path": "CVG_END_DT", "meaning": "Coverage end date for this specific campaign summary row; never infer it from the archive name."}
+    ],
+    "money_fields": [
+      {"path": "TTL_RECEIPTS", "meaning": "Source-reported total receipts summary value.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "TRANS_FROM_AUTH", "meaning": "Source-reported transfers from authorized committees.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "TTL_DISB", "meaning": "Source-reported total disbursements.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "TRANS_TO_AUTH", "meaning": "Source-reported transfers to authorized committees.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "COH_BOP", "meaning": "Source-reported cash on hand at the beginning of the period.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "COH_COP", "meaning": "Source-reported cash on hand at the close of the period.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "CAND_CONTRIB", "meaning": "Source-reported candidate contributions.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "CAND_LOANS", "meaning": "Source-reported candidate loans.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "OTHER_LOANS", "meaning": "Source-reported other loans.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "CAND_LOAN_REPAY", "meaning": "Source-reported candidate loan repayments.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "OTHER_LOAN_REPAY", "meaning": "Source-reported other loan repayments.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "DEBTS_OWED_BY", "meaning": "Source-reported debts owed by the committee.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "TTL_INDIV_CONTRIB", "meaning": "Source-reported total individual contributions.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "OTHER_POL_CMTE_CONTRIB", "meaning": "Source-reported contributions from other political committees.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "POL_PTY_CONTRIB", "meaning": "Source-reported political-party committee contributions.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "INDIV_REFUNDS", "meaning": "Source-reported individual refunds; negative source values remain negative.", "unit": "USD source decimal; lossless reported_point"},
+      {"path": "CMTE_REFUNDS", "meaning": "Source-reported committee refunds.", "unit": "USD source decimal; lossless reported_point"}
+    ],
+    "code_fields": [
+      {"path": "CAND_ICI", "meaning": "Raw incumbent/challenger/open-seat code."},
+      {"path": "PTY_CD", "meaning": "Raw numeric party code."},
+      {"path": "CAND_PTY_AFFILIATION", "meaning": "Raw party-affiliation code."},
+      {"path": "SPEC_ELECTION + PRIM_ELECTION + RUN_ELECTION + GEN_ELECTION", "meaning": "Raw election-status fields; retain each source column separately."}
+    ],
+    "rules": [
+      "Treat this file as a separate House-and-Senate current-campaign population, not as a newer or interchangeable copy of the all-candidates summary.",
+      "Treat each money field as an independent publisher summary assertion; do not assume the published total equals a locally chosen sum of the other columns.",
+      "Convert a valid money lexeme losslessly to the common MoneyMeasure reported_point shape while retaining the raw lexeme and source field.",
+      "Do not replace itemized transaction facts with these summaries or manufacture itemized contributors from summary categories.",
+      "Do not use TTL_RECEIPTS as a fallback for missing graph-attributed receipts; publish coverage differences explicitly.",
+      "Authorized-committee transfers can cause double counting when candidate rows or committees are combined; preserve transfer columns and name the aggregation rule.",
+      "CVG_END_DT is the row's financial time boundary. The archive period is not a substitute.",
+      "Negative reported values are valid evidence and must not be clamped to zero.",
+      "The source field is spelled GEN_ELECTION_PRECENT; preserve that physical name even if a semantic projection later exposes a corrected label."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The FEC regenerates this processed current-campaign file from reports. The file has no row-level amendment chain or revision identifier.",
+    "effective_projection": "Blocked while draft. Preserve every acquired snapshot. A latest view is selected per candidate using a named population, snapshot, and CVG_END_DT policy."
+  },
+  "quality": {
+    "checks": [
+      {"id": "archive_identity", "severity": "block", "rule": "The archive digest, requested period, exact substituted member, retrieval time, and response metadata are present."},
+      {"id": "row_width", "severity": "block", "rule": "Every physical line has exactly 30 fields; short rows are not padded and extra fields are not truncated."},
+      {"id": "strict_decode", "severity": "block", "rule": "Every source byte decodes under the accepted encoding; invalid bytes are retained as failed raw evidence, never silently dropped."},
+      {"id": "money_parse", "severity": "block", "rule": "Every non-empty money field parses losslessly as a signed decimal without binary floating point."},
+      {"id": "coverage_date", "severity": "block", "rule": "Every non-empty CVG_END_DT parses strictly as the source date format and remains attached to its row."},
+      {"id": "population", "severity": "observe", "rule": "Record counts and office codes are compared with prior snapshots; this file's current-campaign population is not silently broadened to all candidates."},
+      {"id": "occurrence_conservation", "severity": "block", "rule": "Every non-empty physical line becomes one record occurrence or one explicit issue."},
+      {"id": "duplicate_key", "severity": "block", "rule": "Conflicting records for one CAND_ID and source period remain separate and block a singleton projection."},
+      {"id": "publisher_schema", "severity": "block", "rule": "The ordered 30-field header must match the positions in the cited official FEC file-format table."},
+      {"id": "schema_drift", "severity": "block", "rule": "Member name, field order, or field count changes require contract review."}
+    ]
+  },
+  "fixtures": [
+    {"path": "fixtures/candidate-loan.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "retrieved_on": "2026-06-21", "sha256": "64ebec3bce7a544028e98f1955fe43fa79ae1c6d642b6c5707883a78885363c2", "scenarios": ["candidate contribution", "candidate loan repayment", "debt and authorized transfers"]},
+    {"path": "fixtures/partial-campaign.json", "representation": "canonical_json", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "retrieved_on": "2026-06-21", "sha256": "3b49aa92b2a6cbf691f0cd6a3549d5d436f473f9db04f077b104d93168b5f865", "scenarios": ["candidate loan", "candidate contribution", "summary categories do not collapse"]},
+    {"path": "fixtures/candidate-loan.txt", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "retrieved_on": "2026-06-21", "sha256": "09c280b065cc615f0ef4fffce6cbf0b41fb1eb9d94e44a412ff253b184bae69e", "scenarios": ["exact pipe-delimited current-campaign row", "30 fields", "terminating LF"]},
+    {"path": "fixtures/partial-campaign.txt", "representation": "exact_bytes", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "retrieved_on": "2026-06-21", "sha256": "cab8c77fa90ca85520fdaf9cb5113f558597159090e7466aaf8c0b34749e45a4", "scenarios": ["exact decimal lexemes", "30 fields", "terminating LF"]}
+  ],
+  "use": {
+    "retention": "Retain the exact archive, HTTP metadata, archive digest, member inventory, record occurrences, and issues indefinitely; every derived summary remains rebuildable.",
+    "citation_date_required": true,
+    "disclaimer": "These are processed FEC summary assertions for the current House-and-Senate campaign population with row-specific coverage dates. They are not itemized transactions and must not be presented as fully attributed terminal-source money."
+  },
+  "outputs": {
+    "fact_types": ["current_campaign_financial_summary_assertion"],
+    "change_dimensions": ["source_snapshot", "coverage_end_date", "summary_field", "publisher_population"]
+  }
+}

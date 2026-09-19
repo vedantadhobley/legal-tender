@@ -1,0 +1,15 @@
+{
+  "$schema": "../header-fixtures.schema.json",
+  "fixtures": [
+    {
+      "id": "hdr-8.3",
+      "format_version": "8.3",
+      "file_number": 1483193,
+      "source_url": "https://docquery.fec.gov/dcdev/posted/1483193.fec",
+      "retrieved_on": "2026-08-27",
+      "raw_hex": "4844521c4645431c382e331c53796e6574656368204c4c431c1c4645432d313436323935331c311c0d0a",
+      "sha256": "b5fb57cbf7c48275d8e9cbaa593aaa2aa8aab3bf664bd1af2eeeaf47be702068",
+      "record_terminator_hex": "0d0a"
+    }
+  ]
+}

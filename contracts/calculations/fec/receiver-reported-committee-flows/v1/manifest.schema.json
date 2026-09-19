@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/receiver-reported-committee-flows/v1/manifest.schema.json",
+  "title": "Published receiver-reported committee-flow calculation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "calculation_set_id", "calculation",
+    "calculation_version", "policy_version", "publisher_version",
+    "result_schema_version", "exception_schema_version", "cycle",
+    "source_release_id", "input_fact_set", "run_id", "state",
+    "published_at", "predicate", "decision_counts", "result_counts",
+    "amounts", "exceptions", "results", "checks"
+  ],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.receiver-reported-committee-flow-set.v1"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "calculation": {"const": "fec/receiver-reported-committee-flows"},
+    "calculation_version": {"const": "1.0.0"},
+    "policy_version": {"const": "legal-tender.fec.receiver-reported-committee-flow-policy.v1"},
+    "publisher_version": {"const": "legal-tender.fec.receiver-reported-committee-flow-publisher.v1"},
+    "result_schema_version": {"const": "legal-tender.fec.receiver-reported-committee-flow.v1"},
+    "exception_schema_version": {"const": "legal-tender.fec.receiver-reported-committee-flow-exception.v1"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "input_fact_set": {"$ref": "#/$defs/fact_set"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "published"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "predicate": {"$ref": "#/$defs/predicate"},
+    "decision_counts": {"$ref": "#/$defs/decision_counts"},
+    "result_counts": {"$ref": "#/$defs/result_counts"},
+    "amounts": {"$ref": "#/$defs/amounts"},
+    "exceptions": {"$ref": "#/$defs/artifact"},
+    "results": {"$ref": "#/$defs/artifact"},
+    "checks": {"type": "array", "minItems": 9, "maxItems": 9, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "signed_integer": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "fact_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "dataset", "fact_type", "fact_set_id", "manifest_sha256", "physical_schema_version"],
+      "properties": {
+        "role": {"const": "schedule_a_receipts"},
+        "dataset": {"const": "schedule-a"},
+        "fact_type": {"const": "fec.schedule_a_receipt.v1"},
+        "fact_set_id": {"$ref": "#/$defs/digest"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"},
+        "physical_schema_version": {"const": "legal-tender.fec.schedule-a-parquet.v1"}
+      }
+    },
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "input_physical_schema_version", "membership_identity", "required_columns", "decision_order", "receipt_type_rules", "exceptional_states", "excluded_states"],
+      "properties": {
+        "version": {"const": "legal-tender.fec.receiver-reported-committee-flow-policy.v1"},
+        "input_physical_schema_version": {"const": "legal-tender.fec.schedule-a-parquet.v1"},
+        "membership_identity": {"const": "Schedule A fact-set ID plus one-based source row ordinal"},
+        "required_columns": {"type": "array", "minItems": 9, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "decision_order": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"$ref": "#/$defs/predicate_rule"}},
+        "receipt_type_rules": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"$ref": "#/$defs/receipt_type_rule"}},
+        "exceptional_states": {"type": "array", "minItems": 6, "maxItems": 6, "uniqueItems": true, "items": {"$ref": "#/$defs/decision"}},
+        "excluded_states": {"type": "array", "minItems": 6, "maxItems": 6, "uniqueItems": true, "items": {"$ref": "#/$defs/decision"}}
+      }
+    },
+    "predicate_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "all"],
+      "properties": {
+        "state": {"type": "string", "minLength": 1},
+        "all": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "receipt_type_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "decision", "codes"],
+      "properties": {
+        "role": {"type": "string", "minLength": 1},
+        "decision": {"$ref": "#/$defs/decision"},
+        "codes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "decision": {
+      "enum": [
+        "invalid_normalization", "unresolved_recipient_committee_id",
+        "excluded_no_source_committee_id", "unresolved_one_sided_source_committee_id",
+        "unresolved_conflicting_source_committee_ids", "excluded_memo_subtotal",
+        "unresolved_amount", "excluded_outbound_receipt_role",
+        "excluded_semantic_memo_receipt_role", "excluded_earmarked_receipt_role",
+        "excluded_noncommittee_receipt_role", "unresolved_receipt_role",
+        "included_receiver_reported_committee_flow"
+      ]
+    },
+    "decision_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_facts", "invalid_normalization", "unresolved_recipient_committee_id",
+        "excluded_no_source_committee_id", "unresolved_one_sided_source_committee_id",
+        "unresolved_conflicting_source_committee_ids", "excluded_memo_subtotal",
+        "unresolved_amount", "excluded_outbound_receipt_role",
+        "excluded_semantic_memo_receipt_role", "excluded_earmarked_receipt_role",
+        "excluded_noncommittee_receipt_role", "unresolved_receipt_role",
+        "included_receiver_reported_committee_flow"
+      ],
+      "properties": {
+        "source_facts": {"type": "integer", "minimum": 0},
+        "invalid_normalization": {"type": "integer", "minimum": 0},
+        "unresolved_recipient_committee_id": {"type": "integer", "minimum": 0},
+        "excluded_no_source_committee_id": {"type": "integer", "minimum": 0},
+        "unresolved_one_sided_source_committee_id": {"type": "integer", "minimum": 0},
+        "unresolved_conflicting_source_committee_ids": {"type": "integer", "minimum": 0},
+        "excluded_memo_subtotal": {"type": "integer", "minimum": 0},
+        "unresolved_amount": {"type": "integer", "minimum": 0},
+        "excluded_outbound_receipt_role": {"type": "integer", "minimum": 0},
+        "excluded_semantic_memo_receipt_role": {"type": "integer", "minimum": 0},
+        "excluded_earmarked_receipt_role": {"type": "integer", "minimum": 0},
+        "excluded_noncommittee_receipt_role": {"type": "integer", "minimum": 0},
+        "unresolved_receipt_role": {"type": "integer", "minimum": 0},
+        "included_receiver_reported_committee_flow": {"type": "integer", "minimum": 0}
+      }
+    },
+    "result_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["known_amount_rows", "unknown_amount_rows", "included_rows", "included_positive_rows", "included_negative_rows", "included_zero_rows", "result_groups", "source_committees", "recipient_committees", "self_edge_rows", "self_edge_groups"],
+      "properties": {
+        "known_amount_rows": {"type": "integer", "minimum": 0},
+        "unknown_amount_rows": {"type": "integer", "minimum": 0},
+        "included_rows": {"type": "integer", "minimum": 0},
+        "included_positive_rows": {"type": "integer", "minimum": 0},
+        "included_negative_rows": {"type": "integer", "minimum": 0},
+        "included_zero_rows": {"type": "integer", "minimum": 0},
+        "result_groups": {"type": "integer", "minimum": 0},
+        "source_committees": {"type": "integer", "minimum": 0},
+        "recipient_committees": {"type": "integer", "minimum": 0},
+        "self_edge_rows": {"type": "integer", "minimum": 0},
+        "self_edge_groups": {"type": "integer", "minimum": 0}
+      }
+    },
+    "amounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["known_source_minor_units", "included_minor_units", "excluded_minor_units", "unresolved_minor_units"],
+      "properties": {
+        "known_source_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "included_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "excluded_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "unresolved_minor_units": {"$ref": "#/$defs/signed_integer"}
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "storage_key"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "compression": {"const": "zstd"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "observe"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

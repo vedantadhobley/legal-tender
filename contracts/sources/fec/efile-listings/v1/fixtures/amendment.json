@@ -1,0 +1,38 @@
+{
+  "api_version": "1.0",
+  "pagination": {
+    "count": 1,
+    "is_count_exact": true,
+    "page": 1,
+    "pages": 1,
+    "per_page": 100
+  },
+  "results": [
+    {
+      "amended_by": null,
+      "amendment_chain": [1997074, 2009982],
+      "amendment_number": 1,
+      "amends_file": 1997074,
+      "beginning_image_number": "202608279903415525",
+      "committee_id": "C00392928",
+      "committee_name": "SAN FRANCISCO DEMOCRATIC COUNTY CENTRAL COMMITTEE",
+      "coverage_end_date": "2026-06-30",
+      "coverage_start_date": "2026-05-14",
+      "csv_url": "https://docquery.fec.gov/csv/982/2009982.csv",
+      "document_description": "JULY QUARTERLY 2026",
+      "ending_image_number": "202608279903415608",
+      "fec_file_id": "FEC-2009982",
+      "fec_url": "https://docquery.fec.gov/dcdev/posted/2009982.fec",
+      "file_number": 2009982,
+      "filed_date": "2026-08-27",
+      "form_type": "F3XA",
+      "html_url": "https://docquery.fec.gov/cgi-bin/forms/C00392928/2009982/",
+      "is_amended": false,
+      "load_timestamp": "2026-08-27T17:35:48",
+      "most_recent": true,
+      "most_recent_filing": 2009982,
+      "pdf_url": "https://docquery.fec.gov/pdf/525/202608279903415525/202608279903415525.pdf",
+      "receipt_date": "2026-08-27T17:35:44"
+    }
+  ]
+}

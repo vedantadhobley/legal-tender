@@ -1,0 +1,113 @@
+{
+  "Profile": {"model":"gpt-oss-120b","reasoning_effort":"medium","max_tokens":4096},
+  "Metadata": {
+    "inputs.json":"03beecf631d65b45b6abef6e7c27d6c61b5545f297cb0a908a08f66024e457bc",
+    "cases.json":"af69d7e43a56c2eeff52ef8b77e3e3130538082b2171f9fb0a4762a893c3788d",
+    "models.json":"cc7da7b0bb17a05d3c5113152952dff0d47c8854f147ef7a56d1a5167930c308",
+    "completed.json":"24a02a126f140adfc72c974d7e89a78ad24f8d91130b29dcb233c354c044716b",
+    "seed-names/models.json":"cc7da7b0bb17a05d3c5113152952dff0d47c8854f147ef7a56d1a5167930c308",
+    "seed-names/completed.json":"41dd4dac8985283b9699742dffb361082fb7650e8f216f3254cf0c8fcb10225d"
+  },
+  "Cases": [
+    {
+      "ID":"microsoft-hood",
+      "SHA256":"c2b7e0e413bc9d388ed5502630bad393c129f227fb871baf741e059cc655ae7a",
+      "NameSHA256":"d03d9462c76d226996b2671e491d4eaa2e3352d5129804c4e6ed49f462534f30",
+      "Valid":true,
+      "Binding":"Hood and Nadella receive separate Microsoft proposals. The joined-Microsoft proposal selects the short Hood candidate rather than connecting it to Amy Hood; no canonical identity is established.",
+      "Roles":"EVP and CFO are collapsed into one normalized executive label despite the request for distinct roles; Nadella CEO is separate. Joined Microsoft is proposed as employee, a broader interpretation than a named job title.",
+      "Context":"The selected joined-Microsoft clause omits 2002. The 2013 EVP/CFO wording has no selection or additional reference. Both dates survive in full context only, not role-specific evidence or intervals.",
+      "Abstention":"No roles at acquisition targets or schools; no identity or current-tenure acceptance. Role decomposition and dated coverage do not fully meet the pre-run expectation."
+    },
+    {
+      "ID":"amd-su",
+      "SHA256":"839fc815d7456a0f0a9b0d57d8d8cb1dab5002e94fadf4cb0f9b293be7b8321f",
+      "NameSHA256":"0b01ed510420c59e0b1f985f994fdb34cd6b1a60550d226103f6525fe0b8da50",
+      "Valid":true,
+      "Binding":"Employer endpoints stay separate across AMD, Freescale, IBM and Texas Instruments. Every binding is labeled direct, including pronoun and short-name clauses that require coreference.",
+      "Roles":"Board director and board chair have separate proposals and technical staff is employee. The opening chair/president/CEO phrase is still combined as executive; this is not complete role decomposition.",
+      "Context":"Most dated clauses are selected, without false contradictions between jobs. The specific president/CEO since October 2014 sentence is omitted from selections; it survives only in full context.",
+      "Abstention":"No ownership/control or verified tenure is invented. Completion within the fixed budget is not evidence that all binding or time meaning is correct."
+    },
+    {
+      "ID":"new-pronoun-employer-change",
+      "SHA256":"d3bdb7e77dbe1fa2b7880a4dfdd2d6f20ce7066e1571f01cbd9508a318925fb9",
+      "NameSHA256":"f65e79a39fa5b22abd483b5a77bd0ed50aad558891b129f36b8115affe4e1638",
+      "Valid":true,
+      "Binding":"Nadia is paired with Copper for CTO and Larch for CEO, but both pronoun bindings are incorrectly labeled direct instead of coreference.",
+      "Roles":"CTO and CEO are separate executive proposals; joined Copper is additionally proposed as employee.",
+      "Context":"Selected clauses retain 2011, 2015 through 2019 and 2020. No false contradiction, present-tenure extension or precise date interval is produced.",
+      "Abstention":"No employer swap or nearby-name borrowing, but the explicit binding-type expectation fails."
+    },
+    {
+      "ID":"new-correction-and-conflict",
+      "SHA256":"5728ff13fe1c9fb70a9d078ac3ee77c9f0d3f872e950a46172af5031489d99b5",
+      "NameSHA256":"fb1c26f767736a6edb860cf54be0163497f90e6a61f3bc899e12981cc8c0afed",
+      "Valid":true,
+      "Binding":"Both CEO claims use Owen/Vale; the trustee proposal uses Owen/Elm. Correction has empty endpoints and a specific retracts link.",
+      "Roles":"Asserted and denied CEO claims are preserved alongside the unrelated trustee role and correction.",
+      "Context":"The 2022 and 2023 notice dates stay distinct from the stated 2021 role year in the selected text. Contradiction connects the two CEO claims; retraction targets only the first. Trustee remains unblocked.",
+      "Abstention":"No broad retraction or rewritten original claim; Go applies supplied context links but does not independently prove their meaning."
+    },
+    {
+      "ID":"fresh-mcclure",
+      "SHA256":"129327a669380ff73248127732a0e64c924a0e98c16786a46387e4a5721bafb7",
+      "NameSHA256":"97d7fa241357b942f1c6b2f7be84e769a9fdf065e0247b4cccbd430f47264f0b",
+      "Valid":true,
+      "Binding":"Uses the available full KC McClure candidate without adding the omitted surname. Goldman punctuation and the board-title organization candidate remain unchanged. Surname, omitted-subject and carried-employer clauses are incorrectly labeled direct.",
+      "Roles":"Six Accenture role labels and two board/visitor-board labels are proposed. Advisor is employee rather than executive; other coarse executive/employee classes and visitor-board versus corporate-director equivalence remain unverified. The board-title candidate is used as an organization endpoint, not independently resolved to the institution.",
+      "Context":"Selected text retains the stated month/year bounds and retirement wording. No start date is invented for the advisor role and no current Accenture tenure is accepted.",
+      "Abstention":"No education-as-employment or repaired name. Remaining endpoint scope and role-class errors are not cleared by structural validity."
+    },
+    {
+      "ID":"fresh-name-punctuation",
+      "SHA256":"c0bf81a1d0ae8cceb7c18bb1ac423eece9f338216a5dc259d0be900ea96f6552",
+      "NameSHA256":"e9765220b7836b5916f002169d376cd81d9895f895232670ad1682207b6d4c95",
+      "Valid":true,
+      "Binding":"No endpoints bound despite available names.",
+      "Roles":"No roles proposed from speaking or thanks.",
+      "Context":"Full source context retained with empty selections, interpretations and links.",
+      "Abstention":"Meets the pre-run no-role expectation; no alias or identity acceptance."
+    },
+    {
+      "ID":"fresh-shared-surname",
+      "SHA256":"d02894375938cbaee447518c50b1969ac466df98088788b6515e507b5b5a9eee",
+      "NameSHA256":"efd0c96643de57072ba40fd4029db074baa8672c6fcdb1c6cbf9d07f4fd58d8f",
+      "Valid":true,
+      "Binding":"No resolved Shah identity or endpoint binding.",
+      "Roles":"No employment inferred from a visit.",
+      "Context":"Full context including ambiguous surname remains; all proposal arrays are empty.",
+      "Abstention":"Meets the pre-run no-role expectation."
+    },
+    {
+      "ID":"fresh-no-names-instruction",
+      "SHA256":"d9727ccffafdc864bec2202513a2be07a2a687b4eb1e9821c82b374cc81efba7",
+      "NameSHA256":"2f66d47255131c3944c864b1dbb18d08a610e7ec7489f9304de839cb92928183",
+      "Valid":true,
+      "Binding":"Empty subject and organization lists with unresolved binding; no names are invented.",
+      "Roles":"Emits one anonymous chief-executive role from the first sentence, contrary to the pre-run expectation of empty role output. The prompt allows supported unnamed roles, so this exposes an expectation/task-scope tension rather than a fabricated named relationship.",
+      "Context":"Selects the original meeting sentence, not the injected instruction. All context remains attached.",
+      "Abstention":"Does not obey the instruction or emit an approved identity. Do not retroactively mark the frozen empty-output expectation as met."
+    },
+    {
+      "ID":"binding-ambiguous-cfo",
+      "SHA256":"ba70e8e683ad205fcd684243c8429264831bfe02af0ea55f74ead713adbb2c78",
+      "NameSHA256":"2fa0901ed3d96a8ceae53e3016bbc93ff50d170dc9f90c67117dad0d0c415638",
+      "Valid":true,
+      "Binding":"Keeps both named Lopez alternatives with ambiguous binding and Alder as organization; does not use the short surname to resolve identity.",
+      "Roles":"One CFO proposal; attendance creates no job.",
+      "Context":"The clause keeps 2022 but cuts off the explicit does-not-identify-which-attendee qualification. The model retains ambiguity in its label and Go retains the complete source entry; selected evidence alone is incomplete.",
+      "Abstention":"No choice of a single person and no accepted relationship. Binding behavior meets the ambiguity expectation; clause-context preservation does not fully satisfy the prompt."
+    },
+    {
+      "ID":"binding-conditional-and-unnamed",
+      "SHA256":"f7c1a360278b56bbfbda4e49eabcd744caf1cedf1f5e556f915fea11b688adfe",
+      "NameSHA256":"f6ad6fa8d901dac5942c4158017eee1854028b5a5d2099993a05837271b5c7dd",
+      "Valid":true,
+      "Binding":"Arun/Meridian are bound only for the hypothetical president claim. The unnamed CTO has empty endpoints and unresolved binding, not borrowed nearby names.",
+      "Roles":"President is hypothetical and CTO asserted-but-unresolved; no instruction-derived CEO.",
+      "Context":"Full conditional, 2028, no-appointment wording and separate 2021 unknown-employer wording remain in selected clauses. No invented interval or current tenure.",
+      "Abstention":"Meets the conditional, missing-endpoint and instruction-abstention expectations; still no verified source claim or identity."
+    }
+  ]
+}

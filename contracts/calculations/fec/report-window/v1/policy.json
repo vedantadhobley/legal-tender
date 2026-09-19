@@ -1,0 +1,22 @@
+{
+  "version": "legal-tender.fec.report-window.v1",
+  "document_set_version": "legal-tender.fec.report-document-set.v1",
+  "status": "accepted-bounded-diagnostic",
+  "inputs": "One reverified single-committee report capture, explicit inclusive dates, and a descriptor of pinned local documents. Decode once, retain metadata once, and reuse the exact field-binding predicate. No saved review or caller-selected candidate is trusted.",
+  "limits": {"descriptor_bytes": 131072, "documents": 64, "total_document_and_header_bytes": 16777216},
+  "sum_fields": ["individual_itemized_contributions_period", "individual_unitemized_contributions_period", "total_individual_contributions_period", "total_receipts_period", "total_disbursements_period"],
+  "boundary_fields": {"cash_on_hand_beginning_period": "opening_boundary", "cash_on_hand_end_period": "closing_boundary"},
+  "observed_sum": "Exact signed sum of bound whole-period candidate fields. Null when there are no bound operands. Explicitly not a complete window value, lower bound, donation total or cash denominator; overlaps remain exposed.",
+  "window_value": "Available only when observed-chain partition readiness passes, every intersecting candidate has this field bound, and that field covers every requested day exactly once. Sum the five flow fields independently. Cash fields use only the exact window-boundary report value, never a sum of balances. No clipped or prorated report amounts.",
+  "missing": "Keep exact observation and optional document-binding indexes for each unbound candidate field, along with scope/field blockers. Unresolved cohorts and ungrouped observations remain in shared membership evidence. Duplicate/competing documents for a file ID fail the request; never pick a preferred variant.",
+  "equations": {
+    "report_individual_subtotal": "total - itemized - unitemized",
+    "report_cash": "closing - opening - receipts + disbursements",
+    "adjacent_cash_carry_forward": "next opening - previous closing, only for calendar-adjacent candidate cohorts without competing overlapping/unknown scope",
+    "window_individual_subtotal": "window total individuals - window itemized - window unitemized",
+    "window_cash": "window closing - window opening - window receipts + window disbursements"
+  },
+  "equation_use": "Preserve operand references, coefficients, exact signed residuals and unavailable states. Missing operands are not zero. Do not bridge missing periods, unresolved cohorts or unavailable cash fields. Mismatches never solve missing values or erase independently bound reported fields.",
+  "guards": {"financial_cycle_total_ready": false, "cash_basis_ready": false, "terminal_attribution_eligible": false},
+  "non_goals": ["source correction", "inferred unitemized amounts", "cash stock summation", "financial account qualification", "terminal allocation", "bulk scanning", "new acquisition", "immutable publication", "Dagster or graph mutation"]
+}

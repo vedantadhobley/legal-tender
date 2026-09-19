@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/page.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "calculation_id",
+    "input",
+    "committee_id",
+    "component",
+    "after_source_row_ordinal",
+    "receipts",
+    "next_after_source_row_ordinal",
+    "has_more",
+    "terminal_attribution_eligible"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "legal-tender.fec.funding-receipt-page.v1"
+    },
+    "calculation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "input": {
+      "$ref": "result.schema.json#/$defs/input"
+    },
+    "committee_id": {
+      "type": "string",
+      "pattern": "^C[0-9]{8}$"
+    },
+    "component": {
+      "enum": [
+        "",
+        "unresolved_recipient",
+        "memo_subtotal",
+        "overlapping_individual_and_committee",
+        "itemized_individual_only",
+        "committee_flow_only",
+        "unknown_amount",
+        "unresolved_individual_class",
+        "other_reported_receipt"
+      ]
+    },
+    "after_source_row_ordinal": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "receipts": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_row_ordinal",
+          "shard_sha256",
+          "key",
+          "fields"
+        ],
+        "properties": {
+          "source_row_ordinal": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "shard_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "key": {
+            "$ref": "result.schema.json#/$defs/key"
+          },
+          "fields": {
+            "type": "object",
+            "minProperties": 99,
+            "maxProperties": 99,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "boolean",
+                "integer",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "next_after_source_row_ordinal": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "has_more": {
+      "type": "boolean"
+    },
+    "terminal_attribution_eligible": {
+      "const": false
+    }
+  }
+}

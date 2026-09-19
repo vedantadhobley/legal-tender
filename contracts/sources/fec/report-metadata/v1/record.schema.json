@@ -1,0 +1,2059 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/sources/fec/report-metadata/v1/record.schema.json",
+  "title": "Endpoint-scoped raw report metadata; explicit observed type exceptions",
+  "$defs": {
+    "Filings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "additional_bank_names",
+        "amendment_chain",
+        "amendment_indicator",
+        "amendment_version",
+        "bank_depository_city",
+        "bank_depository_name",
+        "bank_depository_state",
+        "bank_depository_street_1",
+        "bank_depository_street_2",
+        "bank_depository_zip",
+        "beginning_image_number",
+        "candidate_id",
+        "candidate_name",
+        "cash_on_hand_beginning_period",
+        "cash_on_hand_end_period",
+        "committee_id",
+        "committee_name",
+        "committee_type",
+        "coverage_end_date",
+        "coverage_start_date",
+        "csv_url",
+        "cycle",
+        "debts_owed_by_committee",
+        "debts_owed_to_committee",
+        "document_description",
+        "document_type",
+        "document_type_full",
+        "election_year",
+        "ending_image_number",
+        "fec_file_id",
+        "fec_url",
+        "file_number",
+        "form_category",
+        "form_type",
+        "house_personal_funds",
+        "html_url",
+        "is_amended",
+        "means_filed",
+        "most_recent",
+        "most_recent_file_number",
+        "net_donations",
+        "office",
+        "opposition_personal_funds",
+        "pages",
+        "party",
+        "pdf_url",
+        "previous_file_number",
+        "primary_general_indicator",
+        "receipt_date",
+        "report_type",
+        "report_type_full",
+        "report_year",
+        "request_type",
+        "senate_personal_funds",
+        "state",
+        "sub_id",
+        "total_communication_cost",
+        "total_disbursements",
+        "total_independent_expenditures",
+        "total_individual_contributions",
+        "total_receipts",
+        "treasurer_name",
+        "update_date"
+      ],
+      "properties": {
+        "additional_bank_names": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "amendment_chain": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer"
+          }
+        },
+        "amendment_indicator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "amendment_version": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "bank_depository_city": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bank_depository_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bank_depository_state": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bank_depository_street_1": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bank_depository_street_2": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bank_depository_zip": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "beginning_image_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "candidate_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "candidate_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cash_on_hand_beginning_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cash_on_hand_end_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "committee_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "committee_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "committee_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coverage_end_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coverage_start_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "csv_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cycle": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "debts_owed_by_committee": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "debts_owed_to_committee": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "document_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "document_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "document_type_full": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "election_year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "ending_image_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fec_file_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fec_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "form_category": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "form_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "house_personal_funds": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "html_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_amended": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "means_filed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "most_recent": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "most_recent_file_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "net_donations": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "office": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "opposition_personal_funds": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pages": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "party": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pdf_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "previous_file_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "primary_general_indicator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receipt_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_type_full": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "request_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "senate_personal_funds": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "state": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sub_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "total_communication_cost": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_disbursements": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_independent_expenditures": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_individual_contributions": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_receipts": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "treasurer_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "update_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "HouseSenate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "aggregate_amount_personal_contributions_general",
+        "aggregate_contributions_personal_funds_primary",
+        "all_other_loans_period",
+        "all_other_loans_ytd",
+        "amendment_chain",
+        "amendment_indicator",
+        "amendment_indicator_full",
+        "beginning_image_number",
+        "candidate_contribution_period",
+        "candidate_contribution_ytd",
+        "cash_on_hand_beginning_period",
+        "cash_on_hand_end_period",
+        "committee_id",
+        "committee_name",
+        "committee_type",
+        "coverage_end_date",
+        "coverage_start_date",
+        "csv_url",
+        "cycle",
+        "debts_owed_by_committee",
+        "debts_owed_to_committee",
+        "document_description",
+        "end_image_number",
+        "fec_file_id",
+        "fec_url",
+        "file_number",
+        "gross_receipt_authorized_committee_general",
+        "gross_receipt_authorized_committee_primary",
+        "gross_receipt_minus_personal_contribution_general",
+        "gross_receipt_minus_personal_contributions_primary",
+        "html_url",
+        "individual_itemized_contributions_period",
+        "individual_itemized_contributions_ytd",
+        "individual_unitemized_contributions_period",
+        "individual_unitemized_contributions_ytd",
+        "is_amended",
+        "loan_repayments_candidate_loans_period",
+        "loan_repayments_candidate_loans_ytd",
+        "loan_repayments_other_loans_period",
+        "loan_repayments_other_loans_ytd",
+        "loans_made_by_candidate_period",
+        "loans_made_by_candidate_ytd",
+        "means_filed",
+        "most_recent",
+        "most_recent_file_number",
+        "net_contributions_period",
+        "net_contributions_ytd",
+        "net_operating_expenditures_period",
+        "net_operating_expenditures_ytd",
+        "offsets_to_operating_expenditures_period",
+        "offsets_to_operating_expenditures_ytd",
+        "operating_expenditures_period",
+        "operating_expenditures_ytd",
+        "other_disbursements_period",
+        "other_disbursements_ytd",
+        "other_political_committee_contributions_period",
+        "other_political_committee_contributions_ytd",
+        "other_receipts_period",
+        "other_receipts_ytd",
+        "pdf_url",
+        "political_party_committee_contributions_period",
+        "political_party_committee_contributions_ytd",
+        "previous_file_number",
+        "receipt_date",
+        "refunded_individual_contributions_period",
+        "refunded_individual_contributions_ytd",
+        "refunded_other_political_committee_contributions_period",
+        "refunded_other_political_committee_contributions_ytd",
+        "refunded_political_party_committee_contributions_period",
+        "refunded_political_party_committee_contributions_ytd",
+        "refunds_total_contributions_col_total_ytd",
+        "report_form",
+        "report_type",
+        "report_type_full",
+        "report_year",
+        "subtotal_period",
+        "total_contribution_refunds_col_total_period",
+        "total_contribution_refunds_period",
+        "total_contribution_refunds_ytd",
+        "total_contributions_column_total_period",
+        "total_contributions_period",
+        "total_contributions_ytd",
+        "total_disbursements_period",
+        "total_disbursements_ytd",
+        "total_individual_contributions_period",
+        "total_individual_contributions_ytd",
+        "total_loan_repayments_made_period",
+        "total_loan_repayments_made_ytd",
+        "total_loans_received_period",
+        "total_loans_received_ytd",
+        "total_offsets_to_operating_expenditures_period",
+        "total_offsets_to_operating_expenditures_ytd",
+        "total_operating_expenditures_period",
+        "total_operating_expenditures_ytd",
+        "total_receipts_period",
+        "total_receipts_ytd",
+        "transfers_from_other_authorized_committee_period",
+        "transfers_from_other_authorized_committee_ytd",
+        "transfers_to_other_authorized_committee_period",
+        "transfers_to_other_authorized_committee_ytd"
+      ],
+      "properties": {
+        "aggregate_amount_personal_contributions_general": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "aggregate_contributions_personal_funds_primary": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "all_other_loans_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "all_other_loans_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "amendment_chain": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "number",
+              "string"
+            ]
+          }
+        },
+        "amendment_indicator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "amendment_indicator_full": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "beginning_image_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "candidate_contribution_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "candidate_contribution_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cash_on_hand_beginning_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cash_on_hand_end_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "committee_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "committee_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "committee_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coverage_end_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coverage_start_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "csv_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cycle": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "debts_owed_by_committee": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "debts_owed_to_committee": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "document_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "end_image_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fec_file_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fec_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "gross_receipt_authorized_committee_general": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "gross_receipt_authorized_committee_primary": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "gross_receipt_minus_personal_contribution_general": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "gross_receipt_minus_personal_contributions_primary": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "html_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "individual_itemized_contributions_period": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "individual_itemized_contributions_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "individual_unitemized_contributions_period": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "individual_unitemized_contributions_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "is_amended": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "loan_repayments_candidate_loans_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loan_repayments_candidate_loans_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loan_repayments_other_loans_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loan_repayments_other_loans_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loans_made_by_candidate_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loans_made_by_candidate_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "means_filed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "most_recent": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "most_recent_file_number": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "net_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "net_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "net_operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "net_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "offsets_to_operating_expenditures_period": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "offsets_to_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_disbursements_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_disbursements_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_political_committee_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_political_committee_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_receipts_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_receipts_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pdf_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "political_party_committee_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "political_party_committee_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "previous_file_number": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "receipt_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "refunded_individual_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_individual_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_other_political_committee_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_other_political_committee_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_political_party_committee_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_political_party_committee_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunds_total_contributions_col_total_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "report_form": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_type_full": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "subtotal_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contribution_refunds_col_total_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contribution_refunds_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contribution_refunds_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contributions_column_total_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_disbursements_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_disbursements_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_individual_contributions_period": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "total_individual_contributions_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "total_loan_repayments_made_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_loan_repayments_made_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_loans_received_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_loans_received_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_offsets_to_operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_offsets_to_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_receipts_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_receipts_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "transfers_from_other_authorized_committee_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_from_other_authorized_committee_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_to_other_authorized_committee_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_to_other_authorized_committee_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "PacParty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "all_loans_received_period",
+        "all_loans_received_ytd",
+        "allocated_federal_election_levin_share_period",
+        "amendment_chain",
+        "amendment_indicator",
+        "amendment_indicator_full",
+        "beginning_image_number",
+        "calendar_ytd",
+        "cash_on_hand_beginning_calendar_ytd",
+        "cash_on_hand_beginning_period",
+        "cash_on_hand_close_ytd",
+        "cash_on_hand_end_period",
+        "committee_id",
+        "committee_name",
+        "committee_type",
+        "coordinated_expenditures_by_party_committee_period",
+        "coordinated_expenditures_by_party_committee_ytd",
+        "coverage_end_date",
+        "coverage_start_date",
+        "csv_url",
+        "cycle",
+        "debts_owed_by_committee",
+        "debts_owed_to_committee",
+        "document_description",
+        "end_image_number",
+        "fec_file_id",
+        "fec_url",
+        "fed_candidate_committee_contribution_refunds_ytd",
+        "fed_candidate_committee_contributions_period",
+        "fed_candidate_committee_contributions_ytd",
+        "fed_candidate_contribution_refunds_period",
+        "file_number",
+        "html_url",
+        "independent_expenditures_period",
+        "independent_expenditures_ytd",
+        "individual_itemized_contributions_period",
+        "individual_itemized_contributions_ytd",
+        "individual_unitemized_contributions_period",
+        "individual_unitemized_contributions_ytd",
+        "is_amended",
+        "loan_repayments_made_period",
+        "loan_repayments_made_ytd",
+        "loan_repayments_received_period",
+        "loan_repayments_received_ytd",
+        "loans_made_period",
+        "loans_made_ytd",
+        "means_filed",
+        "most_recent",
+        "most_recent_file_number",
+        "net_contributions_period",
+        "net_contributions_ytd",
+        "net_operating_expenditures_period",
+        "net_operating_expenditures_ytd",
+        "non_allocated_fed_election_activity_period",
+        "non_allocated_fed_election_activity_ytd",
+        "nonfed_share_allocated_disbursements_period",
+        "offsets_to_operating_expenditures_period",
+        "offsets_to_operating_expenditures_ytd",
+        "other_disbursements_period",
+        "other_disbursements_ytd",
+        "other_fed_operating_expenditures_period",
+        "other_fed_operating_expenditures_ytd",
+        "other_fed_receipts_period",
+        "other_fed_receipts_ytd",
+        "other_political_committee_contributions_period",
+        "other_political_committee_contributions_ytd",
+        "pdf_url",
+        "political_party_committee_contributions_period",
+        "political_party_committee_contributions_ytd",
+        "previous_file_number",
+        "receipt_date",
+        "refunded_individual_contributions_period",
+        "refunded_individual_contributions_ytd",
+        "refunded_other_political_committee_contributions_period",
+        "refunded_other_political_committee_contributions_ytd",
+        "refunded_political_party_committee_contributions_period",
+        "refunded_political_party_committee_contributions_ytd",
+        "report_form",
+        "report_type",
+        "report_type_full",
+        "report_year",
+        "shared_fed_activity_nonfed_ytd",
+        "shared_fed_activity_period",
+        "shared_fed_activity_ytd",
+        "shared_fed_operating_expenditures_period",
+        "shared_fed_operating_expenditures_ytd",
+        "shared_nonfed_operating_expenditures_period",
+        "shared_nonfed_operating_expenditures_ytd",
+        "subtotal_summary_page_period",
+        "subtotal_summary_ytd",
+        "total_contribution_refunds_period",
+        "total_contribution_refunds_ytd",
+        "total_contributions_period",
+        "total_contributions_ytd",
+        "total_disbursements_period",
+        "total_disbursements_ytd",
+        "total_fed_disbursements_period",
+        "total_fed_disbursements_ytd",
+        "total_fed_election_activity_period",
+        "total_fed_election_activity_ytd",
+        "total_fed_operating_expenditures_period",
+        "total_fed_operating_expenditures_ytd",
+        "total_fed_receipts_period",
+        "total_fed_receipts_ytd",
+        "total_individual_contributions_period",
+        "total_individual_contributions_ytd",
+        "total_nonfed_transfers_period",
+        "total_nonfed_transfers_ytd",
+        "total_operating_expenditures_period",
+        "total_operating_expenditures_ytd",
+        "total_receipts_period",
+        "total_receipts_ytd",
+        "transfers_from_affiliated_party_period",
+        "transfers_from_affiliated_party_ytd",
+        "transfers_from_nonfed_account_period",
+        "transfers_from_nonfed_account_ytd",
+        "transfers_from_nonfed_levin_period",
+        "transfers_from_nonfed_levin_ytd",
+        "transfers_to_affiliated_committee_period",
+        "transfers_to_affilitated_committees_ytd"
+      ],
+      "properties": {
+        "all_loans_received_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "all_loans_received_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "allocated_federal_election_levin_share_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "amendment_chain": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "number",
+              "string"
+            ]
+          }
+        },
+        "amendment_indicator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "amendment_indicator_full": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "beginning_image_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "calendar_ytd": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "cash_on_hand_beginning_calendar_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cash_on_hand_beginning_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cash_on_hand_close_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cash_on_hand_end_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "committee_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "committee_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "committee_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coordinated_expenditures_by_party_committee_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "coordinated_expenditures_by_party_committee_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "coverage_end_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "coverage_start_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "csv_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cycle": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "debts_owed_by_committee": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "debts_owed_to_committee": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "document_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "end_image_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fec_file_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fec_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fed_candidate_committee_contribution_refunds_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fed_candidate_committee_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fed_candidate_committee_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fed_candidate_contribution_refunds_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "file_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "html_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "independent_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "independent_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "individual_itemized_contributions_period": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "individual_itemized_contributions_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "individual_unitemized_contributions_period": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "individual_unitemized_contributions_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "is_amended": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "loan_repayments_made_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loan_repayments_made_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loan_repayments_received_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loan_repayments_received_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loans_made_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "loans_made_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "means_filed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "most_recent": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "most_recent_file_number": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "net_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "net_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "net_operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "net_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "non_allocated_fed_election_activity_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "non_allocated_fed_election_activity_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "nonfed_share_allocated_disbursements_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "offsets_to_operating_expenditures_period": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "offsets_to_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "other_disbursements_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_disbursements_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_fed_operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_fed_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_fed_receipts_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_fed_receipts_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_political_committee_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "other_political_committee_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pdf_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "political_party_committee_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "political_party_committee_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "previous_file_number": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "receipt_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "refunded_individual_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_individual_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_other_political_committee_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_other_political_committee_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_political_party_committee_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "refunded_political_party_committee_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "report_form": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_type_full": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "shared_fed_activity_nonfed_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shared_fed_activity_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shared_fed_activity_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shared_fed_operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shared_fed_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shared_nonfed_operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shared_nonfed_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "subtotal_summary_page_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "subtotal_summary_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contribution_refunds_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contribution_refunds_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contributions_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_contributions_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_disbursements_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_disbursements_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_fed_disbursements_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_fed_disbursements_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_fed_election_activity_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_fed_election_activity_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_fed_operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_fed_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_fed_receipts_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_fed_receipts_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_individual_contributions_period": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "total_individual_contributions_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "total_nonfed_transfers_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_nonfed_transfers_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_operating_expenditures_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_operating_expenditures_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_receipts_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "total_receipts_ytd": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "transfers_from_affiliated_party_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_from_affiliated_party_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_from_nonfed_account_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_from_nonfed_account_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_from_nonfed_levin_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_from_nonfed_levin_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_to_affiliated_committee_period": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "transfers_to_affilitated_committees_ytd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Filings"
+    },
+    {
+      "$ref": "#/$defs/HouseSenate"
+    },
+    {
+      "$ref": "#/$defs/PacParty"
+    }
+  ]
+}

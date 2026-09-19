@@ -1,0 +1,139 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/schedule-a-reconciliation",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "question": "Which processed FEC Schedule A records corroborate, enrich, omit, or conflict with exact raw occurrences, and how does that evidence align to the currently effective raw filing revision?",
+  "inputs": [
+    {
+      "contract": "fec/efile-schedule-a@1.0.0",
+      "role": "Exact as-filed Schedule A occurrences, including source transaction references and physical provenance.",
+      "required": true,
+      "version_policy": "Require the accepted 45-field raw layout and preserve extra physical fields separately."
+    },
+    {
+      "contract": "fec/effective-schedule-a@1.0.0",
+      "role": "Revision-aware effective raw Schedule A rows and the change from the prior effective filing.",
+      "required": true,
+      "version_policy": "Require the exact calculation version and a projected, conserved row set."
+    },
+    {
+      "contract": "fec/schedule-a-raw-processed-fields@1.0.0",
+      "role": "Explicit field equivalence, applicability, and comparison rules between raw and processed representations.",
+      "required": true,
+      "version_policy": "Pin field-map.json by SHA-256; a mapping or comparator change creates a new result."
+    },
+    {
+      "contract": "fec/schedule-a@1.0.0",
+      "role": "Pinned complete processed Schedule A relation partition used for publishable reconciliation.",
+      "required": false,
+      "version_policy": "Required for complete_snapshot. Pin the dump, relation layout, and exact extracted partition."
+    },
+    {
+      "contract": "fec/schedule-a-api@1.0.0",
+      "role": "Targeted, time-bounded processed observations used for diagnostics and lag investigation.",
+      "required": false,
+      "version_policy": "May produce only provisional_targeted_observation unless a separate contract proves complete partition coverage."
+    }
+  ],
+  "identity": {
+    "result_key": "processed evidence ID + raw report family ID + calculation version",
+    "input_manifest": "Ordered input contract versions, exact source digests, processed coverage state, field-map digest, and effective-projection digest.",
+    "method_version": "fec.schedule_a_reconciliation.v1",
+    "result_digest": "SHA-256 of stable JSON over the complete reconciliation result."
+  },
+  "method": {
+    "ordered_steps": [
+      "Verify every input digest, schema, coverage assertion, and source occurrence locator before matching.",
+      "Build direct-source candidate groups only from exact committee ID, filing number, and transaction ID. Do not use names, fuzzy text, or amount proximity to create identity.",
+      "Retain one-to-zero, one-to-one, one-to-many, and many-to-one groups explicitly. Resolve only a unique exact identity group; otherwise emit an unresolved group.",
+      "Compare the 43 mapped raw fields under field-map.json, retain two unmapped raw fields, and distinguish exact equality, absence, representation, processed enrichment, processed omission, material difference, and non-applicability.",
+      "Classify direct raw-to-processed evidence without confusing publisher enrichment or representation changes with source conflict.",
+      "Compare the processed filing revision with the selected effective raw revision before interpreting row differences.",
+      "Align direct evidence to each effective row: same filing, identical prior-filing content, different prior-filing content, or no support.",
+      "Conserve every raw occurrence, processed occurrence, and effective row; emit processed-only and unresolved groups rather than dropping them.",
+      "Emit the smallest committee and two-year-period change set implied by pending or conflicting effective rows."
+    ],
+    "decision_states": [
+      {"id": "corroborated", "publishable": true, "meaning": "Exact identity is unique and all applicable source content agrees after explicit representation rules; processed-only enrichments remain labeled."},
+      {"id": "representation_only_difference", "publishable": true, "meaning": "The identity is unique and differences are accepted representation changes only."},
+      {"id": "raw_only_pending_processing", "publishable": false, "meaning": "The effective raw content is newer than the available processed evidence or has no processed occurrence yet."},
+      {"id": "processed_changed", "publishable": false, "meaning": "Aligned processed content differs materially from the same raw filing revision and requires investigation."},
+      {"id": "conflict", "publishable": false, "meaning": "Strong identity or mapped source content conflicts and cannot be resolved by a declared comparator."},
+      {"id": "unresolved", "publishable": false, "meaning": "The candidate group is missing, ambiguous, incomplete, or cannot satisfy identity and conservation rules."}
+    ],
+    "invariants": [
+      "Raw source text, processed source values, physical locators, and response locators remain unchanged; comparison values are derived metadata.",
+      "Committee ID, filing number, and transaction ID are all required for direct-source identity. Form/line, back reference, date, and amount corroborate identity but cannot replace it.",
+      "A processed amendment action code does not determine the raw filing cover disposition.",
+      "Mutable nested committee and contributor master expansions cannot participate in Schedule A identity or source-content comparison.",
+      "Revision alignment is independent of field comparison. Older processed evidence cannot turn a newer raw modification into processed_changed.",
+      "A targeted API observation is diagnostic only and cannot feed user totals or prove a complete processed partition.",
+      "The seven comparable state counts sum to comparable_field_count for every direct match; unmapped is conserved separately.",
+      "Every input raw occurrence, processed occurrence, and effective row appears exactly once in a matched, pending, processed-only, conflict, or unresolved output state.",
+      "Receipt, report, election, filing, load, API-observation, and calculation times remain separate dimensions."
+    ]
+  },
+  "output": {
+    "result_schema": "result.schema.json",
+    "grain": "One reconciliation result per processed evidence boundary and raw report family, containing direct occurrence matches plus one alignment state per current effective Schedule A row.",
+    "fact_types": ["schedule_a_direct_source_match", "schedule_a_effective_reconciliation", "schedule_a_reconciliation_change_set"],
+    "publication_states": [
+      {"id": "complete_snapshot", "publishable": true, "meaning": "A pinned complete processed partition and complete raw inputs satisfy identity, coverage, revision, and conservation gates."},
+      {"id": "provisional_targeted_observation", "publishable": false, "meaning": "Exact targeted evidence is useful for diagnostics but cannot support totals or complete absence claims."},
+      {"id": "blocked_incomplete_input", "publishable": false, "meaning": "A required source, partition, report family, or occurrence is incomplete."},
+      {"id": "blocked_identity_conflict", "publishable": false, "meaning": "At least one strong identity group is ambiguous or contradictory."},
+      {"id": "blocked_conservation_failure", "publishable": false, "meaning": "Input and output rows or field-state counts do not conserve."}
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "A new raw filing, processed snapshot, API observation, source correction, or coverage assertion creates a new immutable result and supersedes no evidence bytes.",
+    "method_change_policy": "Any identity, mapping, comparator, revision-alignment, state, or publication change requires a new calculation version and regenerated fixtures.",
+    "history_policy": "Retain every result with its input manifest so processing lag, publisher correction, and raw amendment history remain reconstructable."
+  },
+  "quality": {
+    "checks": [
+      {"id": "input_integrity", "severity": "block", "rule": "All input and occurrence digests reproduce exactly and every referenced source object conforms to its pinned schema."},
+      {"id": "processed_coverage", "severity": "block", "rule": "complete_snapshot requires a pinned complete processed two-year partition; targeted API observations remain provisional."},
+      {"id": "strong_identity", "severity": "block", "rule": "Every resolved direct match has exact committee ID, filing number, and transaction ID with one unique raw and processed occurrence."},
+      {"id": "field_conservation", "severity": "block", "rule": "Each direct comparison accounts for 43 comparable fields and two explicitly unmapped raw fields."},
+      {"id": "row_conservation", "severity": "block", "rule": "Direct raw plus processed-only plus unresolved outputs conserve all source occurrences, and effective outputs conserve the complete selected row set."},
+      {"id": "revision_alignment", "severity": "block", "rule": "A processed_changed or conflict state requires evidence aligned to the same filing revision; older processed evidence yields pending state instead."},
+      {"id": "publisher_enrichment", "severity": "observe", "rule": "Processed values absent from raw remain named enrichments and cannot silently replace the source assertion."},
+      {"id": "change_set", "severity": "block", "rule": "Pending and conflict row keys reproduce the emitted affected committee and two-year-period keys exactly."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/original-processed-effective-amendment-pending.json",
+      "representation": "canonical_json",
+      "sha256": "9f3d1b2c772af61883276780c8ba04b874f06262d8412b705d475a7655fd9d86",
+      "input_paths": [
+        "field-map.json",
+        "../../../../sources/fec/efile-documents/v1/fixtures/1997074.fec",
+        "../../../../sources/fec/efile-documents/v1/fixtures/2009982.fec",
+        "../../../../sources/fec/schedule-a-api/v1/fixtures/original-filing-images.json",
+        "../../../../sources/fec/schedule-a-api/v1/fixtures/amendment-not-yet-processed.json",
+        "../../effective-schedule-a/v1/fixtures/first-amendment-change-set.json"
+      ],
+      "scenarios": [
+        "23 unique direct raw-to-processed matches with complete field-state conservation",
+        "processed publisher enrichment without source conflict",
+        "processed original filing lags a complete effective raw amendment",
+        "18 effective rows corroborated by identical prior-filing content",
+        "five modified and two added effective rows remain raw_only_pending_processing",
+        "targeted observation is diagnostic and ineligible for totals"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": ["raw document digest", "processed evidence digest", "processed coverage state", "processed file number", "processed load date", "effective file number", "field-map digest"],
+    "semantic_change_dimensions": ["direct relationship state", "effective reconciliation state", "processed support state", "processed enrichment field", "processed omission field", "different field", "revision alignment"],
+    "downstream_keys": ["committee_id", "two_year_transaction_period", "report_family_id", "effective Schedule A row_key"],
+    "no_change_policy": "Identical input manifests and method versions reuse the prior result. New observations that do not change any direct or effective state create history but emit no downstream calculation change set."
+  },
+  "use": {
+    "retention": "Retain complete reconciliation results, field maps, source evidence, coverage assertions, and issue history indefinitely.",
+    "disclaimer": "Reconciliation proves an explicit relationship between pinned raw and processed evidence. It does not make targeted API coverage complete, erase filing revisions, or authorize aggregation of pending or conflicting rows."
+  }
+}

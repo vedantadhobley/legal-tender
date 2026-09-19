@@ -1,0 +1,153 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/processed-disbursement-reporting",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "question": "What signed non-memo itemized disbursements appear on reviewed regular committee form lines in one processed Schedule B snapshot, with other reporting scopes and unresolved records kept separate?",
+  "inputs": [
+    {
+      "contract": "fec.schedule_b_disbursement.v1",
+      "role": "Complete lossless selected-cycle Schedule B columnar facts",
+      "required": true,
+      "version_policy": "Pin exact fact manifest, source artifact, physical schema, and every backing shard digest."
+    }
+  ],
+  "identity": {
+    "result_key": "Cycle + exact input + policy version, then filer, form, line, schedule, reporting role, decision, and recipient evidence state",
+    "input_manifest": "Exact immutable fact-set identity and manifest SHA-256; no mutable pointer reread",
+    "method_version": "legal-tender.fec.processed-disbursement-reporting-policy.v1",
+    "result_digest": "Deterministic calculation_set_id and groups_sha256; execution time is not part of the output"
+  },
+  "method": {
+    "ordered_steps": [
+      "Validate physical schema, exact source ordinals, cycle, and memo/amount normalization. Fail the whole calculation on inconsistent typed data.",
+      "Classify reporting scope and role using exact form, line, and SB schedule; do not reinterpret labels, names, or purpose text.",
+      "Assign one decision in order: memo X; missing amount; unreviewed schedule; unreviewed form-line; distinct reporting scope; invalid regular-filer ID; included regular non-memo itemized disbursement.",
+      "Keep F4 convention, F9 F93 electioneering notice, reviewed Levin lines, and F3X line 24 reported on SB separate from the regular-committee subtotal.",
+      "Preserve negative and zero amounts, all action codes, and repeated transaction references without local amendment selection or deduplication.",
+      "Group by the exact policy key, preserving NULL versus empty text. Record recipient identity agreement, self references, and name presence without converting them into flow or ownership.",
+      "Conserve every source row and signed cent independently across all result groups and decision buckets; emit deterministic JSON only on success."
+    ],
+    "decision_states": [
+      {
+        "id": "included_non_memo_itemized_disbursement",
+        "publishable": true,
+        "meaning": "Reviewed regular-committee form-line non-memo itemized amount; not total spending or cash flow."
+      },
+      {
+        "id": "excluded_memo_subtotal",
+        "publishable": true,
+        "meaning": "Memo-X evidence retained outside the non-memo subtotal."
+      },
+      {
+        "id": "separate_reporting_scope",
+        "publishable": true,
+        "meaning": "Convention, electioneering notice, Levin, or IE-on-SB evidence retained separately."
+      },
+      {
+        "id": "unresolved_reporting",
+        "publishable": true,
+        "meaning": "Missing amount, invalid regular-filer ID, or unreviewed reporting shape retained explicitly."
+      }
+    ],
+    "invariants": [
+      "Every fact remains in its immutable Parquet source; calculated groups do not replace or collapse source evidence.",
+      "No Schedule B reporting result is graph-eligible.",
+      "A federal-contribution line can describe own contributions, forwarded earmarks, or in-kind activity; neither names nor absent type codes distinguish these automatically.",
+      "A raw or cleaned recipient ID may identify a beneficiary rather than the named cash payee."
+    ]
+  },
+  "output": {
+    "result_schema": "result.schema.json",
+    "grain": "One deterministic cycle calculation containing disjoint filer/reporting/evidence groups and exact totals",
+    "fact_types": [],
+    "publication_states": [
+      {
+        "id": "complete",
+        "publishable": true,
+        "meaning": "Complete reporting calculation with no unresolved rows; no claim of complete economic flows."
+      },
+      {
+        "id": "complete_with_unresolved",
+        "publishable": true,
+        "meaning": "Complete source conservation with explicit unresolved reporting rows."
+      }
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "A different source fact identity recomputes that cycle.",
+    "method_change_policy": "Change the policy version for any membership, role, scope, identity-state, grouping, or arithmetic change.",
+    "history_policy": "Retain source facts and prior calculation artifacts. No active pointer or automated publisher is implemented in this command."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "source_integrity",
+        "severity": "block",
+        "rule": "Verify immutable input, every shard digest, full physical schema, source ordinals, and cycle."
+      },
+      {
+        "id": "normalization",
+        "severity": "block",
+        "rule": "Reject inconsistent typed memo or amount fields."
+      },
+      {
+        "id": "conservation",
+        "severity": "block",
+        "rule": "Group and decision totals equal the independently scanned source rows, known signed cents, missing amounts, and sign counts."
+      },
+      {
+        "id": "reporting_uncertainty",
+        "severity": "partial",
+        "rule": "Unreviewed reporting rows remain unresolved, never remapped from text."
+      },
+      {
+        "id": "graph_boundary",
+        "severity": "block",
+        "rule": "graph_eligible must be false."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/policy-cases.json",
+      "representation": "synthetic_json",
+      "sha256": "4301602f81187853a386b4b3b40da3a7315c92abd5ff71f1758b7f0ccfa3d382",
+      "input_paths": [
+        "../../../../facts/fec/schedule-b/columnar/v1/physical-schema.json"
+      ],
+      "scenarios": [
+        "Form-specific line meanings",
+        "Separate reporting scopes",
+        "Memo X versus Y",
+        "Unknown, absent, empty, and case-variant lines",
+        "Wrong schedule"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": [
+      "Schedule B fact set"
+    ],
+    "semantic_change_dimensions": [
+      "filer",
+      "form and line",
+      "schedule",
+      "memo",
+      "amount",
+      "recipient evidence state",
+      "transaction type",
+      "beneficiary and conduit presence"
+    ],
+    "downstream_keys": [
+      "cycle",
+      "filer",
+      "reporting role"
+    ],
+    "no_change_policy": "The same exact input and policy produce byte-identical result JSON across worker counts. Persistent reuse and Dagster publication remain deferred."
+  },
+  "use": {
+    "retention": "Retain calculated results and underlying fact sets; do not write dense duplicate fact records.",
+    "disclaimer": "These are processed reporting subtotals, not total committee spending, cash-only payments, economic-flow ownership, or money personally received by a politician."
+  }
+}

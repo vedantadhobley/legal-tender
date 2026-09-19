@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/classic/v1/change.schema.json",
+  "title": "Classic FEC natural-key semantic change",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["natural_key", "change", "current_state"],
+  "properties": {
+    "natural_key": {"type": "string", "minLength": 1},
+    "change": {"enum": ["added", "changed", "absent", "invalid"]},
+    "prior_state": {"enum": ["missing", "unique", "duplicate", "invalid"]},
+    "current_state": {"enum": ["missing", "unique", "duplicate", "invalid"]},
+    "prior_occurrence_id": {"$ref": "#/$defs/digest"},
+    "current_occurrence_id": {"$ref": "#/$defs/digest"},
+    "prior_record_version_id": {"$ref": "#/$defs/digest"},
+    "current_record_version_id": {"$ref": "#/$defs/digest"},
+    "prior_semantic_digest": {"$ref": "#/$defs/digest"},
+    "current_semantic_digest": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+}

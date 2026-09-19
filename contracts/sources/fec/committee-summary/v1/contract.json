@@ -1,0 +1,581 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/committee-summary",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "publisher": {
+    "id": "fec",
+    "name": "Federal Election Commission",
+    "base_url": "https://www.fec.gov/"
+  },
+  "dataset": {
+    "id": "committee-summary",
+    "name": "Committee financial summary CSV",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "Cycle-scoped processed financial assertions with candidate-reference fan-out. Not a report-history or bank-account ledger."
+  },
+  "authority": [
+    {
+      "kind": "documentation",
+      "url": "https://www.fec.gov/campaign-finance-data/committee-summary-file-description/",
+      "retrieved_on": "2026-09-08",
+      "sha256": "6fa2fa43035697db5d8de79590e8ecdc45f1c3325734d99991711f144eaa4141"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://www.fec.gov/data/browse-data/?tab=bulk-data",
+      "retrieved_on": "2026-09-08"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "none",
+      "environment_variable": null,
+      "header": null,
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "Cycle committee financial summary CSV",
+        "method": "GET",
+        "url": "https://www.fec.gov/files/bulk-downloads/{two_year_period}/committee_summary_{two_year_period}.csv",
+        "response_root": "Complete CSV document including header"
+      }
+    ],
+    "pagination": "None. One whole CSV per requested cycle; no archive extraction or API.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "two_year_period",
+        "source": "Requested URL cycle; independently compare FEC_ELECTION_YR.",
+        "purpose": "Acquisition and replay boundary, not a date filter, report coverage guarantee, or balance reset."
+      }
+    ],
+    "retry_policy": "Bounded retries and timeout; capture redirect chain, retrieval time, final status, size, ETag, Last-Modified, and object version when supplied. Stream SHA-256; reject a truncated or oversized download. Review used a 16 MiB cap per artifact; production must declare its own reviewed growth budget. Nightly publisher refresh can be discovered on the coordinated weekly schedule; publication wiring is not yet accepted."
+  },
+  "physical_schema": {
+    "media_type": "text/csv",
+    "source_format": "delimited_file",
+    "encoding": "UTF-8",
+    "delimiter": ",",
+    "line_ending": "Reader v1 accepts LF without CR and requires final LF, matching all four reviewed artifacts. Quoted CSV record boundaries, not line splitting, define occurrences. Capture other encodings but require review before parsing; never silently normalize CRLF inside source fields.",
+    "quote_policy": "rfc4180",
+    "empty_record_policy": "A blank physical record is an explicit issue, never silently skipped. Empty quoted fields remain fields.",
+    "header_model": "embedded_header",
+    "container_members": [],
+    "relations": [],
+    "record_schema": "record.schema.json",
+    "unknown_field_policy": "reject",
+    "null_policy": "Only empty CSV field text is source_blank. Preserve all other raw strings, including 99999999, .27, -.01, zero, and negative amounts. Invalid typed values do not delete raw occurrences.",
+    "schema_fingerprint": "Exact 92-column embedded header, including final LF: SHA-256 f8e539448b8271b6fc975f0982b5426cf2d1dc08425d0685fdf8f8f7b31de0b9. Pinned order in record.schema.json and fixtures/sample.csv; never generate runtime columns from a mutable web dictionary."
+  },
+  "identity": {
+    "publisher_record_key": "No documented row revision ID. (CMTE_ID, FEC_ELECTION_YR, CAND_ID) is an observed composite, not an assumed global uniqueness guarantee. CMTE_ID alone repeats.",
+    "occurrence_locator": "Artifact SHA-256 + one-based logical CSV record ordinal excluding header + exact byte span.",
+    "record_version": "Occurrence locator + SHA-256 of raw record bytes. Preserve artifact snapshot identity independently of coverage dates.",
+    "duplicate_policy": "Preserve all rows. Profile repeated committee and composite keys. The reviewed repeats differ only in CAND_ID and must not become extra money; no deduplication or first/last-wins policy belongs in raw normalization. Conflicting assertions block a singleton committee financial projection until reviewed.",
+    "children": []
+  },
+  "semantics": {
+    "time_fields": [
+      {
+        "path": "FEC_ELECTION_YR",
+        "meaning": "Source-reported cycle label, checked against the requested partition."
+      },
+      {
+        "path": "CVG_START_DT",
+        "meaning": "Beginning coverage of the first report contributing to this processed cycle summary; observed YYYYMMDD, strict calendar validation required."
+      },
+      {
+        "path": "CVG_END_DT",
+        "meaning": "Coverage end reported by the summary, observed YYYYMMDD; not filing or acquisition time."
+      }
+    ],
+    "money_fields": [
+      {
+        "path": "INDV_CONTB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "PTY_CMTE_CONTB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OTH_CMTE_CONTB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_CONTB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TRANF_FROM_OTHER_AUTH_CMTE",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OFFSETS_TO_OP_EXP",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OTHER_RECEIPTS",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_RECEIPTS",
+        "meaning": "Reported total receipts; not a terminal-source denominator without accepted scope and cash semantics.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TRANF_TO_OTHER_AUTH_CMTE",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OTH_LOAN_REPYMTS",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "INDV_REF",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "POL_PTY_CMTE_REF",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_CONTB_REF",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OTHER_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "NET_CONTB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "NET_OP_EXP",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "COH_BOP",
+        "meaning": "Reported cycle opening cash, not a report-level opening balance or identified carry-in donor.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "COH_COP",
+        "meaning": "Reported closing cash at summary coverage end; not a new receipt.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "DEBTS_OWED_BY_CMTE",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "DEBTS_OWED_TO_CMTE",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "INDV_ITEM_CONTB",
+        "meaning": "Reported itemized individual-contribution subtotal; scope comparison with Schedule A is separate.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "INDV_UNITEM_CONTB",
+        "meaning": "Explicit reported unitemized individual-contribution subtotal, not a residual or donor identity.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OTH_LOANS",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TRANF_FROM_NONFED_ACCT",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TRANF_FROM_NONFED_LEVIN",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_NONFED_TRANF",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "LOAN_REPYMTS_RECEIVED",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OFFSETS_TO_FNDRSG",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OFFSETS_TO_LEGAL_ACCTG",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "FED_CAND_CONTB_REF",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_FED_RECEIPTS",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "SHARED_FED_OP_EXP",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "SHARED_NONFED_OP_EXP",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OTHER_FED_OP_EXP",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_OP_EXP",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "FED_CAND_CMTE_CONTB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "INDT_EXP",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "COORD_EXP_BY_PTY_CMTE",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "LOANS_MADE",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "SHARED_FED_ACTVY_FED_SHR",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "SHARED_FED_ACTVY_NONFED",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "NON_ALLOC_FED_ELECT_ACTVY",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_FED_ELECT_ACTVY",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_FED_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "CAND_CNTB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "CAND_LOAN",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_LOANS",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OP_EXP",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "CAND_LOAN_REPYMNT",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_LOAN_REPYMTS",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "OTH_CMTE_REF",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_OFFSETS_TO_OP_EXP",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "EXEMPT_LEGAL_ACCTG_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "FNDRSG_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "ITEM_REF_REB_RET",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "SUBTTL_REF_REB_RET",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "UNITEM_REF_REB_RET",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "ITEM_OTHER_REF_REB_RET",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "UNITEM_OTHER_REF_REB_RET",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "SUBTTL_OTHER_REF_REB_RET",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "ITEM_OTHER_INCOME",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "UNITEM_OTHER_INCOME",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "EXP_PRIOR_YRS_SUBJECT_LIM",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "EXP_SUBJECT_LIMITS",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "FED_FUNDS",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "ITEM_CONVN_EXP_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "ITEM_OTHER_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "SUBTTL_CONVN_EXP_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_EXP_SUBJECT_LIMITS",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "UNITEM_CONVN_EXP_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "UNITEM_OTHER_DISB",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "TTL_COMMUNICATION_COST",
+        "meaning": "Publisher summary monetary assertion; retain source field and form-specific applicability without treating it as cash or a new transaction.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "COH_BOY",
+        "meaning": "Reported beginning-of-year cash; preserve separately from cycle opening cash.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      },
+      {
+        "path": "COH_COY",
+        "meaning": "Reported closing-of-year cash; preserve separately from cycle closing cash.",
+        "unit": "USD, exact signed decimal; source measurement is summary_value, not a modeled point estimate."
+      }
+    ],
+    "code_fields": [
+      {
+        "path": "CMTE_TP",
+        "meaning": "Retain source code and unknown-code state; do not infer identity or account scope."
+      },
+      {
+        "path": "CMTE_DSGN",
+        "meaning": "Retain source code and unknown-code state; do not infer identity or account scope."
+      },
+      {
+        "path": "CMTE_FILING_FREQ",
+        "meaning": "Retain source code and unknown-code state; do not infer identity or account scope."
+      },
+      {
+        "path": "ORG_TP",
+        "meaning": "Retain source code and unknown-code state; do not infer identity or account scope."
+      }
+    ],
+    "rules": [
+      "Normalize nonblank money as exact checked signed cents, accepting a leading decimal point. Never use float, clamp a negative, or turn a blank into zero.",
+      "Raw record schema validates preservation only. Invalid money, calendar dates, reversed intervals, missing fields, and identity issues require explicit typed states and downstream eligibility gates.",
+      "Preserve the three reviewed header/dictionary spelling differences recorded in review.json. Do not silently alias changed future headers.",
+      "Source cycle, coverage dates, snapshot time, and object version are independent. Preserve pre-cycle and post-cycle coverage; never clip or backdate the summary.",
+      "Candidate-reference fan-out is not repeated committee receipts. Raw rows stay distinct; any later committee financial assertion grouping needs exact equal-value proof, all source memberships, and conflict handling.",
+      "A CAND_ID is source reference evidence, not proof of same-cycle authorization or separate financial ownership.",
+      "Explicit summary amounts never replace or patch Schedule A/B/E facts. Preserve comparison differences, including those within the summary itself.",
+      "No report ID, amendment chain, bank-account ID, complete report sequence, original-donor ancestry, or recipient cash-availability time is supplied by this product.",
+      "Missing unitemized fields remain unknown or unestablished applicability. Do not infer their value from total less itemized detail.",
+      "Financial normalization, committee-level grouping, reconciliation, and terminal-dollar allocation are separate acceptance gates."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "Nightly processed snapshot combining report summaries. Embedded columns provide no file number, report version, or amendment chain; the precise report-selection algorithm is not established by this review.",
+    "effective_projection": "Accept immutable whole-source snapshots through the coordinated versioned release, not maximum coverage date. This is not an accepted report-level amendment or financial-assertion selection policy. A changed older coverage assertion can be an amendment; snapshot differences are not new receipts. Retain prior bytes and removed rows as versioned evidence."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "artifact_identity",
+        "severity": "block",
+        "rule": "Complete final HTTP response, byte count, digest, exact requested cycle, and retained raw bytes must agree."
+      },
+      {
+        "id": "physical_shape",
+        "severity": "block",
+        "rule": "Strict CSV framing, decoding, exact pinned ordered header, record width, and complete occurrence conservation; never pad, trim fields, skip blank records, or truncate."
+      },
+      {
+        "id": "typed_values",
+        "severity": "partial",
+        "rule": "Retain field-level blank/valid/invalid states for all 75 monetary fields and both dates. Consumers must reject incompatible or invalid inputs; raw facts are not erased."
+      },
+      {
+        "id": "identity_multiplicity",
+        "severity": "observe",
+        "rule": "Count duplicate committee and composite keys without replacing occurrences. Repeated values are not additive funding."
+      },
+      {
+        "id": "financial_assertion_conflict",
+        "severity": "block",
+        "rule": "Any singleton committee-summary consumer requires an accepted grouping rule and conflict-free source memberships."
+      },
+      {
+        "id": "summary_equations",
+        "severity": "observe",
+        "rule": "Compare opening+receipts-disbursements with closing and itemized+unitemized with individual total only where every operand exists. Differences are diagnostics, not synthetic corrections or a complete-cash validation."
+      },
+      {
+        "id": "report_and_account_scope",
+        "severity": "partial",
+        "rule": "Expose absent report/amendment/account identities and unresolved timing. This source alone cannot qualify a terminal allocation."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/sample.csv",
+      "representation": "exact_bytes",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/2024/committee_summary_2024.csv",
+      "retrieved_on": "2026-09-08",
+      "sha256": "a981b6224ddefd101e1c65f9726612c6a93847478479e3769125babfbc472222",
+      "scenarios": [
+        "Exact header plus eight selected source records; not a complete filing or contiguous source slice.",
+        "blank cash and unitemized fields",
+        "leading decimal point",
+        "negative unitemized subtotal",
+        "invalid coverage date",
+        "identical financial values repeated for different candidate IDs",
+        "reversed coverage interval"
+      ]
+    }
+  ],
+  "use": {
+    "retention": "Retain each complete immutable CSV with transport metadata, raw record locators, typed issues, and all source memberships. Review artifacts stay outside production release pointers.",
+    "citation_date_required": true,
+    "disclaimer": "Processed committee-cycle summary assertions. Not a report history, account-level cash ledger, or fully attributed terminal-source funding."
+  },
+  "outputs": {
+    "fact_types": [
+      "committee_cycle_financial_summary_assertion"
+    ],
+    "change_dimensions": [
+      "source_snapshot",
+      "source_cycle",
+      "committee_id",
+      "candidate_reference",
+      "coverage_interval",
+      "summary_field"
+    ]
+  }
+}

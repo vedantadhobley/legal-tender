@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/releases/fec/v2/release-manifest.schema.json",
+  "title": "Legal Tender published FEC release manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "inventory_version",
+    "release_id",
+    "run_id",
+    "plan_sha256",
+    "acquisition_sha256",
+    "stage_sha256",
+    "state",
+    "selected_at",
+    "published_at",
+    "periods",
+    "artifacts",
+    "staged_outputs",
+    "checks"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "legal-tender.fec.release.v1"},
+    "inventory_version": {"const": "legal-tender.fec.initial-release-inventory.v2"},
+    "release_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"},
+    "plan_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "acquisition_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "stage_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "prior_release_id": {"type": "string", "minLength": 1},
+    "state": {"const": "published"},
+    "selected_at": {"type": "string", "format": "date-time"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "periods": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {"enum": ["2020", "2022", "2024", "2026"]}
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 22,
+      "maxItems": 22,
+      "items": {"$ref": "#/$defs/artifact"}
+    },
+    "staged_outputs": {
+      "type": "array",
+      "minItems": 25,
+      "maxItems": 25,
+      "items": {"$ref": "#/$defs/staged_output"}
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 5,
+      "items": {"$ref": "#/$defs/check"}
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "request_url",
+        "final_url",
+        "observed_at",
+        "version_identity",
+        "version_basis",
+        "byte_count",
+        "sha256",
+        "storage_key",
+        "acquired_at"
+      ],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "request_url": {"type": "string", "format": "uri"},
+        "final_url": {"type": "string", "format": "uri"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "version_identity": {"type": "string", "minLength": 1},
+        "version_basis": {"enum": ["version_id", "etag", "digest", "last_modified_content_length"]},
+        "version_id": {"type": "string", "minLength": 1},
+        "etag": {"type": "string", "minLength": 1},
+        "last_modified": {"type": "string", "minLength": 1},
+        "content_length": {"type": "integer", "minimum": 0},
+        "digest": {"type": "string", "minLength": 1},
+        "accept_ranges": {"type": "string", "minLength": 1},
+        "byte_count": {"type": "integer", "minimum": 0},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "storage_key": {"type": "string", "minLength": 1},
+        "acquired_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "staged_output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id", "disposition", "selection_kind", "selection", "period",
+        "representation", "source_artifact_sha256", "uncompressed_byte_count",
+        "uncompressed_sha256", "compression", "compression_level",
+        "compressed_byte_count", "compressed_sha256", "storage_key",
+        "decompression_validated", "staged_at"
+      ],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "disposition": {"enum": ["staged", "reused"]},
+        "selection_kind": {"enum": ["member", "relation"]},
+        "selection": {"type": "string", "minLength": 1},
+        "period": {"enum": ["2020", "2022", "2024", "2026", "all_history"]},
+        "representation": {"enum": ["selected_member_zstd", "postgresql_copy_text_data_rows_zstd"]},
+        "source_artifact_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "row_count": {"type": "integer", "minimum": 0},
+        "contracted_field_count": {"type": "integer", "minimum": 1},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "compression": {"const": "zstd"},
+        "compression_level": {"const": 3},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "storage_key": {"type": "string", "minLength": 1},
+        "decompression_validated": {"type": "boolean"},
+        "staged_at": {"type": "string", "format": "date-time"}
+      },
+      "allOf": [{
+        "if": {"properties": {"selection_kind": {"const": "relation"}}},
+        "then": {"required": ["row_count", "contracted_field_count"], "properties": {"contracted_field_count": {"enum": [80, 81]}}}
+      }]
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "warn"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

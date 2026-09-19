@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/schedule-a/v1/issue.schema.json",
+  "title": "Processed Schedule A occurrence issue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["issue_id", "occurrence_id", "row_ordinal", "code", "severity", "message"],
+  "properties": {
+    "issue_id": {"$ref": "#/$defs/digest"},
+    "occurrence_id": {"$ref": "#/$defs/digest"},
+    "row_ordinal": {"type": "integer", "minimum": 1},
+    "natural_key": {"type": ["string", "null"], "minLength": 1},
+    "code": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "severity": {"enum": ["block", "warning"]},
+    "message": {"type": "string", "minLength": 1},
+    "related_occurrence_count": {"type": "integer", "minimum": 1}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

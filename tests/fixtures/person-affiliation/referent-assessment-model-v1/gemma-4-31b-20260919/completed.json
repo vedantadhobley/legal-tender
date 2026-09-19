@@ -1,0 +1,15 @@
+{
+  "case_count": 10,
+  "financial_attribution": false,
+  "graph_publication_approved": false,
+  "identity_approved": false,
+  "model": "gemma-4-31b",
+  "observed_at": "2026-09-19T08:24:20Z",
+  "profile": {
+    "model": "gemma-4-31b",
+    "reasoning_effort": "none",
+    "max_tokens": 4096
+  },
+  "prompt_sha256": "01b739b0d3b31374bb8f8c97a234b2634c43ba42569f36e15efc5e978191683f",
+  "request_timeout_seconds": 900
+}

@@ -1,0 +1,94 @@
+[
+  {
+    "name": "JR",
+    "value": "jr"
+  },
+  {
+    "name": "SR",
+    "value": "sr"
+  },
+  {
+    "name": "I",
+    "value": "i"
+  },
+  {
+    "name": "II",
+    "value": "ii"
+  },
+  {
+    "name": "III",
+    "value": "iii"
+  },
+  {
+    "name": "IV",
+    "value": "iv"
+  },
+  {
+    "name": "V",
+    "value": "v"
+  },
+  {
+    "name": "CAE",
+    "value": "cae"
+  },
+  {
+    "name": "DVM",
+    "value": "dvm"
+  },
+  {
+    "name": "DMD",
+    "value": "dmd"
+  },
+  {
+    "name": "DPPD",
+    "value": "dppd"
+  },
+  {
+    "name": "EDD",
+    "value": "edd"
+  },
+  {
+    "name": "ESQ",
+    "value": "esq"
+  },
+  {
+    "name": "JD",
+    "value": "jd"
+  },
+  {
+    "name": "MD",
+    "value": "md"
+  },
+  {
+    "name": "MA",
+    "value": "ma"
+  },
+  {
+    "name": "MED",
+    "value": "med"
+  },
+  {
+    "name": "MHSA",
+    "value": "mhsa"
+  },
+  {
+    "name": "MPH",
+    "value": "mph"
+  },
+  {
+    "name": "OD",
+    "value": "od"
+  },
+  {
+    "name": "PA",
+    "value": "pa"
+  },
+  {
+    "name": "PE",
+    "value": "pe"
+  },
+  {
+    "name": "PHD",
+    "value": "phd"
+  }
+]

@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/releases/fec/v2/staged-release.schema.json",
+  "title": "Legal Tender staged FEC release",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "inventory_version",
+    "candidate_release_id",
+    "plan_sha256",
+    "acquisition_sha256",
+    "run_id",
+    "status",
+    "started_at",
+    "completed_at",
+    "storage",
+    "outputs",
+    "checks",
+    "issues"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.staged-release.v1"},
+    "inventory_version": {"const": "legal-tender.fec.initial-release-inventory.v2"},
+    "candidate_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "prior_release_id": {"type": "string", "minLength": 1},
+    "plan_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "acquisition_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"},
+    "status": {"enum": ["staged", "blocked", "failed"]},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "storage": {"$ref": "#/$defs/storage"},
+    "outputs": {"type": "array", "maxItems": 25, "items": {"$ref": "#/$defs/output"}},
+    "checks": {"type": "array", "items": {"$ref": "#/$defs/check"}},
+    "issues": {"type": "array", "items": {"$ref": "#/$defs/issue"}}
+  },
+  "$defs": {
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schedule_a_hot_bytes_before",
+        "schedule_a_hot_bytes_after",
+        "schedule_a_hot_cap_bytes",
+        "free_bytes_before",
+        "free_bytes_after",
+        "free_floor_bytes",
+        "working_margin_bytes",
+        "largest_extract_working_bytes",
+        "passed"
+      ],
+      "properties": {
+        "schedule_a_hot_bytes_before": {"type": "integer", "minimum": 0},
+        "schedule_a_hot_bytes_after": {"type": "integer", "minimum": 0},
+        "schedule_a_hot_cap_bytes": {"type": "integer", "minimum": 0},
+        "free_bytes_before": {"type": "integer", "minimum": 0},
+        "free_bytes_after": {"type": "integer", "minimum": 0},
+        "free_floor_bytes": {"type": "integer", "minimum": 0},
+        "working_margin_bytes": {"type": "integer", "minimum": 0},
+        "largest_extract_working_bytes": {"type": "integer", "minimum": 0},
+        "passed": {"type": "boolean"}
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "disposition",
+        "selection_kind",
+        "selection",
+        "period",
+        "representation",
+        "source_artifact_sha256",
+        "uncompressed_byte_count",
+        "uncompressed_sha256",
+        "compression",
+        "compression_level",
+        "compressed_byte_count",
+        "compressed_sha256",
+        "storage_key",
+        "decompression_validated",
+        "staged_at"
+      ],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "disposition": {"enum": ["staged", "reused"]},
+        "selection_kind": {"enum": ["member", "relation"]},
+        "selection": {"type": "string", "minLength": 1},
+        "period": {"enum": ["2020", "2022", "2024", "2026", "all_history"]},
+        "representation": {"enum": ["selected_member_zstd", "postgresql_copy_text_data_rows_zstd"]},
+        "source_artifact_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "row_count": {"type": "integer", "minimum": 0},
+        "contracted_field_count": {"type": "integer", "minimum": 1},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "compression": {"const": "zstd"},
+        "compression_level": {"const": 3},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "storage_key": {"type": "string", "minLength": 1},
+        "decompression_validated": {"type": "boolean"},
+        "staged_at": {"type": "string", "format": "date-time"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"selection_kind": {"const": "relation"}}},
+          "then": {"required": ["row_count", "contracted_field_count"], "properties": {"contracted_field_count": {"enum": [80, 81]}}}
+        }
+      ]
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "warn"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "code": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "staged"}}},
+      "then": {
+        "properties": {
+          "storage": {"properties": {"passed": {"const": true}}},
+          "outputs": {"minItems": 25},
+          "checks": {"minItems": 4},
+          "issues": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"enum": ["blocked", "failed"]}}},
+      "then": {"properties": {"issues": {"minItems": 1}}}
+    }
+  ]
+}

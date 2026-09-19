@@ -1,0 +1,24 @@
+# One-shot release tools, not a standing service. No secrets or project data.
+services:
+  go-build:
+    image: ${LT_GO_IMAGE:?use scripts/release-go.sh}
+    platform: linux/amd64
+    network_mode: none
+    read_only: true
+    user: "${LT_BUILD_UID:?}:${LT_BUILD_GID:?}"
+    mem_limit: 4g
+    memswap_limit: 4g
+    cpus: 4
+    pids_limit: 256
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=2g,mode=1777,exec
+    environment:
+      GOMEMLIMIT: 2GiB
+      GOMAXPROCS: "4"
+    volumes:
+      - ${LT_BUILD_SOURCE:?}:/source:ro
+      - ${LT_BUILD_OUTPUT:?}:/job
+      - ${LT_BUILD_MODULE_SEED:?}:/seed:ro
+    entrypoint: [bash, /source/scripts/go-build-worker.sh]

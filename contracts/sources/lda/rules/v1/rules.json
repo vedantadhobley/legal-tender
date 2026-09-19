@@ -1,0 +1,158 @@
+{
+  "$schema": "./schema.json",
+  "rule_set_id": "lda.money.v1",
+  "rule_set_version": "1.0.0",
+  "status": "draft",
+  "currency": "USD",
+  "supported_reporting_period": {
+    "from": "2013-01-01",
+    "through": "2028-12-31"
+  },
+  "registration_thresholds": [
+    {
+      "effective_period": {
+        "from": "2013-01-01",
+        "through": "2020-12-31"
+      },
+      "lobbying_firm_income": {
+        "minor_units": "300000",
+        "exemption_comparison": "less_than_or_equal",
+        "calculation_use": "coverage_boundary_only"
+      },
+      "in_house_lobbying_expenses": {
+        "minor_units": "1300000",
+        "exemption_comparison": "less_than_or_equal",
+        "calculation_use": "coverage_boundary_only"
+      },
+      "authority": {
+        "url": "https://lobbyingdisclosure.house.gov/",
+        "retrieved_on": "2026-08-27"
+      }
+    },
+    {
+      "effective_period": {
+        "from": "2021-01-01",
+        "through": "2024-12-31"
+      },
+      "lobbying_firm_income": {
+        "minor_units": "300000",
+        "exemption_comparison": "less_than_or_equal",
+        "calculation_use": "coverage_boundary_only"
+      },
+      "in_house_lobbying_expenses": {
+        "minor_units": "1400000",
+        "exemption_comparison": "less_than_or_equal",
+        "calculation_use": "coverage_boundary_only"
+      },
+      "authority": {
+        "url": "https://lobbyingdisclosure.house.gov/",
+        "retrieved_on": "2026-08-27"
+      }
+    },
+    {
+      "effective_period": {
+        "from": "2025-01-01",
+        "through": "2028-12-31"
+      },
+      "lobbying_firm_income": {
+        "minor_units": "350000",
+        "exemption_comparison": "less_than_or_equal",
+        "calculation_use": "coverage_boundary_only"
+      },
+      "in_house_lobbying_expenses": {
+        "minor_units": "1600000",
+        "exemption_comparison": "less_than_or_equal",
+        "calculation_use": "coverage_boundary_only"
+      },
+      "authority": {
+        "url": "https://www.senate.gov/legislative/Public_Disclosure/new_thresholds.htm",
+        "retrieved_on": "2026-08-27"
+      }
+    }
+  ],
+  "ld2_amount_rules": [
+    {
+      "effective_period": {
+        "from": "2013-01-01",
+        "through": "2028-12-31"
+      },
+      "semantic_role": "lobbying_income",
+      "accounting_methods": ["lda_income"],
+      "under_reporting_threshold": {
+        "lower_minor_units": "0",
+        "upper_minor_units": "500000",
+        "lower_inclusive": true,
+        "upper_inclusive": false,
+        "measurement_kind": "threshold_band"
+      },
+      "numeric_reporting": {
+        "minimum_minor_units": "500000",
+        "minimum_inclusive": true,
+        "measurement_kind": "rounded_estimate",
+        "precision_increment_minor_units": "1000000",
+        "derived_interval_policy": "blocked_pending_rounding_boundary_rule"
+      },
+      "authority": {
+        "url": "https://www.senate.gov/legislative/resources/pdf/S1guidance.pdf",
+        "retrieved_on": "2026-08-27"
+      }
+    },
+    {
+      "effective_period": {
+        "from": "2013-01-01",
+        "through": "2028-12-31"
+      },
+      "semantic_role": "lobbying_expense",
+      "accounting_methods": ["A"],
+      "under_reporting_threshold": {
+        "lower_minor_units": "0",
+        "upper_minor_units": "500000",
+        "lower_inclusive": true,
+        "upper_inclusive": false,
+        "measurement_kind": "threshold_band"
+      },
+      "numeric_reporting": {
+        "minimum_minor_units": "500000",
+        "minimum_inclusive": true,
+        "measurement_kind": "rounded_estimate",
+        "precision_increment_minor_units": "1000000",
+        "derived_interval_policy": "blocked_pending_rounding_boundary_rule"
+      },
+      "authority": {
+        "url": "https://www.senate.gov/legislative/resources/pdf/S1guidance.pdf",
+        "retrieved_on": "2026-08-27"
+      }
+    },
+    {
+      "effective_period": {
+        "from": "2013-01-01",
+        "through": "2028-12-31"
+      },
+      "semantic_role": "lobbying_expense",
+      "accounting_methods": ["B", "C"],
+      "under_reporting_threshold": {
+        "lower_minor_units": "0",
+        "upper_minor_units": "500000",
+        "lower_inclusive": true,
+        "upper_inclusive": false,
+        "measurement_kind": "threshold_band"
+      },
+      "numeric_reporting": {
+        "minimum_minor_units": "500000",
+        "minimum_inclusive": true,
+        "measurement_kind": "method_specific_reported_value",
+        "precision_increment_minor_units": null,
+        "derived_interval_policy": "not_authorized_without_accounting_method_rule"
+      },
+      "authority": {
+        "url": "https://www.senate.gov/legislative/resources/pdf/S1guidance.pdf",
+        "retrieved_on": "2026-08-27"
+      }
+    }
+  ],
+  "open_questions": [
+    "The official sources reviewed do not establish the tie-boundary convention needed to derive finite intervals from nearest-10000 Method A estimates.",
+    "Expense Methods B and C use tax-code accounting definitions; no interval or precision rule is accepted until those effective rules are audited directly.",
+    "Rules before 2013 are outside this rule set and must be added before publishing older historical coverage claims."
+  ]
+}

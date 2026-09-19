@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/report-lines.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "review_id", "policy", "cycle", "committee_id", "file_num", "inventory_calculation_id", "receipt_input", "receipt_source", "total", "reviewed_nonmemo_line_population", "groups", "transaction_identity_issues", "comparison_blockers", "comparison_ready", "terminal_attribution_eligible"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.receipt-report-line-review.v1"},
+    "review_id": {"$ref": "#/$defs/digest"},
+    "policy": {"const": "fec/reported-itemized-line-membership@1.0.0"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "committee_id": {"type": "string", "pattern": "^C[0-9]{8}$"},
+    "file_num": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "inventory_calculation_id": {"$ref": "#/$defs/digest"},
+    "receipt_input": {"$ref": "result.schema.json#/$defs/input"},
+    "receipt_source": {
+      "type": "object", "additionalProperties": false, "required": ["release_id", "manifest_sha256"],
+      "properties": {"release_id": {"type": "string", "pattern": "^fec-[0-9a-f]{64}$"}, "manifest_sha256": {"$ref": "#/$defs/digest"}}
+    },
+    "total": {"$ref": "result.schema.json#/$defs/measures"},
+    "reviewed_nonmemo_line_population": {"$ref": "result.schema.json#/$defs/measures"},
+    "comparison_ready": {"const": false},
+    "terminal_attribution_eligible": {"const": false},
+    "groups": {"type": "array", "maxItems": 10000, "items": {
+      "type": "object", "additionalProperties": false, "required": ["key", "measures", "source_row_ordinals"],
+      "properties": {
+        "key": {
+          "type": "object", "additionalProperties": false,
+          "required": ["filing_form", "schedule_type", "line_num", "memo_code", "publisher_individual_state", "disposition"],
+          "properties": {
+            "filing_form": {"$ref": "#/$defs/cell"}, "schedule_type": {"$ref": "#/$defs/cell"},
+            "line_num": {"$ref": "#/$defs/cell"}, "memo_code": {"$ref": "#/$defs/cell"},
+            "publisher_individual_state": {"enum": ["true", "false", "source_null"]},
+            "disposition": {"enum": ["reviewed_nonmemo_line", "outside_reviewed_form_line", "excluded_memo_subtotal", "unresolved_memo_code", "unresolved_line_amount"]}
+          }
+        },
+        "measures": {"$ref": "result.schema.json#/$defs/measures"},
+        "source_row_ordinals": {"$ref": "#/$defs/ordinals"}
+      }
+    }},
+    "transaction_identity_issues": {"type": "array", "maxItems": 10000, "items": {
+      "type": "object", "additionalProperties": false, "required": ["transaction_id", "source_row_ordinals"],
+      "properties": {"transaction_id": {"$ref": "#/$defs/cell"}, "source_row_ordinals": {"$ref": "#/$defs/ordinals"}}
+    }},
+    "comparison_blockers": {
+      "type": "array", "minItems": 4, "uniqueItems": true,
+      "items": {"enum": ["original_filing_membership_unverified", "report_period_and_account_coverage_unverified", "effective_report_selection_unverified", "cycle_summary_compatibility_unverified", "missing_or_repeated_transaction_identity", "unresolved_reviewed_line_membership", "no_rows_in_snapshot"]},
+      "allOf": [
+        {"contains": {"const": "original_filing_membership_unverified"}},
+        {"contains": {"const": "report_period_and_account_coverage_unverified"}},
+        {"contains": {"const": "effective_report_selection_unverified"}},
+        {"contains": {"const": "cycle_summary_compatibility_unverified"}}
+      ]
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "cell": {
+      "type": "object", "additionalProperties": false, "required": ["present", "value"],
+      "properties": {"present": {"type": "boolean"}, "value": {"type": "string"}},
+      "allOf": [{"if": {"properties": {"present": {"const": false}}}, "then": {"properties": {"value": {"const": ""}}}}]
+    },
+    "ordinals": {"type": "array", "minItems": 1, "maxItems": 10000, "uniqueItems": true, "items": {"type": "integer", "minimum": 1}}
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "version": "legal-tender.fec.receipt-family-comparison.v2",
+  "map_version": "legal-tender.fec.receipt-family-map.v1",
+  "scope": "bounded_per_report_occurrence_comparison_not_financial_membership",
+  "families": {
+    "F3": ["party_contributions", "other_committee_contributions", "authorized_transfers", "candidate_made_or_guaranteed_loans", "other_loans", "candidate_contributions", "operating_offsets", "other_receipts"],
+    "F3X": ["party_contributions", "other_committee_contributions", "affiliated_or_party_transfers", "loans_received", "loan_repayments_received", "operating_offsets", "contribution_refunds_received", "other_federal_receipts"]
+  },
+  "binding": "reverify_exact_original_metadata_form_filer_report_period_and_observed_chain_candidate; exact_cover_and_metadata_agreement; F3_offsets_require_both_period_cover_positions_28_and_44",
+  "metadata": "F3_offsets_use_total_offsets_to_operating_expenditures_period; F3X_offsets_use_offsets_to_operating_expenditures_period; only_pinned_string_capable_fields_accept_exact_decimal_strings; no_alias_fallback",
+  "profile": "sha256_pinned_complete_v2_profile_revalidated_against_exact_summary_release; no_bulk_body_rescan",
+  "routing": "exact_filing_form_schedule_SA_and_line; preserve_every_report_group_once; no_entity_file_year_or_amount_exceptions",
+  "memo": "retain_raw_codes; X_separate; blank_or_source_null_nonmemo_convention; other_codes_block_affected_family",
+  "detail_relations": {
+    "all_required_itemized": "qualified_nonempty_nonmemo_detail_may_be_compared_to_bound_reported_total; difference_is_reported_minus_detail",
+    "thresholded_component_of_total": "qualified_nonempty_nonmemo_detail_and_bound_reported_total_remain_separate; state_component_not_comparable; delta_always_null_even_when_values_equal"
+  },
+  "empty_detail": "null_detail_and_delta_even_when_reported_total_is_explicit_zero; no_extension_of_v1_absence_qualification",
+  "amounts": "exact_signed_occurrences; unknown_nonmemo_amount_blocks_qualified_detail; no_lower_bound_residual_unitemized_inference_date_clipping_individual_filter_or_deduplication",
+  "compatibility": "v1_default_and_downstream_family_absence_window_summary_outputs_unchanged",
+  "limits": ["no_cash_or_donor_principal_identity", "refund_receipts_not_new_contributions", "no_financial_report_selection", "individual_fields_remain_in_existing_separate_policy", "no_aggregate_cover_only_H3_H5_SL_or_F3P_aliases"],
+  "guards": {
+    "source_body_rescanned": false,
+    "family_window_comparison_ready": false,
+    "unique_transaction_membership_proven": false,
+    "financial_use_eligible": false,
+    "terminal_attribution_eligible": false
+  }
+}

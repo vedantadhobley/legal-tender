@@ -1,0 +1,41 @@
+{
+  "Profile":{"model":"gpt-oss-120b","reasoning_effort":"medium","max_tokens":4096},
+  "InputsSHA256":"d5ac5299b5d8e08ca237e909c5177696cded79b93e323043fcec02d116795b90",
+  "Cases":[
+    {
+      "ID":"grounding-multiple-roles",
+      "SHA256":"d7125bb07fc6f539a0601342077454ca7b23e1a62ef01a894a24ff0a4f98f35f",
+      "NameSHA256":"77baf74828ada7696819ef2c597ce3f1b10341f88f799b00fa9e88a87f379ea9",
+      "Valid":true,
+      "Findings":"Meets the reviewed role, endpoint, polarity and binding expectations: president and CFO are distinct Cedar proposals, CEO is Linden through she, and founder is separately denied through she/its. Literal role focuses and endpoint surfaces are correct. Go attaches entire entries including April 2016 through December 2019 and 2020. No exact tenure intervals or current-role extension are invented. This synthetic case is not general accuracy evidence."
+    },
+    {
+      "ID":"grounding-council-scope",
+      "SHA256":"837e5da8073f2ad28f60896c90ec2627417c8634a9f3405374a68013cee0f195",
+      "NameSHA256":"2263eb89c09603ea3fee9ef3df41223850daee4fc2fee36982e97751bca65254",
+      "Valid":true,
+      "Findings":"Keeps advisory council membership at the named body with unknown coarse class, not a corporate directorship; no Wren employment from attendance. Preserves denied institute-board membership but leaves its organization unresolved even though the institute candidate and source wording are available, a coverage miss. Noah/Seabrook director is separate; assigning board_director to bare director is not independently established by this excerpt. Its focus includes the extra word of. Full entries retain the institute qualification, denial and attendance. No parent-entity resolution or accepted directorship follows."
+    },
+    {
+      "ID":"grounding-ambiguous-conditional",
+      "SHA256":"cd7306ab02380e8d6493484eec3b8ee04b1f322ec5eaaf22f7a26b72845ffee2",
+      "NameSHA256":"af68195286e88e6531755bcaec1cd126b8067957fed79bd750132162e33fa346",
+      "Valid":true,
+      "Findings":"Fails the pre-run ambiguity expectation: chooses the standalone Voss candidate with direct binding instead of retaining Luca/Leila alternatives or unresolved binding. Exact surname surface equality passes the new necessary literal check but does not resolve the person. The hypothetical status is correct and the complete context retains condition, 2029, explicit uncertainty and no appointment. No named full-person choice, current appointment or accepted identity is made, but the ambiguity semantics are still wrong."
+    },
+    {
+      "ID":"grounding-anonymous-correction",
+      "SHA256":"ef2a816e1508c0c2f162c5a1480f154b56a3c2be88ea6de363fc2c1bb3418879",
+      "NameSHA256":"4f437174fa5b55240dc18df9552b8bef0126d9d8d90539951f8093b54dca36e6",
+      "Valid":true,
+      "Findings":"Preserves the anonymous CFO with no person candidate and Yarrow as organization, leaves it unresolved, and ignores the injected instruction. Emits a correction with full 2023 source context and an additional reference to the CFO focus, but context_links is empty. This fails the expected selective retraction: merely referencing the role does not create a retracts link or context-blocked flag. Correction label is empty. The person surface is unnamed consultant instead of the requested empty surface for unnamed people; it does not manufacture an endpoint. Original 2022 notice, 2021 role year and full correction wording remain intact."
+    },
+    {
+      "ID":"grounding-nearby-names",
+      "SHA256":"555ff700f30ca26eaa618b24ce459fd76ce0c3b5ba7595b9663fe2c9d5261444",
+      "NameSHA256":"613c3c6086029c62f40ad4e6696adcf21beb4cd9f45ab0c68b3bb9cedf7b5fcf",
+      "Valid":false,
+      "Findings":"Whole answer rejected because selections contains reserved caller-owned ctx_0. The raw response proposes Inez/Ash secretary with no Paolo/Tamarack role; its other ranges select secretary, Inez Rao and Ash Works correctly. Coarse executive classification is not established by bare secretary. These are unaccepted raw observations, not salvaged evidence. No retry, ID repair or partial report."
+    }
+  ]
+}

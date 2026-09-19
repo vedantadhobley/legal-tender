@@ -1,13 +1,24 @@
 # Development Dockerfile for Legal Tender
 # Volume-mounted code, dev tools, stays alive for VS Code Dev Containers
 
-FROM python:3.11-slim
+ARG GO_IMAGE=golang:1.26.5-bookworm@sha256:53eeac89074db483fdf0ab3be1df32bf6e47562263d2d0d6baa7f26acb4957dd
+
+FROM --platform=linux/amd64 ${GO_IMAGE} AS go-builder
+
+WORKDIR /src
+COPY go.mod go.sum ./
+COPY scripts/go-build.env scripts/build-go.sh ./scripts/
+COPY cmd/ ./cmd/
+COPY internal/ ./internal/
+RUN bash scripts/build-go.sh dependencies && mkdir /out && bash scripts/build-go.sh build /out/legal-tender
+
+FROM --platform=linux/amd64 python:3.11-slim-bookworm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-    postgresql-client \
+    postgresql-client-15 \
     wget \
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -23,9 +34,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Install dev tools
 RUN pip install --no-cache-dir ipython ipdb pytest black ruff mypy
 
+COPY --from=go-builder /out/legal-tender /usr/local/bin/legal-tender
+
 # Environment variables
 ENV PYTHONPATH=/workspace \
     DAGSTER_HOME=/workspace \
+    LEGAL_TENDER_BINARY=/usr/local/bin/legal-tender \
     PYTHONUNBUFFERED=1
 
 # Default command: sleep infinity (dev container stays alive for VS Code)

@@ -1,0 +1,80 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "lda/constants@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "The public API response was parsed as JSON and reserialized with sorted object keys and two-space indentation. Values and array order are unchanged; HTTP headers and original whitespace are not part of this fixture.",
+  "fixtures": [
+    {
+      "path": "filing-types.json",
+      "source_url": "https://lda.gov/api/v1/constants/filing/filingtypes/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "1ce517e2e684882c250491f892eea2864bed8b3c69f52c2b4a95117d6ceb958d",
+      "scenarios": [
+        "complete filing-type code list"
+      ]
+    },
+    {
+      "path": "lobbying-activity-issues.json",
+      "source_url": "https://lda.gov/api/v1/constants/filing/lobbyingactivityissues/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "458193083e994c8eebe7d9ac8f988c57b52fce3d2069022e50c78e5719109380",
+      "scenarios": [
+        "complete lobbying-issue code list"
+      ]
+    },
+    {
+      "path": "government-entities.json",
+      "source_url": "https://lda.gov/api/v1/constants/filing/governmententities/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "eb0a9e91d53ff763253bb0ad54f6cca8229a2d24bad9cacbc7e6c0cc6a050c03",
+      "scenarios": [
+        "government-entity ID and name list"
+      ]
+    },
+    {
+      "path": "countries.json",
+      "source_url": "https://lda.gov/api/v1/constants/general/countries/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "3dee284cc1e7669c8c13362266245c9c757af3b5f574a5b7eb49191866e82b9a",
+      "scenarios": [
+        "complete country code list"
+      ]
+    },
+    {
+      "path": "states.json",
+      "source_url": "https://lda.gov/api/v1/constants/general/states/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6b847f23a65727e53a8294b4ae7e0cce2866379386be4407778dc8880bb4b748",
+      "scenarios": [
+        "complete state and province code list"
+      ]
+    },
+    {
+      "path": "lobbyist-prefixes.json",
+      "source_url": "https://lda.gov/api/v1/constants/lobbyist/prefixes/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "e764fd36e02b88ccd433155b2716447b486a1766669d82b60c8535c7d1f13dbf",
+      "scenarios": [
+        "complete lobbyist-prefix code list"
+      ]
+    },
+    {
+      "path": "lobbyist-suffixes.json",
+      "source_url": "https://lda.gov/api/v1/constants/lobbyist/suffixes/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "865b9110af02003be69de4676a196298eb851db7de644e9487547f0fcd93afa1",
+      "scenarios": [
+        "complete lobbyist-suffix code list"
+      ]
+    },
+    {
+      "path": "contribution-item-types.json",
+      "source_url": "https://lda.gov/api/v1/constants/contribution/itemtypes/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "417303874c13b8b30c746d00e4834665d7a85ef75725224b80c249f963d478fd",
+      "scenarios": [
+        "complete LD-203 contribution-item type list"
+      ]
+    }
+  ]
+}

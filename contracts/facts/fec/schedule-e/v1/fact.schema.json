@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/facts/fec/schedule-e/v1/fact.schema.json",
+  "title": "Processed Schedule E independent-expenditure fact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "fact_id", "fact_type", "cycle", "natural_key",
+    "occurrence_set_id", "occurrence_id", "record_version_id",
+    "source_release_id", "source_contract", "state", "issue_codes",
+    "source_fields", "typed_fields"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.schedule-e-independent-expenditure.v1"},
+    "fact_id": {"$ref": "#/$defs/digest"},
+    "fact_type": {"const": "fec.schedule_e_independent_expenditure.v1"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "natural_key": {"type": "string", "pattern": "^fec:schedule-e:[0-9]{4}:[0-9]+$"},
+    "occurrence_set_id": {"$ref": "#/$defs/digest"},
+    "occurrence_id": {"$ref": "#/$defs/digest"},
+    "record_version_id": {"$ref": "#/$defs/digest"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "source_contract": {"const": "fec/schedule-e@1.0.0"},
+    "state": {"enum": ["valid", "invalid"]},
+    "issue_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "source_fields": {"$ref": "../../../../sources/fec/schedule-e/v1/record.schema.json"},
+    "typed_fields": {"$ref": "#/$defs/typedFields"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "optionalString": {"type": ["string", "null"]},
+    "optionalInteger": {"type": ["integer", "null"]},
+    "localTimestamp": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?$"},
+    "date": {"type": ["string", "null"], "format": "date"},
+    "money": {
+      "type": "object", "additionalProperties": false,
+      "required": ["semantic_role", "currency", "raw_value", "reported_minor_units", "source_scale", "observation_state", "measurement_kind", "source_rule_version"],
+      "properties": {
+        "semantic_role": {"enum": ["independent_expenditure", "calendar_ytd_office_sought"]},
+        "currency": {"const": "USD"},
+        "raw_value": {"$ref": "#/$defs/optionalString"},
+        "reported_minor_units": {"type": ["string", "null"], "pattern": "^-?(0|[1-9][0-9]*)$"},
+        "source_scale": {"type": ["integer", "null"], "minimum": 0},
+        "observation_state": {"enum": ["reported_value", "source_null", "invalid"]},
+        "measurement_kind": {"const": "reported_point"},
+        "source_rule_version": {"const": "fec/schedule-e@1.0.0"}
+      }
+    },
+    "spender": {
+      "type": "object", "additionalProperties": false,
+      "required": ["committee_id", "name"],
+      "properties": {
+        "committee_id": {"$ref": "#/$defs/optionalString"},
+        "name": {"$ref": "#/$defs/optionalString"}
+      }
+    },
+    "payee": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "first_name", "middle_name", "last_name", "prefix", "suffix", "street_1", "street_2", "city", "state", "zip", "entity_type_code", "entity_type_description", "normalized_name_text"],
+      "properties": {
+        "name": {"$ref": "#/$defs/optionalString"},
+        "first_name": {"$ref": "#/$defs/optionalString"},
+        "middle_name": {"$ref": "#/$defs/optionalString"},
+        "last_name": {"$ref": "#/$defs/optionalString"},
+        "prefix": {"$ref": "#/$defs/optionalString"},
+        "suffix": {"$ref": "#/$defs/optionalString"},
+        "street_1": {"$ref": "#/$defs/optionalString"},
+        "street_2": {"$ref": "#/$defs/optionalString"},
+        "city": {"$ref": "#/$defs/optionalString"},
+        "state": {"$ref": "#/$defs/optionalString"},
+        "zip": {"$ref": "#/$defs/optionalString"},
+        "entity_type_code": {"$ref": "#/$defs/optionalString"},
+        "entity_type_description": {"$ref": "#/$defs/optionalString"},
+        "normalized_name_text": {"$ref": "#/$defs/optionalString"}
+      }
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["candidate_id", "name", "first_name", "middle_name", "last_name", "prefix", "suffix", "office_code", "office", "office_state", "office_state_name", "office_district", "support_oppose_code", "support_oppose_description"],
+      "properties": {
+        "candidate_id": {"$ref": "#/$defs/optionalString"},
+        "name": {"$ref": "#/$defs/optionalString"},
+        "first_name": {"$ref": "#/$defs/optionalString"},
+        "middle_name": {"$ref": "#/$defs/optionalString"},
+        "last_name": {"$ref": "#/$defs/optionalString"},
+        "prefix": {"$ref": "#/$defs/optionalString"},
+        "suffix": {"$ref": "#/$defs/optionalString"},
+        "office_code": {"$ref": "#/$defs/optionalString"},
+        "office": {"$ref": "#/$defs/optionalString"},
+        "office_state": {"$ref": "#/$defs/optionalString"},
+        "office_state_name": {"$ref": "#/$defs/optionalString"},
+        "office_district": {"$ref": "#/$defs/optionalString"},
+        "support_oppose_code": {"$ref": "#/$defs/optionalString"},
+        "support_oppose_description": {"$ref": "#/$defs/optionalString"}
+      }
+    },
+    "election": {
+      "type": "object", "additionalProperties": false,
+      "required": ["election_type_code", "fec_election_type_description", "cycle", "calendar_ytd_office_sought"],
+      "properties": {
+        "election_type_code": {"$ref": "#/$defs/optionalString"},
+        "fec_election_type_description": {"$ref": "#/$defs/optionalString"},
+        "cycle": {"type": "integer"},
+        "calendar_ytd_office_sought": {"$ref": "#/$defs/money"}
+      }
+    },
+    "expenditure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["description", "category_code", "category", "amount", "expenditure_at_local", "expenditure_on", "disseminated_at_local", "disseminated_on", "expenditure_type_code", "expenditure_type", "memo_code", "memo_code_description", "memo_text"],
+      "properties": {
+        "description": {"$ref": "#/$defs/optionalString"},
+        "category_code": {"$ref": "#/$defs/optionalString"},
+        "category": {"$ref": "#/$defs/optionalString"},
+        "amount": {"$ref": "#/$defs/money"},
+        "expenditure_at_local": {"$ref": "#/$defs/localTimestamp"},
+        "expenditure_on": {"$ref": "#/$defs/date"},
+        "disseminated_at_local": {"$ref": "#/$defs/localTimestamp"},
+        "disseminated_on": {"$ref": "#/$defs/date"},
+        "expenditure_type_code": {"$ref": "#/$defs/optionalString"},
+        "expenditure_type": {"$ref": "#/$defs/optionalString"},
+        "memo_code": {"$ref": "#/$defs/optionalString"},
+        "memo_code_description": {"$ref": "#/$defs/optionalString"},
+        "memo_text": {"$ref": "#/$defs/optionalString"}
+      }
+    },
+    "conduit": {
+      "type": "object", "additionalProperties": false,
+      "required": ["committee_id", "name", "street_1", "street_2", "city", "state", "zip"],
+      "properties": {
+        "committee_id": {"$ref": "#/$defs/optionalString"},
+        "name": {"$ref": "#/$defs/optionalString"},
+        "street_1": {"$ref": "#/$defs/optionalString"},
+        "street_2": {"$ref": "#/$defs/optionalString"},
+        "city": {"$ref": "#/$defs/optionalString"},
+        "state": {"$ref": "#/$defs/optionalString"},
+        "zip": {"$ref": "#/$defs/optionalString"}
+      }
+    },
+    "certification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["independent_expenditure_signer", "independent_expenditure_signed_at_local", "notary_signer", "notary_signed_at_local", "notary_commission_expires_at_local"],
+      "properties": {
+        "independent_expenditure_signer": {"$ref": "#/$defs/optionalString"},
+        "independent_expenditure_signed_at_local": {"$ref": "#/$defs/localTimestamp"},
+        "notary_signer": {"$ref": "#/$defs/optionalString"},
+        "notary_signed_at_local": {"$ref": "#/$defs/localTimestamp"},
+        "notary_commission_expires_at_local": {"$ref": "#/$defs/localTimestamp"}
+      }
+    },
+    "filer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["first_name", "middle_name", "last_name", "prefix", "suffix"],
+      "properties": {
+        "first_name": {"$ref": "#/$defs/optionalString"},
+        "middle_name": {"$ref": "#/$defs/optionalString"},
+        "last_name": {"$ref": "#/$defs/optionalString"},
+        "prefix": {"$ref": "#/$defs/optionalString"},
+        "suffix": {"$ref": "#/$defs/optionalString"}
+      }
+    },
+    "filing": {
+      "type": "object", "additionalProperties": false,
+      "required": ["action_code", "action", "transaction_id", "back_reference_transaction_id", "back_reference_schedule_name", "schedule_type_code", "schedule_type", "line_number", "image_number", "file_number", "link_id", "original_submission_id", "submission_id", "filing_form", "report_type_code", "report_year", "pdf_url", "publisher_loaded_at_local"],
+      "properties": {
+        "action_code": {"$ref": "#/$defs/optionalString"},
+        "action": {"$ref": "#/$defs/optionalString"},
+        "transaction_id": {"$ref": "#/$defs/optionalString"},
+        "back_reference_transaction_id": {"$ref": "#/$defs/optionalString"},
+        "back_reference_schedule_name": {"$ref": "#/$defs/optionalString"},
+        "schedule_type_code": {"$ref": "#/$defs/optionalString"},
+        "schedule_type": {"$ref": "#/$defs/optionalString"},
+        "line_number": {"$ref": "#/$defs/optionalString"},
+        "image_number": {"$ref": "#/$defs/optionalString"},
+        "file_number": {"$ref": "#/$defs/optionalInteger"},
+        "link_id": {"$ref": "#/$defs/optionalString"},
+        "original_submission_id": {"$ref": "#/$defs/optionalString"},
+        "submission_id": {"type": "string", "pattern": "^[0-9]+$"},
+        "filing_form": {"type": "string", "minLength": 1},
+        "report_type_code": {"$ref": "#/$defs/optionalString"},
+        "report_year": {"$ref": "#/$defs/optionalInteger"},
+        "pdf_url": {"$ref": "#/$defs/optionalString"},
+        "publisher_loaded_at_local": {"$ref": "#/$defs/localTimestamp"}
+      }
+    },
+    "typedFields": {
+      "type": "object", "additionalProperties": false,
+      "required": ["spender", "payee", "candidate", "election", "expenditure", "conduit", "certification", "filer", "filing"],
+      "properties": {
+        "spender": {"$ref": "#/$defs/spender"},
+        "payee": {"$ref": "#/$defs/payee"},
+        "candidate": {"$ref": "#/$defs/candidate"},
+        "election": {"$ref": "#/$defs/election"},
+        "expenditure": {"$ref": "#/$defs/expenditure"},
+        "conduit": {"$ref": "#/$defs/conduit"},
+        "certification": {"$ref": "#/$defs/certification"},
+        "filer": {"$ref": "#/$defs/filer"},
+        "filing": {"$ref": "#/$defs/filing"}
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"state": {"const": "valid"}}}, "then": {"properties": {"issue_codes": {"maxItems": 0}}}},
+    {"if": {"properties": {"state": {"const": "invalid"}}}, "then": {"properties": {"issue_codes": {"minItems": 1}}}}
+  ]
+}

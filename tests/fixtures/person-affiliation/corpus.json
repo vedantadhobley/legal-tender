@@ -1,0 +1,67 @@
+{
+  "version": "person-affiliation-corpus.v1",
+  "scope": "Diagnostic, development-selected appearances from one retained as-filed report, not a representative person sample. Corporate role interpretations are reviewed annotations, not automatic extraction or accepted donor identities. Current pages do not prove transaction-time employment. Unsearched alternatives remain unknown.",
+  "layout": {"path": "schedule-a-fields.json", "sha256": "dd15056f52cb49d947874a14f2a83b47deac02ebb5851f9f8478990ae921575f", "bytes": 10549},
+  "filing": {
+    "id": "fec-1730162",
+    "url": "https://docquery.fec.gov/dcdev/posted/1730162.fec",
+    "observed_on": "2026-09-10",
+    "body": {"path": "fec-1730162.fec", "sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c", "bytes": 630349}
+  },
+  "headers": {"path": "fec-1730162.headers", "sha256": "6b13f14c4670c5435ac7dbb79766103cf2a5f5de2c1355f14941812e6a906373", "bytes": 1126},
+  "sources": [
+    {"id": "jc2-about", "url": "https://www.jc2ventures.com/about", "observed_on": "2026-09-15", "body": {"path": "jc2-about.html", "sha256": "45fe693cfae5b459c92df0947f0b33efa386b56fc68fa160dd3c5c6332e3e391", "bytes": 134098}},
+    {"id": "jc2-bio", "url": "https://www.jc2ventures.com/john-chambers", "observed_on": "2026-09-15", "body": {"path": "jc2-bio.html", "sha256": "9bce701416c1345470ef55d1555f7875f0d4c4449f1c3a81f549d49cab717857", "bytes": 100282}},
+    {"id": "ridgeline-leadership", "url": "https://ridgeline.ai/company/leadership", "observed_on": "2026-09-15", "body": {"path": "ridgeline-leadership.html", "sha256": "c91e3c5785ddf31a229ac50c6757dca476d8c5acb5cdaab234369ce892be4151", "bytes": 200202}}
+  ],
+  "reviewed_roles": [
+    {
+      "id": "jc2-ceo", "source_id": "jc2-about",
+      "excerpts": ["John Chambers is the founder and CEO of JC2 Ventures."],
+      "reason": "The company identifies this subject as CEO. The current page has no explicit role validity period; capture time is not a role date.",
+      "claim": {"source": {"sha256": "", "locator": ""}, "person_id": "review:jc2/john-chambers", "organization_id": "review:jc2", "person_name": "John Chambers", "organization_name": "JC2 Ventures", "role": "executive"}
+    },
+    {
+      "id": "jc2-founder", "source_id": "jc2-about",
+      "excerpts": ["founder and CEO"],
+      "reason": "A separate founder assertion from the same sentence is not independent corroboration and does not alone prove current authority.",
+      "claim": {"source": {"sha256": "", "locator": ""}, "person_id": "review:jc2/john-chambers", "organization_id": "review:jc2", "person_name": "John Chambers", "organization_name": "JC2 Ventures", "role": "founder"}
+    },
+    {
+      "id": "jc2-near-name", "source_id": "jc2-about",
+      "excerpts": ["JOHN J. CHAMBERS</strong>,<br>Head of Growth"],
+      "reason": "The page lists a separate similar-name team member. No initial stripping or inferred executive classification. This is a real near-name alternative, not a demonstrated same-name ambiguous donor identity.",
+      "claim": {"source": {"sha256": "", "locator": ""}, "person_id": "review:jc2/john-j-chambers", "organization_id": "review:jc2", "person_name": "John J. Chambers", "organization_name": "JC2 Ventures", "role": "unknown"}
+    },
+    {
+      "id": "cisco-emeritus", "source_id": "jc2-about",
+      "excerpts": ["Chairman Emeritus with the organization."],
+      "reason": "The preceding company biography names Cisco. An emeritus title does not by itself establish board membership, employment or control. The shared person label is a reviewed within-biography subject, not a cross-registry identity join.",
+      "claim": {"source": {"sha256": "", "locator": ""}, "person_id": "review:jc2/john-chambers", "organization_id": "review:cisco", "person_name": "John Chambers", "organization_name": "Cisco", "role": "unknown"}
+    },
+    {
+      "id": "cisco-historical-ceo", "source_id": "jc2-bio",
+      "excerpts": ["Prior to founding JC2 Ventures in January 2018", "when he stepped down as CEO in 2015."],
+      "reason": "The company links this biography from the about page. The narrative describes a historical Cisco CEO role with a year-only end. Do not invent a day or stretch that role through the 2023 receipt. The current day-bound evaluator cannot express this coarse historical constraint.",
+      "claim": {"source": {"sha256": "", "locator": ""}, "person_id": "review:jc2/john-chambers", "organization_id": "review:cisco", "person_name": "John Chambers", "organization_name": "Cisco Systems", "role": "executive", "issue": "historical_role_end_year_only_not_supported_as_day_bound"}
+    },
+    {
+      "id": "ridgeline-board", "source_id": "ridgeline-leadership",
+      "excerpts": ["Board of Directors</h2>", "<h3 class=\"ld_name\">Dave Duffield</h3>", "<p class=\"ld_position\">Founder and Chairman</p>"],
+      "reason": "Reviewed board-section placement supports the board-chair interpretation, not ownership. Present-day page has no day-level historical validity. Dave is retained verbatim, not replaced with the FEC appearance's David.",
+      "claim": {"source": {"sha256": "", "locator": ""}, "person_id": "review:ridgeline/dave-duffield", "organization_id": "review:ridgeline", "person_name": "Dave Duffield", "organization_name": "Ridgeline", "role": "board_director"}
+    },
+    {
+      "id": "ridgeline-founder", "source_id": "ridgeline-leadership",
+      "excerpts": ["<p class=\"ld_position\">Founder and Chairman</p>"],
+      "reason": "Keep the founder assertion separately. It is from the same page and not an independent vote for identity or current authority.",
+      "claim": {"source": {"sha256": "", "locator": ""}, "person_id": "review:ridgeline/dave-duffield", "organization_id": "review:ridgeline", "person_name": "Dave Duffield", "organization_name": "Ridgeline", "role": "founder"}
+    }
+  ],
+  "cases": [
+    {"id": "jc2-receipt-1", "ordinal": 58, "role_ids": ["jc2-ceo", "jc2-founder", "jc2-near-name", "cisco-emeritus", "cisco-historical-ceo"], "review": "The reported employer differs by a letter/number word boundary. Preserve this as a v1 matching gap, not an approved identity. Historical and emeritus Cisco claims must not become current authority."},
+    {"id": "jc2-receipt-2", "ordinal": 59, "role_ids": ["jc2-ceo", "jc2-founder", "jc2-near-name", "cisco-emeritus", "cisco-historical-ceo"], "review": "A second occurrence with the same name, date and employer remains separate; this test makes no counting, deduplication or amendment decision."},
+    {"id": "ridgeline-receipt", "ordinal": 2772, "role_ids": ["ridgeline-board", "ridgeline-founder"], "review": "Both nickname and legal-suffix differences remain unbridged under v1. Current board evidence is not dated to the contribution. This is not an accepted donor-to-person match."},
+    {"id": "reported-engineer-no-discovery", "ordinal": 263, "role_ids": [], "review": "No independent role discovery was attempted for this reported engineer. This is a coverage gap, not proof of an ordinary employee or a true-negative executive classification; occupation alone publishes no role."}
+  ]
+}

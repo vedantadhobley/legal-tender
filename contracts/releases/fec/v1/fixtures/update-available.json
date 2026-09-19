@@ -1,0 +1,41 @@
+{
+  "schema_version": "legal-tender.fec.release-plan.v1",
+  "inventory_version": "legal-tender.fec.initial-release-inventory.v1",
+  "status": "update_available",
+  "planned_at": "2026-08-31T08:01:00Z",
+  "discovery_started_at": "2026-08-31T08:00:00Z",
+  "discovery_completed_at": "2026-08-31T08:00:30Z",
+  "candidate_release_id": "fec-941952835bf759865339ed3510ee11cf6c95d466ac6daaecbba56d7615a086db",
+  "selected_sources": [
+    {"source_id": "fec:cn:2020", "request_url": "https://www.fec.gov/files/bulk-downloads/2020/cn20.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2020/cn20.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:cm:2020", "request_url": "https://www.fec.gov/files/bulk-downloads/2020/cm20.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2020/cm20.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:ccl:2020", "request_url": "https://www.fec.gov/files/bulk-downloads/2020/ccl20.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2020/ccl20.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:weball:2020", "request_url": "https://www.fec.gov/files/bulk-downloads/2020/weball20.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2020/weball20.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:webl:2020", "request_url": "https://www.fec.gov/files/bulk-downloads/2020/webl20.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2020/webl20.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:cn:2022", "request_url": "https://www.fec.gov/files/bulk-downloads/2022/cn22.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2022/cn22.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:cm:2022", "request_url": "https://www.fec.gov/files/bulk-downloads/2022/cm22.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2022/cm22.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:ccl:2022", "request_url": "https://www.fec.gov/files/bulk-downloads/2022/ccl22.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2022/ccl22.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:weball:2022", "request_url": "https://www.fec.gov/files/bulk-downloads/2022/weball22.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2022/weball22.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:webl:2022", "request_url": "https://www.fec.gov/files/bulk-downloads/2022/webl22.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2022/webl22.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:cn:2024", "request_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2024/cn24.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:cm:2024", "request_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:ccl:2024", "request_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:weball:2024", "request_url": "https://www.fec.gov/files/bulk-downloads/2024/weball24.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2024/weball24.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:webl:2024", "request_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2024/webl24.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:cn:2026", "request_url": "https://www.fec.gov/files/bulk-downloads/2026/cn26.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2026/cn26.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:cm:2026", "request_url": "https://www.fec.gov/files/bulk-downloads/2026/cm26.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2026/cm26.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:ccl:2026", "request_url": "https://www.fec.gov/files/bulk-downloads/2026/ccl26.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2026/ccl26.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:weball:2026", "request_url": "https://www.fec.gov/files/bulk-downloads/2026/weball26.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2026/weball26.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:webl:2026", "request_url": "https://www.fec.gov/files/bulk-downloads/2026/webl26.zip", "final_url": "https://www.fec.gov/files/bulk-downloads/2026/webl26.zip", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"},
+    {"source_id": "fec:schedule-a:processed", "request_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "final_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump", "observed_at": "2026-08-31T08:00:00Z", "version_identity": "version_id:fixture-v2", "version_basis": "version_id", "version_id": "fixture-v2"}
+  ],
+  "changed_source_ids": [
+    "fec:cn:2020", "fec:cm:2020", "fec:ccl:2020", "fec:weball:2020", "fec:webl:2020",
+    "fec:cn:2022", "fec:cm:2022", "fec:ccl:2022", "fec:weball:2022", "fec:webl:2022",
+    "fec:cn:2024", "fec:cm:2024", "fec:ccl:2024", "fec:weball:2024", "fec:webl:2024",
+    "fec:cn:2026", "fec:cm:2026", "fec:ccl:2026", "fec:weball:2026", "fec:webl:2026",
+    "fec:schedule-a:processed"
+  ],
+  "reused_source_ids": [],
+  "issues": []
+}

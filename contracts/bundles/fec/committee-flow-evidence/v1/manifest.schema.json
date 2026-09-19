@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/bundles/fec/committee-flow-evidence/v1/manifest.schema.json",
+  "title": "Exact-input readiness for the committee-flow observation graph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "bundle_id", "cycle", "state", "consumer", "calculation", "input", "committee_master", "identity_scope", "economic_flow_eligible", "checks"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.committee-flow-evidence-bundle.v1"},
+    "bundle_id": {"$ref": "#/$defs/digest"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{3}[02468]$"},
+    "state": {"const": "ready"},
+    "consumer": {"const": "committee_flow_evidence"},
+    "calculation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calculation_set_id", "manifest_sha256"],
+      "properties": {
+        "calculation_set_id": {"$ref": "#/$defs/digest"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "input": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json#/properties/input"},
+    "committee_master": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/result.schema.json#/$defs/input"},
+    "identity_scope": {"const": "same_cycle_master_only"},
+    "economic_flow_eligible": {"const": false},
+    "checks": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "prefixItems": [
+        {"const": "immutable_calculation"},
+        {"const": "candidate_evidence_replay"},
+        {"const": "separate_ledger_conservation"},
+        {"const": "exact_source_ancestry"},
+        {"const": "same_cycle_master_source_bytes"},
+        {"const": "master_fact_integrity"},
+        {"const": "observation_only_consumer"}
+      ],
+      "items": false
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

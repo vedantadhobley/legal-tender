@@ -1,0 +1,39 @@
+{
+  "schema_version": "legal-tender.fec.schedule-a-parquet.v1",
+  "format": "parquet",
+  "layout": "flat",
+  "compression": "zstd",
+  "column_count": 99,
+  "source_columns": {
+    "contract": "../../../../../sources/fec/schedule-a/v1/record.schema.json",
+    "count": 81,
+    "names": "publisher names from the source contract",
+    "representation": "all non-Boolean values retain decoded source lexemes as Parquet UTF8; is_individual is nullable BOOLEAN",
+    "ordering": "physical leaf order is canonical Parquet schema order and must be resolved by name"
+  },
+  "added_columns": [
+    {"name": "lt_source_row_ordinal", "type": "INT64", "nullable": false, "meaning": "one-based row ordinal in the selected immutable COPY relation"},
+    {"name": "lt_source_raw_byte_offset", "type": "INT64", "nullable": false, "meaning": "zero-based uncompressed byte offset of the source row"},
+    {"name": "lt_source_raw_byte_length", "type": "INT64", "nullable": false, "meaning": "source row byte length including the terminating line feed"},
+    {"name": "lt_normalization_state", "type": "UTF8", "nullable": false, "meaning": "valid or invalid typed projection state"},
+    {"name": "lt_normalization_issue_codes_json", "type": "UTF8", "nullable": true, "meaning": "JSON array of stable issue codes; null for a valid projection"},
+    {"name": "lt_receipt_amount_minor_units", "type": "INT64", "nullable": true, "meaning": "losslessly parsed signed USD cents"},
+    {"name": "lt_receipt_amount_source_scale", "type": "INT32", "nullable": true, "meaning": "fractional digit count in the source receipt amount lexeme"},
+    {"name": "lt_receipt_amount_state", "type": "UTF8", "nullable": false, "meaning": "reported_value, source_null, or invalid"},
+    {"name": "lt_aggregate_ytd_minor_units", "type": "INT64", "nullable": true, "meaning": "losslessly parsed signed contributor aggregate USD cents"},
+    {"name": "lt_aggregate_ytd_source_scale", "type": "INT32", "nullable": true, "meaning": "fractional digit count in the source aggregate lexeme"},
+    {"name": "lt_aggregate_ytd_state", "type": "UTF8", "nullable": false, "meaning": "reported_value, source_null, or invalid"},
+    {"name": "lt_receipt_date", "type": "DATE", "nullable": true, "meaning": "calendar date derived from the source local receipt timestamp"},
+    {"name": "lt_receipt_at_local", "type": "TIMESTAMP_NANOS_NTZ", "nullable": true, "meaning": "source receipt timestamp without invented timezone"},
+    {"name": "lt_publisher_loaded_at_local", "type": "TIMESTAMP_NANOS_NTZ", "nullable": true, "meaning": "publisher load timestamp without invented timezone"},
+    {"name": "lt_fec_election_year", "type": "INT64", "nullable": true, "meaning": "parsed FEC election year"},
+    {"name": "lt_report_year", "type": "INT64", "nullable": true, "meaning": "parsed report year"},
+    {"name": "lt_two_year_transaction_period", "type": "INT64", "nullable": false, "meaning": "parsed FEC two-year transaction period"},
+    {"name": "lt_memoed_subtotal", "type": "BOOLEAN", "nullable": false, "meaning": "true exactly when memo_cd equals X; no counting decision"}
+  ],
+  "identity": {
+    "fact_type": "fec.schedule_a_receipt.v1",
+    "source_locator": ["source_artifact_sha256", "relation", "cycle", "lt_source_row_ordinal", "lt_source_raw_byte_offset", "lt_source_raw_byte_length"],
+    "per_row_hashes": "derived on demand; not stored as high-cardinality physical columns"
+  }
+}

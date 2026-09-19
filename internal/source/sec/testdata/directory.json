@@ -1,0 +1,6 @@
+{
+  "0": {"cik_str": 100, "ticker": "EXA", "title": "EXAMPLE CORP"},
+  "1": {"cik_str": 100, "ticker": "EXB", "title": "EXAMPLE CORP"},
+  "2": {"cik_str": 200, "ticker": "EXBK", "title": "EXAMPLE BANK"},
+  "10": {"cik_str": 300, "ticker": "RIV", "title": "RIVAL INC"}
+}

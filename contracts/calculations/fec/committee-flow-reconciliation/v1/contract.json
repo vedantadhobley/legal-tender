@@ -1,0 +1,177 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/committee-flow-reconciliation",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "question": "Which conservatively selected sender and receiver observations corroborate or conflict within one cycle and coordinated source snapshot?",
+  "inputs": [
+    {
+      "contract": "fec.schedule_a_receipt.v1",
+      "role": "Complete accepted dense Schedule A columnar facts",
+      "required": true,
+      "version_policy": "Pin immutable manifest and every backing shard digest."
+    },
+    {
+      "contract": "fec.schedule_b_disbursement.v1",
+      "role": "Complete accepted Schedule B columnar facts",
+      "required": true,
+      "version_policy": "Pin immutable manifest and every backing shard digest."
+    },
+    {
+      "contract": "legal-tender.fec.release.v1",
+      "role": "Coordinated source selection",
+      "required": true,
+      "version_policy": "Verify original ancestry and selected bytes in one immutable coordinated release. Different fact release IDs require identical selected source bytes."
+    }
+  ],
+  "identity": {
+    "result_key": "Cycle, exact inputs, reporting policy, receiver policy, sender rules, and candidate-component policy",
+    "input_manifest": "Exact A/B fact manifests and immutable coordinated release digest",
+    "method_version": "legal-tender.fec.committee-flow-candidate-components.v1",
+    "result_digest": "Deterministic calculation_set_id plus content-addressed evidence descriptors; no runtime or worker count"
+  },
+  "method": {
+    "ordered_steps": [
+      "Rehash both fact sets, validate complete physical schemas and source ordinals, and verify each source against the coordinated release.",
+      "Apply the unchanged receiver-flow policy. Map contribution, in-kind, affiliated transfer, and refund/repayment roles without changing receipt membership.",
+      "Apply the reporting predicate first. Hold self recipients, invalid or disagreeing endpoints, earmark codes, unreviewed reporting roles, named conduit evidence, missing types, and unsupported role/type pairs outside sender membership.",
+      "Select sender observations only through the exact reporting-role/type rules in the result. A reported committee endpoint is not proof of cash payee or beneficial ownership.",
+      "Connect opposite selected ledgers on directed endpoints plus role and signed amount, role and known date, or exact signed amount and known date regardless of role. Keep all alternatives in connected components; never greedily consume an exact match.",
+      "Classify each component as exact-signature corroboration, date-disagreement candidate, missing-date candidate, amount conflict, role conflict, ambiguous candidates, or unmatched selected evidence.",
+      "Persist source-indexed selected observations and component assertions with separate signed amounts for both ledgers. Verify every selected fact belongs to exactly one component and fully read back every artifact."
+    ],
+    "decision_states": [
+      {
+        "id": "corroborated_exact_signature",
+        "publishable": true,
+        "meaning": "One observation on each side agrees on endpoints, role, signed amount, and known date with no other selected candidates."
+      },
+      {
+        "id": "candidate_date_disagreement",
+        "publishable": true,
+        "meaning": "Unique same-role/signed-amount candidate with different reported dates."
+      },
+      {
+        "id": "candidate_missing_date",
+        "publishable": true,
+        "meaning": "Unique same-role/signed-amount candidate with at least one missing date."
+      },
+      {
+        "id": "conflicting_amount",
+        "publishable": true,
+        "meaning": "Unique same-role/date candidate with different signed amounts."
+      },
+      {
+        "id": "conflicting_role",
+        "publishable": true,
+        "meaning": "Unique same-date/signed-amount candidate with different roles."
+      },
+      {
+        "id": "ambiguous_candidates",
+        "publishable": true,
+        "meaning": "Several selected facts participate in a connected candidate component."
+      },
+      {
+        "id": "unmatched_schedule_a",
+        "publishable": true,
+        "meaning": "No selected Schedule B candidate under this policy and cycle; not proof of no sender report."
+      },
+      {
+        "id": "unmatched_schedule_b",
+        "publishable": true,
+        "meaning": "No selected Schedule A candidate under this policy and cycle; not proof of no receiver report."
+      }
+    ],
+    "invariants": [
+      "Preserve raw and normalized source grain; no amendment selection, transaction-label deduplication, or sign normalization.",
+      "Conserve all source rows and known signed cents in disjoint selection-decision buckets.",
+      "Every selected source ordinal occurs exactly once in assertions; source fact-set identity scopes all ordinals.",
+      "Do not add the two reported amounts, infer original funding, create money-flow edges, or treat in-kind as cash.",
+      "An exact signature corroborates source reports, not unique economic identity or beneficial ownership.",
+      "Selection and candidate coverage are deliberately incomplete; no arbitrary date tolerance or match confidence score."
+    ]
+  },
+  "output": {
+    "result_schema": "result.schema.json",
+    "grain": "One cycle result binding exact inputs to selected source observations and disjoint candidate components",
+    "fact_types": [],
+    "publication_states": [
+      {
+        "id": "complete_candidate_reconciliation",
+        "publishable": true,
+        "meaning": "Complete source conservation and verified candidate evidence, not complete economic-flow coverage or graph readiness."
+      }
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "Recompute affected cycle for a changed input identity.",
+    "method_change_policy": "Version any membership, role mapping, matching, or arithmetic change.",
+    "history_policy": "Retain content-addressed artifacts and earlier graphs. The manual command has no active pointer or Dagster publisher."
+  },
+  "quality": {
+    "checks": [
+      {
+        "id": "source_integrity",
+        "severity": "block",
+        "rule": "Verify exact coordinated ancestry, schemas, ordinals, cycles, and backing digests."
+      },
+      {
+        "id": "conservation",
+        "severity": "block",
+        "rule": "Conserve all source facts in decision buckets and all selected facts exactly once in candidate components, with independent signed amounts."
+      },
+      {
+        "id": "readback",
+        "severity": "block",
+        "rule": "Reopen artifacts and compare every record, row count, and digest before returning a result."
+      },
+      {
+        "id": "graph_boundary",
+        "severity": "block",
+        "rule": "graph_eligible remains false; no corroboration or match state authorizes a graph mutation."
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/components.json",
+      "representation": "synthetic_json",
+      "sha256": "cf219fff91066f7d59b5a552a5b33ef0d8ee615bf43a1a36825cd7c4abc4166a",
+      "input_paths": [
+        "observation.schema.json"
+      ],
+      "scenarios": [
+        "Unique exact signature",
+        "Competing dates prevent greedy pairing",
+        "In-kind role conflict",
+        "Signed amount conflict"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": [
+      "Schedule A fact set",
+      "Schedule B fact set",
+      "coordinated source release"
+    ],
+    "semantic_change_dimensions": [
+      "reported directed endpoints",
+      "reporting role",
+      "transaction type",
+      "memo",
+      "conduit presence",
+      "signed amount",
+      "reported date"
+    ],
+    "downstream_keys": [
+      "cycle",
+      "directed committee pair",
+      "candidate component"
+    ],
+    "no_change_policy": "Same inputs and policies yield byte-identical outputs across worker counts. Existing content-addressed artifacts are verified before reuse; persistent no-scan calculation reuse is deferred."
+  },
+  "use": {
+    "retention": "Keep immutable source facts, derived evidence, and prior results; no dense second copy of all facts.",
+    "disclaimer": "Selected reporting observations and candidate relationships only. Not complete transfers, original-source attribution, personal politician income, or evidence of illegality."
+  }
+}

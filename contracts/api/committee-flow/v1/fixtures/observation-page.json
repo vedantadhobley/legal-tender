@@ -1,0 +1,82 @@
+{
+  "projection": {
+    "schema_version": "legal-tender.committee-flow-api.v1",
+    "projection_id": "5555555555555555555555555555555555555555555555555555555555555555",
+    "cycle": "2026",
+    "state": "partial",
+    "bundle_id": "6666666666666666666666666666666666666666666666666666666666666666",
+    "bundle_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+    "calculation_set_id": "8888888888888888888888888888888888888888888888888888888888888888",
+    "inputs": {
+      "release_id": "fec-3333333333333333333333333333333333333333333333333333333333333333",
+      "release_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+      "schedule_a": {
+        "fact_set_id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "source_release_id": "fec-3333333333333333333333333333333333333333333333333333333333333333",
+        "source_artifact_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "facts": 1
+      },
+      "schedule_b": {
+        "fact_set_id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "source_release_id": "fec-3333333333333333333333333333333333333333333333333333333333333333",
+        "source_artifact_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "facts": 0
+      }
+    },
+    "entities": 2,
+    "unresolved_same_cycle_masters": 1,
+    "schedule_a": {
+      "rows": 1,
+      "known_amount_rows": 1,
+      "signed_amount_minor_units": "9007199254740993"
+    },
+    "schedule_b": {
+      "rows": 0,
+      "known_amount_rows": 0,
+      "signed_amount_minor_units": "0"
+    },
+    "economic_flow_status": "not_established",
+    "terminal_attribution_eligible": false
+  },
+  "data": {
+    "query": {
+      "kind": "observations",
+      "ledger": "schedule_a",
+      "committee": "C00000001",
+      "direction": "outbound",
+      "limit": 1
+    },
+    "items": [
+      {
+        "_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "_from": "entities/C00000001",
+        "_to": "entities/C00000002",
+        "schema_version": "legal-tender.arango.committee-flow-evidence.v1",
+        "cycle": "2026",
+        "ledger": "schedule_a",
+        "fact_set_id": "1111111111111111111111111111111111111111111111111111111111111111",
+        "calculation_set_id": "8888888888888888888888888888888888888888888888888888888888888888",
+        "selection_policy": "synthetic-fixture-policy",
+        "reporting_policy": "synthetic-fixture-policy",
+        "matching_policy": "synthetic-fixture-policy",
+        "component_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "economic_flow_status": "not_established",
+        "terminal_attribution_eligible": false,
+        "source_row_ordinal": 1,
+        "sub_id": "synthetic",
+        "sender_committee_id": "C00000001",
+        "reported_recipient_committee_id": "C00000002",
+        "flow_role": "reported_transfer",
+        "transaction_type": "synthetic",
+        "reporting_role": "synthetic",
+        "date_days": null,
+        "signed_amount_minor_units": "9007199254740993"
+      }
+    ],
+    "has_more": false,
+    "next_cursor": null,
+    "coverage_scope": "selected_observations_in_pinned_projection"
+  }
+}

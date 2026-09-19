@@ -1,0 +1,105 @@
+{
+  "policy": "reported-name-employer-searches.v1",
+  "build_sha256": "7983202eb4ec990f4c8f75ca6dde000420af8994660576aae0ef6adbefec44d1",
+  "selection": "verified as-filed appearances selected by diagnostic corpus 7dfba2320ea5acaf7cf3846cde13a4f1825cd9990b7c1629570475784012d3a4",
+  "appearances": [
+    {
+      "source_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "source_locator": "record:263;bytes[44531,44708);sha256:268b94cf743a821643fce1bc189e4891e1c5ecf5f5ae40a020fc800b020bea8c",
+      "reported_name": "MICHAEL O'BRIEN",
+      "reported_employer": "VALLEY TECH SERVICES INC"
+    },
+    {
+      "source_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "source_locator": "record:2772;bytes[596734,597008);sha256:41ab77885c47d179425f6eb31e23a1923a3a7b24013f6228938dc763ee693a28",
+      "reported_name": "DAVID DUFFIELD",
+      "reported_employer": "RIDGELINE INC"
+    },
+    {
+      "source_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "source_locator": "record:58;bytes[10084,10241);sha256:c73ea9e57322183dd92175c5acd722285e18866c5a486ee1d2b11923ac3a3aa3",
+      "reported_name": "JOHN CHAMBERS",
+      "reported_employer": "JC2VENTURES"
+    },
+    {
+      "source_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "source_locator": "record:59;bytes[10241,10418);sha256:3ded53bdd58884ebb3f7455c2af37de2602f2c5ed0b9c013a584929684080a5c",
+      "reported_name": "JOHN CHAMBERS",
+      "reported_employer": "JC2VENTURES"
+    }
+  ],
+  "input_states": [
+    "name_and_employer",
+    "name_and_employer",
+    "name_and_employer",
+    "name_and_employer"
+  ],
+  "searches": [
+    {
+      "kind": "person_name",
+      "search_text": "\"DAVID\" \"DUFFIELD\"",
+      "appearance_indexes": [
+        1
+      ]
+    },
+    {
+      "kind": "person_name",
+      "search_text": "\"JOHN\" \"CHAMBERS\"",
+      "appearance_indexes": [
+        2,
+        3
+      ]
+    },
+    {
+      "kind": "person_name",
+      "search_text": "\"MICHAEL\" \"O\" \"BRIEN\"",
+      "appearance_indexes": [
+        0
+      ]
+    },
+    {
+      "kind": "person_name_employer",
+      "search_text": "\"DAVID\" \"DUFFIELD\" \"RIDGELINE\" \"INC\"",
+      "appearance_indexes": [
+        1
+      ]
+    },
+    {
+      "kind": "person_name_employer",
+      "search_text": "\"JOHN\" \"CHAMBERS\" \"JC2VENTURES\"",
+      "appearance_indexes": [
+        2,
+        3
+      ]
+    },
+    {
+      "kind": "person_name_employer",
+      "search_text": "\"MICHAEL\" \"O\" \"BRIEN\" \"VALLEY\" \"TECH\" \"SERVICES\" \"INC\"",
+      "appearance_indexes": [
+        0
+      ]
+    },
+    {
+      "kind": "reported_employer",
+      "search_text": "\"JC2VENTURES\"",
+      "appearance_indexes": [
+        2,
+        3
+      ]
+    },
+    {
+      "kind": "reported_employer",
+      "search_text": "\"RIDGELINE\" \"INC\"",
+      "appearance_indexes": [
+        1
+      ]
+    },
+    {
+      "kind": "reported_employer",
+      "search_text": "\"VALLEY\" \"TECH\" \"SERVICES\" \"INC\"",
+      "appearance_indexes": [
+        0
+      ]
+    }
+  ]
+}

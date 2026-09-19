@@ -1,0 +1,79 @@
+{
+  "version": "legal-tender.fec.receipt-family-map.v1",
+  "status": "reviewed-source-map-not-runtime-financial-policy",
+  "scope": "F3 and F3X period-column receipt families; no new counting, cash, amendment, correction or terminal policy",
+  "sources": {
+    "format84": {"url": "https://cg-519a459a-0ea3-42c2-b7bc-fa1143481f74.s3-us-gov-west-1.amazonaws.com/bulk-downloads/electronic/eFilingFormats.zip", "member": "eFilingFormats/FEC_v8x/FEC_Format_v8.4.xlsx", "sha256": "9d3775d73e9398144b0e0267415ba53e1b5c6a326110b327ce2cd58d233bf3d6"},
+    "f3": {"url": "https://www.fec.gov/pdf/forms/fecfrm3i.pdf", "sha256": "3dc5ec33fa35a403a890b082cbe9fe4134e6984c81069169f25a7cba2791ce84", "printed_pages": [4, 5, 6, 7, 11]},
+    "f3x": {"url": "https://www.fec.gov/pdf/forms/fecfrm3xi.pdf", "sha256": "d7897e5aee7fd5fb65b4ee75b438d025a53b0f77160d55ed77f83c415526a8f0", "printed_pages": [6, 7]},
+    "summary": {"url": "https://www.fec.gov/campaign-finance-data/committee-summary-file-description/", "contract": "contracts/sources/fec/committee-summary/v1/contract.json"}
+  },
+  "rules": {
+    "identity": "Exact filing form and literal line code. No case folding, suffix stripping or cross-form fallback.",
+    "profile": "Re-use pinned v2 groups as physical occurrence evidence. Existing individual_decision and disposition remain unchanged; neither defines a new family total.",
+    "memo": "Keep raw blank, null, X and other codes. A future nonmemo subtotal excludes X; unknown codes or unknown amounts remain unresolved. In-kind cannot be detected by absence of X.",
+    "itemization": "Required itemization is a source reporting rule, not proof of complete, unique or effective processed membership. A thresholded detail subtotal is not the corresponding entire cover total.",
+    "missing": "An absent line is not zero. Preserve explicit cover values and missing detail separately; do not name any cover-minus-detail residual unitemized money.",
+    "money": "Keep exact signed cents, unknown amounts and duplicate physical occurrences. Never clamp negative values, add nested totals, or merge sender and receiver ledgers.",
+    "time": "Map period columns only. Candidate election-cycle-to-date and PAC/party calendar-year-to-date are not period or two-calendar-year replacements.",
+    "loans": "Schedule A records loan receipts; Schedule C/C1 adds terms, balances and guarantors, not another receipt amount. Candidate-guaranteed does not mean candidate-funded.",
+    "transfers": "The category can include affiliated/authorized loans and repayments. It is not proof of a new donation, economic payment identity, or ultimate source.",
+    "nonfederal": "H3 and H5 cover transfers into federal/allocation accounts. Keep nonfederal/Levin origin and account scope distinct; do not add their underlying receipts again.",
+    "cash": "Receipt category, reported amount and spendable cash are separate. Contributions can include in-kind; refunds, repayments and offsets can return earlier money.",
+    "summary": "Summary fields below are candidate counterparts by source definition. They do not establish compatible report/account/window membership or authorize numeric reconciliation."
+  },
+  "forms": {
+    "F3": {
+      "cover_width": 93,
+      "leaves": [
+        {"id": "individual_itemized", "line": "11AI", "sequence": 33, "label": "11(a i.) Individuals Itemized", "detail_schedule": "SA", "detail_relation": "itemized_component", "summary_field": "INDV_ITEM_CONTB", "role": "contribution_cash_or_inkind"},
+        {"id": "individual_unitemized", "line": "11AII", "sequence": 34, "label": "11(a.ii) Individuals Unitemized", "detail_schedule": null, "detail_relation": "explicit_cover_only", "summary_field": "INDV_UNITEM_CONTB", "role": "unknown_donor_composition"},
+        {"id": "party_contributions", "line": "11B", "sequence": 36, "label": "11(b) Political Party Committees", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "PTY_CMTE_CONTB", "role": "contribution_cash_or_inkind"},
+        {"id": "other_committee_contributions", "line": "11C", "sequence": 37, "label": "11(c) Other Political Committees", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "OTH_CMTE_CONTB", "role": "contribution_cash_or_inkind"},
+        {"id": "candidate_contributions", "line": "11D", "sequence": 38, "label": "11(d) The Candidate", "detail_schedule": "SA", "detail_relation": "thresholded_component_of_total", "summary_field": "CAND_CNTB", "role": "candidate_contribution_not_loan"},
+        {"id": "authorized_transfers", "line": "12", "sequence": 40, "label": "12. Transfers  From Other Authorized Cmttes", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "TRANF_FROM_OTHER_AUTH_CMTE", "role": "transfer_can_include_loans_and_repayments"},
+        {"id": "candidate_made_or_guaranteed_loans", "line": "13A", "sequence": 41, "label": "13(a) Loans made or guarn. by the Candidate", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "CAND_LOAN", "role": "borrowed_funds_origin_unqualified"},
+        {"id": "other_loans", "line": "13B", "sequence": 42, "label": "13(b) All Other Loans", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "OTH_LOANS", "role": "borrowed_funds_origin_unqualified"},
+        {"id": "operating_offsets", "line": "14", "sequence": 44, "label": "14. Offsets to Operating Expenditures", "detail_schedule": "SA", "detail_relation": "thresholded_component_of_total", "summary_field": "OFFSETS_TO_OP_EXP", "role": "recovery_or_adjustment_not_new_donation"},
+        {"id": "other_receipts", "line": "15", "sequence": 45, "label": "15. Other Receipts", "detail_schedule": "SA", "detail_relation": "thresholded_component_of_total", "summary_field": "OTHER_RECEIPTS", "role": "mixed_receipt_origin_unqualified"}
+      ],
+      "aggregates": [
+        {"id": "total_individual", "line": "11AIII", "sequence": 35, "label": "11(a.iii) Individual Contribution Total", "summary_field": "INDV_CONTB", "terms": {"individual_itemized": 1, "individual_unitemized": 1}},
+        {"id": "total_contributions", "line": "11E", "sequence": 39, "label": "11(e) Total Contributions", "summary_field": "TTL_CONTB", "terms": {"total_individual": 1, "party_contributions": 1, "other_committee_contributions": 1, "candidate_contributions": 1}},
+        {"id": "total_loans", "line": "13C", "sequence": 43, "label": "13(c) Total Loans", "summary_field": "TTL_LOANS", "terms": {"candidate_made_or_guaranteed_loans": 1, "other_loans": 1}},
+        {"id": "total_receipts", "line": "16", "sequence": 46, "label": "16. Total Receipts", "summary_field": "TTL_RECEIPTS", "terms": {"total_contributions": 1, "authorized_transfers": 1, "total_loans": 1, "operating_offsets": 1, "other_receipts": 1}}
+      ]
+    },
+    "F3X": {
+      "cover_width": 123,
+      "leaves": [
+        {"id": "individual_itemized", "line": "11AI", "sequence": 30, "label": "11(a)i  Itemized", "detail_schedule": "SA", "detail_relation": "itemized_component", "summary_field": "INDV_ITEM_CONTB", "role": "contribution_cash_or_inkind"},
+        {"id": "individual_unitemized", "line": "11AII", "sequence": 31, "label": "11(a)ii  Unitemized", "detail_schedule": null, "detail_relation": "explicit_cover_only", "summary_field": "INDV_UNITEM_CONTB", "role": "unknown_donor_composition"},
+        {"id": "party_contributions", "line": "11B", "sequence": 33, "label": "11(b) Political Party Committees", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "PTY_CMTE_CONTB", "role": "contribution_cash_or_inkind_party_filers_use_transfers"},
+        {"id": "other_committee_contributions", "line": "11C", "sequence": 34, "label": "11(c) Other Political Committees (PACs)", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "OTH_CMTE_CONTB", "role": "contribution_cash_or_inkind"},
+        {"id": "affiliated_or_party_transfers", "line": "12", "sequence": 36, "label": "12. Transfers from Affiliated/Other Party Cmtes", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "TRANF_FROM_OTHER_AUTH_CMTE", "role": "transfer_can_include_loans_and_repayments"},
+        {"id": "loans_received", "line": "13", "sequence": 37, "label": "13. All Loans Received", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "OTH_LOANS", "role": "borrowed_funds_origin_unqualified"},
+        {"id": "loan_repayments_received", "line": "14", "sequence": 38, "label": "14. Loan Repayments Received", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "LOAN_REPYMTS_RECEIVED", "role": "return_of_prior_lending_not_new_donation"},
+        {"id": "operating_offsets", "line": "15", "sequence": 39, "label": "15. Offsets to Operating Expenditures (refunds)", "detail_schedule": "SA", "detail_relation": "thresholded_component_of_total", "summary_field": "OFFSETS_TO_OP_EXP", "role": "recovery_or_adjustment_not_new_donation"},
+        {"id": "contribution_refunds_received", "line": "16", "sequence": 40, "label": "16. Refunds of Federal Contributions", "detail_schedule": "SA", "detail_relation": "all_required_itemized", "summary_field": "FED_CAND_CONTB_REF", "role": "return_of_prior_contribution_not_uncashed_check"},
+        {"id": "other_federal_receipts", "line": "17", "sequence": 41, "label": "17. Other Federal Receipts (dividends)", "detail_schedule": "SA", "detail_relation": "thresholded_component_of_total", "summary_field": "OTHER_RECEIPTS", "role": "mixed_receipt_origin_unqualified"},
+        {"id": "nonfederal_transfers", "line": "18A", "sequence": 42, "label": "18(a) Transfers from Nonfederal Account (H3)", "detail_schedule": "H3", "detail_relation": "other_schedule_and_account_scope", "summary_field": "TRANF_FROM_NONFED_ACCT", "role": "nonfederal_account_transfer"},
+        {"id": "levin_transfers", "line": "18B", "sequence": 43, "label": "18(b) Transfers from Non-Federal (Levin - H5)", "detail_schedule": "H5", "detail_relation": "other_schedule_and_account_scope", "summary_field": "TRANF_FROM_NONFED_LEVIN", "role": "levin_account_transfer"}
+      ],
+      "aggregates": [
+        {"id": "total_individual", "line": "11AIII", "sequence": 32, "label": "11(a)iii Total", "summary_field": "INDV_CONTB", "terms": {"individual_itemized": 1, "individual_unitemized": 1}},
+        {"id": "total_contributions", "line": "11D", "sequence": 35, "label": "11(d) Total Contributions", "summary_field": "TTL_CONTB", "terms": {"total_individual": 1, "party_contributions": 1, "other_committee_contributions": 1}},
+        {"id": "total_nonfederal_transfers", "line": "18C", "sequence": 44, "label": "18(c) Total Non-Federal Transfers (18a+18b)", "summary_field": "TTL_NONFED_TRANF", "terms": {"nonfederal_transfers": 1, "levin_transfers": 1}},
+        {"id": "total_receipts", "line": "19", "sequence": 45, "label": "19. Total Receipts", "summary_field": "TTL_RECEIPTS", "terms": {"total_contributions": 1, "affiliated_or_party_transfers": 1, "loans_received": 1, "loan_repayments_received": 1, "operating_offsets": 1, "contribution_refunds_received": 1, "other_federal_receipts": 1, "total_nonfederal_transfers": 1}},
+        {"id": "total_federal_receipts", "line": "20", "sequence": 46, "label": "20. Total Federal Receipts", "summary_field": "TTL_FED_RECEIPTS", "terms": {"total_receipts": 1, "total_nonfederal_transfers": -1}}
+      ]
+    }
+  },
+  "outside_scope": {
+    "forms": ["F3P", "F4", "F9"],
+    "f3x_report_lines": ["19A", "SL1A", "SL2"],
+    "treatment": "Retain every unsupported or unrecognized exact key. An observed aggregate-line reference is not another leaf receipt. Do not strip A from 19A or assign Levin-account receipts to H5 transfers.",
+    "next_form": "F3P needs its own source/cover/report-period map and original-file gate, including the processed 17A label; this contract does not exclude it from source storage."
+  },
+  "guards": {"runtime_counting_policy_changed": false, "complete_funding_basis": false, "cash_basis_ready": false, "terminal_attribution_eligible": false}
+}

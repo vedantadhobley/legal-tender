@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/receiver-flow-committee-identity-coverage/v1/decision.schema.json",
+  "title": "Receiver-flow committee identity-coverage decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "decision_id", "calculation_set_id", "cycle", "committee_id", "state", "endpoint_roles", "terminal_identity_eligible", "evidence_codes", "same_cycle_comparison_assertions", "historical_assertions"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.receiver-flow-committee-identity-coverage.v1"},
+    "decision_id": {"$ref": "#/$defs/digest"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "committee_id": {"$ref": "#/$defs/committee_id"},
+    "state": {"enum": ["historical_registration", "alternate_release_registration", "unresolved_reported_id"]},
+    "endpoint_roles": {"type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": {"enum": ["recipient", "source"]}},
+    "terminal_identity_eligible": {"const": false},
+    "evidence_codes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "same_cycle_comparison_assertions": {"type": "array", "items": {"$ref": "#/$defs/assertion"}},
+    "historical_assertions": {"type": "array", "items": {"$ref": "#/$defs/assertion"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "committee_id": {"type": "string", "pattern": "^C[0-9]{8}$"},
+    "nullable_candidate_id": {"type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9]{8}$"},
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cycle", "source_kind", "issue_codes", "name", "party_affiliation", "designation_code", "committee_type_code", "organization_type_code", "connected_organization"],
+      "properties": {
+        "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+        "source_kind": {"enum": ["normalized_fact", "official_bulk_archive"]},
+        "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+        "fact_set_id": {"$ref": "#/$defs/digest"},
+        "fact_id": {"$ref": "#/$defs/digest"},
+        "archive_sha256": {"$ref": "#/$defs/digest"},
+        "source_row": {"type": "integer", "minimum": 1},
+        "source_row_sha256": {"$ref": "#/$defs/digest"},
+        "issue_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "name": {"type": "string"},
+        "party_affiliation": {"type": "string"},
+        "designation_code": {"type": "string"},
+        "committee_type_code": {"type": "string"},
+        "organization_type_code": {"type": "string"},
+        "connected_organization": {"type": "string"},
+        "candidate_id": {"$ref": "#/$defs/nullable_candidate_id"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "historical_registration"}}, "required": ["state"]},
+      "then": {"properties": {"historical_assertions": {"minItems": 1}}}
+    },
+    {
+      "if": {"properties": {"state": {"const": "alternate_release_registration"}}, "required": ["state"]},
+      "then": {"properties": {"same_cycle_comparison_assertions": {"minItems": 1}, "historical_assertions": {"maxItems": 0}}}
+    },
+    {
+      "if": {"properties": {"state": {"const": "unresolved_reported_id"}}, "required": ["state"]},
+      "then": {"properties": {"same_cycle_comparison_assertions": {"maxItems": 0}, "historical_assertions": {"maxItems": 0}}}
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../../calculation-fixture-manifest.schema.json",
+  "calculation_contract": "../contract.json",
+  "transformation": "Project the selected amendment as a complete Schedule A replacement, compare exact report-life transaction IDs, and separate source-lineage from logical-content changes.",
+  "fixtures": [
+    {
+      "path": "first-amendment-change-set.json",
+      "sha256": "ac9a4d0e97ed3a4498ccb0fad45cd31e628283f4ae5120dffb5c61ff12c97df2",
+      "input_paths": [
+        "../../../efile-report-family/v1/fixtures/selected-first-amendment.json",
+        "../../../../../sources/fec/efile-documents/v1/fixtures/1997074.fec",
+        "../../../../../sources/fec/efile-documents/v1/fixtures/2009982.fec",
+        "../../../../../sources/fec/efile-format/v1/schedule-a-fields.json"
+      ],
+      "scenarios": [
+        "complete amendment replaces original",
+        "23 prior and 25 current Schedule A rows",
+        "2 added, 5 modified, 0 removed, and 18 carried-forward rows",
+        "identical memo row keeps distinct source occurrences",
+        "changed accumulator, occupation capitalization, and source-empty district fields",
+        "semantic change set targets one committee and 2026 period"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "version": "legal-tender.fec.receipt-reported-window.v1",
+  "profile_version": "legal-tender.fec.receipt-report-occurrence-profile.v2",
+  "line_policy": "fec/reported-itemized-line-membership@1.0.0",
+  "reported_field": "individual_itemized_contributions_period",
+  "summary_field": "INDV_ITEM_CONTB",
+  "profile_max_bytes": 402653184,
+  "lineage": "exact_verified_summary_input_and_release_owned_schedule_a_relation",
+  "population": "all_reviewed_nonmemo_line_occurrences_for_each_bound_observed_chain_candidate",
+  "amounts": "exact_signed_minor_units_without_date_clipping_or_individual_flag_filtering",
+  "empty_value": "no_profile_report_groups_plus_complete_original_without_schedule_a_plus_explicit_bound_zero",
+  "delta": "reported_minus_detail",
+  "guards": {
+    "source_body_rescanned": false,
+    "unique_transaction_membership_proven": false,
+    "financial_use_eligible": false,
+    "terminal_attribution_eligible": false
+  },
+  "not_established": [
+    "transaction_uniqueness_or_original_member_identity_from_group_extrema",
+    "effective_financial_report_and_account_membership",
+    "summary_constituent_report_membership",
+    "full_cycle_activity_or_cash_continuity",
+    "other_receipt_lines_or_forms",
+    "unitemized_donor_composition",
+    "recurring_publication_or_orchestration"
+  ]
+}

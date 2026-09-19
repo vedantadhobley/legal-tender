@@ -1,0 +1,166 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "fec/efile-listings",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {
+    "id": "fec",
+    "name": "Federal Election Commission",
+    "base_url": "https://www.fec.gov/"
+  },
+  "dataset": {
+    "id": "efile-listings",
+    "name": "Electronic filing listings",
+    "semantic_domain": "federal_campaign_finance",
+    "description": "OpenFEC listing assertions for electronic files posted as received, retained at API-page and file-number grain."
+  },
+  "authority": [
+    {
+      "kind": "openapi",
+      "url": "https://api.open.fec.gov/swagger/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "b933e5ba144a9b3b63b19b902e7ad4d4032507022826d93ddde6dca5918b9485"
+    },
+    {
+      "kind": "api",
+      "url": "https://api.open.fec.gov/v1/efile/filings/",
+      "retrieved_on": "2026-08-27"
+    },
+    {
+      "kind": "documentation",
+      "url": "https://api.open.fec.gov/developers/",
+      "retrieved_on": "2026-08-27"
+    }
+  ],
+  "acquisition": {
+    "authentication": {
+      "class": "api_token",
+      "environment_variable": "ELECTION_API_KEY",
+      "header": "X-Api-Key",
+      "scheme": null
+    },
+    "endpoints": [
+      {
+        "name": "electronic filing listing",
+        "method": "GET",
+        "url": "https://api.open.fec.gov/v1/efile/filings/{?min_receipt_date,max_receipt_date,page,per_page,file_number,committee_id,form_type,sort}",
+        "response_root": "results"
+      }
+    ],
+    "pagination": "Offset pages starting at 1 with per_page=100. Preserve every page envelope. A closed overlapped receipt-date query is complete only after every advertised page is present, result count equals the exact advertised count, and two complete passes converge on the same file-number set and per-file listing content.",
+    "rate_limit_per_minute": null,
+    "partitions": [
+      {
+        "name": "efile_received_date",
+        "source": "Calendar date parsed from receipt_date after acquisition through an overlapped publisher date query.",
+        "purpose": "Daily raw-filing discovery. Null or unparsable receipt dates enter an explicit unassigned partition and never disappear."
+      },
+      {
+        "name": "listing_observation",
+        "source": "Legal Tender retrieval timestamp plus request parameters, response headers, and response-body SHA-256 for each page.",
+        "purpose": "Preserve mutable amendment and most-recent assertions independently of filing receipt time."
+      }
+    ],
+    "retry_policy": "Retry bounded transient HTTP and rate-limit responses using publisher headers and jitter. Preserve failed page attempts. Never publish an empty or partial interval after an error, an inexact count, a missing page, duplicate conflict, or failed convergence pass."
+  },
+  "physical_schema": {
+    "media_type": "application/json",
+    "source_format": "json_api",
+    "encoding": "UTF-8 JSON",
+    "delimiter": null,
+    "line_ending": null,
+    "quote_policy": "not_applicable",
+    "empty_record_policy": "Every object in results becomes a listing occurrence or an explicit issue. An empty complete interval is retained with its page envelope and convergence evidence.",
+    "header_model": "not_applicable",
+    "container_members": [],
+    "relations": [],
+    "record_schema": "record.schema.json",
+    "envelope_schema": "page.schema.json",
+    "unknown_field_policy": "capture_and_review",
+    "null_policy": "Preserve absent, null, empty-string, false, zero, and empty-array states independently. No source timestamp gains an inferred timezone.",
+    "schema_fingerprint": "OpenFEC EFilings result fields and pagination envelope captured from Swagger SHA-256 b933e5ba144a9b3b63b19b902e7ad4d4032507022826d93ddde6dca5918b9485."
+  },
+  "identity": {
+    "publisher_record_key": "file_number",
+    "occurrence_locator": "listing page response SHA-256 + zero-based results ordinal",
+    "record_version": "file_number + SHA-256 of the complete canonical listing object + listing observation timestamp",
+    "duplicate_policy": "Preserve every page occurrence. Equal file numbers with equal content deduplicate only in a named interval index; conflicting content remains separate versioned listing assertions and blocks interval completion until reviewed.",
+    "children": [
+      {
+        "object": "referenced .fec document",
+        "locator": "file_number + fec_url",
+        "content_digest": true
+      }
+    ]
+  },
+  "semantics": {
+    "time_fields": [
+      {"path": "receipt_date", "meaning": "Publisher electronic-filing receipt timestamp without an explicit timezone; the raw text remains authoritative."},
+      {"path": "filed_date", "meaning": "Publisher filing calendar date, independent of receipt and load timestamps."},
+      {"path": "load_timestamp", "meaning": "Publisher load timestamp without an explicit timezone; not filing or transaction time."},
+      {"path": "coverage_start_date", "meaning": "Report coverage start asserted by the listing."},
+      {"path": "coverage_end_date", "meaning": "Report coverage end asserted by the listing."},
+      {"path": "listing_observation", "meaning": "Legal Tender API observation time and transport evidence."}
+    ],
+    "money_fields": [],
+    "code_fields": [
+      {"path": "form_type", "meaning": "Publisher filing form code, including new, amendment, or termination suffix when supplied."},
+      {"path": "fec_file_id", "meaning": "Publisher display identifier for this file; not the same field as the amendment report ID inside HDR."},
+      {"path": "beginning_image_number + ending_image_number", "meaning": "Publisher document-image range, retained as opaque text."}
+    ],
+    "rules": [
+      "Capture every form type returned for the discovery interval; parser support never narrows source acquisition.",
+      "The API's date filter is only a discovery boundary. Assign daily partitions from the preserved receipt_date and use overlap so endpoint boundary behavior cannot lose a filing.",
+      "A file number identifies one publisher filing. It does not identify a report family, real-world transaction, or effective report.",
+      "amends_file, amended_by, amendment_chain, amendment_number, is_amended, most_recent, and most_recent_filing are separate publisher assertions. Preserve all of them even when they appear incomplete or inconsistent.",
+      "is_amended describes whether this listed filing has been superseded in the observed projection; it must not be interpreted as 'this filing is an amendment'.",
+      "A listing fetched by predecessor file number can expose a shorter amendment_chain than its successor. Never treat one listing object's chain array as proof of family closure.",
+      "Never infer an effective filing from form_type or most_recent alone. A versioned report-family calculation owns that decision.",
+      "The fec_url selects the exact as-filed acquisition lane. csv_url, pdf_url, and html_url are independent publisher representations and cannot replace those bytes without separate contracts.",
+      "Keep receipt, filed, load, report coverage, observation, document publication, and transaction dates independent."
+    ]
+  },
+  "revisions": {
+    "publisher_model": "The listing endpoint presents files as received and mutable relationship projections. Later amendments can change predecessor fields such as amended_by, is_amended, most_recent, most_recent_filing, and observed amendment_chain without changing the predecessor file number.",
+    "effective_projection": "Blocked while draft. Preserve every observed listing version and exact referenced filing. Effective report families are a separate calculation contract and never rewrite listing history."
+  },
+  "quality": {
+    "checks": [
+      {"id": "page_schema", "severity": "block", "rule": "Every accepted response conforms to page.schema.json; unknown fields are captured and require contract review."},
+      {"id": "exact_count", "severity": "block", "rule": "pagination.is_count_exact is true, every page from 1 through pages is present, and the distinct occurrence count agrees with pagination.count."},
+      {"id": "convergence", "severity": "block", "rule": "Two complete passes over the same closed overlapped query yield identical file-number sets and per-file content before the interval is complete."},
+      {"id": "file_number", "severity": "block", "rule": "Every result has a positive file_number and conflicting content for one file number remains versioned evidence rather than last-write-wins input."},
+      {"id": "partition_assignment", "severity": "block", "rule": "Every result becomes one received-date occurrence, one explicit overlap duplicate, or one unassigned-date issue."},
+      {"id": "url_binding", "severity": "block", "rule": "The acquired .fec document retains the listing file_number, fec_url, listing version, and content digest."},
+      {"id": "amendment_links", "severity": "partial", "rule": "Missing predecessors, successor disagreement, cycles, and asymmetric chain assertions remain explicit report-family issues."},
+      {"id": "timezone", "severity": "observe", "rule": "OpenFEC listing timestamps omit an offset in the observed schema; raw values remain timezone-unresolved until publisher semantics are pinned."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/original.json",
+      "representation": "canonical_json",
+      "source_url": "https://api.open.fec.gov/v1/efile/filings/?file_number=1997074&per_page=100",
+      "retrieved_on": "2026-08-27",
+      "sha256": "15411e7f7c103ec26c84cfead70abc15b43506550472968d87205f8d2fdd870d",
+      "scenarios": ["original filing later superseded", "predecessor chain array omits observed successor", "mutable most-recent projection"]
+    },
+    {
+      "path": "fixtures/amendment.json",
+      "representation": "canonical_json",
+      "source_url": "https://api.open.fec.gov/v1/efile/filings/?file_number=2009982&per_page=100",
+      "retrieved_on": "2026-08-27",
+      "sha256": "23a9ec0d06c7d91d2e451964b73a22a141c1a2d1669f27875ac6d4acc96e5123",
+      "scenarios": ["first amendment", "successor chain contains original and amendment", "is_amended false on an amendment not yet superseded"]
+    }
+  ],
+  "use": {
+    "retention": "Retain every exact response page, request parameters without credentials, response headers, response digest, observation time, parsed listing occurrence, and convergence result indefinitely.",
+    "citation_date_required": true,
+    "disclaimer": "Electronic-filing listings are publisher discovery and relationship assertions. They do not establish that a filing is the legally effective report or that its transaction rows are processed FEC data."
+  },
+  "outputs": {
+    "fact_types": ["electronic_filing_listing_assertion"],
+    "change_dimensions": ["efile_received_date", "listing_observation", "file_number", "listing_record_version", "amendment_reference"]
+  }
+}

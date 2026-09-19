@@ -1,0 +1,92 @@
+[
+  {
+    "id": "microsoft-hood",
+    "grounding_origin": "reviewed_fixture",
+    "grounding_sha256": "8eea754e01226d98e37598b6c1a49c73fc40214daeda5825d6c6227da53a01c9",
+    "checks": [
+      "Propose Amy Hood, not the short Hood mention, for Hood's CFO role; keep Satya Nadella separate and Microsoft as the organization.",
+      "Do not attach acquisition targets or universities, which are absent from the supplied role grounding."
+    ]
+  },
+  {
+    "id": "amd-su",
+    "grounding_origin": "reviewed_fixture",
+    "grounding_sha256": "ffcd009ab8367ef49cde5b4b4b5ef5aa4b70a944ab570cc640f0ed74a8476152",
+    "checks": [
+      "Propose Lisa T. Su for short-name and pronoun role surfaces; do not treat the full and short mentions as competing people.",
+      "Keep AMD, Freescale, IBM and Texas Instruments organization referents separate; prefer the supported full Freescale mention for its short form."
+    ]
+  },
+  {
+    "id": "fresh-mcclure",
+    "grounding_origin": "reviewed_fixture",
+    "grounding_sha256": "6aae8efc3ca7947dd74613d19d8586ab008d6fe8dc733511564cbd39932601c7",
+    "checks": [
+      "Propose KC McClure for later Ms. McClure surfaces without repairing the upstream name list.",
+      "Keep Accenture, Goldman and the Board of Visitors candidates separate; do not substitute the parent college or university."
+    ]
+  },
+  {
+    "id": "grounding-multiple-roles",
+    "grounding_origin": "model_proposal",
+    "grounding_sha256": "5be6342aada8add80e28f9e847ceb6941da6dce93844af0f05d3c6bbe5cd665b",
+    "checks": [
+      "All four supplied roles refer to Elena Ruiz; Cedar and Linden remain separate organization referents.",
+      "The denied founder role is still assessed, but its denied status must remain immutable."
+    ]
+  },
+  {
+    "id": "grounding-council-scope",
+    "grounding_origin": "model_proposal",
+    "grounding_sha256": "0cc0fe1a32296c1e7a6718d47621f1553e9640fab21e1938a21bb1b14c8f8902",
+    "checks": [
+      "Keep the advisory council distinct from Beacon Engineering Institute; do not silently use the institute as the council referent.",
+      "Keep Noah and Seabrook separate from Mina and the council; conference attendance creates no assessed role because none is grounded."
+    ]
+  },
+  {
+    "id": "grounding-ambiguous-conditional",
+    "grounding_origin": "model_proposal",
+    "grounding_sha256": "cc8d39e12e40bbd4d5a189454eb2ff5e1cd5708d596ba4802b38639e765cbdec",
+    "checks": [
+      "The Voss subject remains ambiguous between Luca Voss and Leila Voss or unresolved; the surname mention alone is not a resolved person.",
+      "Propose Juniper Energy only for the organization endpoint and preserve the immutable hypothetical grounding."
+    ]
+  },
+  {
+    "id": "grounding-anonymous-correction",
+    "grounding_origin": "model_proposal",
+    "grounding_sha256": "19472f5bdc377ef6d3115a85592d6602a63815bde21c8e6262158c6c943eb61b",
+    "checks": [
+      "The anonymous CFO person stays unresolved while Yarrow Systems may be proposed as the organization.",
+      "The correction proposes only the CFO role as its target; an unresolved target is honest abstention but not successful extraction."
+    ]
+  },
+  {
+    "id": "grounding-nearby-names",
+    "grounding_origin": "reviewed_fixture",
+    "grounding_sha256": "5b129a74aee4a5bbc0afee5f076edf0f48921a98236ce8e01d45b4323efc9aa0",
+    "checks": [
+      "Propose Inez Rao and Ash Works for the only supplied role.",
+      "Do not use Paolo Wu or Tamarack Power merely because they occur nearby."
+    ]
+  },
+  {
+    "id": "new-pronoun-employer-change",
+    "grounding_origin": "reviewed_fixture",
+    "grounding_sha256": "c1f6830c78c65f49711c5360786fa392337502fe820403bc1124b72038afa1ba",
+    "checks": [
+      "Resolve both pronoun subjects to Nadia Torres while keeping Copper Instruments and Larch Robotics separate.",
+      "Do not rewrite the supplied role or time context."
+    ]
+  },
+  {
+    "id": "new-correction-and-conflict",
+    "grounding_origin": "reviewed_fixture",
+    "grounding_sha256": "b30fa9fde3136f778a0fa33c9c4a6395b4d12246ece9ce9e2d56315e7675e737",
+    "checks": [
+      "Propose Owen Price and Vale Devices for both CEO claims, and Owen Price with Elm Museum for the trustee role.",
+      "Target only the asserted CEO claim from the correction; do not target the denial or unrelated trustee role."
+    ]
+  }
+]

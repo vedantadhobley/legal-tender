@@ -1,0 +1,451 @@
+{
+  "reviewed_on": "2026-09-08",
+  "status": "research_only_not_a_published_source_release",
+  "scope": "Four complete target-cycle CSV snapshots; counts are source occurrences, not deduplicated financial statements.",
+  "storage_directory": "dumps/audits/fec/committee-summary-source/2026-09-08",
+  "profiles": [
+    {
+      "cycle": 2020,
+      "file": "committee_summary_2020.csv",
+      "url": "https://www.fec.gov/files/bulk-downloads/2020/committee_summary_2020.csv",
+      "size_bytes": 7550294,
+      "sha256": "6d7cd8c8c9c6af2e7565ea9f186c35432dcd1fb3507bd0eb63646b1213bf4e40",
+      "header_sha256": "f8e539448b8271b6fc975f0982b5426cf2d1dc08425d0685fdf8f8f7b31de0b9",
+      "rows": 13554,
+      "columns": 92,
+      "committee_ids": 13535,
+      "repeated_committee_ids": 18,
+      "repeated_committee_occurrences": 37,
+      "repeated_committee_extra_rows": 19,
+      "duplicate_composite_keys": 0,
+      "differing_repeat_fields": [
+        "CAND_ID"
+      ],
+      "invalid_dates": [
+        {
+          "ordinal": 1262,
+          "committee_id": "C00720847",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 2381,
+          "committee_id": "C00751255",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 2672,
+          "committee_id": "C00651893",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 3765,
+          "committee_id": "C00695221",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 6150,
+          "committee_id": "C00691105",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 6999,
+          "committee_id": "C00762625",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 8905,
+          "committee_id": "C00712596",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 9730,
+          "committee_id": "C00756320",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 11933,
+          "committee_id": "C70006366",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        }
+      ],
+      "valid_interval_profile": {
+        "reversed": 1,
+        "start_before_cycle": 111,
+        "end_after_cycle": 35,
+        "start_after_cycle_start": 4458
+      },
+      "diagnostic_equations": {
+        "cash_equal": 11594,
+        "individual_equal": 12817,
+        "cash_different": 1500,
+        "individual_missing": 499,
+        "cash_missing": 460,
+        "individual_different": 238
+      },
+      "key_money": {
+        "COH_BOP": {
+          "blank": 417,
+          "negative": 102
+        },
+        "COH_COP": {
+          "blank": 438,
+          "negative": 302
+        },
+        "INDV_UNITEM_CONTB": {
+          "blank": 474,
+          "negative": 6
+        }
+      },
+      "leading_decimal_money_fields": 482,
+      "invalid_money_fields": 0,
+      "http": {
+        "Last-Modified": "Tue, 08 Sep 2026 10:13:31 GMT",
+        "ETag": "\"09fed21d0ccdbe033409915c3bafacd7\"",
+        "x-amz-version-id": "_vy14g0U8RPj8vC59gDn53ZeumOGPzXJ",
+        "Content-Type": "text/csv",
+        "Content-Length": "7550294"
+      }
+    },
+    {
+      "cycle": 2022,
+      "file": "committee_summary_2022.csv",
+      "url": "https://www.fec.gov/files/bulk-downloads/2022/committee_summary_2022.csv",
+      "size_bytes": 7798792,
+      "sha256": "4eced04905da3bd6eeb86a40c2c9c6d85069b298888bb5d1dc53187d19ecb505",
+      "header_sha256": "f8e539448b8271b6fc975f0982b5426cf2d1dc08425d0685fdf8f8f7b31de0b9",
+      "rows": 13977,
+      "columns": 92,
+      "committee_ids": 13946,
+      "repeated_committee_ids": 31,
+      "repeated_committee_occurrences": 62,
+      "repeated_committee_extra_rows": 31,
+      "duplicate_composite_keys": 0,
+      "differing_repeat_fields": [
+        "CAND_ID"
+      ],
+      "invalid_dates": [
+        {
+          "ordinal": 1632,
+          "committee_id": "C00749234",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 5194,
+          "committee_id": "C00782474",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 7651,
+          "committee_id": "C70006499",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 7732,
+          "committee_id": "C00777169",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 7936,
+          "committee_id": "C00792010",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 9001,
+          "committee_id": "C00770065",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 10175,
+          "committee_id": "C70006473",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        }
+      ],
+      "valid_interval_profile": {
+        "reversed": 0,
+        "start_before_cycle": 179,
+        "end_after_cycle": 13,
+        "start_after_cycle_start": 4297
+      },
+      "diagnostic_equations": {
+        "cash_equal": 12497,
+        "individual_equal": 13542,
+        "cash_different": 1209,
+        "cash_missing": 271,
+        "individual_missing": 289,
+        "individual_different": 146
+      },
+      "key_money": {
+        "COH_BOP": {
+          "blank": 245,
+          "negative": 110
+        },
+        "COH_COP": {
+          "blank": 254,
+          "negative": 279
+        },
+        "INDV_UNITEM_CONTB": {
+          "blank": 278,
+          "negative": 22
+        }
+      },
+      "leading_decimal_money_fields": 496,
+      "invalid_money_fields": 0,
+      "http": {
+        "Last-Modified": "Tue, 08 Sep 2026 10:13:32 GMT",
+        "ETag": "\"9ac2092923a8c1f0ccb5f452b3e8682c\"",
+        "x-amz-version-id": "7uy_ArRuUiFVqYv1Fc1Eq27_aVyc7dPC",
+        "Content-Type": "text/csv",
+        "Content-Length": "7798792"
+      }
+    },
+    {
+      "cycle": 2024,
+      "file": "committee_summary_2024.csv",
+      "url": "https://www.fec.gov/files/bulk-downloads/2024/committee_summary_2024.csv",
+      "size_bytes": 7861711,
+      "sha256": "40a8916ebda47ab1e81a970af94999776b6c84025c67a233704f6318d7681695",
+      "header_sha256": "f8e539448b8271b6fc975f0982b5426cf2d1dc08425d0685fdf8f8f7b31de0b9",
+      "rows": 14065,
+      "columns": 92,
+      "committee_ids": 13994,
+      "repeated_committee_ids": 65,
+      "repeated_committee_occurrences": 136,
+      "repeated_committee_extra_rows": 71,
+      "duplicate_composite_keys": 0,
+      "differing_repeat_fields": [
+        "CAND_ID"
+      ],
+      "invalid_dates": [
+        {
+          "ordinal": 6221,
+          "committee_id": "C00844969",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 9506,
+          "committee_id": "C00855940",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        },
+        {
+          "ordinal": 12423,
+          "committee_id": "C00874065",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        }
+      ],
+      "valid_interval_profile": {
+        "reversed": 1,
+        "start_before_cycle": 100,
+        "end_after_cycle": 10,
+        "start_after_cycle_start": 3986
+      },
+      "diagnostic_equations": {
+        "cash_equal": 12721,
+        "individual_equal": 13557,
+        "cash_missing": 304,
+        "individual_missing": 342,
+        "cash_different": 1040,
+        "individual_different": 166
+      },
+      "key_money": {
+        "COH_BOP": {
+          "blank": 291,
+          "negative": 116
+        },
+        "COH_COP": {
+          "blank": 299,
+          "negative": 269
+        },
+        "INDV_UNITEM_CONTB": {
+          "blank": 327,
+          "negative": 20
+        }
+      },
+      "leading_decimal_money_fields": 658,
+      "invalid_money_fields": 0,
+      "http": {
+        "Last-Modified": "Tue, 08 Sep 2026 10:13:34 GMT",
+        "ETag": "\"a61a05776e0f341673b986b80d2ae8b4\"",
+        "x-amz-version-id": "AHlA..dZuVmvtdMI9qD2CPgyG5SvDj.J",
+        "Content-Type": "text/csv",
+        "Content-Length": "7861711"
+      }
+    },
+    {
+      "cycle": 2026,
+      "file": "committee_summary_2026.csv",
+      "url": "https://www.fec.gov/files/bulk-downloads/2026/committee_summary_2026.csv",
+      "size_bytes": 7907259,
+      "sha256": "4fbb6d2a24d34c9fe4b04941de63e0abda1422d9b447eaed64c9e18c2f61518b",
+      "header_sha256": "f8e539448b8271b6fc975f0982b5426cf2d1dc08425d0685fdf8f8f7b31de0b9",
+      "rows": 14152,
+      "columns": 92,
+      "committee_ids": 14079,
+      "repeated_committee_ids": 70,
+      "repeated_committee_occurrences": 143,
+      "repeated_committee_extra_rows": 73,
+      "duplicate_composite_keys": 0,
+      "differing_repeat_fields": [
+        "CAND_ID"
+      ],
+      "invalid_dates": [
+        {
+          "ordinal": 3554,
+          "committee_id": "C00915165",
+          "field": "CVG_START_DT",
+          "raw": "99999999"
+        }
+      ],
+      "valid_interval_profile": {
+        "reversed": 0,
+        "start_before_cycle": 99,
+        "end_after_cycle": 0,
+        "start_after_cycle_start": 3867
+      },
+      "diagnostic_equations": {
+        "cash_equal": 13185,
+        "individual_equal": 13957,
+        "cash_different": 870,
+        "individual_different": 64,
+        "cash_missing": 97,
+        "individual_missing": 131
+      },
+      "key_money": {
+        "COH_BOP": {
+          "blank": 81,
+          "negative": 136
+        },
+        "COH_COP": {
+          "blank": 87,
+          "negative": 267
+        },
+        "INDV_UNITEM_CONTB": {
+          "blank": 122,
+          "negative": 18
+        }
+      },
+      "leading_decimal_money_fields": 529,
+      "invalid_money_fields": 0,
+      "http": {
+        "Last-Modified": "Tue, 08 Sep 2026 10:13:35 GMT",
+        "ETag": "\"0b93e3f67114de68b7b8188c2c93eecc\"",
+        "x-amz-version-id": "MKGsEP7NZmCkt7Gt7Nid7J8zoQFf1NlW",
+        "Content-Type": "text/csv",
+        "Content-Length": "7907259"
+      }
+    }
+  ],
+  "documentation_mismatches": [
+    {
+      "position": 51,
+      "dictionary": "OTH_FED_OPE_EXP",
+      "header": "OTHER_FED_OP_EXP"
+    },
+    {
+      "position": 77,
+      "dictionary": "SUBTTL_OTHER_REF_REB_RETB",
+      "header": "SUBTTL_OTHER_REF_REB_RET"
+    },
+    {
+      "position": 89,
+      "dictionary": "TTL_COMMUNICATION_COSTS",
+      "header": "TTL_COMMUNICATION_COST"
+    }
+  ],
+  "date_format_discrepancy": {
+    "dictionary": "MM/DD/YYYY",
+    "observed": "YYYYMMDD",
+    "invalid_raw": "99999999",
+    "invalid_meaning": "unestablished; not promoted to a date or zero"
+  },
+  "evidence": [
+    {
+      "file": "committee-summary-description.html",
+      "size_bytes": 51702,
+      "sha256": "6fa2fa43035697db5d8de79590e8ecdc45f1c3325734d99991711f144eaa4141"
+    },
+    {
+      "file": "pac-summary-description.html",
+      "size_bytes": 30334,
+      "sha256": "b370eea1165b2bc312430d30c809b23ff2d229e159d5dcfa92d5ddb9282eb29e"
+    },
+    {
+      "file": "dump-inventory.xml",
+      "size_bytes": 1942,
+      "sha256": "18d18e477ba95a788a518dc3c3f757609cda0c50246383cfe8c36862164e6107"
+    }
+  ],
+  "fixtures": {
+    "file": "sample.csv",
+    "sha256": "a981b6224ddefd101e1c65f9726612c6a93847478479e3769125babfbc472222",
+    "header_sha256": "f8e539448b8271b6fc975f0982b5426cf2d1dc08425d0685fdf8f8f7b31de0b9",
+    "source_cycle": 2024,
+    "source_sha256": "40a8916ebda47ab1e81a970af94999776b6c84025c67a233704f6318d7681695",
+    "rows": [
+      {
+        "sample_ordinal": 1,
+        "source_ordinal": 1,
+        "sha256": "b5201647b0971a6090819b9c0c86e16d1d3c53dc84c40464185d9dff522d8754"
+      },
+      {
+        "sample_ordinal": 2,
+        "source_ordinal": 5,
+        "sha256": "8440aedb65d872c32fde7b297634847b4dbf792db1ca29c91ff41ddd6226a2db"
+      },
+      {
+        "sample_ordinal": 3,
+        "source_ordinal": 92,
+        "sha256": "4f35497c27bf5cd02b864bb5f874b84ba4312391cb2f9b62d9f2c3dd5ebd9713"
+      },
+      {
+        "sample_ordinal": 4,
+        "source_ordinal": 482,
+        "sha256": "66a340fc5ee5c899a45303bec4534a9a0cf27e1e4fe836f1fce5a9e066a21e37"
+      },
+      {
+        "sample_ordinal": 5,
+        "source_ordinal": 6221,
+        "sha256": "a09ffc2a5c22cf516f9501bc6c33fccf878ba9b7cfa24673ee2bca2f446842eb"
+      },
+      {
+        "sample_ordinal": 6,
+        "source_ordinal": 13136,
+        "sha256": "5db299729bb035eb0d82364046920a1409bd7267cda617576aecda761188f659"
+      },
+      {
+        "sample_ordinal": 7,
+        "source_ordinal": 13137,
+        "sha256": "b62b1d6326e9c3667bdf5416d0c00c7408c6be6a1e823200f9d87504e19cdb3b"
+      },
+      {
+        "sample_ordinal": 8,
+        "source_ordinal": 13471,
+        "sha256": "e345a790997642e29396552ffb81821f2b60845d96dedcb0ebf872cbc2bce5b6"
+      }
+    ]
+  },
+  "guards": {
+    "production_source_accepted": false,
+    "report_history_available": false,
+    "account_id_available": false,
+    "terminal_attribution_eligible": false
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "legal-tender.fec.acquisition.v1",
+  "inventory_version": "legal-tender.fec.initial-release-inventory.v1",
+  "candidate_release_id": "fec-941952835bf759865339ed3510ee11cf6c95d466ac6daaecbba56d7615a086db",
+  "plan_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "run_id": "fixture-storage-blocked",
+  "status": "blocked",
+  "started_at": "2026-08-31T08:02:00Z",
+  "completed_at": "2026-08-31T08:02:01Z",
+  "storage": {
+    "schedule_a_hot_bytes_before": 148874256384,
+    "candidate_download_bytes": 90000000000,
+    "remaining_download_bytes": 90000000000,
+    "projected_schedule_a_hot_bytes": 472081194942,
+    "schedule_a_hot_cap_bytes": 644245094400,
+    "free_bytes_before": 520000000000,
+    "free_floor_bytes": 536870912000,
+    "working_margin_bytes": 26843545600,
+    "largest_extract_working_bytes": 206363392958,
+    "passed": false
+  },
+  "artifacts": [],
+  "post_capture": {"versions": []},
+  "issues": [
+    {
+      "code": "storage_free_floor",
+      "message": "acquisition would leave less than the required free-space floor"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/evidence/fec/schedule-a/compact/v1/row-exception.schema.json",
+  "title": "Compact Schedule A row exception",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["exception_id", "occurrence_id", "row_ordinal", "raw_byte_offset", "raw_byte_length", "code", "severity", "message"],
+  "properties": {
+    "exception_id": {"$ref": "#/$defs/digest"},
+    "occurrence_id": {"$ref": "#/$defs/digest"},
+    "row_ordinal": {"type": "integer", "minimum": 1},
+    "raw_byte_offset": {"type": "integer", "minimum": 0},
+    "raw_byte_length": {"type": "integer", "minimum": 1},
+    "raw_content_sha256": {"$ref": "#/$defs/digest"},
+    "sub_id": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "code": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "severity": {"enum": ["block", "warning"]},
+    "message": {"type": "string", "minLength": 1},
+    "related_occurrence_count": {"type": "integer", "minimum": 2}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

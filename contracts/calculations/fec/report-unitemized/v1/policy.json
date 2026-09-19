@@ -1,0 +1,44 @@
+{
+  "contract": "fec/report-unitemized@1.0.0",
+  "version": "legal-tender.fec.report-unitemized-review.v1",
+  "status": "accepted-bounded-reported-observations",
+  "field": "fec.form3x.unitemized_individual_contributions.column_a",
+  "amount_method": "explicit_reported_field_only",
+  "donor_composition": "not_identified_by_summary",
+  "publisher_meaning": {
+    "form": "F3X",
+    "line": "11(a)(ii)",
+    "column": "A: total this reporting period",
+    "instructions": "https://www.fec.gov/resources/cms-content/documents/fecfrm3xi.pdf",
+    "section": "page 6: line 11(a)(ii), individual/person contributions not required to be itemized on Schedule A",
+    "not_implied": ["cash available", "identified donors", "grassroots funding", "a fixed donation-size partition", "complete economic funding", "terminal status"]
+  },
+  "paper": {
+    "schema_sha256": "f9637d641d581d169cecc42cfb46c08e5a073f02803df8159e3ff40e3860f259",
+    "period_positions": {"itemized": 29, "unitemized": 30, "total": 31},
+    "year_to_date_positions_not_substitutes": [79, 80, 81],
+    "scope": "Reuse qualified P3.4 cover identity, dates, response completeness, and cover multiplicity checks. Preserve observed values even when scope blocks comparison."
+  },
+  "metadata": {
+    "schema_sha256": "0cca7f2af73270b35d7276e53d99b56b2f8f9970b33cb5d36a85fdb8b773caed",
+    "endpoint": "/v1/reports/pac-party/",
+    "period_fields": {"itemized": "individual_itemized_contributions_period", "unitemized": "individual_unitemized_contributions_period", "total": "total_individual_contributions_period"},
+    "accepted_values": "Pinned number|string|null shape. Preserve raw JSON type; parse signed plain decimal numbers and strings to checked cents. Empty string, null, invalid, and zero are distinct.",
+    "filings_endpoint": "not_supplied_by_endpoint, not a null or zero monetary assertion",
+    "other_endpoints": "unsupported_endpoint; retain original metadata without remapping to Form 3X",
+    "period": "Preserve each assertion's own valid date or midnight-without-zone dates; do not borrow dates from another source."
+  },
+  "arithmetic": {
+    "formula": "total minus itemized minus explicitly reported unitemized",
+    "states": ["balanced", "mismatch", "unavailable"],
+    "purpose": "An exact intra-assertion diagnostic only. Never solve for a missing operand or replace unitemized with the residual."
+  },
+  "reported_pair": {
+    "rule": "Same exact file, filer, form, report code, paper origin, amendment indicator and period; complete qualified paper response; both explicit unitemized operands valid. Each metadata observation is separate.",
+    "delta": "metadata minus paper unitemized cents; null if pair is blocked",
+    "subtotal_conflict": "Keep visible without erasing the explicit unitemized observation or blocking a same-field reported pair solely because sibling fields disagree. Does not qualify a financial component.",
+    "missing_cover": "Metadata observation can remain available with its own scope; no pair is fabricated."
+  },
+  "guards": {"financial_component_eligible": false, "cycle_comparison_ready": false, "terminal_attribution_eligible": false},
+  "non_goals": ["effective-report selection", "cycle unitemized aggregation", "Schedule A gap filling", "donor identity or count inference", "cash funding basis", "upstream allocation", "new acquisition", "source/graph mutation"]
+}

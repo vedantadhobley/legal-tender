@@ -1,0 +1,318 @@
+[
+  {
+    "name": "Accounting",
+    "value": "ACC"
+  },
+  {
+    "name": "Advertising",
+    "value": "ADV"
+  },
+  {
+    "name": "Aerospace",
+    "value": "AER"
+  },
+  {
+    "name": "Agriculture",
+    "value": "AGR"
+  },
+  {
+    "name": "Alcohol and Drug Abuse",
+    "value": "ALC"
+  },
+  {
+    "name": "Animals",
+    "value": "ANI"
+  },
+  {
+    "name": "Apparel/Clothing Industry/Textiles",
+    "value": "APP"
+  },
+  {
+    "name": "Arts/Entertainment",
+    "value": "ART"
+  },
+  {
+    "name": "Automotive Industry",
+    "value": "AUT"
+  },
+  {
+    "name": "Aviation/Airlines/Airports",
+    "value": "AVI"
+  },
+  {
+    "name": "Banking",
+    "value": "BAN"
+  },
+  {
+    "name": "Bankruptcy",
+    "value": "BNK"
+  },
+  {
+    "name": "Beverage Industry",
+    "value": "BEV"
+  },
+  {
+    "name": "Budget/Appropriations",
+    "value": "BUD"
+  },
+  {
+    "name": "Civil Rights/Civil Liberties",
+    "value": "CIV"
+  },
+  {
+    "name": "Chemicals/Chemical Industry",
+    "value": "CHM"
+  },
+  {
+    "name": "Clean Air and Water (quality)",
+    "value": "CAW"
+  },
+  {
+    "name": "Commodities (big ticket)",
+    "value": "CDT"
+  },
+  {
+    "name": "Communications/Broadcasting/Radio/TV",
+    "value": "COM"
+  },
+  {
+    "name": "Computer Industry",
+    "value": "CPI"
+  },
+  {
+    "name": "Constitution",
+    "value": "CON"
+  },
+  {
+    "name": "Consumer Issues/Safety/Products",
+    "value": "CSP"
+  },
+  {
+    "name": "Copyright/Patent/Trademark",
+    "value": "CPT"
+  },
+  {
+    "name": "Defense",
+    "value": "DEF"
+  },
+  {
+    "name": "Disaster Planning/Emergencies",
+    "value": "DIS"
+  },
+  {
+    "name": "District of Columbia",
+    "value": "DOC"
+  },
+  {
+    "name": "Economics/Economic Development",
+    "value": "ECN"
+  },
+  {
+    "name": "Education",
+    "value": "EDU"
+  },
+  {
+    "name": "Energy/Nuclear",
+    "value": "ENG"
+  },
+  {
+    "name": "Environment/Superfund",
+    "value": "ENV"
+  },
+  {
+    "name": "Family issues/Abortion/Adoption",
+    "value": "FAM"
+  },
+  {
+    "name": "Financial Institutions/Investments/Securities",
+    "value": "FIN"
+  },
+  {
+    "name": "Firearms/Guns/Ammunition",
+    "value": "FIR"
+  },
+  {
+    "name": "Food Industry (safety, labeling, etc.)",
+    "value": "FOO"
+  },
+  {
+    "name": "Foreign Relations",
+    "value": "FOR"
+  },
+  {
+    "name": "Fuel/Gas/Oil",
+    "value": "FUE"
+  },
+  {
+    "name": "Gaming/Gambling/Casino",
+    "value": "GAM"
+  },
+  {
+    "name": "Government Issues",
+    "value": "GOV"
+  },
+  {
+    "name": "Health Issues",
+    "value": "HCR"
+  },
+  {
+    "name": "Homeland Security",
+    "value": "HOM"
+  },
+  {
+    "name": "Housing",
+    "value": "HOU"
+  },
+  {
+    "name": "Immigration",
+    "value": "IMM"
+  },
+  {
+    "name": "Indian/Native American Affairs",
+    "value": "IND"
+  },
+  {
+    "name": "Insurance",
+    "value": "INS"
+  },
+  {
+    "name": "Intelligence",
+    "value": "INT"
+  },
+  {
+    "name": "Labor Issues/Antitrust/Workplace",
+    "value": "LBR"
+  },
+  {
+    "name": "Law Enforcement/Crime/Criminal Justice",
+    "value": "LAW"
+  },
+  {
+    "name": "Manufacturing",
+    "value": "MAN"
+  },
+  {
+    "name": "Marine/Maritime/Boating/Fisheries",
+    "value": "MAR"
+  },
+  {
+    "name": "Media (information/publishing)",
+    "value": "MIA"
+  },
+  {
+    "name": "Medical/Disease Research/Clinical Labs",
+    "value": "MED"
+  },
+  {
+    "name": "Medicare/Medicaid",
+    "value": "MMM"
+  },
+  {
+    "name": "Minting/Money/Gold Standard",
+    "value": "MON"
+  },
+  {
+    "name": "Natural Resources",
+    "value": "NAT"
+  },
+  {
+    "name": "Pharmacy",
+    "value": "PHA"
+  },
+  {
+    "name": "Postal",
+    "value": "POS"
+  },
+  {
+    "name": "Railroads",
+    "value": "RRR"
+  },
+  {
+    "name": "Real Estate/Land Use/Conservation",
+    "value": "RES"
+  },
+  {
+    "name": "Religion",
+    "value": "REL"
+  },
+  {
+    "name": "Retirement",
+    "value": "RET"
+  },
+  {
+    "name": "Roads/Highway",
+    "value": "ROD"
+  },
+  {
+    "name": "Science/Technology",
+    "value": "SCI"
+  },
+  {
+    "name": "Small Business",
+    "value": "SMB"
+  },
+  {
+    "name": "Sports/Athletics",
+    "value": "SPO"
+  },
+  {
+    "name": "Tariff (miscellaneous tariff bills)",
+    "value": "TAR"
+  },
+  {
+    "name": "Taxation/Internal Revenue Code",
+    "value": "TAX"
+  },
+  {
+    "name": "Telecommunications",
+    "value": "TEC"
+  },
+  {
+    "name": "Tobacco",
+    "value": "TOB"
+  },
+  {
+    "name": "Torts",
+    "value": "TOR"
+  },
+  {
+    "name": "Trade (domestic/foreign)",
+    "value": "TRD"
+  },
+  {
+    "name": "Transportation",
+    "value": "TRA"
+  },
+  {
+    "name": "Travel/Tourism",
+    "value": "TOU"
+  },
+  {
+    "name": "Trucking/Shipping",
+    "value": "TRU"
+  },
+  {
+    "name": "Urban Development/Municipalities",
+    "value": "URB"
+  },
+  {
+    "name": "Unemployment",
+    "value": "UNM"
+  },
+  {
+    "name": "Utilities",
+    "value": "UTI"
+  },
+  {
+    "name": "Veterans",
+    "value": "VET"
+  },
+  {
+    "name": "Waste (hazardous/solid/interstate/nuclear)",
+    "value": "WAS"
+  },
+  {
+    "name": "Welfare",
+    "value": "WEL"
+  }
+]

@@ -1,0 +1,932 @@
+{
+  "$schema": "../../archive-observation.schema.json",
+  "observation_id": "fec:schedule-a-dump:2026-08-23:e9298538b2e5819263e8d2da41ed224a-5358",
+  "observed_at": "2026-08-28T04:51:26Z",
+  "source": {
+    "request_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+    "final_url": "https://cg-519a459a-0ea3-42c2-b7bc-fa1143481f74.s3-us-gov-west-1.amazonaws.com/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+    "http_status": 200,
+    "last_modified": "2026-08-23T20:40:26Z",
+    "etag": "\"e9298538b2e5819263e8d2da41ed224a-5358\"",
+    "version_id": "j5VMlsW.60mHEbcOSohmOBermt2VXhQ7",
+    "accept_ranges": "bytes",
+    "content_type": "binary/octet-stream",
+    "content_length": 89883424294,
+    "server_side_encryption": "AES256"
+  },
+  "range_probe": {
+    "first_byte": 0,
+    "last_byte": 1048575,
+    "byte_count": 1048576,
+    "sha256": "f4dd1c78893bbfed0ccb0801e226c61563f876e6391ecf12657fb2c066f694f1",
+    "contains_complete_catalog": true,
+    "contains_pre_data_ddl": true
+  },
+  "archive": {
+    "magic": "PGDMP",
+    "format": "CUSTOM",
+    "dump_version": "1.14-0",
+    "compression": 9,
+    "integer_bytes": 4,
+    "offset_bytes": 8,
+    "database_name": "fec",
+    "created_at": "2026-08-23T11:02:00Z",
+    "database_version": "15.10",
+    "pg_dump_version": "15.16",
+    "toc_entry_count": 1022,
+    "listed_entry_count": 1018
+  },
+  "toolchain": {
+    "container_image": "postgres:15-alpine",
+    "image_digest": "sha256:1d1095b0503145be79c79239372aefadfacf6b7c33c9245bbf99ce4b6b89c737",
+    "platform": "linux/amd64",
+    "pg_restore_version": "15.15",
+    "memory_limit_bytes": 1073741824,
+    "cpu_limit": 1,
+    "network": "none"
+  },
+  "catalog": {
+    "schema": "disclosure",
+    "entry_type_counts": {
+      "table": 27,
+      "default": 26,
+      "table_data": 27,
+      "constraint": 27,
+      "index": 884,
+      "trigger": 27
+    },
+    "relations": [
+      {
+        "name": "fec_fitem_sched_a",
+        "table_toc_entry_id": 304,
+        "table_data_toc_entry_id": 9806,
+        "object_oid": 17413
+      },
+      {
+        "name": "fec_fitem_sched_a_1975_1976",
+        "table_toc_entry_id": 305,
+        "table_data_toc_entry_id": 9807,
+        "object_oid": 17420
+      },
+      {
+        "name": "fec_fitem_sched_a_1977_1978",
+        "table_toc_entry_id": 306,
+        "table_data_toc_entry_id": 9808,
+        "object_oid": 17428
+      },
+      {
+        "name": "fec_fitem_sched_a_1979_1980",
+        "table_toc_entry_id": 307,
+        "table_data_toc_entry_id": 9809,
+        "object_oid": 17436
+      },
+      {
+        "name": "fec_fitem_sched_a_1981_1982",
+        "table_toc_entry_id": 308,
+        "table_data_toc_entry_id": 9810,
+        "object_oid": 17444
+      },
+      {
+        "name": "fec_fitem_sched_a_1983_1984",
+        "table_toc_entry_id": 309,
+        "table_data_toc_entry_id": 9811,
+        "object_oid": 17452
+      },
+      {
+        "name": "fec_fitem_sched_a_1985_1986",
+        "table_toc_entry_id": 310,
+        "table_data_toc_entry_id": 9812,
+        "object_oid": 17460
+      },
+      {
+        "name": "fec_fitem_sched_a_1987_1988",
+        "table_toc_entry_id": 311,
+        "table_data_toc_entry_id": 9813,
+        "object_oid": 17468
+      },
+      {
+        "name": "fec_fitem_sched_a_1989_1990",
+        "table_toc_entry_id": 312,
+        "table_data_toc_entry_id": 9814,
+        "object_oid": 17476
+      },
+      {
+        "name": "fec_fitem_sched_a_1991_1992",
+        "table_toc_entry_id": 313,
+        "table_data_toc_entry_id": 9815,
+        "object_oid": 17484
+      },
+      {
+        "name": "fec_fitem_sched_a_1993_1994",
+        "table_toc_entry_id": 314,
+        "table_data_toc_entry_id": 9816,
+        "object_oid": 17492
+      },
+      {
+        "name": "fec_fitem_sched_a_1995_1996",
+        "table_toc_entry_id": 315,
+        "table_data_toc_entry_id": 9817,
+        "object_oid": 17500
+      },
+      {
+        "name": "fec_fitem_sched_a_1997_1998",
+        "table_toc_entry_id": 316,
+        "table_data_toc_entry_id": 9818,
+        "object_oid": 17508
+      },
+      {
+        "name": "fec_fitem_sched_a_1999_2000",
+        "table_toc_entry_id": 317,
+        "table_data_toc_entry_id": 9819,
+        "object_oid": 17516
+      },
+      {
+        "name": "fec_fitem_sched_a_2001_2002",
+        "table_toc_entry_id": 318,
+        "table_data_toc_entry_id": 9820,
+        "object_oid": 17524
+      },
+      {
+        "name": "fec_fitem_sched_a_2003_2004",
+        "table_toc_entry_id": 319,
+        "table_data_toc_entry_id": 9821,
+        "object_oid": 17532
+      },
+      {
+        "name": "fec_fitem_sched_a_2005_2006",
+        "table_toc_entry_id": 320,
+        "table_data_toc_entry_id": 9822,
+        "object_oid": 17540
+      },
+      {
+        "name": "fec_fitem_sched_a_2007_2008",
+        "table_toc_entry_id": 321,
+        "table_data_toc_entry_id": 9823,
+        "object_oid": 17548
+      },
+      {
+        "name": "fec_fitem_sched_a_2009_2010",
+        "table_toc_entry_id": 322,
+        "table_data_toc_entry_id": 9824,
+        "object_oid": 17556
+      },
+      {
+        "name": "fec_fitem_sched_a_2011_2012",
+        "table_toc_entry_id": 323,
+        "table_data_toc_entry_id": 9825,
+        "object_oid": 17564
+      },
+      {
+        "name": "fec_fitem_sched_a_2013_2014",
+        "table_toc_entry_id": 324,
+        "table_data_toc_entry_id": 9826,
+        "object_oid": 17572
+      },
+      {
+        "name": "fec_fitem_sched_a_2015_2016",
+        "table_toc_entry_id": 325,
+        "table_data_toc_entry_id": 9827,
+        "object_oid": 17580
+      },
+      {
+        "name": "fec_fitem_sched_a_2017_2018",
+        "table_toc_entry_id": 326,
+        "table_data_toc_entry_id": 9828,
+        "object_oid": 17588
+      },
+      {
+        "name": "fec_fitem_sched_a_2019_2020",
+        "table_toc_entry_id": 327,
+        "table_data_toc_entry_id": 9829,
+        "object_oid": 17596
+      },
+      {
+        "name": "fec_fitem_sched_a_2021_2022",
+        "table_toc_entry_id": 328,
+        "table_data_toc_entry_id": 9830,
+        "object_oid": 17604
+      },
+      {
+        "name": "fec_fitem_sched_a_2023_2024",
+        "table_toc_entry_id": 1017,
+        "table_data_toc_entry_id": 9831,
+        "object_oid": 884513
+      },
+      {
+        "name": "fec_fitem_sched_a_2025_2026",
+        "table_toc_entry_id": 1191,
+        "table_data_toc_entry_id": 9832,
+        "object_oid": 2550853
+      }
+    ]
+  },
+  "parent_relation": {
+    "name": "fec_fitem_sched_a",
+    "table_toc_entry_id": 304,
+    "table_data_toc_entry_id": 9806,
+    "field_count": 81,
+    "fields": [
+      {
+        "ordinal": 1,
+        "name": "cmte_id",
+        "postgres_type": "character varying(9)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 2,
+        "name": "cmte_nm",
+        "postgres_type": "character varying(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 3,
+        "name": "contbr_id",
+        "postgres_type": "character varying(9)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 4,
+        "name": "contbr_nm",
+        "postgres_type": "character varying(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 5,
+        "name": "contbr_nm_first",
+        "postgres_type": "character varying(38)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 6,
+        "name": "contbr_m_nm",
+        "postgres_type": "character varying(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 7,
+        "name": "contbr_nm_last",
+        "postgres_type": "character varying(38)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 8,
+        "name": "contbr_prefix",
+        "postgres_type": "character varying(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 9,
+        "name": "contbr_suffix",
+        "postgres_type": "character varying(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 10,
+        "name": "contbr_st1",
+        "postgres_type": "character varying(34)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 11,
+        "name": "contbr_st2",
+        "postgres_type": "character varying(34)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 12,
+        "name": "contbr_city",
+        "postgres_type": "character varying(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 13,
+        "name": "contbr_st",
+        "postgres_type": "character varying(2)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 14,
+        "name": "contbr_zip",
+        "postgres_type": "character varying(9)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 15,
+        "name": "entity_tp",
+        "postgres_type": "character varying(3)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 16,
+        "name": "entity_tp_desc",
+        "postgres_type": "character varying(50)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 17,
+        "name": "contbr_employer",
+        "postgres_type": "character varying(38)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 18,
+        "name": "contbr_occupation",
+        "postgres_type": "character varying(38)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 19,
+        "name": "election_tp",
+        "postgres_type": "character varying(5)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 20,
+        "name": "fec_election_tp_desc",
+        "postgres_type": "character varying(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 21,
+        "name": "fec_election_yr",
+        "postgres_type": "character varying(4)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 22,
+        "name": "election_tp_desc",
+        "postgres_type": "character varying(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 23,
+        "name": "contb_aggregate_ytd",
+        "postgres_type": "numeric(14,2)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 24,
+        "name": "contb_receipt_dt",
+        "postgres_type": "timestamp without time zone",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 25,
+        "name": "contb_receipt_amt",
+        "postgres_type": "numeric(14,2)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 26,
+        "name": "receipt_tp",
+        "postgres_type": "character varying(3)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 27,
+        "name": "receipt_tp_desc",
+        "postgres_type": "character varying(90)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 28,
+        "name": "receipt_desc",
+        "postgres_type": "character varying(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 29,
+        "name": "memo_cd",
+        "postgres_type": "character varying(1)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 30,
+        "name": "memo_cd_desc",
+        "postgres_type": "character varying(50)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 31,
+        "name": "memo_text",
+        "postgres_type": "character varying(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 32,
+        "name": "cand_id",
+        "postgres_type": "character varying(9)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 33,
+        "name": "cand_nm",
+        "postgres_type": "character varying(90)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 34,
+        "name": "cand_nm_first",
+        "postgres_type": "character varying(38)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 35,
+        "name": "cand_m_nm",
+        "postgres_type": "character varying(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 36,
+        "name": "cand_nm_last",
+        "postgres_type": "character varying(38)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 37,
+        "name": "cand_prefix",
+        "postgres_type": "character varying(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 38,
+        "name": "cand_suffix",
+        "postgres_type": "character varying(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 39,
+        "name": "cand_office",
+        "postgres_type": "character varying(1)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 40,
+        "name": "cand_office_desc",
+        "postgres_type": "character varying(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 41,
+        "name": "cand_office_st",
+        "postgres_type": "character varying(2)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 42,
+        "name": "cand_office_st_desc",
+        "postgres_type": "character varying(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 43,
+        "name": "cand_office_district",
+        "postgres_type": "character varying(2)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 44,
+        "name": "conduit_cmte_id",
+        "postgres_type": "character varying(9)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 45,
+        "name": "conduit_cmte_nm",
+        "postgres_type": "character varying(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 46,
+        "name": "conduit_cmte_st1",
+        "postgres_type": "character varying(34)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 47,
+        "name": "conduit_cmte_st2",
+        "postgres_type": "character varying(34)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 48,
+        "name": "conduit_cmte_city",
+        "postgres_type": "character varying(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 49,
+        "name": "conduit_cmte_st",
+        "postgres_type": "character varying(2)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 50,
+        "name": "conduit_cmte_zip",
+        "postgres_type": "character varying(9)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 51,
+        "name": "donor_cmte_nm",
+        "postgres_type": "character varying(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 52,
+        "name": "national_cmte_nonfed_acct",
+        "postgres_type": "character varying(9)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 53,
+        "name": "increased_limit",
+        "postgres_type": "character varying(1)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 54,
+        "name": "action_cd",
+        "postgres_type": "character varying(1)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 55,
+        "name": "action_cd_desc",
+        "postgres_type": "character varying(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 56,
+        "name": "tran_id",
+        "postgres_type": "character varying(32)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 57,
+        "name": "back_ref_tran_id",
+        "postgres_type": "character varying(32)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 58,
+        "name": "back_ref_sched_nm",
+        "postgres_type": "character varying(8)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 59,
+        "name": "schedule_type",
+        "postgres_type": "character varying(8)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 60,
+        "name": "schedule_type_desc",
+        "postgres_type": "character varying(90)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 61,
+        "name": "line_num",
+        "postgres_type": "character varying(12)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 62,
+        "name": "image_num",
+        "postgres_type": "character varying(18)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 63,
+        "name": "file_num",
+        "postgres_type": "numeric(7,0)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 64,
+        "name": "link_id",
+        "postgres_type": "numeric(19,0)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 65,
+        "name": "orig_sub_id",
+        "postgres_type": "numeric(19,0)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 66,
+        "name": "sub_id",
+        "postgres_type": "numeric(19,0)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "ordinal": 67,
+        "name": "filing_form",
+        "postgres_type": "character varying(8)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "ordinal": 68,
+        "name": "rpt_tp",
+        "postgres_type": "character varying(3)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 69,
+        "name": "rpt_yr",
+        "postgres_type": "numeric(4,0)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 70,
+        "name": "two_year_transaction_period",
+        "postgres_type": "numeric(4,0)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 71,
+        "name": "pdf_url",
+        "postgres_type": "text",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 72,
+        "name": "contributor_name_text",
+        "postgres_type": "tsvector",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 73,
+        "name": "contributor_employer_text",
+        "postgres_type": "tsvector",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 74,
+        "name": "contributor_occupation_text",
+        "postgres_type": "tsvector",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 75,
+        "name": "is_individual",
+        "postgres_type": "boolean",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 76,
+        "name": "clean_contbr_id",
+        "postgres_type": "character varying(9)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 77,
+        "name": "pg_date",
+        "postgres_type": "timestamp without time zone",
+        "nullable": true,
+        "default": "now()"
+      },
+      {
+        "ordinal": 78,
+        "name": "line_number_label",
+        "postgres_type": "text",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 79,
+        "name": "cmte_tp",
+        "postgres_type": "character varying(1)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 80,
+        "name": "org_tp",
+        "postgres_type": "character varying(1)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "ordinal": 81,
+        "name": "cmte_dsgn",
+        "postgres_type": "character varying(1)",
+        "nullable": true,
+        "default": null
+      }
+    ]
+  },
+  "selected_partition": {
+    "name": "fec_fitem_sched_a_2025_2026",
+    "inherits": "fec_fitem_sched_a",
+    "table_toc_entry_id": 1191,
+    "table_data_toc_entry_id": 9832,
+    "accepted_periods": [
+      2025,
+      2026
+    ],
+    "check_constraint": "two_year_transaction_period = ANY (ARRAY[(2025)::numeric, (2026)::numeric])"
+  },
+  "complete_archive": {
+    "byte_count": 89883424294,
+    "sha256": "caead0f0fc2b5cd6583a194671349830ff94e6c7f8d139acddf102cb6b3039ea",
+    "validated_at": "2026-08-28T05:41:29Z",
+    "pg_restore_inventory_succeeded": true
+  },
+  "selected_extracts": [
+    {
+      "relation": "disclosure.fec_fitem_sched_a_2019_2020",
+      "accepted_periods": [
+        2019,
+        2020
+      ],
+      "representation": "postgresql_copy_text_data_rows",
+      "copy_section_count": 1,
+      "field_count": 81,
+      "row_count": 293862761,
+      "byte_count": 206363392958,
+      "sha256": "6e812b3728cc67c1482f7db88fff9a5e24bfcad0403aab1d01393b2c2ad8c670",
+      "started_at": "2026-08-28T06:24:30Z",
+      "finished_at": "2026-08-28T06:39:15Z",
+      "elapsed_seconds": 885,
+      "pg_restore_exit_code": 0,
+      "compressed_artifact": {
+        "compression": "zstd",
+        "level": 3,
+        "byte_count": 22808034191,
+        "sha256": "2eea09fb41695b28f8fe800f22ce92a2ba26110e9336675c36c05befbacf6a46",
+        "frame_test_succeeded": true,
+        "decompressed_sha256": "6e812b3728cc67c1482f7db88fff9a5e24bfcad0403aab1d01393b2c2ad8c670",
+        "validated_at": "2026-08-28T06:49:09Z",
+        "elapsed_seconds": 475
+      }
+    },
+    {
+      "relation": "disclosure.fec_fitem_sched_a_2021_2022",
+      "accepted_periods": [
+        2021,
+        2022
+      ],
+      "representation": "postgresql_copy_text_data_rows",
+      "copy_section_count": 1,
+      "field_count": 81,
+      "row_count": 166775547,
+      "byte_count": 117038862557,
+      "sha256": "d8bfd18b759b9adb3d6e536723a67bf15d873a65747a9b2d2a8368e5a05ee0c4",
+      "started_at": "2026-08-28T06:15:36Z",
+      "finished_at": "2026-08-28T06:23:52Z",
+      "elapsed_seconds": 496,
+      "pg_restore_exit_code": 0,
+      "compressed_artifact": {
+        "compression": "zstd",
+        "level": 3,
+        "byte_count": 10465583451,
+        "sha256": "8b52451f904c48f886244a69be1b9efdc5f4920d165562d91d621957c606da83",
+        "frame_test_succeeded": true,
+        "decompressed_sha256": "d8bfd18b759b9adb3d6e536723a67bf15d873a65747a9b2d2a8368e5a05ee0c4",
+        "validated_at": "2026-08-28T06:59:57Z",
+        "elapsed_seconds": 235
+      }
+    },
+    {
+      "relation": "disclosure.fec_fitem_sched_a_2023_2024",
+      "accepted_periods": [
+        2023,
+        2024
+      ],
+      "representation": "postgresql_copy_text_data_rows",
+      "copy_section_count": 1,
+      "field_count": 81,
+      "row_count": 264085601,
+      "byte_count": 182881290413,
+      "sha256": "1df5fb2451d32e81887be84df59c68cbcf2299fca84ea5670406bf45ac88b01c",
+      "started_at": "2026-08-28T06:02:21Z",
+      "finished_at": "2026-08-28T06:14:50Z",
+      "elapsed_seconds": 749,
+      "pg_restore_exit_code": 0,
+      "compressed_artifact": {
+        "compression": "zstd",
+        "level": 3,
+        "byte_count": 15126887041,
+        "sha256": "ccb5cb37aecbaeca85dce12b0a416622c219ba3c69bcfefb0fd973380e7ea1ea",
+        "frame_test_succeeded": true,
+        "decompressed_sha256": "1df5fb2451d32e81887be84df59c68cbcf2299fca84ea5670406bf45ac88b01c",
+        "validated_at": "2026-08-28T06:55:31Z",
+        "elapsed_seconds": 351
+      }
+    },
+    {
+      "relation": "disclosure.fec_fitem_sched_a_2025_2026",
+      "accepted_periods": [
+        2025,
+        2026
+      ],
+      "representation": "postgresql_copy_text_data_rows",
+      "copy_section_count": 1,
+      "field_count": 81,
+      "row_count": 166293056,
+      "byte_count": 114190988781,
+      "sha256": "caff37ccb61c5c1bf07ebef14837411bde29a6c46811c5d8ed4ee555aa4db1de",
+      "started_at": "2026-08-28T05:41:43Z",
+      "finished_at": "2026-08-28T05:49:56Z",
+      "elapsed_seconds": 493,
+      "pg_restore_exit_code": 0,
+      "compressed_artifact": {
+        "compression": "zstd",
+        "level": 3,
+        "byte_count": 10587087035,
+        "sha256": "5e61c585f1ac01d7fbb81d66b46b190ddcb938561b8622680b3895bfedc424d6",
+        "frame_test_succeeded": true,
+        "decompressed_sha256": "caff37ccb61c5c1bf07ebef14837411bde29a6c46811c5d8ed4ee555aa4db1de",
+        "validated_at": "2026-08-28T07:04:24Z",
+        "elapsed_seconds": 232
+      }
+    }
+  ],
+  "evidence_state": "complete_target_partitions",
+  "limitations": [
+    "All four target relations passed complete COPY framing, 81-field row-width, row-count, byte-count, and digest validation; independent value-level Go replay has so far covered the complete 2025_2026 extract and exact fixtures from that relation.",
+    "The selected COPY extracts preserve relation row order and exact field lexemes but are derived evidence; the PostgreSQL custom dump remains the immutable publisher artifact.",
+    "The zstd copies pass frame tests and full decompressed SHA-256 comparison. After explicit approval, the redundant uncompressed working copies were removed; their row counts, byte counts, and SHA-256 digests remain recorded.",
+    "The publisher URL is mutable; this observation is bound to its Last-Modified value, ETag, version ID, content length, and range digest."
+  ]
+}

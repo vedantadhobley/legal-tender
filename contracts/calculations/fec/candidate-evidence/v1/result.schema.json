@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/candidate-evidence/v1/result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "result_id", "policy", "executable_sha256", "candidate_id", "cycle", "state", "inventory_calculation_id", "inventory_policy", "receipt_input", "summary_context_state", "overview", "committee_trace", "connection_witnesses", "committees", "terminal_policy", "allocation_policy", "terminal_amount_minor_units", "terminal_attribution_eligible", "limitations"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.candidate-evidence.v1"},
+    "result_id": {"$ref": "#/$defs/digest"},
+    "policy": {"const": "fec/integrated-candidate-observations@1.0.0"},
+    "executable_sha256": {"$ref": "#/$defs/digest"},
+    "candidate_id": {"type": "string", "pattern": "^[HSP][0-9A-Z]{8}$"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{3}[02468]$"},
+    "state": {"const": "integrated_observations_not_complete_funding"},
+    "inventory_calculation_id": {"$ref": "#/$defs/digest"},
+    "inventory_policy": {"const": "fec/committee-reported-receipt-inventory@1.0.0"},
+    "receipt_input": {"$ref": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/result.schema.json#/$defs/input"},
+    "summary_context_state": {"enum": ["not_requested", "candidate_linked_context_only_not_receipt_replacement"]},
+    "overview": {
+      "type": "object", "additionalProperties": false,
+      "required": ["authorized_committees", "unresolved_linked_committees", "reached_committees", "reached_without_same_cycle_master", "reached_without_receipt_rows", "cyclic_components"],
+      "properties": {
+        "authorized_committees": {"type": "integer", "minimum": 1},
+        "unresolved_linked_committees": {"type": "integer", "minimum": 0},
+        "reached_committees": {"type": "integer", "minimum": 1},
+        "reached_without_same_cycle_master": {"type": "integer", "minimum": 0},
+        "reached_without_receipt_rows": {"type": "integer", "minimum": 0},
+        "cyclic_components": {"type": "integer", "minimum": 0}
+      }
+    },
+    "committee_trace": {"$ref": "https://legal-tender.local/contracts/calculations/fec/candidate-committee-upstream/v1/result.schema.json"},
+    "connection_witnesses": {"type": "array", "items": {"$ref": "https://legal-tender.local/contracts/calculations/fec/committee-flow-reconciliation/v1/observation.schema.json"}},
+    "committees": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/committee"}},
+    "terminal_policy": {"type": "null"},
+    "allocation_policy": {"type": "null"},
+    "terminal_amount_minor_units": {"type": "null"},
+    "terminal_attribution_eligible": {"const": false},
+    "limitations": {"const": ["receipt_populations_are_not_complete_candidate_funding", "upstream_receipts_are_not_additive_candidate_money", "connectivity_is_not_chronological_dollar_provenance", "missing_edges_or_masters_do_not_define_terminal_sources", "unknown_signed_amounts_do_not_establish_lower_bounds", "person_corporation_and_conduit_identity_unresolved", "report_amendment_and_financial_period_selection_not_established", "opening_balances_unitemized_and_cash_basis_not_established", "independent_expenditures_and_sender_ledger_not_combined_into_receipts", "terminal_and_allocation_policies_not_selected"]}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "committee": {
+      "type": "object", "additionalProperties": false,
+      "required": ["committee_id", "candidate_authorization", "reached_by_selected_committee_trace", "reported_receipt_population", "candidate_linked_summary_review", "coverage_limits"],
+      "properties": {
+        "committee_id": {"type": "string", "pattern": "^C[0-9]{8}$"},
+        "candidate_authorization": {"enum": ["authorized", "unauthorized", "unresolved", "not_candidate_linked"]},
+        "reached_by_selected_committee_trace": {"type": "boolean"},
+        "reported_receipt_population": {"$ref": "https://legal-tender.local/contracts/calculations/fec/summary-receipt-review/v1/result.schema.json#/properties/receipts"},
+        "candidate_linked_summary_review": {"anyOf": [{"type": "null"}, {"$ref": "https://legal-tender.local/contracts/calculations/fec/summary-receipt-review/v1/result.schema.json"}]},
+        "coverage_limits": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"enum": ["reported_rows_not_complete_funding", "resolved_donor_identity_not_established", "no_receipt_rows_is_not_reported_zero", "unknown_signed_amounts", "individual_committee_predicates_overlap_do_not_add"]}}
+      }
+    }
+  }
+}

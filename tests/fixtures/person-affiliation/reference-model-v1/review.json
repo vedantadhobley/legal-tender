@@ -1,0 +1,52 @@
+{
+  "Profile": {"model": "gpt-oss-120b", "reasoning_effort": "medium", "max_tokens": 4096},
+  "Metadata": {
+    "models.json": "cc7da7b0bb17a05d3c5113152952dff0d47c8854f147ef7a56d1a5167930c308",
+    "completed.json": "fed864b7df02e098c5bd29aede67e92531c9537ea0ea46ec85cfd68e82401509",
+    "inputs.json": "349fd6181c4b48874b30e94359fb515782aed2dc092ed2aa81883ba45a0f6473"
+  },
+  "Cases": [
+    {
+      "ID": "microsoft-hood", "SHA256": "1eace226fb52a84820530b9103f827d54d01d70d5646966d3fa8ec0a6cf6e5fa", "Valid": true,
+      "Selection": "All three ranges are literal clauses, but every interpretation reuses its entire clause as both the person and organization endpoint. No proper name-only endpoint selection is supplied.",
+      "Binding": "Direct binding on clauses does not link Amy Hood or the short surname to Microsoft as separate entities. The historical EVP/CFO clause contains neither endpoint. A structural pass does not establish a binding.",
+      "Roles": "Current and historical combined EVP/CFO proposals and a joined-as-employee proposal appear. The source's separately named Microsoft CEO is missed. No employer role is invented for acquisition targets or universities.",
+      "ContextTime": "2002 and 2013 stay in the selected historical clauses. The normalized 'since 2013' is supplied interpretation, not a code-accepted tenure interval. Full selected entries and all excerpt context remain; no approval follows."
+    },
+    {
+      "ID": "amd-su", "SHA256": "29d59424ee2866086e7294488b86482dd6674684c930614b372d989fa8af150d", "Valid": false,
+      "Selection": "HTTP 200 ends with finish_reason=length at 4096 completion tokens. Final JSON is incomplete and contains no complete selection array. There is no valid final proposal or attached interpretation report.",
+      "Binding": "Cannot evaluate a complete endpoint mapping. The partial text is retained only, not parsed or salvaged into relationships.",
+      "Roles": "Partial generated labels are not an evaluated complete extraction. The larger multi-employer source exceeds this run's generation budget.",
+      "ContextTime": "All original input remains in the capture. Do not infer temporal coverage from a truncated answer or replace it with an earlier model result."
+    },
+    {
+      "ID": "new-pronoun-employer-change", "SHA256": "733dc31bc7ca975023754fbbffb7e0078e469b327ad70115b84cdd3441455ad3", "Valid": true,
+      "Selection": "Named person and Larch Robotics spans are correct, but the Copper Instruments organization selection includes the extra word 'in'. The CTO clause omits its leading subject pronoun; complete entry context remains.",
+      "Binding": "Both roles point to Nadia Torres and the intended separate company contexts, but pronoun-based readings are labeled direct rather than coreference. Go does not trim the wrong organization span or change that label.",
+      "Roles": "CTO and CEO stay separate executive proposals; no ownership or invented concurrent employer is asserted.",
+      "ContextTime": "Both role selections retain their reported time wording. The job transition is not turned into a contradiction, and no continuous present tenure is accepted."
+    },
+    {
+      "ID": "new-surname-ambiguity", "SHA256": "8a538ac4ebf79e32051dd274b95f6d7dc3f15634341d4cb6ca7a52b07a96471f", "Valid": false,
+      "Selection": "All six ranges are literal. Person/company selections are correct and the CFO clause retains 2021, but it omits the explicit uncertainty wording, retained only in input context. Whole answer rejected; no partial report is produced.",
+      "Binding": "The CFO correctly retains both named Chen alternatives with ambiguous binding. Rejection instead comes from the event activity using two subjects with direct binding, which violates the existing single-subject contract. Both speakers really are explicit in the source: this is a representation limitation, not evidence that CFO ambiguity was resolved incorrectly.",
+      "Roles": "Speaking remains an activity; CFO remains executive. Do not salvage the useful CFO interpretation or relabel the jointly stated activity as ambiguous to force acceptance.",
+      "ContextTime": "No correction or contradiction is invented. The selected CFO clause includes the reported year but ends before the unresolved-surname explanation. No tenure or identity is accepted."
+    },
+    {
+      "ID": "new-correction-and-conflict", "SHA256": "1a0b2444f9e6a2f7ce55ea9b39b50fdb75aaac1aa69c3fb1ca5064d022e5ac3b", "Valid": true,
+      "Selection": "Role/correction clauses, names, first organization and museum selections are useful, but the denied-role organization is literally 'of Vale', not Vale Devices. Normalized role text does not fix that invalid endpoint meaning.",
+      "Binding": "Named person selections are preserved. The denied-role organization selection is wrong despite legal token coordinates; the supplied contradiction link does not prove endpoint equivalence.",
+      "Roles": "Asserted CEO, denied CEO and unrelated museum trustee are distinct. Trustee is classified board_director, not executive employment.",
+      "ContextTime": "Both CEO clauses preserve role year 2021 rather than notice years. Contradiction flags both; retraction targets only the first assertion and preserves its asserted status. The museum role stays unverified, not retracted. Explicit extra evidence on the correction is retained in the derived union."
+    },
+    {
+      "ID": "new-conditional-and-activity", "SHA256": "98c2b8ccd7addbde729b134aceafdb5ff52d780d87e6eeb416e2b6d509a29a08", "Valid": true,
+      "Selection": "Person and company spans are correct. The president clause includes condition and 2028 but omits 'no appointment has been made', which remains in full context. The instruction-derived CEO clause omits the surrounding instruction and non-fact warning.",
+      "Binding": "Named endpoints are direct for the hypothetical role and award activity. Literal name selection alone does not make the instruction's requested role factual.",
+      "Roles": "President stays hypothetical and the award stays activity. However, the answer also emits a CEO role with unclear status from the embedded instruction. It does not assert or approve that CEO relationship, but it has not fully excluded instructions from relationship proposals.",
+      "ContextTime": "Full source entries preserve both negative appointment context and the injection warning. The CEO proposal stays nonpositive_unclear, the president nonpositive_hypothetical and the award incidental_activity_not_role. No graph, identity or financial approval."
+    }
+  ]
+}

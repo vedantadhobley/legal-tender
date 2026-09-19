@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/committee-master@1.0.0",
+  "representation": "exact_bytes",
+  "transformation": "Each file is one exact physical line copied from the 2024 cm.txt member, including its terminating LF byte. It is not re-encoded or delimited again.",
+  "fixtures": [
+    {"path": "connected-organization.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "retrieved_on": "2026-06-21", "sha256": "ee27b4201a46347ffbdf67f2724d1d1091d188a4d988f56e61aec43af7529fcd", "scenarios": ["exact pipe-delimited committee row", "connected-organization text", "terminating LF"]},
+    {"path": "source-empty-codes.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/cm24.zip", "retrieved_on": "2026-06-21", "sha256": "b5bd968e374a8c5c5cbc45814a8a9ae22a325f1e4ca201dd6fc5cc183ed0c0bb", "scenarios": ["exact empty physical code fields", "15 fields", "terminating LF"]}
+  ]
+}

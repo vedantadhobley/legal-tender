@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/projections/arango/receiver-reported-committee-flows/v2/result.schema.json",
+  "title": "Identity-aware ArangoDB receiver-reported committee-flow projection result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "projection_version", "projection_id", "state", "cycle", "database", "graph", "run_id", "observed_at", "inputs", "expected_counts", "observed_counts", "expected_amounts", "observed_amounts", "topology", "reused_projection", "storage", "representative_source_committee_id", "representative_target_committee_id", "representative_cycle_committee_id", "queries", "checks"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.arango.receiver-reported-committee-flows-probe-result.v2"},
+    "projection_version": {"const": "legal-tender.arango.receiver-reported-committee-flows-projection.v2"},
+    "projection_id": {"$ref": "#/$defs/digest"},
+    "state": {"enum": ["ready", "partial"]},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "database": {"type": "string", "pattern": "^lt_flow_probe_v2_[0-9]{4}_[a-f0-9]{16}$"},
+    "graph": {"const": "receiver_reported_committee_flows"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "inputs": {"$ref": "#/$defs/inputs"},
+    "expected_counts": {"$ref": "#/$defs/counts"},
+    "observed_counts": {"$ref": "#/$defs/counts"},
+    "expected_amounts": {"$ref": "#/$defs/amounts"},
+    "observed_amounts": {"$ref": "#/$defs/amounts"},
+    "topology": {"$ref": "#/$defs/topology"},
+    "reused_projection": {"type": "boolean"},
+    "storage": {"$ref": "#/$defs/storage"},
+    "representative_source_committee_id": {"$ref": "#/$defs/committee_id"},
+    "representative_target_committee_id": {"$ref": "#/$defs/committee_id"},
+    "representative_cycle_committee_id": {"type": "string", "pattern": "^(|C[0-9]{8})$"},
+    "queries": {"type": "array", "minItems": 3, "maxItems": 4, "items": {"$ref": "#/$defs/query"}},
+    "checks": {"type": "array", "minItems": 11, "maxItems": 11, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "committee_id": {"type": "string", "pattern": "^C[0-9]{8}$"},
+    "signed_integer": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "inputs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_release_id", "readiness_bundle_id", "readiness_bundle_manifest_sha256", "base_flow_bundle_id", "base_flow_bundle_manifest_sha256", "calculation_set_id", "calculation_manifest_sha256", "schedule_a_fact_set_id", "schedule_a_manifest_sha256", "committee_fact_set_id", "committee_manifest_sha256", "identity_calculation_set_id", "identity_manifest_sha256", "identity_decisions_sha256"],
+      "properties": {
+        "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+        "readiness_bundle_id": {"$ref": "#/$defs/digest"},
+        "readiness_bundle_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "base_flow_bundle_id": {"$ref": "#/$defs/digest"},
+        "base_flow_bundle_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "calculation_set_id": {"$ref": "#/$defs/digest"},
+        "calculation_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "schedule_a_fact_set_id": {"$ref": "#/$defs/digest"},
+        "schedule_a_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "committee_fact_set_id": {"$ref": "#/$defs/digest"},
+        "committee_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "identity_calculation_set_id": {"$ref": "#/$defs/digest"},
+        "identity_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "identity_decisions_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["entities", "current_cycle_masters", "historical_registrations", "alternate_release_registrations", "unresolved_reported_ids", "terminal_identity_eligible", "terminal_identity_ineligible", "edges", "registered_filer_contribution_edges", "in_kind_contribution_edges", "affiliated_transfer_in_edges", "refund_repayment_received_edges"],
+      "properties": {
+        "entities": {"type": "integer", "minimum": 1},
+        "current_cycle_masters": {"type": "integer", "minimum": 0},
+        "historical_registrations": {"type": "integer", "minimum": 0},
+        "alternate_release_registrations": {"type": "integer", "minimum": 0},
+        "unresolved_reported_ids": {"type": "integer", "minimum": 0},
+        "terminal_identity_eligible": {"type": "integer", "minimum": 0},
+        "terminal_identity_ineligible": {"type": "integer", "minimum": 0},
+        "edges": {"type": "integer", "minimum": 1},
+        "registered_filer_contribution_edges": {"type": "integer", "minimum": 0},
+        "in_kind_contribution_edges": {"type": "integer", "minimum": 0},
+        "affiliated_transfer_in_edges": {"type": "integer", "minimum": 0},
+        "refund_repayment_received_edges": {"type": "integer", "minimum": 0}
+      }
+    },
+    "amounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["total_minor_units", "registered_filer_contribution_minor_units", "in_kind_contribution_minor_units", "affiliated_transfer_in_minor_units", "refund_repayment_received_minor_units"],
+      "properties": {
+        "total_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "registered_filer_contribution_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "in_kind_contribution_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "affiliated_transfer_in_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "refund_repayment_received_minor_units": {"$ref": "#/$defs/signed_integer"}
+      }
+    },
+    "topology": {
+      "type": "object", "additionalProperties": false,
+      "required": ["weak_components", "strong_components", "cyclic_strong_components", "committees_in_cycles", "representative_path_hops", "representative_cycle_hops"],
+      "properties": {
+        "weak_components": {"type": "integer", "minimum": 1},
+        "strong_components": {"type": "integer", "minimum": 1},
+        "cyclic_strong_components": {"type": "integer", "minimum": 0},
+        "committees_in_cycles": {"type": "integer", "minimum": 0},
+        "representative_path_hops": {"type": "integer", "minimum": 1},
+        "representative_cycle_hops": {"type": "integer", "minimum": 0}
+      }
+    },
+    "storage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["collections", "document_bytes", "index_bytes", "combined_bytes"],
+      "properties": {
+        "collections": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/collection"}},
+        "document_bytes": {"type": "integer", "minimum": 1},
+        "index_bytes": {"type": "integer", "minimum": 1},
+        "combined_bytes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "collection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "documents", "document_bytes", "index_count", "index_bytes", "cache_bytes"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "documents": {"type": "integer", "minimum": 0},
+        "document_bytes": {"type": "integer", "minimum": 0},
+        "index_count": {"type": "integer", "minimum": 1},
+        "index_bytes": {"type": "integer", "minimum": 0},
+        "cache_bytes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "query": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "repetitions", "result_rows", "minimum_micros", "median_micros", "p95_micros", "maximum_micros"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "repetitions": {"type": "integer", "minimum": 1},
+        "result_rows": {"type": "integer", "minimum": 1},
+        "minimum_micros": {"type": "integer", "minimum": 0},
+        "median_micros": {"type": "integer", "minimum": 0},
+        "p95_micros": {"type": "integer", "minimum": 0},
+        "maximum_micros": {"type": "integer", "minimum": 0}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {"id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}, "passed": {"type": "boolean"}, "severity": {"enum": ["block", "warn"]}, "detail": {"type": "string", "minLength": 1}}
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "lda/filings@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "The public API response was parsed as JSON and reserialized with sorted object keys and two-space indentation. Values and array order are unchanged; HTTP headers and original whitespace are not part of this fixture.",
+  "fixtures": [
+    {
+      "path": "registration.json",
+      "source_url": "https://lda.gov/api/v1/filings/7866327b-c892-4430-b9f0-1f0f679c58c6/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "cd0629aaf3d8ff540295d3745c86801006140b0e86abe0fd5852dd6bb57902c9",
+      "scenarios": [
+        "LD-1 registration",
+        "multiple lobbying activities",
+        "null income and expenses"
+      ]
+    },
+    {
+      "path": "quarterly-report.json",
+      "source_url": "https://lda.gov/api/v1/filings/467e4a97-6351-4902-8ffa-dd51632e156b/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "34b653709e0f280a623c299460c86a109a188ac0cf5770a722d32f5c8a3e1202",
+      "scenarios": [
+        "ordinary LD-2 quarterly report",
+        "income filer",
+        "nested activity"
+      ]
+    },
+    {
+      "path": "no-activity-with-income.json",
+      "source_url": "https://lda.gov/api/v1/filings/3e3453a3-0d92-4f65-883f-e2a13cfdb11f/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "af376ac3ca3131e4511fb823c8702bb3b773ad7d0749481e3f9b59205a46d8d2",
+      "scenarios": [
+        "no-activity filing",
+        "empty activity array",
+        "non-zero income"
+      ]
+    },
+    {
+      "path": "termination-with-activity.json",
+      "source_url": "https://lda.gov/api/v1/filings/24aa3971-815e-40ca-a63f-455ff0090c03/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "ecca47c7012ffe7f3d045bbc285bba9c9c3154fc84246e7270c5d276400e04f9",
+      "scenarios": [
+        "termination date",
+        "reported expenses",
+        "activity retained"
+      ]
+    },
+    {
+      "path": "amendment.json",
+      "source_url": "https://lda.gov/api/v1/filings/7466c7ee-8bd1-4496-94df-5d5322d25e2d/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "6b1b4a22d996e698de3c3a7d89caf7e70fbf44af85d6d383a6a24c209347f22f",
+      "scenarios": [
+        "amendment filing",
+        "uppercase expense-method code",
+        "distinct filing UUID"
+      ]
+    },
+    {
+      "path": "amendment-family-original.json",
+      "source_url": "https://lda.gov/api/v1/filings/d05eac1f-0651-48a8-b34f-d57b6d40cd06/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "8b27215accd4f1dcce575e259cef1600244e4b71fbd7a569a28cfa769aff74e0",
+      "scenarios": [
+        "LD-2 amendment-family original",
+        "API null expense with printable under-threshold state",
+        "complete form-version comparison"
+      ]
+    },
+    {
+      "path": "amendment-family-second.json",
+      "source_url": "https://lda.gov/api/v1/filings/502bf3ec-6897-4d1e-a684-b1b7f578fa04/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "99acef991307678086535d8315a80024fa9eb004b6f5d75086eac3d0a9686893",
+      "scenarios": [
+        "LD-2 amendment-family intermediate version",
+        "API null expense with printable under-threshold state",
+        "changed complete activity sections"
+      ]
+    },
+    {
+      "path": "amendment-family-third.json",
+      "source_url": "https://lda.gov/api/v1/filings/ad68a692-6a5b-4562-b468-48262b8bcba0/",
+      "retrieved_on": "2026-08-27",
+      "sha256": "144220c55fbabf78f8886282f50dfd61516203f093a85a6acb20bbebc683b30e",
+      "scenarios": [
+        "LD-2 amendment-family later version",
+        "API null expense with printable under-threshold state",
+        "changed complete activity sections"
+      ]
+    }
+  ]
+}

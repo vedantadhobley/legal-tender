@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/releases/fec/v1/release-plan.schema.json",
+  "title": "Legal Tender FEC release plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "inventory_version",
+    "status",
+    "planned_at",
+    "selected_sources",
+    "changed_source_ids",
+    "reused_source_ids",
+    "issues"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.release-plan.v1"},
+    "inventory_version": {"const": "legal-tender.fec.initial-release-inventory.v1"},
+    "status": {"enum": ["update_available", "no_change", "source_not_ready", "invalid"]},
+    "planned_at": {"type": "string", "format": "date-time"},
+    "discovery_started_at": {"type": "string", "format": "date-time"},
+    "discovery_completed_at": {"type": "string", "format": "date-time"},
+    "prior_release_id": {"type": "string", "minLength": 1},
+    "candidate_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "selected_sources": {
+      "type": "array",
+      "maxItems": 21,
+      "items": {"$ref": "#/$defs/selectedSource"}
+    },
+    "changed_source_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "reused_source_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "issues": {"type": "array", "items": {"$ref": "#/$defs/issue"}}
+  },
+  "$defs": {
+    "selectedSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "request_url",
+        "final_url",
+        "observed_at",
+        "version_identity",
+        "version_basis"
+      ],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "request_url": {"type": "string", "format": "uri"},
+        "final_url": {"type": "string", "format": "uri"},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "version_identity": {"type": "string", "minLength": 1},
+        "version_basis": {"enum": ["version_id", "etag", "digest", "last_modified_content_length"]},
+        "version_id": {"type": "string", "minLength": 1},
+        "etag": {"type": "string", "minLength": 1},
+        "last_modified": {"type": "string", "minLength": 1},
+        "content_length": {"type": "integer", "minimum": 0},
+        "digest": {"type": "string", "minLength": 1},
+        "accept_ranges": {"type": "string", "minLength": 1}
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "source_id": {"type": "string", "minLength": 1},
+        "code": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "update_available"}}},
+      "then": {
+        "required": ["discovery_started_at", "discovery_completed_at", "candidate_release_id"],
+        "properties": {"selected_sources": {"minItems": 21}, "changed_source_ids": {"minItems": 1}}
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "no_change"}}},
+      "then": {
+        "required": ["discovery_started_at", "discovery_completed_at", "prior_release_id"],
+        "properties": {"selected_sources": {"minItems": 21}, "changed_source_ids": {"maxItems": 0}, "reused_source_ids": {"minItems": 21}}
+      }
+    },
+    {
+      "if": {"properties": {"status": {"enum": ["source_not_ready", "invalid"]}}},
+      "then": {"properties": {"issues": {"minItems": 1}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "source_not_ready"}}},
+      "then": {"required": ["discovery_started_at", "discovery_completed_at"]}
+    }
+  ]
+}

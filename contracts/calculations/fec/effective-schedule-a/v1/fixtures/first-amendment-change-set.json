@@ -1,0 +1,597 @@
+{
+  "calculation_contract": "fec/effective-schedule-a",
+  "calculation_version": "1.0.0",
+  "report_family_id": "fec:efile-report:1997074",
+  "report_family_result_sha256": "52eae400d6f9592820c8773fdc5f9ec6febc5e23a1c2396e9be0b2932d73d99f",
+  "projection_state": "projected",
+  "prior_effective_file_number": 1997074,
+  "effective_file_number": 2009982,
+  "record_family": "SA",
+  "row_key_method": "report_family_id + ':SA:' + exact transaction_id",
+  "logical_digest_method": "fec.schedule_a.logical_row.v1",
+  "row_set_digest_method": "fec.schedule_a.logical_row_set.v1",
+  "summary": {
+    "prior_row_count": 23,
+    "current_row_count": 25,
+    "added_count": 2,
+    "modified_count": 5,
+    "removed_count": 0,
+    "carried_forward_identical_count": 18,
+    "representation_changed_count": 0,
+    "unresolved_count": 0
+  },
+  "current_rows": [
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4937",
+      "transaction_id": "DA4937",
+      "form_type": "SA11AI",
+      "change_state": "modified",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 17,
+        "physical_record_sha256": "747e12e331162b9382dfdc40d04f203cd4fb23052d4b9add9c5feedb050173b5"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 17,
+        "physical_record_sha256": "15421cd1b3815b12615123ed36e013a589815ccff94b48956d54ef4d2d29d981"
+      },
+      "logical_row_sha256": "dabe5182a4a9039cb0e87fd702809621d3d252fd5bef6198f9b29fe0cd7520e5",
+      "prior_logical_row_sha256": "29548451468e9656d5bd62ba8387a8ecc86026ce8eb2fbbf7c6792ededfb18b8",
+      "changed_fields": [
+        "contribution_aggregate",
+        "donor_candidate_district"
+      ]
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4939",
+      "transaction_id": "DA4939",
+      "form_type": "SA11AI",
+      "change_state": "modified",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 15,
+        "physical_record_sha256": "eb3400e6c34312293265478c0563c7c7e8ac4f1b4f0fa90c65e6cc08113caed6"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 15,
+        "physical_record_sha256": "30b15edf4c4c924eab049b809e0474397c1214a5bed64399ccb288294ce70807"
+      },
+      "logical_row_sha256": "32dd46362210941d94f66c6ed5ba3c1c251301a7e3f338fcb75ab40de290cd1f",
+      "prior_logical_row_sha256": "e5ff534c76fe419d317130e7b2ed956bd85b9a518891d0d0a397392ed9ccdb71",
+      "changed_fields": [
+        "contribution_aggregate",
+        "contributor_occupation",
+        "donor_candidate_district"
+      ]
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4945",
+      "transaction_id": "DA4945",
+      "form_type": "SA11AI",
+      "change_state": "added",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 19,
+        "physical_record_sha256": "207d9a0a0b35020b14b822812c0dd3cd166bf423401b8dc507865278b83c2567"
+      },
+      "prior_occurrence": null,
+      "logical_row_sha256": "760233626de70b9d8227f40142d9dc29767e044b089580d139189052b7da4f92",
+      "prior_logical_row_sha256": null,
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4950",
+      "transaction_id": "DA4950",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 21,
+        "physical_record_sha256": "d62af329afe34bfd36d2c71115fc54b9b4523191202cf52ad65b6431ea26ae73"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 19,
+        "physical_record_sha256": "d62af329afe34bfd36d2c71115fc54b9b4523191202cf52ad65b6431ea26ae73"
+      },
+      "logical_row_sha256": "e17a4f3f9cb05bb64959731eefe61bd77f6a6da6acdfb514a783b088fe32ee63",
+      "prior_logical_row_sha256": "e17a4f3f9cb05bb64959731eefe61bd77f6a6da6acdfb514a783b088fe32ee63",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4955",
+      "transaction_id": "DA4955",
+      "form_type": "SA11AI",
+      "change_state": "modified",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 6,
+        "physical_record_sha256": "7a605ecfa3225229154255ea050aaf7050bb2916b75f637fc5c4cce9b5df3a02"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 6,
+        "physical_record_sha256": "27c555dd284c661b322155a5fa2ed40cb0a1b5de1ce4f62b9fbffe92dcbcf07b"
+      },
+      "logical_row_sha256": "10b10da93e620515810fb0bb7772c0abe8ed9e72454848bdd8ff6a0fedd88aad",
+      "prior_logical_row_sha256": "dde2e5bc3fafc466cb3b575a96f77069d4bf2503ede810bc83c94813ec027366",
+      "changed_fields": [
+        "contribution_aggregate",
+        "donor_candidate_district"
+      ]
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4957",
+      "transaction_id": "DA4957",
+      "form_type": "SA11AI",
+      "change_state": "modified",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 4,
+        "physical_record_sha256": "cba91d93bc11ba41b3510add7233e471409ba0720b41814721b484c6bdc5d46b"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 4,
+        "physical_record_sha256": "06ed121c503d0d23a7ae8414e475004d158f8cb5f5e7fc6e05e30986c0c89fb3"
+      },
+      "logical_row_sha256": "df644722912dcabef2b76ff68d698a7a8ec685d204345b93d940b5102ca953fb",
+      "prior_logical_row_sha256": "0cd2a23ed8976f3544f94b98b17f3146b9fde5ca6eea51be4eea7e7da581b744",
+      "changed_fields": [
+        "contribution_aggregate",
+        "contributor_occupation",
+        "donor_candidate_district"
+      ]
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4958",
+      "transaction_id": "DA4958",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 9,
+        "physical_record_sha256": "e0f0e4d860d9256ca98b120857e916c5d104a5b6115bb2b289429c189552690a"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 9,
+        "physical_record_sha256": "e0f0e4d860d9256ca98b120857e916c5d104a5b6115bb2b289429c189552690a"
+      },
+      "logical_row_sha256": "23879f5f38c90f247f56635e3473acecd09d2545055727ac6f9e4b9e28891434",
+      "prior_logical_row_sha256": "23879f5f38c90f247f56635e3473acecd09d2545055727ac6f9e4b9e28891434",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:DA4959",
+      "transaction_id": "DA4959",
+      "form_type": "SA11AI",
+      "change_state": "modified",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 12,
+        "physical_record_sha256": "8e66d375844834ade33f80f6dd29da452385ab50341152999c7f0d51a6c4ad0b"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 12,
+        "physical_record_sha256": "2ba842b930525163e1a0eca44e5f32736ef9d83cb5e753612c8586c8b7f3f519"
+      },
+      "logical_row_sha256": "7e777654dd44e986f2efed2a4208b3eb02b80ad96b52c997da2d042ed16a5446",
+      "prior_logical_row_sha256": "700ad83cb1096c678e488ec14203f4b51c43ed9dc7777ea007538afe99037814",
+      "changed_fields": [
+        "contribution_aggregate",
+        "contributor_occupation",
+        "donor_candidate_district"
+      ]
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21226IDTA4955",
+      "transaction_id": "IA21226IDTA4955",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 7,
+        "physical_record_sha256": "ac60500d5bc4149d3fea8ccd575fb1d2f2d2fc7641ffa7cc97735f59071126d1"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 7,
+        "physical_record_sha256": "ac60500d5bc4149d3fea8ccd575fb1d2f2d2fc7641ffa7cc97735f59071126d1"
+      },
+      "logical_row_sha256": "4f974fceb28c919c37eefd4ed7e81ff73d8448e8b969b12c899aa851cceb48b3",
+      "prior_logical_row_sha256": "4f974fceb28c919c37eefd4ed7e81ff73d8448e8b969b12c899aa851cceb48b3",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21226IDTA4957",
+      "transaction_id": "IA21226IDTA4957",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 5,
+        "physical_record_sha256": "abdcb9b9036dc0e4fd7842954d97c92517fca14da048cdee8adf50b2933f8733"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 5,
+        "physical_record_sha256": "abdcb9b9036dc0e4fd7842954d97c92517fca14da048cdee8adf50b2933f8733"
+      },
+      "logical_row_sha256": "c4929d5690ad5c3ff8b420918c3cd4162de63a9f688a86130d756657c8e9b1cf",
+      "prior_logical_row_sha256": "c4929d5690ad5c3ff8b420918c3cd4162de63a9f688a86130d756657c8e9b1cf",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21289IDTA4958",
+      "transaction_id": "IA21289IDTA4958",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 10,
+        "physical_record_sha256": "780141314e5584de5bc9a9cff98e19081f1b9f08b0f620e8cdba75b07fdf0f74"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 10,
+        "physical_record_sha256": "780141314e5584de5bc9a9cff98e19081f1b9f08b0f620e8cdba75b07fdf0f74"
+      },
+      "logical_row_sha256": "632fd409977e6ab503598817e9d5b606eca218074afcf58245a14cc1e2384f0b",
+      "prior_logical_row_sha256": "632fd409977e6ab503598817e9d5b606eca218074afcf58245a14cc1e2384f0b",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21289IDTA4959",
+      "transaction_id": "IA21289IDTA4959",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 13,
+        "physical_record_sha256": "bb076034af5e8969e70913ae3d6db755b1703910f2a1cbbaecb7c2f0a2aaad66"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 13,
+        "physical_record_sha256": "bb076034af5e8969e70913ae3d6db755b1703910f2a1cbbaecb7c2f0a2aaad66"
+      },
+      "logical_row_sha256": "1b0232a3c36b3c976e5345d109d5005f48eb346e81cc6ab91b444f31f1aa58bd",
+      "prior_logical_row_sha256": "1b0232a3c36b3c976e5345d109d5005f48eb346e81cc6ab91b444f31f1aa58bd",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21291",
+      "transaction_id": "IA21291",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 3,
+        "physical_record_sha256": "4ab644b3084fa63d10ed3a64b85fe459c67cda432740a777d5c19a75fce93e05"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 3,
+        "physical_record_sha256": "4ab644b3084fa63d10ed3a64b85fe459c67cda432740a777d5c19a75fce93e05"
+      },
+      "logical_row_sha256": "6ee1ca52502e0b7de79ddb50e21018e28a46ada750f355e90f52da9798e40f7b",
+      "prior_logical_row_sha256": "6ee1ca52502e0b7de79ddb50e21018e28a46ada750f355e90f52da9798e40f7b",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21292",
+      "transaction_id": "IA21292",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 8,
+        "physical_record_sha256": "bfaec809d5c4124fb5f11a2b0d4c51cd20824c201511303685d4de8a4114ef9a"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 8,
+        "physical_record_sha256": "bfaec809d5c4124fb5f11a2b0d4c51cd20824c201511303685d4de8a4114ef9a"
+      },
+      "logical_row_sha256": "60f4f7a67166314f85d92046d44ccb54c9928315ee33267cde13116282253a9a",
+      "prior_logical_row_sha256": "60f4f7a67166314f85d92046d44ccb54c9928315ee33267cde13116282253a9a",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21293",
+      "transaction_id": "IA21293",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 11,
+        "physical_record_sha256": "85f1d2938a97deb7c618ec0c160c2fe13c83e0eec883314384ff01dbe9f3c0f8"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 11,
+        "physical_record_sha256": "85f1d2938a97deb7c618ec0c160c2fe13c83e0eec883314384ff01dbe9f3c0f8"
+      },
+      "logical_row_sha256": "8d7e285eceb298c13bcd7c008a2a290a1066ca43dbe38d63ad8e08ec1803228e",
+      "prior_logical_row_sha256": "8d7e285eceb298c13bcd7c008a2a290a1066ca43dbe38d63ad8e08ec1803228e",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21294",
+      "transaction_id": "IA21294",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 14,
+        "physical_record_sha256": "6d30cd683fbcb9e24847ed29e7563a8115cf45fa88d82f4ec2484823e87a8530"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 14,
+        "physical_record_sha256": "6d30cd683fbcb9e24847ed29e7563a8115cf45fa88d82f4ec2484823e87a8530"
+      },
+      "logical_row_sha256": "ad1f11b606f132cd82894e79f1d3e24b14cb00f4b169972f5a42aa9983c4fef7",
+      "prior_logical_row_sha256": "ad1f11b606f132cd82894e79f1d3e24b14cb00f4b169972f5a42aa9983c4fef7",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21313",
+      "transaction_id": "IA21313",
+      "form_type": "SA15",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 23,
+        "physical_record_sha256": "d7046d1d352d2a34426db0ba7714b7b46aed3a5cfaa6b228776dbc310c415ad9"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 21,
+        "physical_record_sha256": "d7046d1d352d2a34426db0ba7714b7b46aed3a5cfaa6b228776dbc310c415ad9"
+      },
+      "logical_row_sha256": "a102210f202cf39ba654db7eb7a04fcb04a41f16fef3371d2d7fd60081458c75",
+      "prior_logical_row_sha256": "a102210f202cf39ba654db7eb7a04fcb04a41f16fef3371d2d7fd60081458c75",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21314",
+      "transaction_id": "IA21314",
+      "form_type": "SA15",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 24,
+        "physical_record_sha256": "22869e0f77bc89b404f65de201db8858d4d378b912c87ea3bef7ffb9e4dae5bf"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 22,
+        "physical_record_sha256": "22869e0f77bc89b404f65de201db8858d4d378b912c87ea3bef7ffb9e4dae5bf"
+      },
+      "logical_row_sha256": "e3f086cdbe8b715a26c33b350a4da6a00ef823c81fa925c0259ed36823d8ef3b",
+      "prior_logical_row_sha256": "e3f086cdbe8b715a26c33b350a4da6a00ef823c81fa925c0259ed36823d8ef3b",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21353IDTA4937",
+      "transaction_id": "IA21353IDTA4937",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 18,
+        "physical_record_sha256": "6e6e403ba78ac0452e61f2cbc403b12ec70171be627f3d0ac1183b28daa71446"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 18,
+        "physical_record_sha256": "6e6e403ba78ac0452e61f2cbc403b12ec70171be627f3d0ac1183b28daa71446"
+      },
+      "logical_row_sha256": "893412e9ac479d4c098707aade583c97fbe21d3c0d1254c73bab71453af37345",
+      "prior_logical_row_sha256": "893412e9ac479d4c098707aade583c97fbe21d3c0d1254c73bab71453af37345",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21353IDTA4939",
+      "transaction_id": "IA21353IDTA4939",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 16,
+        "physical_record_sha256": "9527bd20c5661ab2d77cdcf8918e38c563a6d74951c3e8071754f1bdc938c19c"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 16,
+        "physical_record_sha256": "9527bd20c5661ab2d77cdcf8918e38c563a6d74951c3e8071754f1bdc938c19c"
+      },
+      "logical_row_sha256": "7c108870c6ee2fd7ca92b3055a319289fe9362501108a35b95af186c7222a959",
+      "prior_logical_row_sha256": "7c108870c6ee2fd7ca92b3055a319289fe9362501108a35b95af186c7222a959",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21354IDTA4945",
+      "transaction_id": "IA21354IDTA4945",
+      "form_type": "SA11AI",
+      "change_state": "added",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 20,
+        "physical_record_sha256": "a763629ead8285a53d309ac534b79556a53dceaf2a3fbc2575e3615f84882fc9"
+      },
+      "prior_occurrence": null,
+      "logical_row_sha256": "32d13437d59ad26fc67e025bfb0abfea2fad940a60ca6efa6e75d0c1bbaf6386",
+      "prior_logical_row_sha256": null,
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21354IDTA4950",
+      "transaction_id": "IA21354IDTA4950",
+      "form_type": "SA11AI",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 22,
+        "physical_record_sha256": "1d1d667bebd4eb9d225098e33ebf64515c2598acf723ff561235a54c2fc6793e"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 20,
+        "physical_record_sha256": "1d1d667bebd4eb9d225098e33ebf64515c2598acf723ff561235a54c2fc6793e"
+      },
+      "logical_row_sha256": "43497730c5a865bdfd109ad7eb2cf6a66164baf901d69bc4763d99fa9d3507ca",
+      "prior_logical_row_sha256": "43497730c5a865bdfd109ad7eb2cf6a66164baf901d69bc4763d99fa9d3507ca",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21404",
+      "transaction_id": "IA21404",
+      "form_type": "SA15",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 25,
+        "physical_record_sha256": "24149fa7915226de9d5c9c745b10d522b47c6125c52ae1a7f29f42ff9631bcb8"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 23,
+        "physical_record_sha256": "24149fa7915226de9d5c9c745b10d522b47c6125c52ae1a7f29f42ff9631bcb8"
+      },
+      "logical_row_sha256": "2d79d93fe281a040e5da0cfbcca09f1434924943686cedc75e52d8b3fc00d021",
+      "prior_logical_row_sha256": "2d79d93fe281a040e5da0cfbcca09f1434924943686cedc75e52d8b3fc00d021",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21405",
+      "transaction_id": "IA21405",
+      "form_type": "SA15",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 27,
+        "physical_record_sha256": "691c3a8788a2cb6dd1d6ae2fe7cf1e4bca3570838be041b1a54afc9e8a07401f"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 25,
+        "physical_record_sha256": "691c3a8788a2cb6dd1d6ae2fe7cf1e4bca3570838be041b1a54afc9e8a07401f"
+      },
+      "logical_row_sha256": "fc24d943b4cdca35726a0a39959953a4bfb0168e6531c68eb4662c5050dffd9a",
+      "prior_logical_row_sha256": "fc24d943b4cdca35726a0a39959953a4bfb0168e6531c68eb4662c5050dffd9a",
+      "changed_fields": []
+    },
+    {
+      "row_key": "fec:efile-report:1997074:SA:IA21414",
+      "transaction_id": "IA21414",
+      "form_type": "SA15",
+      "change_state": "carried_forward_identical",
+      "current_occurrence": {
+        "file_number": 2009982,
+        "document_sha256": "e2b8e0d98e1fbbfd491d0ed39232a2c00607e045e2c5de7dbd83c8b4ab9883ce",
+        "physical_record_ordinal": 26,
+        "physical_record_sha256": "607dbf629a272d72a2507a1d1f50088ffedf9140e6ad65a86f625a9e7aab2386"
+      },
+      "prior_occurrence": {
+        "file_number": 1997074,
+        "document_sha256": "ecf925adb774097fef43f606568f92459638759493214cd71c20be085317bb1f",
+        "physical_record_ordinal": 24,
+        "physical_record_sha256": "607dbf629a272d72a2507a1d1f50088ffedf9140e6ad65a86f625a9e7aab2386"
+      },
+      "logical_row_sha256": "bacd111e03ddd56e885494f4e643adeaaff4f1401231807bfcacefef044d6476",
+      "prior_logical_row_sha256": "bacd111e03ddd56e885494f4e643adeaaff4f1401231807bfcacefef044d6476",
+      "changed_fields": []
+    }
+  ],
+  "removed_rows": [],
+  "unresolved_rows": [],
+  "change_set": {
+    "lineage_changed": true,
+    "semantic_changed": true,
+    "changed_row_keys": [
+      "fec:efile-report:1997074:SA:DA4937",
+      "fec:efile-report:1997074:SA:DA4939",
+      "fec:efile-report:1997074:SA:DA4945",
+      "fec:efile-report:1997074:SA:DA4955",
+      "fec:efile-report:1997074:SA:DA4957",
+      "fec:efile-report:1997074:SA:DA4959",
+      "fec:efile-report:1997074:SA:IA21354IDTA4945"
+    ],
+    "affected_committee_ids": [
+      "C00392928"
+    ],
+    "affected_contribution_dates": [
+      "20260516",
+      "20260517",
+      "20260523",
+      "20260616",
+      "20260617",
+      "20260623",
+      "20260628"
+    ],
+    "target_two_year_periods": [
+      2026
+    ],
+    "prior_semantic_row_set_sha256": "4448afcda02ae9d46ab640088b7600af7aecf5fe9d92d5f05e71f7fd7ed0aa2c",
+    "current_semantic_row_set_sha256": "e4344b51de5d8e55082e2b2975e6be40371b97c1d901fa204b9eb7076ba1d1d0"
+  },
+  "issues": [
+    {
+      "code": "extra_trailing_empty_field",
+      "severity": "observe",
+      "detail": "All 23 prior and 25 current Schedule A rows contain one preserved trailing empty field after the 45-field logical layout; it does not enter the logical digest."
+    }
+  ]
+}

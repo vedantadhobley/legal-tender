@@ -1,0 +1,179 @@
+{
+  "affiliated_organizations": [],
+  "client": {
+    "client_government_entity": null,
+    "client_id": 58116,
+    "client_self_select": false,
+    "country": "US",
+    "country_display": "United States of America",
+    "effective_date": "2024-01-01",
+    "general_description": "Emergency services dispatch center",
+    "id": 58116,
+    "name": "E-COM 9-1-1 DISPATCH CENTER",
+    "ppb_country": "US",
+    "ppb_country_display": "United States of America",
+    "ppb_state": "IL",
+    "ppb_state_display": "Illinois",
+    "state": "IL",
+    "state_display": "Illinois",
+    "url": "https://lda.gov/api/v1/clients/58116/"
+  },
+  "conviction_disclosures": [],
+  "dt_posted": "2024-01-02T10:13:41-05:00",
+  "expenses": null,
+  "expenses_method": null,
+  "expenses_method_display": null,
+  "filing_document_content_type": "text/html",
+  "filing_document_url": "https://lda.gov/filings/public/filing/7866327b-c892-4430-b9f0-1f0f679c58c6/print/",
+  "filing_period": "first_quarter",
+  "filing_period_display": "1st Quarter (Jan 1 - Mar 31)",
+  "filing_type": "RR",
+  "filing_type_display": "Registration",
+  "filing_uuid": "7866327b-c892-4430-b9f0-1f0f679c58c6",
+  "filing_year": 2024,
+  "foreign_entities": [],
+  "income": null,
+  "lobbying_activities": [
+    {
+      "description": "Federal funding opportunities related to emergency and disaster preparedness.",
+      "foreign_entity_issues": null,
+      "general_issue_code": "BUD",
+      "general_issue_code_display": "Budget/Appropriations",
+      "government_entities": [],
+      "lobbyists": [
+        {
+          "covered_position": null,
+          "lobbyist": {
+            "first_name": "BRETT",
+            "id": 38841,
+            "last_name": "GARSON",
+            "middle_name": null,
+            "nickname": null,
+            "prefix": null,
+            "prefix_display": null,
+            "suffix": null,
+            "suffix_display": null
+          },
+          "new": true
+        },
+        {
+          "covered_position": "Scheduler/special assistant, Rep. Raul Ruiz; Staff Assistant, Legislative Correspondent, Legislative Assistant, Rep. Zoe Lofgren",
+          "lobbyist": {
+            "first_name": "KRISTIAN",
+            "id": 72956,
+            "last_name": "CHIN",
+            "middle_name": null,
+            "nickname": null,
+            "prefix": null,
+            "prefix_display": null,
+            "suffix": null,
+            "suffix_display": null
+          },
+          "new": true
+        },
+        {
+          "covered_position": "Legislative Correspondent and Systems Administrator, Congressman Elijah E. Cummings Legislative Assistant and Systems Administrator, Congressman Kweisi Mfume",
+          "lobbyist": {
+            "first_name": "KIERSTIN",
+            "id": 148710,
+            "last_name": "STRADFORD-PATTERSON",
+            "middle_name": null,
+            "nickname": null,
+            "prefix": null,
+            "prefix_display": null,
+            "suffix": null,
+            "suffix_display": null
+          },
+          "new": true
+        }
+      ]
+    },
+    {
+      "description": "Federal funding opportunities related to emergency and disaster preparedness.",
+      "foreign_entity_issues": null,
+      "general_issue_code": "DIS",
+      "general_issue_code_display": "Disaster Planning/Emergencies",
+      "government_entities": [],
+      "lobbyists": [
+        {
+          "covered_position": null,
+          "lobbyist": {
+            "first_name": "BRETT",
+            "id": 38841,
+            "last_name": "GARSON",
+            "middle_name": null,
+            "nickname": null,
+            "prefix": null,
+            "prefix_display": null,
+            "suffix": null,
+            "suffix_display": null
+          },
+          "new": true
+        },
+        {
+          "covered_position": "Scheduler/special assistant, Rep. Raul Ruiz; Staff Assistant, Legislative Correspondent, Legislative Assistant, Rep. Zoe Lofgren",
+          "lobbyist": {
+            "first_name": "KRISTIAN",
+            "id": 72956,
+            "last_name": "CHIN",
+            "middle_name": null,
+            "nickname": null,
+            "prefix": null,
+            "prefix_display": null,
+            "suffix": null,
+            "suffix_display": null
+          },
+          "new": true
+        },
+        {
+          "covered_position": "Legislative Correspondent and Systems Administrator, Congressman Elijah E. Cummings Legislative Assistant and Systems Administrator, Congressman Kweisi Mfume",
+          "lobbyist": {
+            "first_name": "KIERSTIN",
+            "id": 148710,
+            "last_name": "STRADFORD-PATTERSON",
+            "middle_name": null,
+            "nickname": null,
+            "prefix": null,
+            "prefix_display": null,
+            "suffix": null,
+            "suffix_display": null
+          },
+          "new": true
+        }
+      ]
+    }
+  ],
+  "posted_by_name": "Amy R. Williams",
+  "registrant": {
+    "address_1": "750 First Street NE",
+    "address_2": "SUITE 1130",
+    "address_3": null,
+    "address_4": null,
+    "city": "WASHINGTON",
+    "contact_name": "AMY R. WILLIAMS",
+    "contact_telephone": "+1 202-835-0740",
+    "country": "US",
+    "country_display": "United States of America",
+    "description": "Government affairs",
+    "dt_updated": "2026-07-18T20:19:36.811212-04:00",
+    "house_registrant_id": 32416,
+    "id": 35707,
+    "name": "SMITH GARSON",
+    "ppb_country": "US",
+    "ppb_country_display": "United States of America",
+    "state": "DC",
+    "state_display": "District of Columbia",
+    "url": "https://lda.gov/api/v1/registrants/35707/",
+    "zip": "20002"
+  },
+  "registrant_address_1": "1150 CONNECTICUT AVE, NW",
+  "registrant_address_2": "SUITE 730",
+  "registrant_city": "WASHINGTON",
+  "registrant_country": "United States of America",
+  "registrant_different_address": null,
+  "registrant_ppb_country": null,
+  "registrant_state": "DC",
+  "registrant_zip": "20036",
+  "termination_date": null,
+  "url": "https://lda.gov/api/v1/filings/7866327b-c892-4430-b9f0-1f0f679c58c6/"
+}

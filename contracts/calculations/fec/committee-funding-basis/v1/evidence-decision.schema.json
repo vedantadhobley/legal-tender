@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/evidence-decision.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_row_ordinal",
+    "source_route",
+    "reported_source_committee_id",
+    "publisher_individual_overlap",
+    "individual_entity_type_conflict",
+    "earmark_state",
+    "conduit_state",
+    "reported_conduit_committee_id",
+    "report_reference_state",
+    "memo_text_present",
+    "conduit_name_present",
+    "additional_conduit_amount_minor_units",
+    "terminal_attribution_eligible"
+  ],
+  "properties": {
+    "source_row_ordinal": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "source_route": {
+      "enum": [
+        "reported_committee_observation",
+        "publisher_individual_identity_unresolved",
+        "conflicting_contributor_evidence_unresolved",
+        "memo_evidence_only",
+        "unknown_amount",
+        "unresolved_recipient",
+        "other_or_unresolved_receipt"
+      ]
+    },
+    "reported_source_committee_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^C[0-9]{8}$"
+    },
+    "publisher_individual_overlap": {
+      "type": "boolean"
+    },
+    "individual_entity_type_conflict": {
+      "type": "boolean"
+    },
+    "earmark_state": {
+      "enum": [
+        "no_reviewed_earmark_code",
+        "reported_earmarked_receipt",
+        "reported_intermediary_receipt"
+      ]
+    },
+    "conduit_state": {
+      "enum": [
+        "no_structured_conduit_assertion",
+        "invalid_structured_conduit_id",
+        "reported_structured_id_identity_unverified",
+        "conduit_role_unresolved",
+        "earmark_conduit_unresolved",
+        "conduit_name_identity_unresolved"
+      ]
+    },
+    "reported_conduit_committee_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^C[0-9]{8}$"
+    },
+    "report_reference_state": {
+      "enum": [
+        "no_report_reference",
+        "incomplete_report_reference",
+        "reported_reference_requires_same_filing_resolution"
+      ]
+    },
+    "memo_text_present": {
+      "type": "boolean"
+    },
+    "conduit_name_present": {
+      "type": "boolean"
+    },
+    "additional_conduit_amount_minor_units": {
+      "const": "0"
+    },
+    "terminal_attribution_eligible": {
+      "const": false
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../../source-contract.schema.json",
+  "contract_id": "wikimedia/relationship-statements",
+  "contract_version": "1.0.0",
+  "status": "draft",
+  "publisher": {"id":"wikimedia","name":"Wikimedia community projects","base_url":"https://www.wikidata.org/"},
+  "dataset": {"id":"relationship-statements","name":"Incident relationship claims in retained Wikidata items","semantic_domain":"relationship_evidence","description":"Read-only, single-response query over the existing role reader plus parent/child properties. No identity resolution, graph publication or financial attribution."},
+  "authority": [
+    {"kind":"documentation","url":"https://doc.wikimedia.org/Wikibase/master/php/docs_topics_json.html","retrieved_on":"2026-09-15"},
+    {"kind":"documentation","url":"https://www.wikidata.org/wiki/Property:P355","retrieved_on":"2026-09-16"},
+    {"kind":"documentation","url":"https://www.wikidata.org/wiki/Property:P749","retrieved_on":"2026-09-16"}
+  ],
+  "acquisition": {
+    "authentication":{"class":"none","environment_variable":null,"header":null,"scheme":null},
+    "endpoints":[{"name":"wikidata_entities","method":"GET","url":"https://www.wikidata.org/w/api.php","response_root":"Retained wbgetentities response; no HTTP request by this query."}],
+    "pagination":"No pagination or network. Query either endpoint in one supplied response with the complete expected item set; not an exhaustive neighborhood.",
+    "rate_limit_per_minute":60,
+    "partitions":[{"name":"body","source":"Exact response digest and explicit expected QIDs","purpose":"Keep separate observations separate, without FEC-cycle validity assumptions."}],
+    "retry_policy":"No acquisition, retry, endpoint expansion or refresh selection. API errors and malformed envelopes fail; they do not become empty relationship results. Existing background acquisition policy is unchanged."
+  },
+  "physical_schema": {
+    "media_type":"application/json","source_format":"json_api","encoding":"Strict UTF-8 JSON; duplicate keys, invalid surrogates and trailing JSON rejected.",
+    "record_schema":"../../organization-candidates/v1/record.schema.json",
+    "unknown_field_policy":"capture_and_review",
+    "null_policy":"Source-missing items, unloaded items, unknown/no-value snaks and unsupported statements remain distinct. A missing object never becomes a fabricated endpoint.",
+    "schema_fingerprint":"Shared closed entity/statement/snak/time reader used by role-statements@1.0.0. Four MiB, twenty explicit expected items, ten thousand total statements. Query matches only selected properties and known source endpoints. Unsupported outgoing statements survive with issues; an unparseable incoming target cannot be matched."
+  },
+  "identity": {
+    "publisher_record_key":"Item QID, item revision, property and statement ID; duplicate IDs do not merge occurrences.",
+    "occurrence_locator":"Body digest plus /entities/QID/claims/property/zero-based-index and exact raw statement digest/bytes.",
+    "record_version":"Source bytes and item revision; labels and aliases belong only to the supplied response.",
+    "duplicate_policy":"Retain all incident occurrences. Opposite parent/child statements stay separate evidence, not independent verification or another synthesized edge.",
+    "children":[{"object":"Qualifiers and references","locator":"Original statement pointer and array position","content_digest":false}]
+  },
+  "semantics": {
+    "money_fields":[],
+    "time_fields":[{"path":"qualifiers.P580/P582/P585","meaning":"Reported relationship time at source precision, not observation time or current validity. Shared role_time.go profile; unsupported values remain explicit."}],
+    "code_fields":[],
+    "rules":[
+      "Preserve the existing P108/P112/P169/P3320/P127/P1830/P39/P488 meanings and raw evidence. The old ExtractRoles function and discovery consumers retain their original property set and contract.",
+      "P355 reports a child organization or unit, subject parent and object child. P749 reports a parent organization or unit, subject child and object parent. Expose this display mapping alongside the unchanged source predicate/direction.",
+      "Hierarchy does not establish legal corporate type, ownership percentage, control, direct or ultimate parentage. Role category is not_applicable; do not populate personal-role holder fields for hierarchy.",
+      "Keep ranks, duplicate occurrences, self-relations, time precision, uninterpreted qualifiers and references. Do not choose current statements, compare intervals or infer personal relationships from common organizations.",
+      "Optional observation timestamp is validated RFC3339 caller metadata. Missing observation time remains missing; a body checksum does not authenticate acquisition time or publisher.",
+      "A query requires a wikidata:QID, not a name or FEC appearance. Empty matches describe this limited input and property set, not real-world absence. No identity merge or financial change."
+    ]
+  },
+  "revisions":{"publisher_model":"Mutable community-curated item statements with qualifiers and ranks.","effective_projection":"No latest selection, cross-response merging, accepted relationship truth or graph publication."},
+  "quality":{"checks":[
+    {"id":"bounded_source_identity","severity":"block","rule":"Verify exact body digest, complete expected IDs, closed envelope and byte/entity/statement limits before returning results."},
+    {"id":"incident_occurrence_conservation","severity":"block","rule":"Every selected occurrence with a matching parseable source endpoint survives, including duplicates and malformed outgoing claims."},
+    {"id":"context_only","severity":"partial","rule":"Keep identity, graph and financial approval false; report coverage, missing endpoint and time limits."}
+  ]},
+  "fixtures":[
+    {"path":"../../../../../tests/fixtures/person-affiliation/wikidata-interactive-1.json","representation":"exact_bytes","sha256":"5683ad0692e124dcd9d87bcdc81b7448def720f632a2e4e4b66b8aae4f490076","scenarios":["Incoming historical CEO role","Distinct board terms and original date precision","Multiple founders","Child endpoints not loaded"]},
+    {"path":"../../../../../tests/fixtures/person-affiliation/discovery-v2/70550b265085b63444770915cf00c183292bc32856da77e411186b1f3b6a4f3f.body","representation":"exact_bytes","sha256":"70550b265085b63444770915cf00c183292bc32856da77e411186b1f3b6a4f3f","scenarios":["Opposite parent/child directions","Multiple parent assertions without validity dates","No FEC-employer match implied by a discovery result"]}
+  ],
+  "use":{"retention":"Reuse existing source bodies and acquisition records. This query has no publication or retention workflow.","citation_date_required":true,"disclaimer":"Community statements are contextual evidence, not independently verified identities, affiliations, ownership or money flows."},
+  "outputs":{"fact_types":["wikimedia.incident_relationship_evidence.v1"],"change_dimensions":["input_body","selected_entity","property_contract"]}
+}

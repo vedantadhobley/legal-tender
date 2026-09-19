@@ -1,0 +1,18 @@
+{
+  "schema_version": "legal-tender.fec.release-plan.v1",
+  "inventory_version": "legal-tender.fec.initial-release-inventory.v1",
+  "status": "source_not_ready",
+  "planned_at": "2026-08-31T08:01:00Z",
+  "discovery_started_at": "2026-08-31T08:00:00Z",
+  "discovery_completed_at": "2026-08-31T08:00:30Z",
+  "selected_sources": [],
+  "changed_source_ids": [],
+  "reused_source_ids": [],
+  "issues": [
+    {
+      "source_id": "fec:schedule-a:processed",
+      "code": "source_not_ready",
+      "message": "unexpected_http_status: HEAD returned HTTP 503"
+    }
+  ]
+}

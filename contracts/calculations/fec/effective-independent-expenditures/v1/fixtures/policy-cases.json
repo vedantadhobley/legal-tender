@@ -1,0 +1,22 @@
+{
+  "schema_version": "legal-tender.fec.effective-independent-expenditure-policy-fixture.v1",
+  "cycle": "2024",
+  "facts": [
+    {"fact_id": "support-add", "spender": "C00000001", "candidate": "H4AA00001", "stance": "S", "amount_minor_units": "10050", "memo_code": null, "action_code": "A", "transaction_id": "TX-1", "expenditure_type": "24E"},
+    {"fact_id": "support-change", "spender": "C00000001", "candidate": "H4AA00001", "stance": "S", "amount_minor_units": "-550", "memo_code": null, "action_code": "C", "transaction_id": "TX-1", "expenditure_type": "24E"},
+    {"fact_id": "oppose-no-change", "spender": "C00000001", "candidate": "H4AA00001", "stance": "O", "amount_minor_units": "2500", "memo_code": null, "action_code": "N", "transaction_id": "TX-2", "expenditure_type": null},
+    {"fact_id": "memo", "spender": "C00000001", "candidate": "H4AA00001", "stance": "S", "amount_minor_units": "900", "memo_code": "X", "action_code": "N", "transaction_id": "TX-3", "expenditure_type": "24E"},
+    {"fact_id": "null-amount", "spender": "C00000001", "candidate": "H4AA00001", "stance": "S", "amount_minor_units": null, "memo_code": null, "action_code": "A", "transaction_id": "TX-4", "expenditure_type": "24E"},
+    {"fact_id": "missing-candidate", "spender": "C00000001", "candidate": null, "stance": "S", "amount_minor_units": "700", "memo_code": null, "action_code": "A", "transaction_id": "TX-5", "expenditure_type": "24E"}
+  ],
+  "expected": {
+    "decision_counts": {"source_facts": 6, "included": 4, "excluded_memo": 1, "excluded_memo_amount_unresolved": 0, "unresolved_amount": 1},
+    "route_counts": {"attributed": 3, "unattributed": 1, "missing_spender": 0, "missing_candidate": 1, "invalid_support_oppose": 0},
+    "amounts": {"included_minor_units": "12700", "excluded_memo_minor_units": "900", "attributed_minor_units": "12000", "unattributed_minor_units": "700"},
+    "results": [
+      {"spender": "C00000001", "candidate": "H4AA00001", "stance": "O", "amount_minor_units": "2500", "expenditure_count": 1},
+      {"spender": "C00000001", "candidate": "H4AA00001", "stance": "S", "amount_minor_units": "9500", "expenditure_count": 2}
+    ],
+    "repeated_spender_transaction_keys": 1
+  }
+}

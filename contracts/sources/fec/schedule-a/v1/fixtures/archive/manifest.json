@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/schedule-a@1.0.0",
+  "representation": "canonical_json",
+  "transformation": "Exact HTTP object metadata, the first 1 MiB source range, the complete source artifact, and four deterministic target-period COPY extracts are pinned by digest. PostgreSQL 15 pg_restore inventories and selectively extracts the archive in a network-disabled, read-only, memory-capped container. Each zstd-3 storage copy passes a frame test and full decompressed SHA-256 comparison with its COPY extract. The fixture maps catalog entries, DDL declarations, whole-artifact validation, extract conservation, and lossless stored-artifact evidence into ordered JSON.",
+  "fixtures": [
+    {
+      "path": "dump-2026-08-23.json",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "24a5f3092bd321425c47f22d7594d0e71abc5740e9b768e406a4be2d7d6923f0",
+      "scenarios": [
+        "exact HTTP object identity and one-MiB range digest",
+        "complete PostgreSQL custom-archive catalog",
+        "exact 81-column parent relation DDL",
+        "2025_2026 inherited partition and check constraint",
+        "whole-artifact SHA-256 and complete catalog inventory",
+        "891016965-row four-partition conservation",
+        "lossless zstd storage artifacts with decompressed digest proof",
+        "explicit value-level replay and temporary-storage evidence boundaries"
+      ]
+    }
+  ]
+}

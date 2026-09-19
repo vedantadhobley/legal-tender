@@ -1,0 +1,80 @@
+{
+  "kind": "manually_selected_supplementary_source_review",
+  "reviewed_on_local": "2026-09-16",
+  "observed_on_utc": "2026-09-17",
+  "selection": "Same three appearances chosen by sha256_name_employer_excluding_reviewed.v1, sample-size 3; URLs selected through interactive web research, not application discovery.",
+  "corpus_sha256": "7dfba2320ea5acaf7cf3846cde13a4f1825cd9990b7c1629570475784012d3a4",
+  "filing_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+  "baseline_capture_sha256": "79b2f1b49e422831ce6a704b57ae86ea66285aff4f68782d3e206aee840c52d6",
+  "acquisition": "Five bounded HTTPS GETs using curl; no credentials, retries, assets or recursive traversal. Complete bodies retained. This review log records observed status and final URL, not a production capture manifest or an exact response-header record.",
+  "sources": [
+    {
+      "file": "rick-reviglio.html",
+      "url": "https://goblueteam.com/rick-reviglio/",
+      "final_url": "https://goblueteam.com/rick-reviglio/",
+      "http_status": 200,
+      "media_type": "text/html; charset=UTF-8",
+      "bytes": 175801,
+      "sha256": "c0a0ed7fc8cd9729aa775c98d423d9ecf70175f8cda3560e94b2fba63902e7ef",
+      "source_class": "company_biography",
+      "fec_ordinal_under_review": 317,
+      "review": "Prose describes Rick Reviglio as president/general manager of Western Nevada Supply. It does not establish ownership, the FEC identity, or a receipt-day role interval."
+    },
+    {
+      "file": "jack-reviglio.html",
+      "url": "https://goblueteam.com/jack-reviglio/",
+      "final_url": "https://goblueteam.com/jack-reviglio/",
+      "http_status": 200,
+      "media_type": "text/html; charset=UTF-8",
+      "bytes": 162352,
+      "sha256": "2e5bacfd4f2b85d086789ec66ea1f89725b7cf55f288b4cfcc4a0acf5b9abccf",
+      "source_class": "company_historical_biography",
+      "fec_ordinal_under_review": 317,
+      "review": "Explicit parenthetical Richard/Rick name evidence occurs in prose. Same website as the role biography; not independent corroboration. The main biography subject is Jack, not the donor candidate."
+    },
+    {
+      "file": "moana-culture.html",
+      "url": "https://www.moananursery.com/our-culture/",
+      "final_url": "https://www.moananursery.com/our-culture/",
+      "http_status": 200,
+      "media_type": "text/html; charset=UTF-8",
+      "bytes": 194058,
+      "sha256": "104c26b89a92c3a76c04ec4a07c1890c6c813bc5f608867e2e79aa9e935fd7b1",
+      "source_class": "company_about_page",
+      "fec_ordinal_under_review": 139,
+      "review": "Company context and a first-name image label are not a full-name role claim. The lexical text projection supplies no Christie Gescheider role."
+    },
+    {
+      "file": "gdc-alton-russell.html",
+      "url": "https://gdc.georgia.gov/alton-russell",
+      "final_url": "https://gdc.georgia.gov/alton-russell",
+      "http_status": 200,
+      "media_type": "text/html; charset=UTF-8",
+      "bytes": 197989,
+      "sha256": "ebf9b5971c37c83759920e63e678ce711c0271c4e739ec287e732a7e17062427",
+      "source_class": "government_board_profile",
+      "fec_ordinal_under_review": 453,
+      "review": "The stated role belongs to the GDC Board of Corrections. No Copaco employer role is stated. A government board title must not become corporate executive authority."
+    },
+    {
+      "file": "nv-contractors-2019-03-21.pdf",
+      "url": "https://www.nvcontractorsboard.com/wp-content/uploads/2023/09/03-21-19-Board-Meeting-Agenda-Updated.pdf",
+      "final_url": "https://www.nvcontractorsboard.com/wp-content/uploads/2023/09/03-21-19-Board-Meeting-Agenda-Updated.pdf",
+      "http_status": 200,
+      "media_type": "application/pdf",
+      "bytes": 212647,
+      "sha256": "98932ac4dc3fcd1cfce16dacd3659c91df0080a13b807218b522af46c187201f",
+      "source_class": "government_licensing_consent_agenda",
+      "fec_ordinal_under_review": 139,
+      "pdf_page_1_based": 46,
+      "printed_page": "43 of 107",
+      "record_number": 154,
+      "meeting_day": "2019-03-21",
+      "application_approved_day": "2019-03-01",
+      "review": "Record 154 names Christie Ann Gescheider as Moana Nursery VP/Secretary with licenses 0003379A and 0003379D. Dates describe meeting/application approval, not a proven start/end of employment. Manual PDF text and rendered-page inspection; no application PDF adapter."
+    }
+  ],
+  "identity_approved": false,
+  "graph_publication_approved": false,
+  "financial_attribution": false
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/schedule-a@1.0.0",
+  "representation": "synthetic_json",
+  "transformation": "These are synthetic relation-shaped records mapped field by field from two official OpenFEC Schedule A API results for one image. API decimal and integer JSON numbers become lossless strings; the API date becomes the relation's midnight timestamp; the API load_date maps to the PostgreSQL timestamp-without-time-zone lexical form; API recipient committee codes map to cmte_tp, org_tp, and cmte_dsgn; API-only nested master objects are omitted; dump-only tsvector fields are null. The separate Schedule A API contract preserves the exact response values. These fixtures do not claim to be extracted dump rows and cannot validate physical restore behavior.",
+  "fixtures": [
+    {
+      "path": "earmarked-individual.json",
+      "source_url": "https://api.open.fec.gov/v1/schedules/schedule_a/?api_key=DEMO_KEY&per_page=2&two_year_transaction_period=2024&image_number=202410159685547424",
+      "retrieved_on": "2026-08-27",
+      "sha256": "f1bff300bf49129c172311b69062b483d2e9c98292246e16ca58e45a7fe631a7",
+      "scenarios": ["earmarked individual receipt", "back-reference pair", "individual contributor derived flag"]
+    },
+    {
+      "path": "memo-conduit-total.json",
+      "source_url": "https://api.open.fec.gov/v1/schedules/schedule_a/?api_key=DEMO_KEY&per_page=2&two_year_transaction_period=2024&image_number=202410159685547424",
+      "retrieved_on": "2026-08-27",
+      "sha256": "4e3d09c611fafbf31e9562306e764c0b4e9e27c703af25c3eb6ae5cdef9873a6",
+      "scenarios": ["memo code X", "conduit-total description", "related amount must not be double counted"]
+    }
+  ]
+}

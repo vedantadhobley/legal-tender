@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/effective-schedule-a/v1/result.schema.json",
+  "title": "Effective as-filed Schedule A projection result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "calculation_contract", "calculation_version", "report_family_id",
+    "report_family_result_sha256", "projection_state",
+    "prior_effective_file_number", "effective_file_number", "record_family",
+    "row_key_method", "logical_digest_method", "row_set_digest_method",
+    "summary", "current_rows", "removed_rows", "unresolved_rows",
+    "change_set", "issues"
+  ],
+  "properties": {
+    "calculation_contract": {"const": "fec/effective-schedule-a"},
+    "calculation_version": {"const": "1.0.0"},
+    "report_family_id": {"type": "string", "pattern": "^fec:efile-report:[1-9][0-9]*$"},
+    "report_family_result_sha256": {"$ref": "#/$defs/sha256"},
+    "projection_state": {
+      "enum": [
+        "projected", "blocked_family", "blocked_duplicate_transaction_id",
+        "blocked_missing_transaction_id", "blocked_invalid_row"
+      ]
+    },
+    "prior_effective_file_number": {"$ref": "#/$defs/nullableFileNumber"},
+    "effective_file_number": {"$ref": "#/$defs/nullableFileNumber"},
+    "record_family": {"const": "SA"},
+    "row_key_method": {"const": "report_family_id + ':SA:' + exact transaction_id"},
+    "logical_digest_method": {"const": "fec.schedule_a.logical_row.v1"},
+    "row_set_digest_method": {"const": "fec.schedule_a.logical_row_set.v1"},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prior_row_count", "current_row_count", "added_count", "modified_count",
+        "removed_count", "carried_forward_identical_count",
+        "representation_changed_count", "unresolved_count"
+      ],
+      "properties": {
+        "prior_row_count": {"type": "integer", "minimum": 0},
+        "current_row_count": {"type": "integer", "minimum": 0},
+        "added_count": {"type": "integer", "minimum": 0},
+        "modified_count": {"type": "integer", "minimum": 0},
+        "removed_count": {"type": "integer", "minimum": 0},
+        "carried_forward_identical_count": {"type": "integer", "minimum": 0},
+        "representation_changed_count": {"type": "integer", "minimum": 0},
+        "unresolved_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "current_rows": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/currentRow"}
+    },
+    "removed_rows": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/removedRow"}
+    },
+    "unresolved_rows": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/unresolvedRow"}
+    },
+    "change_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lineage_changed", "semantic_changed", "changed_row_keys",
+        "affected_committee_ids", "affected_contribution_dates",
+        "target_two_year_periods", "prior_semantic_row_set_sha256",
+        "current_semantic_row_set_sha256"
+      ],
+      "properties": {
+        "lineage_changed": {"type": "boolean"},
+        "semantic_changed": {"type": "boolean"},
+        "changed_row_keys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/rowKey"}
+        },
+        "affected_committee_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^C[0-9]{8}$"}
+        },
+        "affected_contribution_dates": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[0-9]{8}$"}
+        },
+        "target_two_year_periods": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 1976, "multipleOf": 2}
+        },
+        "prior_semantic_row_set_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+        "current_semantic_row_set_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/issue"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "nullableFileNumber": {"type": ["integer", "null"], "minimum": 1},
+    "rowKey": {"type": "string", "pattern": "^fec:efile-report:[1-9][0-9]*:SA:.+$"},
+    "occurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file_number", "document_sha256", "physical_record_ordinal", "physical_record_sha256"],
+      "properties": {
+        "file_number": {"type": "integer", "minimum": 1},
+        "document_sha256": {"$ref": "#/$defs/sha256"},
+        "physical_record_ordinal": {"type": "integer", "minimum": 1},
+        "physical_record_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "currentRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "row_key", "transaction_id", "form_type", "change_state",
+        "current_occurrence", "prior_occurrence", "logical_row_sha256",
+        "prior_logical_row_sha256", "changed_fields"
+      ],
+      "properties": {
+        "row_key": {"$ref": "#/$defs/rowKey"},
+        "transaction_id": {"type": "string", "minLength": 1},
+        "form_type": {"type": "string", "pattern": "^SA.+"},
+        "change_state": {"enum": ["added", "modified", "carried_forward_identical", "representation_changed"]},
+        "current_occurrence": {"$ref": "#/$defs/occurrence"},
+        "prior_occurrence": {
+          "oneOf": [
+            {"$ref": "#/$defs/occurrence"},
+            {"type": "null"}
+          ]
+        },
+        "logical_row_sha256": {"$ref": "#/$defs/sha256"},
+        "prior_logical_row_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+        "changed_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "removedRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row_key", "transaction_id", "form_type", "change_state", "prior_occurrence", "prior_logical_row_sha256"],
+      "properties": {
+        "row_key": {"$ref": "#/$defs/rowKey"},
+        "transaction_id": {"type": "string", "minLength": 1},
+        "form_type": {"type": "string", "pattern": "^SA.+"},
+        "change_state": {"const": "removed"},
+        "prior_occurrence": {"$ref": "#/$defs/occurrence"},
+        "prior_logical_row_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "unresolvedRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "occurrences"],
+      "properties": {
+        "reason": {"enum": ["missing_transaction_id", "duplicate_transaction_id", "invalid_row"]},
+        "occurrences": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/occurrence"}
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "detail"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+        "severity": {"enum": ["observe", "partial", "block"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

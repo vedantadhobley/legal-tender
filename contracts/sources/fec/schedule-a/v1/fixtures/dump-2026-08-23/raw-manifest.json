@@ -1,0 +1,64 @@
+{
+  "$schema": "../../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/schedule-a@1.0.0",
+  "representation": "exact_bytes",
+  "transformation": "Each file is one exact physical PostgreSQL COPY text row selected by deterministic extraction ordinal from disclosure.fec_fitem_sched_a_2025_2026, including its terminating LF. The source relation extract has SHA-256 caff37ccb61c5c1bf07ebef14837411bde29a6c46811c5d8ed4ee555aa4db1de and preserves all 166293056 rows in archive order.",
+  "fixtures": [
+    {
+      "path": "action-code-c.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "11bb7ad7bfc1e974c5727e10b4d14272982079414d0ecbf4419a45de774157f1",
+      "scenarios": ["extraction ordinal 12", "81 COPY fields", "terminating LF", "action code C"]
+    },
+    {
+      "path": "action-code-f.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "d162b25a021ec87c152142d8df71ccdd8009d0da3a8e1fd22b033511516ec498",
+      "scenarios": ["extraction ordinal 98829696", "81 COPY fields", "terminating LF", "action code F"]
+    },
+    {
+      "path": "action-code-n.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "8f9c0f0fe48d3eaad5bf4eb7676156855c235cd526276f2f4625aab0237eb9ee",
+      "scenarios": ["extraction ordinal 161", "81 COPY fields", "terminating LF", "action code N"]
+    },
+    {
+      "path": "escaped-copy-text.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "ccd7c4d58873ffb67ee52794653a35272d0f19362adab171aca1c06540b5c80c",
+      "scenarios": ["extraction ordinal 525877", "81 COPY fields", "terminating LF", "escaped source text"]
+    },
+    {
+      "path": "negative-adjustment.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "f46ce5904950d2fd77f18f3d28a2e583e62e7fbc881ea551f4d03ec311e2d823",
+      "scenarios": ["extraction ordinal 45", "81 COPY fields", "terminating LF", "negative amount lexeme"]
+    },
+    {
+      "path": "null-receipt-date.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "7aa678c004df4a843600c1393f4f32607acca0ece38c730face1ec30396806a3",
+      "scenarios": ["extraction ordinal 5202", "81 COPY fields", "terminating LF", "COPY null lexeme"]
+    },
+    {
+      "path": "targeted-individual.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "f409261a185a9bc551c32b12ca306076b5a98970b3e13531a2c7817ce91ae17b",
+      "scenarios": ["extraction ordinal 59899017", "81 COPY fields", "terminating LF", "targeted filing 1997074"]
+    },
+    {
+      "path": "targeted-memo-committee.copy",
+      "source_url": "https://www.fec.gov/files/bulk-downloads/data-dump/schedules/fec_fitem_sched_a.dump",
+      "retrieved_on": "2026-08-28",
+      "sha256": "b8be26210fa97a019714cb20bc2780c42beab6729d079c94f411d68f017b08b1",
+      "scenarios": ["extraction ordinal 59899018", "81 COPY fields", "terminating LF", "memo back-reference pair"]
+    }
+  ]
+}

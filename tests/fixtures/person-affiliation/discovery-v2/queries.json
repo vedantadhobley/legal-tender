@@ -1,0 +1,259 @@
+{
+  "policy": "reported-name-employer-searches.v2",
+  "build_sha256": "de1d0dd3e0883e8a9c9aea9e0c95d24e387ac837dcacb3cd51ca8f8141dee59e",
+  "selection": "verified as-filed appearances selected by diagnostic corpus 7dfba2320ea5acaf7cf3846cde13a4f1825cd9990b7c1629570475784012d3a4",
+  "appearances": [
+    {
+      "source_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "source_locator": "record:263;bytes[44531,44708);sha256:268b94cf743a821643fce1bc189e4891e1c5ecf5f5ae40a020fc800b020bea8c",
+      "reported_name": "MICHAEL O'BRIEN",
+      "reported_employer": "VALLEY TECH SERVICES INC"
+    },
+    {
+      "source_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "source_locator": "record:2772;bytes[596734,597008);sha256:41ab77885c47d179425f6eb31e23a1923a3a7b24013f6228938dc763ee693a28",
+      "reported_name": "DAVID DUFFIELD",
+      "reported_employer": "RIDGELINE INC"
+    },
+    {
+      "source_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "source_locator": "record:58;bytes[10084,10241);sha256:c73ea9e57322183dd92175c5acd722285e18866c5a486ee1d2b11923ac3a3aa3",
+      "reported_name": "JOHN CHAMBERS",
+      "reported_employer": "JC2VENTURES"
+    },
+    {
+      "source_sha256": "d1b489162cf91c7436162a059ee6633f354f1defd199ccee731bc2724c4b2a9c",
+      "source_locator": "record:59;bytes[10241,10418);sha256:3ded53bdd58884ebb3f7455c2af37de2602f2c5ed0b9c013a584929684080a5c",
+      "reported_name": "JOHN CHAMBERS",
+      "reported_employer": "JC2VENTURES"
+    }
+  ],
+  "input_states": [
+    "name_and_employer",
+    "name_and_employer",
+    "name_and_employer",
+    "name_and_employer"
+  ],
+  "searches": [
+    {
+      "kind": "person_name",
+      "search_text": "\"DAVID\" \"DUFFIELD\"",
+      "appearance_indexes": [
+        1
+      ],
+      "derivations": [
+        {
+          "appearance_index": 1,
+          "rule": "reported_tokens"
+        }
+      ]
+    },
+    {
+      "kind": "person_name",
+      "search_text": "\"JOHN\" \"CHAMBERS\"",
+      "appearance_indexes": [
+        2,
+        3
+      ],
+      "derivations": [
+        {
+          "appearance_index": 2,
+          "rule": "reported_tokens"
+        },
+        {
+          "appearance_index": 3,
+          "rule": "reported_tokens"
+        }
+      ]
+    },
+    {
+      "kind": "person_name",
+      "search_text": "\"MICHAEL\" \"O\" \"BRIEN\"",
+      "appearance_indexes": [
+        0
+      ],
+      "derivations": [
+        {
+          "appearance_index": 0,
+          "rule": "reported_tokens"
+        }
+      ]
+    },
+    {
+      "kind": "person_name_employer",
+      "search_text": "\"DAVID\" \"DUFFIELD\" \"RIDGELINE\"",
+      "appearance_indexes": [
+        1
+      ],
+      "derivations": [
+        {
+          "appearance_index": 1,
+          "rule": "employer_legal_suffix_omission"
+        }
+      ]
+    },
+    {
+      "kind": "person_name_employer",
+      "search_text": "\"DAVID\" \"DUFFIELD\" \"RIDGELINE\" \"INC\"",
+      "appearance_indexes": [
+        1
+      ],
+      "derivations": [
+        {
+          "appearance_index": 1,
+          "rule": "reported_tokens"
+        }
+      ]
+    },
+    {
+      "kind": "person_name_employer",
+      "search_text": "\"JOHN\" \"CHAMBERS\" \"JC\" \"2\" \"VENTURES\"",
+      "appearance_indexes": [
+        2,
+        3
+      ],
+      "derivations": [
+        {
+          "appearance_index": 2,
+          "rule": "employer_digit_letter_boundaries"
+        },
+        {
+          "appearance_index": 3,
+          "rule": "employer_digit_letter_boundaries"
+        }
+      ]
+    },
+    {
+      "kind": "person_name_employer",
+      "search_text": "\"JOHN\" \"CHAMBERS\" \"JC2VENTURES\"",
+      "appearance_indexes": [
+        2,
+        3
+      ],
+      "derivations": [
+        {
+          "appearance_index": 2,
+          "rule": "reported_tokens"
+        },
+        {
+          "appearance_index": 3,
+          "rule": "reported_tokens"
+        }
+      ]
+    },
+    {
+      "kind": "person_name_employer",
+      "search_text": "\"MICHAEL\" \"O\" \"BRIEN\" \"VALLEY\" \"TECH\" \"SERVICES\"",
+      "appearance_indexes": [
+        0
+      ],
+      "derivations": [
+        {
+          "appearance_index": 0,
+          "rule": "employer_legal_suffix_omission"
+        }
+      ]
+    },
+    {
+      "kind": "person_name_employer",
+      "search_text": "\"MICHAEL\" \"O\" \"BRIEN\" \"VALLEY\" \"TECH\" \"SERVICES\" \"INC\"",
+      "appearance_indexes": [
+        0
+      ],
+      "derivations": [
+        {
+          "appearance_index": 0,
+          "rule": "reported_tokens"
+        }
+      ]
+    },
+    {
+      "kind": "reported_employer",
+      "search_text": "\"JC\" \"2\" \"VENTURES\"",
+      "appearance_indexes": [
+        2,
+        3
+      ],
+      "derivations": [
+        {
+          "appearance_index": 2,
+          "rule": "employer_digit_letter_boundaries"
+        },
+        {
+          "appearance_index": 3,
+          "rule": "employer_digit_letter_boundaries"
+        }
+      ]
+    },
+    {
+      "kind": "reported_employer",
+      "search_text": "\"JC2VENTURES\"",
+      "appearance_indexes": [
+        2,
+        3
+      ],
+      "derivations": [
+        {
+          "appearance_index": 2,
+          "rule": "reported_tokens"
+        },
+        {
+          "appearance_index": 3,
+          "rule": "reported_tokens"
+        }
+      ]
+    },
+    {
+      "kind": "reported_employer",
+      "search_text": "\"RIDGELINE\"",
+      "appearance_indexes": [
+        1
+      ],
+      "derivations": [
+        {
+          "appearance_index": 1,
+          "rule": "employer_legal_suffix_omission"
+        }
+      ]
+    },
+    {
+      "kind": "reported_employer",
+      "search_text": "\"RIDGELINE\" \"INC\"",
+      "appearance_indexes": [
+        1
+      ],
+      "derivations": [
+        {
+          "appearance_index": 1,
+          "rule": "reported_tokens"
+        }
+      ]
+    },
+    {
+      "kind": "reported_employer",
+      "search_text": "\"VALLEY\" \"TECH\" \"SERVICES\"",
+      "appearance_indexes": [
+        0
+      ],
+      "derivations": [
+        {
+          "appearance_index": 0,
+          "rule": "employer_legal_suffix_omission"
+        }
+      ]
+    },
+    {
+      "kind": "reported_employer",
+      "search_text": "\"VALLEY\" \"TECH\" \"SERVICES\" \"INC\"",
+      "appearance_indexes": [
+        0
+      ],
+      "derivations": [
+        {
+          "appearance_index": 0,
+          "rule": "reported_tokens"
+        }
+      ]
+    }
+  ]
+}

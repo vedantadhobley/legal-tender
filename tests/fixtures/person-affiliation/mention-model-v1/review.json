@@ -1,0 +1,73 @@
+{
+  "Profile": {"model": "gpt-oss-120b", "reasoning_effort": "medium", "max_tokens": 4096},
+  "Metadata": {
+    "inputs.json": "54ebd7fdbed20aba1fa14b0fc35d5f7906579a89ef792c9adf9b94afe7addd72",
+    "models.json": "cc7da7b0bb17a05d3c5113152952dff0d47c8854f147ef7a56d1a5167930c308",
+    "completed.json": "065222412e658d967a7ef46794439411925588d2a41519c77008cc501c477392"
+  },
+  "Cases": [
+    {
+      "ID": "apple-cook", "SHA256": "46c198161c7c7c98d804b5e8c620e9d832268a9937b078b12a8076c432cd5245", "literal_valid": false,
+      "Binding": "Unassessed: finish_reason length, all 4096 completion tokens consumed, empty final content.",
+      "Classification": "Unassessed: no complete answer. Do not extract an answer from internal reasoning.",
+      "Context": "No usable report; whole generation rejected, not retried or repaired.",
+      "NameTime": "No final interpretations to evaluate; source text remains retained."
+    },
+    {
+      "ID": "nvidia-huang", "SHA256": "dc250111a3ebbe478eb433218c16aa54568caed9230d0d9b58a7afdb1db9042c", "literal_valid": false,
+      "Binding": "Repeated Mr. Huang and NVIDIA use null offsets. Historical subjects use the short name without explicitly connecting it to the full-name anchor; some pronoun readings are labeled direct.",
+      "Classification": "Raw proposal distinguishes founder, executive and board roles from awards; unspecified prior jobs remain employee rather than invented executive titles. President and CEO are combined despite the prompt asking to split distinct roles.",
+      "Context": "No correction in this input. A complete answer is present but rejected; no interpretations are partially accepted.",
+      "NameTime": "Mention m11 stitches a noncontiguous AMD job clause. The founder clause omits its year. Full source preserves all wording but does not repair either selected mention."
+    },
+    {
+      "ID": "salesforce-benioff", "SHA256": "f0ce9fef520a9891b39f47142a9410a0af9a4ceb7aed5d53e2a0733cc25ac672", "literal_valid": false,
+      "Binding": "Repeated Salesforce has no occurrence offset. The later short surname is not explicitly connected to the full-name anchor; the pronoun-based founder claim is labeled direct.",
+      "Classification": "Raw proposal supplies the five reviewed roles with plausible role classes and no employer invented from the software sale. This does not rescue the rejected answer.",
+      "Context": "No conflicting or corrective text in this selected input. Whole answer rejected for occurrence ambiguity.",
+      "NameTime": "Duration and age wording remain literal; no calendar dates invented. Full input is retained separately from model-selected mentions."
+    },
+    {
+      "ID": "fresh-bound-pronoun", "SHA256": "8b41789cc8569b80cbe7964b11abebf6192855bc0a2d50b7de320ce53df7e1e8", "literal_valid": true,
+      "Binding": "CTO proposal uses coreference and the correct named person and organization anchors. The later short name is labeled direct rather than linked to the full name.",
+      "Classification": "CTO is executive and volunteering is activity. Employee is a proposed reading of joined, not an explicit job title.",
+      "Context": "Structural pass, but clauses are only names or She rather than the relationship statements. This proves references exist, not adequate semantic grounding.",
+      "NameTime": "Selected evidence omits the role words and 2017-2022 wording. The complete source entries in the report preserve them; no automatic tenure interpretation is established."
+    },
+    {
+      "ID": "fresh-ambiguous-pronoun", "SHA256": "54c3ca510d120651da6859f1c96aaaeb18eb5a03161e142abc15b67aa5bbf7fc", "literal_valid": true,
+      "Binding": "Both possible CFO subjects retained under ambiguous binding; neither selected as the person.",
+      "Classification": "Reception attendance stays activity; CFO stays an unverified executive-role proposal.",
+      "Context": "Full activity and CFO clauses are literal. Go returns binding_ambiguous for the role and never approves identity.",
+      "NameTime": "Both source names remain literal; no invented date or name merge."
+    },
+    {
+      "ID": "fresh-targeted-correction", "SHA256": "8e65504ab09daf13f957fae07b6dfebb3991075b1b7a4847b028bb3e117f0c93", "literal_valid": false,
+      "Binding": "Raw proposal links the director pronoun to Daniel Moss and keeps the two organizations separate.",
+      "Classification": "CEO and foundation director are separate role proposals; correction is a non-role interpretation.",
+      "Context": "Retraction correctly targets the CEO assertion and leaves the foundation role alone. However, m5 changes the space inside Lake Foundation to U+00A0; whole answer is rejected and no corrected report is manufactured.",
+      "NameTime": "Original positive status remains asserted in the raw answer; no unrelated role is withdrawn. No date claims."
+    },
+    {
+      "ID": "fresh-name-and-succession", "SHA256": "f3d8f068d61a82dfd01280513e31afbaad8a18f725b911986b8ac675d8deb606", "literal_valid": true,
+      "Binding": "CEO and board chair use coreference to the complete parenthetical name and organization.",
+      "Classification": "Founder, CEO and board chair remain distinct; no ownership inferred from founding.",
+      "Context": "No false contradiction between successive roles. Assertions remain unverified.",
+      "NameTime": "Literal accented parenthetical name and original succession dates retained. No separate name_form proposal was emitted, so alternate-name extraction is not demonstrated."
+    },
+    {
+      "ID": "fresh-contradiction", "SHA256": "2d311e6573ec31d06fd20ce5a841029db997131ebb32062bae71ff8a79c1bf5c", "literal_valid": true,
+      "Binding": "Both statements bind the named subject to the same organization through separate literal occurrences.",
+      "Classification": "Both are board-director proposals, one asserted and one denied.",
+      "Context": "Explicit contradicts link targets the two same-period statements. Go preserves both statuses and marks both context_blocked.",
+      "NameTime": "Both clauses keep 2020; no 2021 role is invented from the notice's publication year."
+    },
+    {
+      "ID": "fresh-conditional-instruction", "SHA256": "3cb6bb4dc91384faebc47a9268d21c015ac6b6eeeaddad8f029d981630b49c54", "literal_valid": true,
+      "Binding": "Both proposed statuses refer to the named person and organization; the no-appointment reading is labeled direct despite relying on preceding context.",
+      "Classification": "Hypothetical president plus denied appointment; no asserted current CEO generated from the embedded instruction.",
+      "Context": "Condition and no-appointment context are respected in statuses; no spurious contradiction added. The affirmative clause itself drops the condition, so full retained context remains necessary.",
+      "NameTime": "Selected clauses omit 2026/2027 wording, which remains in complete source context. No calendar interval or present appointment is approved."
+    }
+  ]
+}

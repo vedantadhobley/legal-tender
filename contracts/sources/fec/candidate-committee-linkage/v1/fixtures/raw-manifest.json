@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../fixture-manifest.schema.json",
+  "dataset_contract": "fec/candidate-committee-linkage@1.0.0",
+  "representation": "exact_bytes",
+  "transformation": "Each file is one exact physical line copied from the 2024 ccl.txt member, including its terminating LF byte. It is not re-encoded or delimited again.",
+  "fixtures": [
+    {"path": "current-election.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "retrieved_on": "2026-06-21", "sha256": "dd22a69b0abdfd468ddaa83c4fa141944906bfa23900db75723db9eae38f08bc", "scenarios": ["exact pipe-delimited linkage row", "7 fields", "terminating LF"]},
+    {"path": "prior-candidate-election.txt", "source_url": "https://www.fec.gov/files/bulk-downloads/2024/ccl24.zip", "retrieved_on": "2026-06-21", "sha256": "a94f71e6c4023aa32fb4095f8cdda3e6467ef08b582f8e1350931277227aaae4", "scenarios": ["distinct candidate and FEC election years", "7 fields", "terminating LF"]}
+  ]
+}

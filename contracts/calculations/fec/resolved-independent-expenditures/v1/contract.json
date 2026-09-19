@@ -1,0 +1,93 @@
+{
+  "$schema": "../../../../calculation-contract.schema.json",
+  "contract_id": "fec/resolved-independent-expenditures",
+  "contract_version": "1.0.0",
+  "status": "accepted",
+  "question": "How much effective independent spending did each spender report supporting or opposing each safely resolved candidate, and how much remains outside candidate edges because candidate identity is ambiguous or unresolved?",
+  "inputs": [
+    {
+      "contract": "fec/independent-expenditure-candidate-resolution@1.0.0",
+      "role": "Every dense per-fact candidate-reference decision from the current exact-context method, including exact signed amounts, spender, stance, and nullable resolved candidate ID.",
+      "required": true,
+      "version_policy": "Pin the exact immutable candidate-resolution manifest and complete decision-artifact digest. Reject legacy resolution methods."
+    }
+  ],
+  "identity": {
+    "result_key": "cycle + spender committee ID + resolved candidate ID + support-or-oppose stance",
+    "input_manifest": "Exact candidate-resolution calculation-set identity, immutable manifest digest, decision schema, and decision-artifact digest.",
+    "method_version": "fec/resolved-independent-expenditures@1.0.0 plus grouping-policy.v1 and the named publisher version",
+    "result_digest": "SHA-256 over the exact input identity and canonical grouped or exception identity fields."
+  },
+  "method": {
+    "ordered_steps": [
+      "Verify the current immutable candidate-resolution manifest and complete decision artifact.",
+      "Replay each decision exactly once and verify its canonical identity, cycle, calculation set, state, and signed amount.",
+      "Group confirmed, resolved, and unverified decisions by spender committee ID, resolved candidate ID, and support-or-oppose stance.",
+      "Retain signed amount, sign counts, and separate count and signed-amount components for each projectable resolution state on every group.",
+      "Publish ambiguous and unresolved decisions as one sparse exception each without creating candidate edges.",
+      "Conserve all decision counts and exact signed minor units by resolution state and route."
+    ],
+    "decision_states": [
+      {"id": "projectable", "publishable": true, "meaning": "The decision is confirmed, resolved, or unverified and contributes once to a resolved candidate group."},
+      {"id": "unprojectable", "publishable": true, "meaning": "The decision is ambiguous or unresolved and remains one explicit sparse exception outside candidate edges."}
+    ],
+    "invariants": [
+      "Every input decision lands exactly once in one grouped result or one sparse exception.",
+      "Only the separate resolved candidate ID defines a candidate group; the reported source ID remains unchanged in the upstream decision.",
+      "Confirmed, resolved, and unverified counts and exact signed amounts remain independently visible on every group.",
+      "Ambiguous and unresolved decisions never create candidate edges and never lose their source fact, reported ID, stance, spender, method, or exact amount.",
+      "Support and opposition remain separate and are outside spending, not candidate-controlled receipts or personal payments."
+    ]
+  },
+  "output": {
+    "result_schema": "result.schema.json",
+    "grain": "One grouped result per cycle, spender committee, resolved candidate, and stance, plus one sparse exception per unprojectable input decision.",
+    "fact_types": ["resolved_independent_expenditure_group", "resolved_independent_expenditure_exception"],
+    "publication_states": [
+      {"id": "published", "publishable": true, "meaning": "All input decisions and signed amounts conserve exactly through groups and exceptions."},
+      {"id": "blocked_integrity", "publishable": false, "meaning": "Input identity, decision replay, grouping, exception membership, or signed conservation failed verification."}
+    ]
+  },
+  "revisions": {
+    "input_change_policy": "A changed candidate-resolution calculation or decision artifact creates a new immutable aggregate for only that cycle.",
+    "method_change_policy": "Any change to projectable states, grouping dimensions, result components, or exception routing requires a new calculation version.",
+    "history_policy": "Retain all upstream per-fact decisions, grouped results, sparse exceptions, exact input identities, and superseded manifests indefinitely."
+  },
+  "quality": {
+    "checks": [
+      {"id": "input_lineage", "severity": "block", "rule": "The exact candidate-resolution manifest and decision artifact pass immutable backing verification."},
+      {"id": "current_resolution_method", "severity": "block", "rule": "The input uses the current candidate-resolution method rather than a retained legacy method."},
+      {"id": "decision_conservation", "severity": "block", "rule": "Every input decision is exactly one of confirmed, resolved, unverified, ambiguous, or unresolved."},
+      {"id": "route_conservation", "severity": "block", "rule": "Every decision lands in one candidate group or one sparse exception."},
+      {"id": "signed_conservation", "severity": "block", "rule": "Signed source cents equal both route totals and the sum of all five resolution-state totals."},
+      {"id": "result_conservation", "severity": "block", "rule": "Every projectable decision contributes once to one resolved spender-candidate-stance group."},
+      {"id": "exception_conservation", "severity": "block", "rule": "Every ambiguous or unresolved decision becomes one exact sparse exception."},
+      {"id": "quality_preservation", "severity": "block", "rule": "Every group retains separate confirmed, resolved, and unverified count and signed-amount components."}
+    ]
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/policy-cases.json",
+      "representation": "synthetic_json",
+      "sha256": "63abc0e38f801b9dba31dd1c119a874ca1ecc176e477cebceb00213e06bc996f",
+      "input_paths": ["../../independent-expenditure-candidate-resolution/v1/decision.schema.json"],
+      "scenarios": [
+        "three projectable resolution states merge into one resolved candidate group",
+        "positive, negative, and zero signed observations remain counted",
+        "state-specific signed amounts conserve to the group total",
+        "ambiguous and unresolved decisions become sparse exceptions",
+        "all source decisions and signed amounts conserve by route"
+      ]
+    }
+  ],
+  "propagation": {
+    "source_change_dimensions": ["candidate-resolution calculation", "candidate-resolution decision artifact"],
+    "semantic_change_dimensions": ["resolution state", "resolved candidate ID", "spender committee ID", "support-or-oppose stance", "signed amount"],
+    "downstream_keys": ["cycle", "spender_committee_id", "candidate_id", "support_oppose", "resolution_decision_id"],
+    "no_change_policy": "Identical input identity and grouping-policy version reuse the immutable result and exception artifacts. A changed cycle input recomputes only that cycle and dependent projections."
+  },
+  "use": {
+    "retention": "Use grouped results as the candidate-edge input. Retain upstream decisions for full evidence and sparse exceptions for unresolved-coverage surfaces.",
+    "disclaimer": "A grouped result reports independent spending about a candidate. It does not prove coordination, influence, corruption, a donation, or a personal payment to the candidate."
+  }
+}

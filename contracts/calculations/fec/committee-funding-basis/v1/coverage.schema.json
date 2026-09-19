@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.dev/contracts/calculations/fec/committee-funding-basis/v1/coverage.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "audit_id", "policy", "cycle", "inventory_calculation_id", "receipt_input", "receipt_bundle_id", "receipt_bundle_manifest_sha256", "source_release_id", "receipt_roles", "candidate_summary_profiles", "requirements", "complete_committee_funding_basis", "terminal_attribution_eligible"],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.funding-coverage-audit.v1"},
+    "audit_id": {"$ref": "#/$defs/digest"},
+    "policy": {"const": "fec/preserved-funding-coverage-audit@1.0.0"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "inventory_calculation_id": {"$ref": "#/$defs/digest"},
+    "receipt_input": {"$ref": "result.schema.json#/$defs/input"},
+    "receipt_bundle_id": {"$ref": "#/$defs/digest"},
+    "receipt_bundle_manifest_sha256": {"$ref": "#/$defs/digest"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[0-9a-f]{64}$"},
+    "complete_committee_funding_basis": {"const": false},
+    "terminal_attribution_eligible": {"const": false},
+    "receipt_roles": {"type": "array", "minItems": 1, "maxItems": 250000, "items": {
+      "type": "object", "additionalProperties": false, "required": ["component", "receipt_role", "measures"],
+      "properties": {
+        "component": {"$ref": "result.schema.json#/$defs/key/properties/component"},
+        "receipt_role": {"type": "string"},
+        "measures": {"$ref": "result.schema.json#/$defs/measures"}
+      }
+    }},
+    "candidate_summary_profiles": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/summary"}},
+    "requirements": {"type": "array", "minItems": 1, "items": {
+      "type": "object", "additionalProperties": false, "required": ["requirement", "state", "evidence", "reason"],
+      "properties": {
+        "requirement": {"type": "string", "minLength": 1},
+        "state": {"enum": ["supported", "absent_from_supplied_sources", "scope_incompatible", "unresolved"]},
+        "evidence": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    }}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "count": {"type": "integer", "minimum": 0},
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "storage_key"],
+      "properties": {
+        "record_count": {"$ref": "#/$defs/count"}, "uncompressed_byte_count": {"$ref": "#/$defs/count"},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"}, "compressed_byte_count": {"$ref": "#/$defs/count"},
+        "compressed_sha256": {"$ref": "#/$defs/digest"}, "compression": {"const": "zstd"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["dataset", "scope", "state", "fact_set_id", "manifest_sha256", "source_contract", "publication_counts", "facts_artifact", "source_fields", "money_fields", "coverage_through", "verified_rows"],
+      "properties": {
+        "dataset": {"enum": ["all-candidates-summary", "current-campaigns-summary"]},
+        "scope": {"const": "candidate_summary_not_committee_report"},
+        "state": {"enum": ["complete_valid_fact_scan", "valid_fact_subset_source_exclusions"]},
+        "fact_set_id": {"$ref": "#/$defs/digest"}, "manifest_sha256": {"$ref": "#/$defs/digest"},
+        "source_contract": {"type": "string", "minLength": 1},
+        "verified_rows": {"$ref": "#/$defs/count"},
+        "facts_artifact": {"$ref": "#/$defs/artifact"},
+        "publication_counts": {
+          "type": "object", "additionalProperties": false,
+          "required": ["source_occurrences", "facts", "valid_facts", "invalid_facts", "excluded_occurrences", "source_invalid_occurrences", "source_duplicate_occurrences"],
+          "properties": {
+            "source_occurrences": {"$ref": "#/$defs/count"}, "facts": {"$ref": "#/$defs/count"},
+            "valid_facts": {"$ref": "#/$defs/count"}, "invalid_facts": {"const": 0},
+            "excluded_occurrences": {"$ref": "#/$defs/count"}, "source_invalid_occurrences": {"$ref": "#/$defs/count"},
+            "source_duplicate_occurrences": {"$ref": "#/$defs/count"}
+          }
+        },
+        "source_fields": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "money_fields": {"type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["field", "blank_rows", "positive_rows", "negative_rows", "zero_rows"],
+          "properties": {"field": {"type": "string"}, "blank_rows": {"$ref": "#/$defs/count"}, "positive_rows": {"$ref": "#/$defs/count"}, "negative_rows": {"$ref": "#/$defs/count"}, "zero_rows": {"$ref": "#/$defs/count"}}
+        }},
+        "coverage_through": {"type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["date", "source_cycle_relation", "rows"],
+          "properties": {"date": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}, "source_cycle_relation": {"enum": ["source_blank", "before_source_cycle", "within_source_cycle", "after_source_cycle"]}, "rows": {"type": "integer", "minimum": 1}},
+          "allOf": [{"if": {"properties": {"source_cycle_relation": {"const": "source_blank"}}}, "then": {"properties": {"date": {"type": "null"}}}, "else": {"properties": {"date": {"type": "string"}}}}]
+        }}
+      }
+    }
+  }
+}

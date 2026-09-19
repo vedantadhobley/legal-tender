@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/bundles/fec/resolved-independent-expenditure-projection/v1/manifest.schema.json",
+  "title": "Resolved independent-expenditure projection readiness bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "bundle_id", "bundle_type", "bundle_version", "publisher_version", "cycle", "source_release_id", "input_calculation", "input_fact_sets", "run_id", "state", "published_at", "counts", "checks"],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.resolved-independent-expenditure-projection-bundle.v1"},
+    "bundle_id": {"$ref": "#/$defs/digest"},
+    "bundle_type": {"const": "fec/resolved-independent-expenditure-projection"},
+    "bundle_version": {"const": "1.0.0"},
+    "publisher_version": {"const": "legal-tender.fec.resolved-independent-expenditure-projection-bundle-publisher.v1"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "input_calculation": {"$ref": "#/$defs/calculation"},
+    "input_fact_sets": {"type": "array", "minItems": 2, "maxItems": 2, "prefixItems": [{"$ref": "#/$defs/candidate"}, {"$ref": "#/$defs/committee"}]},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "ready"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "counts": {"$ref": "#/$defs/counts"},
+    "checks": {"type": "array", "minItems": 7, "maxItems": 7, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "calculation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "calculation", "calculation_version", "calculation_set_id", "manifest_sha256", "candidate_resolution_calculation_set_id", "candidate_resolution_manifest_sha256", "results_sha256", "exceptions_sha256"],
+      "properties": {
+        "role": {"const": "resolved_independent_expenditures"},
+        "calculation": {"const": "fec/resolved-independent-expenditures"},
+        "calculation_version": {"const": "1.0.0"},
+        "calculation_set_id": {"$ref": "#/$defs/digest"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"},
+        "candidate_resolution_calculation_set_id": {"$ref": "#/$defs/digest"},
+        "candidate_resolution_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "results_sha256": {"$ref": "#/$defs/digest"},
+        "exceptions_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "fact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "dataset", "fact_type", "fact_set_id", "manifest_sha256"],
+      "properties": {
+        "role": {"type": "string"}, "dataset": {"type": "string"}, "fact_type": {"type": "string"},
+        "fact_set_id": {"$ref": "#/$defs/digest"}, "manifest_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "candidate": {"$ref": "#/$defs/fact", "properties": {"role": {"const": "candidate_master"}, "dataset": {"const": "candidate-master"}, "fact_type": {"const": "fec.candidate_assertion.v1"}}},
+    "committee": {"$ref": "#/$defs/fact", "properties": {"role": {"const": "committee_master"}, "dataset": {"const": "committee-master"}, "fact_type": {"const": "fec.committee_assertion.v1"}}},
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["calculation_results", "calculation_exceptions", "projectable_decisions", "unprojectable_decisions", "candidate_facts", "committee_facts"],
+      "properties": {
+        "calculation_results": {"type": "integer", "minimum": 1},
+        "calculation_exceptions": {"type": "integer", "minimum": 0},
+        "projectable_decisions": {"type": "integer", "minimum": 1},
+        "unprojectable_decisions": {"type": "integer", "minimum": 0},
+        "candidate_facts": {"type": "integer", "minimum": 1},
+        "committee_facts": {"type": "integer", "minimum": 1}
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {"id": {"type": "string", "minLength": 1}, "passed": {"const": true}, "severity": {"const": "block"}, "detail": {"type": "string", "minLength": 1}}
+    }
+  }
+}
