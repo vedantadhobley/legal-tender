@@ -5,25 +5,55 @@
 
 ## Active Go rewrite
 
-### Current priority: durable checkpoint and product-shaped candidate slice
+### Current priority: select the next bounded identity slice
 
 - [x] Restore the complete Go rewrite, contracts, retained fixtures, orchestration,
   and documentation to Git tracking. Anchor runtime-directory ignores at the
   repository root so `internal/storage/` remains source-controlled. See the
   [2026-09-19 checkpoint](./audit/go-rewrite-checkpoint-2026-09-19.md).
-- [ ] Complete the four open interpretation choices in the
+- [x] Complete the four interpretation choices in the
   [pre-attribution review](./design/pre-attribution-review.md#decisions-to-review-first):
   candidate-ID resolution, committee-flow membership, conduit associations, and
   A/B comparison. Do not choose terminal or allocation policy during this review.
-- [ ] Publish one product-shaped 2024 candidate slice from the accepted generation.
+  - [x] Run the [focused 2024 validation](./audit/pre-attribution-interpretation-validation-2026-09-20.md).
+    It proves that current candidate replacement contains material source-ID
+    conflicts, both one-sided committee-ID populations are self references, and
+    unbounded A/B candidates extend to 1,099 days. No policy changed.
+  - [x] The user accepted all four evidence-backed recommendations. Publish the
+    separate candidate-interpretation and direct A/B pair contracts without
+    mutating retained v1 evidence. The complete
+    [2024 gate](./audit/pre-attribution-interpretation-publications-2026-09-20.md)
+    passes exact semantic replay.
+- [x] Publish one product-shaped 2024 candidate slice from the accepted generation.
   It must separate authorized-committee receipts, support, opposition, committee
   paths, unresolved states, source drilldown, and coverage. It must not present
-  topology as terminal-dollar attribution.
-- [ ] After that slice exposes the actual evidence boundary, compare explicit
+  topology as terminal-dollar attribution. The
+  [candidate dossier gate](./audit/candidate-dossier-2026-09-20.md) passes for two
+  retained candidates and discloses exact cross-domain release alignment.
+- [x] After that slice exposes the actual evidence boundary, compare explicit
   terminal definitions and allocation methods. Preserve unresolved amounts and
-  require exact conservation before promoting any terminal-source result.
+  require exact conservation before promoting any terminal-source result. The
+  [comparison and recommendation](./design/terminal-policy-comparison.md) and
+  [two-candidate 2024 gate](./audit/terminal-policy-comparison-2026-09-20.md)
+  pass. No scenario is adopted.
+- [x] Accept the narrow partial boundary: exact explicit-earmark and direct
+  reported source-appearance attribution at occurrence grain, with all
+  committee-chain amounts unresolved. The separate cycle-wide production
+  calculation and [complete 2024 gate](./audit/direct-source-attribution-2026-09-20.md)
+  conserve all source rows and pass byte-identical worker-varied replay. The
+  dossier diagnostic remains unchanged.
+- [x] Review and land the September 20 worktree as one
+  coherent checkpoint. The [high-level inventory](./audit/go-rewrite-inventory-2026-09-20.md)
+  distinguishes the durable core, verified work in progress and parked exploration.
+- [ ] Select the next domain slice using the candidate-shaped evidence view. Start
+  with deterministic identity resolution for direct/earmarked source appearances
+  unless committee-chain evidence disproves that order. Preserve unresolved cases.
+- [ ] Investigate committee-chain allocation as a separate policy and calculation
+  boundary. Graph reachability alone does not establish economic ownership.
+- [ ] Add durable publication, Dagster wiring or graph projection for the direct
+  source-appearance result only when an accepted downstream consumer needs it.
 - [ ] Resume four-cycle A/B rollout, unattended weekly operation, and a user-facing
-  investigative surface only after the single-slice contracts are accepted.
+  investigative surface only after the next domain boundary works end to end.
 
 ### Paused exploration: relationship evidence and separate identity binding
 
@@ -458,7 +488,7 @@ are unfinished core work, not optional coverage improvements.
 - [x] Clarify [cycle partitions versus calculation windows](./design/cycle-calculation-windows.md)
   in PD-002 and the work plan. Preserve detailed inputs and explicit cross-cycle
   dependencies; this is not implemented general multi-cycle analytics.
-- [ ] Complete the [pre-attribution interpretation review](./design/pre-attribution-review.md)
+- [x] Complete the [pre-attribution interpretation review](./design/pre-attribution-review.md)
   with the user before choosing terminal definitions or allocation. Identify the
   reviewed policies and existing evidence pins; a complete recovery baseline is
   separate deferred work, not a prerequisite. A graph is not raw evidence.
@@ -471,7 +501,8 @@ are unfinished core work, not optional coverage improvements.
     unresolved authorization and routable unverified candidate IDs. No policy changed.
   - [x] Review [candidate-ID precedence and its graph consequences](./design/pre-attribution-review.md#candidate-id-resolution-review--2026-09-15):
     existing-ID replacement, context collisions, unverified routing and separate
-    amount categories. The recommendation is documented; user acceptance remains open.
+    amount categories. The user accepted the four-part boundary on 2026-09-20;
+    immutable replacement views now pass the complete 2024 gate.
 - [x] Implement the [reported identity assertion view](./design/reported-identity-assertions.md)
   over complete published A/CM facts, preserving field values and occurrence/fact
   grain without another text corpus copy. The [live gate](./audit/reported-identity-assertions-2026-09-13.md)

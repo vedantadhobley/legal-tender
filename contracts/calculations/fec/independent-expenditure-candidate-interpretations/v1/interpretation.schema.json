@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/independent-expenditure-candidate-interpretations/v1/interpretation.schema.json",
+  "title": "Independent-expenditure candidate interpretation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "interpretation_id", "calculation_set_id",
+    "source_decision_id", "fact_id", "natural_key", "cycle",
+    "spender_committee_id", "support_oppose", "amount_minor_units",
+    "reported_candidate", "state", "reported_endpoint_state",
+    "alternative_endpoint_state", "alternative_candidate_id",
+    "safe_default_candidate_id", "candidate_fact_ids", "evidence_codes",
+    "source_state", "source_method"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.independent-expenditure-candidate-interpretation.v1"},
+    "interpretation_id": {"$ref": "#/$defs/digest"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "source_decision_id": {"$ref": "#/$defs/digest"},
+    "fact_id": {"$ref": "#/$defs/digest"},
+    "natural_key": {"type": "string", "minLength": 1},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "spender_committee_id": {"type": "string", "minLength": 1},
+    "support_oppose": {"enum": ["S", "O"]},
+    "amount_minor_units": {"$ref": "#/$defs/signed_integer"},
+    "reported_candidate": {"$ref": "#/$defs/reported_candidate"},
+    "state": {"enum": ["confirmed", "inferred", "conflicting", "unverified", "ambiguous", "unresolved"]},
+    "reported_endpoint_state": {"enum": ["present_exact_context", "present_context_conflict", "present_unverified", "absent_from_candidate_master"]},
+    "alternative_endpoint_state": {"enum": ["none", "unique_exact_context", "multiple_exact_context", "no_exact_context", "insufficient_context"]},
+    "alternative_candidate_id": {"type": ["string", "null"], "minLength": 1},
+    "safe_default_candidate_id": {"type": ["string", "null"], "minLength": 1},
+    "candidate_fact_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/digest"}},
+    "evidence_codes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "source_state": {"enum": ["confirmed", "resolved", "unverified", "ambiguous", "unresolved"]},
+    "source_method": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "signed_integer": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "nullable_text": {"type": ["string", "null"]},
+    "reported_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_id", "name", "office", "office_state", "office_district"],
+      "properties": {
+        "candidate_id": {"type": "string", "minLength": 1},
+        "name": {"$ref": "#/$defs/nullable_text"},
+        "office": {"$ref": "#/$defs/nullable_text"},
+        "office_state": {"$ref": "#/$defs/nullable_text"},
+        "office_district": {"$ref": "#/$defs/nullable_text"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "confirmed"}}, "required": ["state"]},
+      "then": {"properties": {
+        "reported_endpoint_state": {"const": "present_exact_context"},
+        "alternative_endpoint_state": {"const": "none"},
+        "alternative_candidate_id": {"type": "null"},
+        "safe_default_candidate_id": {"type": "string", "minLength": 1}
+      }}
+    },
+    {
+      "if": {"properties": {"state": {"const": "inferred"}}, "required": ["state"]},
+      "then": {"properties": {
+        "reported_endpoint_state": {"const": "absent_from_candidate_master"},
+        "alternative_endpoint_state": {"const": "unique_exact_context"},
+        "alternative_candidate_id": {"type": "string", "minLength": 1},
+        "safe_default_candidate_id": {"type": "null"}
+      }}
+    },
+    {
+      "if": {"properties": {"state": {"const": "conflicting"}}, "required": ["state"]},
+      "then": {"properties": {
+        "reported_endpoint_state": {"const": "present_context_conflict"},
+        "alternative_endpoint_state": {"const": "unique_exact_context"},
+        "alternative_candidate_id": {"type": "string", "minLength": 1},
+        "safe_default_candidate_id": {"type": "null"}
+      }}
+    },
+    {
+      "if": {"properties": {"state": {"const": "unverified"}}, "required": ["state"]},
+      "then": {"properties": {
+        "reported_endpoint_state": {"const": "present_unverified"},
+        "alternative_endpoint_state": {"enum": ["no_exact_context", "insufficient_context"]},
+        "alternative_candidate_id": {"type": "null"},
+        "safe_default_candidate_id": {"type": "null"}
+      }}
+    },
+    {
+      "if": {"properties": {"state": {"const": "ambiguous"}}, "required": ["state"]},
+      "then": {"properties": {
+        "reported_endpoint_state": {"enum": ["present_context_conflict", "absent_from_candidate_master"]},
+        "alternative_endpoint_state": {"const": "multiple_exact_context"},
+        "alternative_candidate_id": {"type": "null"},
+        "safe_default_candidate_id": {"type": "null"}
+      }}
+    },
+    {
+      "if": {"properties": {"state": {"const": "unresolved"}}, "required": ["state"]},
+      "then": {"properties": {
+        "reported_endpoint_state": {"const": "absent_from_candidate_master"},
+        "alternative_endpoint_state": {"enum": ["no_exact_context", "insufficient_context"]},
+        "alternative_candidate_id": {"type": "null"},
+        "safe_default_candidate_id": {"type": "null"}
+      }}
+    }
+  ]
+}

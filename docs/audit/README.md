@@ -6,6 +6,10 @@ backlogs or target architecture. Route surviving work through
 [`../todo.md`](../todo.md), target contracts through [`../design/`](../design/),
 and accepted decisions through [`../decisions.md`](../decisions.md).
 
+- [Go rewrite inventory — 2026-09-20](./go-rewrite-inventory-2026-09-20.md) —
+  high-level audit of the durable Go core, verified worktree, live development
+  state, parked exploration, product gaps and corrected next sequence.
+
 - [Grounding-bound referent assessment comparison](./prose-referent-assessment-model-2026-09-19.md) —
   exact ten-case Gemma/GPT-OSS replay over immutable validated grounding; both
   models improve structural validity but retain mention-versus-antecedent errors.
@@ -80,7 +84,11 @@ and accepted decisions through [`../decisions.md`](../decisions.md).
 - [Complete shared-conduit publication](./shared-conduit-publication-2026-09-14.md) —
   full-cycle qualification, unchanged prior decisions, isolated graph and replay status.
 - [Pre-attribution interpretation review](./pre-attribution-review-2026-09-14.md) —
-  code-backed rules, inference boundaries, exceptions and pending user review.
+  historical code-backed rules, inference boundaries and exceptions before acceptance.
+- [Pre-attribution interpretation validation](./pre-attribution-interpretation-validation-2026-09-20.md) —
+  complete 2024 conflict, self-reference and A/B timing evidence supporting acceptance.
+- [Accepted pre-attribution interpretation publications](./pre-attribution-interpretation-publications-2026-09-20.md) —
+  immutable 2024 candidate-interpretation and direct A/B pair results with semantic replay.
 - [Checkpoint evidence proposal](./pre-attribution-checkpoint-2026-09-14.md) —
   pinned outputs/manifests/builds, file checks and incomplete recovery scope.
 - [Publication-independent committee paths](./funding-window-2026-09-13.md) —
@@ -95,6 +103,11 @@ and accepted decisions through [`../decisions.md`](../decisions.md).
   complete compact-index census, exact source-ID evidence and worker-varied replay status.
 - [Terminal-source boundary assessment](./terminal-source-assessment-2026-09-13.md) —
   selected-ledger topology comparison, source witnesses and independent replay status.
+- [Terminal-policy comparison](./terminal-policy-comparison-2026-09-20.md) —
+  six conserving scenarios over two retained candidate dossiers, with no policy promotion.
+- [Direct source-appearance attribution](./direct-source-attribution-2026-09-20.md) —
+  accepted partial boundary over the complete 2024 participant corpus, with exact
+  conservation and byte-identical worker-varied replay.
 - [Generation-bound typed paths](./funding-paths-2026-09-13.md) —
   source-backed multi-hop witnesses, search-boundary cases and fresh replay status.
 - [Generation-bound neighborhoods](./funding-neighborhoods-2026-09-13.md) —
@@ -133,6 +146,8 @@ and accepted decisions through [`../decisions.md`](../decisions.md).
   exact source labels and witness chains, preserved core evidence and reproducible presentation.
 - [Integrated candidate evidence](./candidate-evidence-2026-09-11.md) —
   two readable real reports, joined source populations, exact witnesses and byte-identical replay.
+- [Candidate dossier](./candidate-dossier-2026-09-20.md) —
+  two compact real views with exact cross-domain lineage and separate Schedule E endpoint roles.
 - [Positive remaining receipt families](./positive-receipt-families-v2-2026-09-11.md) —
   real originals/metadata, preserved partial detail and shared header-binding limits.
 - [Remaining receipt-family comparisons](./receipt-families-v2-2026-09-11.md) —

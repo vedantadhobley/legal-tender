@@ -1,6 +1,7 @@
 # Review before terminal attribution
 
-Status: active interpretation review; user acceptance remains open. Scope corrected
+Status: accepted 2026-09-20 and implemented as separate 2024 interpretation
+publications. Scope corrected
 2026-09-15: the user asked which assumptions determine nodes, edges and counted
 amounts. The assistant expanded that into recovery infrastructure. A full isolated
 rebuild is **not a prerequisite for this review**. Do not resume recovery engineering
@@ -51,10 +52,44 @@ identify terminal donors or allocate dollars.
 4. A/B comparison: is the broad candidate grouping useful as evidence, including
    distant same-amount records, without presenting it as deduplicated payments?
 
-These are review questions, not newly accepted behavior changes. Fixed publisher
+The user accepted all four boundaries on 2026-09-20. Strict counterparty agreement
+and the zero-money conduit association retain their existing rules. Separate
+candidate-interpretation and direct A/B pair publications implement the two
+required replacement views without mutating v1 evidence or graphs. Fixed publisher
 code mappings are explicit domain rules; they are not inherently brittle exceptions.
 The reviewed predicates do not use named candidates/committees to select outcomes.
 That is a scoped observation, not a repository-wide hardcoding audit.
+
+## Focused 2024 validation — 2026-09-20
+
+The [complete diagnostic](../audit/pre-attribution-interpretation-validation-2026-09-20.md)
+now verifies the exact retained candidate-resolution and receiver-flow artifacts,
+binds the complete Schedule B profile to the reconciliation inputs, and replays all
+308,488 A/B components. It changes no rule or graph.
+
+The evidence sharpens the four choices:
+
+1. **Candidate resolution needs separate reported and inferred endpoints.** Of
+   1,811 current replacements, 1,054 covering $266,304,052.67 conflict with a
+   reported ID that exists in the pinned candidate master. A replacement cannot
+   silently serve as a confirmed or source-reported default.
+2. **Strict committee counterparty agreement is supported.** All 2,101 Schedule A
+   and 97,850 Schedule B one-sided IDs are raw-only self references. Neither
+   ledger contains a clean-only or conflicting raw/clean cohort. Raw fallback
+   would manufacture self-flow edges.
+3. **The conduit pair/star rule remains a zero-money association.** FEC guidance
+   explicitly allows the supporting conduit date and displayed total to differ
+   from an original contribution. Amount/date equality is not a valid gate.
+4. **A/B comparison needs evidence tiers rather than unbounded components.** The
+   replay finds 130,650 different-date one-to-one candidates. Most are proximate,
+   but 32 exceed one year and the maximum is 1,099 days. Preserve every candidate,
+   carry no money, and publish the gap before any default filter.
+
+The user accepted these recommendations. The
+[2024 publication gate](../audit/pre-attribution-interpretation-publications-2026-09-20.md)
+now passes for the versioned candidate-interpretation and direct A/B pair contracts.
+The existing immutable facts, decisions, reconciliation components, graphs and
+current evidence pins remain unchanged.
 
 ## Candidate-ID resolution review — 2026-09-15
 
@@ -100,7 +135,7 @@ unique normalized name/office context may outweigh a conflicting reported ID;
 the master itself does not prove which field is correct. `confirmed` also means
 corroborated under this rule, not independently verified identity.
 
-Recommendation, pending user review: keep these distinctions and source assertions
+Accepted boundary: keep these distinctions and source assertions
 explicit. The current inferred links can support investigation, but totals must
 expose their confirmed/resolved/unverified composition or state an explicit selection.
 Do not label the combined amount confirmed, treat reassignment as a source correction,

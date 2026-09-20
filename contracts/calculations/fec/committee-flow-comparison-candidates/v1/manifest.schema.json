@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/committee-flow-comparison-candidates/v1/manifest.schema.json",
+  "title": "Published direct Schedule A/B comparison candidates",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "calculation_set_id", "calculation",
+    "calculation_version", "publisher_version", "candidate_schema_version",
+    "cycle", "source_release_id", "input_reconciliation", "run_id", "state",
+    "published_at", "method", "counts", "candidates", "checks"
+  ],
+  "properties": {
+    "$schema": {"const": "manifest.schema.json"},
+    "schema_version": {"const": "legal-tender.fec.committee-flow-comparison-candidate-set.v1"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "calculation": {"const": "fec/committee-flow-comparison-candidates"},
+    "calculation_version": {"const": "1.0.0"},
+    "publisher_version": {"const": "legal-tender.fec.committee-flow-comparison-candidate-publisher.v1"},
+    "candidate_schema_version": {"const": "legal-tender.fec.committee-flow-comparison-candidate.v1"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "source_release_id": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "input_reconciliation": {"$ref": "#/$defs/input"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "state": {"const": "published"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "method": {"$ref": "#/$defs/method"},
+    "counts": {"$ref": "#/$defs/counts"},
+    "candidates": {"$ref": "#/$defs/artifact"},
+    "checks": {"type": "array", "minItems": 7, "items": {"$ref": "#/$defs/check"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "calculation", "calculation_version", "calculation_set_id", "manifest_sha256", "match_policy", "schedule_a_observations_sha256", "schedule_b_observations_sha256"],
+      "properties": {
+        "role": {"const": "committee_flow_reconciliation_evidence"},
+        "calculation": {"const": "fec/committee-flow-reconciliation"},
+        "calculation_version": {"const": "1.0.0"},
+        "calculation_set_id": {"$ref": "#/$defs/digest"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"},
+        "match_policy": {"const": "legal-tender.fec.committee-flow-candidate-components.v1"},
+        "schedule_a_observations_sha256": {"$ref": "#/$defs/digest"},
+        "schedule_b_observations_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "candidate_signals", "date_gap_bands", "pairing", "financial_effect"],
+      "properties": {
+        "version": {"const": "legal-tender.fec.committee-flow-pair-comparison-method.v1"},
+        "candidate_signals": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "string", "minLength": 1}},
+        "date_gap_bands": {"type": "array", "minItems": 7, "maxItems": 7, "items": {"type": "string", "minLength": 1}},
+        "pairing": {"type": "string", "minLength": 1},
+        "financial_effect": {"const": "none"}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schedule_a_observations", "schedule_b_observations",
+        "schedule_a_with_candidates", "schedule_a_without_candidates",
+        "schedule_b_with_candidates", "schedule_b_without_candidates",
+        "candidate_pairs", "mutual_one_to_one", "competing_candidates",
+        "exact_signature", "role_amount_date_disagreement",
+        "role_amount_missing_date", "role_date_amount_conflict",
+        "amount_date_role_conflict"
+      ],
+      "properties": {
+        "schedule_a_observations": {"type": "integer", "minimum": 0},
+        "schedule_b_observations": {"type": "integer", "minimum": 0},
+        "schedule_a_with_candidates": {"type": "integer", "minimum": 0},
+        "schedule_a_without_candidates": {"type": "integer", "minimum": 0},
+        "schedule_b_with_candidates": {"type": "integer", "minimum": 0},
+        "schedule_b_without_candidates": {"type": "integer", "minimum": 0},
+        "candidate_pairs": {"type": "integer", "minimum": 0},
+        "mutual_one_to_one": {"type": "integer", "minimum": 0},
+        "competing_candidates": {"type": "integer", "minimum": 0},
+        "exact_signature": {"type": "integer", "minimum": 0},
+        "role_amount_date_disagreement": {"type": "integer", "minimum": 0},
+        "role_amount_missing_date": {"type": "integer", "minimum": 0},
+        "role_date_amount_conflict": {"type": "integer", "minimum": 0},
+        "amount_date_role_conflict": {"type": "integer", "minimum": 0}
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_count", "uncompressed_byte_count", "uncompressed_sha256", "compressed_byte_count", "compressed_sha256", "compression", "storage_key"],
+      "properties": {
+        "record_count": {"type": "integer", "minimum": 0},
+        "uncompressed_byte_count": {"type": "integer", "minimum": 0},
+        "uncompressed_sha256": {"$ref": "#/$defs/digest"},
+        "compressed_byte_count": {"type": "integer", "minimum": 1},
+        "compressed_sha256": {"$ref": "#/$defs/digest"},
+        "compression": {"const": "zstd"},
+        "storage_key": {"type": "string", "minLength": 1}
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "passed", "severity", "detail"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "passed": {"type": "boolean"},
+        "severity": {"enum": ["block", "warning"]},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

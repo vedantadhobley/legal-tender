@@ -1,7 +1,41 @@
 # Legal Tender — Agent Context
 
-Current priority, 2026-09-18: the [automated affiliation report](docs/design/affiliation-enrichment.md)
-now connects verified FEC appearances to the existing Wikipedia/Wikidata discovery,
+Current checkpoint, 2026-09-20: the
+[high-level inventory](docs/audit/go-rewrite-inventory-2026-09-20.md) finds a
+strong Go FEC evidence and calculation foundation, not a finished investigative
+product. Detailed Schedule A/B facts pass for 2024, Schedule E passes for all four
+target cycles, core calculations and isolated ArangoDB projections pass, and the
+September 20 worktree adds accepted interpretation evidence, a candidate dossier
+and direct/earmark source-appearance attribution. This reviewed checkpoint is the
+baseline for subsequent domain work.
+Production identity resolution, committee-chain allocation, one unified product
+graph, general serving/UI, remaining A/B cycles and unattended operation remain
+open. Durable publication and Dagster wiring are not automatic next steps for a
+calculation that is already deterministic; add them when a concrete consumer needs
+them. Select the next domain boundary from the candidate-shaped evidence.
+
+The user accepted the four boundaries supported by
+the [pre-attribution interpretation validation](docs/audit/pre-attribution-interpretation-validation-2026-09-20.md).
+Separate [2024 publications](docs/audit/pre-attribution-interpretation-publications-2026-09-20.md)
+now preserve reported and alternative candidate endpoints and direct Schedule A/B
+pair evidence with complete semantic replay. Strict counterparty agreement and
+zero-money conduit associations remain accepted. Existing v1 facts, calculations,
+graphs and money are unchanged. The first
+[product-shaped 2024 candidate dossier](docs/audit/candidate-dossier-2026-09-20.md)
+now passes for two retained candidates. It keeps receipts and independent spending
+separate, exposes four non-additive candidate-endpoint views, and discloses exact
+cross-domain release alignment. The subsequent
+[terminal-policy comparison](docs/audit/terminal-policy-comparison-2026-09-20.md)
+now passes six exactly conserving scenarios for both dossiers. It supports only
+partial occurrence-grain direct/earmark attribution and keeps blocked pooled
+methods unresolved. The user accepted that narrow boundary through the separate
+[direct source-appearance calculation](docs/audit/direct-source-attribution-2026-09-20.md).
+Its complete 2024 scan conserves all 264,085,606 participant rows into 7,470
+candidate results, reproduces the two retained diagnostic witnesses, and passes
+byte-identical eight/four-worker replay. Committee chains, resolved entities,
+durable publication, Dagster wiring and graph projection remain separate.
+The earlier [automated affiliation report](docs/design/affiliation-enrichment.md)
+connects verified FEC appearances to the existing Wikipedia/Wikidata discovery,
 source extraction and name/role/date comparison in one command. It replays retained
 captures and selects additional appearances in code. The live three-appearance
 sample completed all requests but supplied no corresponding names or person/employer
@@ -264,14 +298,24 @@ The [reported identity assertion view](docs/design/reported-identity-assertions.
 now exposes exact receipt identity/employer/occupation text and committee
 organization fields without copying the corpus or resolving identities.
 The [live gate](docs/audit/reported-identity-assertions-2026-09-13.md) owns
-acceptance status. Before selecting terminal definitions or dollar allocation,
-complete the user-requested [interpretation review](docs/design/pre-attribution-review.md).
-That review is not yet accepted; Arango is a derived projection, not raw evidence.
+acceptance status. The user-requested
+[interpretation review](docs/design/pre-attribution-review.md) is accepted and its
+separate 2024 calculation publications pass; Arango remains a derived projection,
+not raw evidence.
 The [first code-backed review](docs/audit/pre-attribution-review-2026-09-14.md)
 and [selected evidence pins](docs/audit/pre-attribution-checkpoint-2026-09-14.md)
 are prepared. Candidate-resolution characterization tests and selected artifact
-checks pass. User acceptance remains open; complete data/runtime recovery is
-separate deferred operational work. No runtime interpretation changed during that review.
+checks pass. The focused 2024 validation now replays exact retained inputs and
+quantifies candidate-ID conflicts, one-sided committee IDs, Schedule A/B timing,
+and conduit evidence. All input and conservation checks pass. The accepted additive
+candidate-interpretation and direct A/B pair publications pass complete 2024
+semantic replay; existing v1 interpretation, graph and money remain unchanged.
+The compact candidate dossier now verifies those interpretations against pinned
+candidate receipt/path reports, stores each relevant Schedule E row once, and
+publishes separate reported, safe-default, inferred and conflicting views. Two
+retained candidates pass the real 2024 gate; cross-domain release differences are
+explicit and terminal attribution remains ineligible.
+Complete data/runtime recovery is separate deferred operational work.
 
 The [receipt-role profiler](docs/design/terminal-receipt-roles.md) now joins
 complete compact participant evidence and exact reported source-ID master facts
@@ -835,11 +879,12 @@ documented in @docs/go-rewrite.md.
 ## Active state
 
 - **Branch**: `feature/professionalization`.
-- **Current priority**: preserve the complete rewrite in Git, finish the
-  pre-attribution interpretation review, and build one product-shaped 2024
-  candidate slice before choosing terminal or allocation policy. Further prose-model
-  and autonomous page-discovery work is paused. See
-  @docs/audit/go-rewrite-checkpoint-2026-09-19.md.
+- **Current priority**: define the next bounded domain slice through the
+  candidate-shaped evidence view. Deterministic identity resolution for direct and
+  earmarked appearances is the leading option; committee-chain allocation stays
+  separate. Do not add publication, Dagster or graph machinery without a concrete
+  consumer. Further prose-model and autonomous page-discovery work remains paused.
+  See @docs/audit/go-rewrite-inventory-2026-09-20.md.
 - **Current phase**: first vertical-slice implementation for the Go rewrite.
   The processed Schedule A reader/verifier, complete classic-overlap audit,
   exact 21-source FEC release contract, metadata-only discovery command, pure
@@ -911,7 +956,13 @@ documented in @docs/go-rewrite.md.
   unverified, zero ambiguous, and 296 unresolved decisions. The resolved
   aggregate, exact replacement bundle, and separate v2 graph now pass for all
   four cycles with zero missing masters, exact amount readback, and idempotent
-  replay. The receiver-reported flow bundle and graph now conserve 180,283
+  replay. The additive 2024 candidate-interpretation calculation conserves all
+  58,288 decisions and $4,337,242,339.31 while separating 757 inferred and 1,054
+  conflicting alternatives; only 45,185 confirmed rows have a safe default
+  endpoint. The direct Schedule A/B comparison publication preserves 471,229
+  zero-money pairs, including 155,364 mutual one-to-one pairs and 315,865 with
+  competing candidates. Both pass complete semantic readback without changing
+  the prior calculations or graphs. The receiver-reported flow bundle and graph now conserve 180,283
   edges and $4,672,820,179.49, expose 35 cyclic strong components containing
   2,304 committees, and pass exact readback and bounded path queries. Its 707
   missing committee masters remain explicit placeholders. Official 1980–2026

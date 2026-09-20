@@ -229,6 +229,30 @@ func TestAuditScheduleABAlignmentRequiresInputs(t *testing.T) {
 	}
 }
 
+func TestAuditPreAttributionInterpretationsRequiresInputs(t *testing.T) {
+	t.Parallel()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	exitCode := Run([]string{"pipeline", "fec", "audit-pre-attribution-interpretations", "--storage-root", "/storage"}, &stdout, &stderr)
+	if exitCode != 2 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "--candidate-resolution") {
+		t.Fatalf("exit=%d stdout=%q stderr=%q", exitCode, stdout.String(), stderr.String())
+	}
+}
+
+func TestWriteAuditResultIsImmutableAndIdempotent(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "audit", "result.json")
+	if err := writeAuditResult(path, []byte("first\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeAuditResult(path, []byte("first\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeAuditResult(path, []byte("second\n")); err == nil {
+		t.Fatal("different bytes replaced immutable audit result")
+	}
+}
+
 func TestPublishReceiverCommitteeFlowsRequiresInputs(t *testing.T) {
 	t.Parallel()
 	var stdout bytes.Buffer
@@ -420,6 +444,28 @@ func TestPublishIndependentExpenditureCandidateResolutionRequiresCycle(t *testin
 	}
 	if !strings.Contains(stderr.String(), "--cycle") {
 		t.Fatalf("stderr = %q; want required candidate-resolution inputs", stderr.String())
+	}
+}
+
+func TestPublishIndependentExpenditureCandidateInterpretationsRequiresCycle(t *testing.T) {
+	t.Parallel()
+	var stdout, stderr bytes.Buffer
+	if exitCode := Run([]string{"pipeline", "fec", "publish-independent-expenditure-candidate-interpretations"}, &stdout, &stderr); exitCode != 2 {
+		t.Fatalf("exit code = %d; want 2", exitCode)
+	}
+	if !strings.Contains(stderr.String(), "--cycle") {
+		t.Fatalf("stderr = %q; want required candidate-interpretation inputs", stderr.String())
+	}
+}
+
+func TestPublishCommitteeFlowComparisonCandidatesRequiresCycle(t *testing.T) {
+	t.Parallel()
+	var stdout, stderr bytes.Buffer
+	if exitCode := Run([]string{"pipeline", "fec", "publish-committee-flow-comparison-candidates"}, &stdout, &stderr); exitCode != 2 {
+		t.Fatalf("exit code = %d; want 2", exitCode)
+	}
+	if !strings.Contains(stderr.String(), "--cycle") {
+		t.Fatalf("stderr = %q; want required comparison-candidate inputs", stderr.String())
 	}
 }
 

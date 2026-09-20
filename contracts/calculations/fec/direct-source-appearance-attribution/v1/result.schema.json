@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/direct-source-appearance-attribution/v1/result.schema.json",
+  "title": "Direct source-appearance attribution",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "calculation_id", "calculation_policy", "terminal_policy",
+    "allocation_policy", "executable_sha256", "cycle", "state", "identity_boundary",
+    "inputs", "predicate", "authorization_census", "census", "candidates",
+    "source_appearance_terminal_eligible", "resolved_entity_terminal_eligible",
+    "committee_chain_allocation_performed", "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.direct-source-appearance-attribution.v1"},
+    "calculation_id": {"$ref": "#/$defs/digest"},
+    "calculation_policy": {"const": "fec/direct-source-appearance-attribution@1.0.0"},
+    "terminal_policy": {"const": "fec/reported-source-appearance-terminal-boundary@1.0.0"},
+    "allocation_policy": {"const": "fec/direct-and-explicit-earmark-allocation@1.0.0"},
+    "executable_sha256": {"$ref": "#/$defs/digest"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{3}[02468]$"},
+    "state": {"const": "complete_cycle_partial_source_appearance_attribution"},
+    "identity_boundary": {"const": "reported_source_appearance_not_resolved_person_or_organization"},
+    "inputs": {"$ref": "#/$defs/inputs"},
+    "predicate": {"$ref": "#/$defs/predicate"},
+    "authorization_census": {"$ref": "#/$defs/authorization"},
+    "census": {"$ref": "#/$defs/census"},
+    "candidates": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/candidate"}
+    },
+    "source_appearance_terminal_eligible": {"const": true},
+    "resolved_entity_terminal_eligible": {"const": false},
+    "committee_chain_allocation_performed": {"const": false},
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "fec_release": {"type": "string", "pattern": "^fec-[a-f0-9]{64}$"},
+    "signed_integer": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "participant_calculation_id", "participant_manifest_sha256", "schedule_a_fact_set_id",
+        "schedule_a_manifest_sha256", "fec_source_release_id", "receipt_fact_bundle_id",
+        "receipt_fact_bundle_sha256", "candidate_committee_linkage_fact_set_id",
+        "candidate_committee_linkage_manifest_sha256", "schedule_a_rows",
+        "candidate_committee_linkage_facts"
+      ],
+      "properties": {
+        "participant_calculation_id": {"$ref": "#/$defs/digest"},
+        "participant_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "schedule_a_fact_set_id": {"$ref": "#/$defs/digest"},
+        "schedule_a_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "fec_source_release_id": {"$ref": "#/$defs/fec_release"},
+        "receipt_fact_bundle_id": {"$ref": "#/$defs/digest"},
+        "receipt_fact_bundle_sha256": {"$ref": "#/$defs/digest"},
+        "candidate_committee_linkage_fact_set_id": {"$ref": "#/$defs/digest"},
+        "candidate_committee_linkage_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "schedule_a_rows": {"type": "integer", "minimum": 1},
+        "candidate_committee_linkage_facts": {"type": "integer", "minimum": 1}
+      }
+    },
+    "measures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rows", "known_amount_rows", "unknown_amount_rows", "positive_rows",
+        "negative_rows", "zero_rows", "signed_minor_units", "positive_minor_units",
+        "negative_minor_units"
+      ],
+      "properties": {
+        "rows": {"type": "integer", "minimum": 0},
+        "known_amount_rows": {"type": "integer", "minimum": 0},
+        "unknown_amount_rows": {"type": "integer", "minimum": 0},
+        "positive_rows": {"type": "integer", "minimum": 0},
+        "negative_rows": {"type": "integer", "minimum": 0},
+        "zero_rows": {"type": "integer", "minimum": 0},
+        "signed_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "positive_minor_units": {"$ref": "#/$defs/signed_integer"},
+        "negative_minor_units": {"$ref": "#/$defs/signed_integer"}
+      }
+    },
+    "reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "measures"],
+      "properties": {
+        "reason": {
+          "enum": [
+            "amount_unresolved", "committee_chain_unresolved",
+            "individual_class_unresolved", "individual_committee_role_conflict",
+            "other_reported_source_role_unresolved"
+          ]
+        },
+        "measures": {"$ref": "#/$defs/measures"}
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id", "state", "authorized_committee_ids", "authorized_committee_scope",
+        "included_nonmemo_scope", "direct", "explicitly_earmarked", "unresolved",
+        "excluded_memo_subtotal", "unresolved_reasons"
+      ],
+      "properties": {
+        "candidate_id": {"type": "string", "pattern": "^[HSP][0-9A-Z]{8}$"},
+        "state": {"const": "partial_source_appearance_attribution"},
+        "authorized_committee_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^C[0-9A-Z]{8}$"}
+        },
+        "authorized_committee_scope": {"$ref": "#/$defs/measures"},
+        "included_nonmemo_scope": {"$ref": "#/$defs/measures"},
+        "direct": {"$ref": "#/$defs/measures"},
+        "explicitly_earmarked": {"$ref": "#/$defs/measures"},
+        "unresolved": {"$ref": "#/$defs/measures"},
+        "excluded_memo_subtotal": {"$ref": "#/$defs/measures"},
+        "unresolved_reasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/reason"}
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidates_with_linkage_facts", "candidates_with_authorized_committees",
+        "authorized_committees", "authorized_relationships", "unresolved_relationships",
+        "unauthorized_relationships"
+      ],
+      "properties": {
+        "candidates_with_linkage_facts": {"type": "integer", "minimum": 1},
+        "candidates_with_authorized_committees": {"type": "integer", "minimum": 0},
+        "authorized_committees": {"type": "integer", "minimum": 0},
+        "authorized_relationships": {"type": "integer", "minimum": 0},
+        "unresolved_relationships": {"type": "integer", "minimum": 0},
+        "unauthorized_relationships": {"type": "integer", "minimum": 0}
+      }
+    },
+    "census": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "complete_participant_population", "outside_authorized_candidate_scope",
+        "authorized_committee_scope", "included_nonmemo_scope", "direct",
+        "explicitly_earmarked", "unresolved", "excluded_memo_subtotal"
+      ],
+      "properties": {
+        "complete_participant_population": {"$ref": "#/$defs/measures"},
+        "outside_authorized_candidate_scope": {"$ref": "#/$defs/measures"},
+        "authorized_committee_scope": {"$ref": "#/$defs/measures"},
+        "included_nonmemo_scope": {"$ref": "#/$defs/measures"},
+        "direct": {"$ref": "#/$defs/measures"},
+        "explicitly_earmarked": {"$ref": "#/$defs/measures"},
+        "unresolved": {"$ref": "#/$defs/measures"},
+        "excluded_memo_subtotal": {"$ref": "#/$defs/measures"}
+      }
+    },
+    "predicate_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["disposition", "all", "meaning"],
+      "properties": {
+        "disposition": {
+          "enum": ["direct", "explicitly_earmarked", "unresolved", "excluded_memo_subtotal", "outside_authorized_candidate_scope"]
+        },
+        "all": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "meaning": {"type": "string", "minLength": 1}
+      }
+    },
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "authorization_rule", "decision_order", "source_membership_key"],
+      "properties": {
+        "version": {"const": "legal-tender.fec.direct-source-appearance-membership.v1"},
+        "authorization_rule": {"type": "string", "minLength": 1},
+        "decision_order": {
+          "type": "array",
+          "minItems": 6,
+          "items": {"$ref": "#/$defs/predicate_rule"}
+        },
+        "source_membership_key": {
+          "const": ["schedule_a_fact_set_id", "source_row_ordinal", "candidate_id"]
+        }
+      }
+    }
+  }
+}

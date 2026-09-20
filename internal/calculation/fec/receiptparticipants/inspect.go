@@ -134,8 +134,8 @@ type Inspector struct {
 }
 
 type InspectionScope struct {
-	FactSetID, ManifestSHA256, Cycle, SourceReleaseID, SourceReleaseManifestSHA256, ParticipantSHA256 string
-	Rows                                                                                              uint64
+	ParticipantID, FactSetID, ManifestSHA256, Cycle, SourceReleaseID, SourceReleaseManifestSHA256, ParticipantSHA256 string
+	Rows                                                                                                             uint64
 }
 
 func OpenInspector(ctx context.Context, root, facts, manifest, expectedID string) (*Inspector, error) {
@@ -179,7 +179,16 @@ func OpenInspector(ctx context.Context, root, facts, manifest, expectedID string
 }
 
 func (i *Inspector) Scope() InspectionScope {
-	return InspectionScope{i.manifest.FactSetID, i.participant.ManifestSHA256, i.manifest.Cycle, i.manifest.SourceReleaseID, i.manifest.SourceReleaseManifestSHA256, i.participantSHA, i.participant.SourceRows}
+	return InspectionScope{
+		ParticipantID:               i.participant.CalculationID,
+		FactSetID:                   i.manifest.FactSetID,
+		ManifestSHA256:              i.participant.ManifestSHA256,
+		Cycle:                       i.manifest.Cycle,
+		SourceReleaseID:             i.manifest.SourceReleaseID,
+		SourceReleaseManifestSHA256: i.manifest.SourceReleaseManifestSHA256,
+		ParticipantSHA256:           i.participantSHA,
+		Rows:                        i.participant.SourceRows,
+	}
 }
 
 func (i *Inspector) Inspect(ctx context.Context, ordinal uint64) (Inspection, error) {

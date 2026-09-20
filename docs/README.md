@@ -24,6 +24,17 @@ Code and live data remain authoritative for current runtime behavior. A target
 document does not become as-built truth until the implementation lands and the
 document is updated accordingly.
 
+## Current state
+
+- [Go rewrite inventory — 2026-09-20](./audit/go-rewrite-inventory-2026-09-20.md) —
+  high-level implemented/experimental/missing boundary, live development state,
+  worktree risk and corrected next sequence.
+- [Direct source-appearance attribution](./design/direct-source-attribution.md) —
+  accepted 2024 direct/earmark calculation with committee chains and resolved
+  entities kept outside the result.
+- [Active TODO](./todo.md) — the current implementation queue. Detailed research
+  below is retained evidence, not an automatic next-work sequence.
+
 ## Redesign
 
 - [Go rewrite checkpoint](./audit/go-rewrite-checkpoint-2026-09-19.md) —
@@ -146,6 +157,12 @@ document is updated accordingly.
 - [Node/edge assumption review](./design/pre-attribution-review.md) —
   implemented connection rules, interpretation choices and user review;
   recovery engineering is separate deferred work.
+- [Pre-attribution interpretation validation](./audit/pre-attribution-interpretation-validation-2026-09-20.md) —
+  complete 2024 candidate-conflict, one-sided committee-ID and A/B date-gap
+  diagnostic with source-backed recommendations and no policy or graph change.
+- [Accepted pre-attribution interpretation publications](./audit/pre-attribution-interpretation-publications-2026-09-20.md) —
+  accepted four-part boundary, immutable candidate endpoint interpretations,
+  direct A/B pair evidence, complete 2024 replay and remaining product boundary.
 - [Reproducible Go builds](./go-build.md) — pinned compiler, offline clean builds,
   exact executable comparison and retained source/module inputs.
 - [Go build acceptance gate](./audit/go-build-2026-09-14.md) — matching clean and
@@ -176,6 +193,14 @@ document is updated accordingly.
   complete selected-ledger topology, provisional hypotheses and explicit origin blockers.
 - [Terminal assessment live gate](./audit/terminal-source-assessment-2026-09-13.md) —
   pinned population comparison, automatic source witnesses and fresh replay status.
+- [Terminal definition and allocation comparison](./design/terminal-policy-comparison.md) —
+  six explicit candidate-receipt scenarios, supported partial boundaries and blocked pooled methods.
+- [Terminal-policy comparison gate](./audit/terminal-policy-comparison-2026-09-20.md) —
+  two real 2024 dossiers with exact scenario conservation and no adopted policy.
+- [Direct source-appearance attribution](./design/direct-source-attribution.md) —
+  accepted cycle-wide direct/earmark boundary with committee-chain money unresolved.
+- [Direct source-attribution gate](./audit/direct-source-attribution-2026-09-20.md) —
+  complete 2024 conservation, exact diagnostic witnesses and worker-varied replay.
 - [Generation-bound typed paths](./design/funding-paths.md) —
   receipt/committee/candidate routes, separate ledgers and explicit search boundaries.
 - [Typed path live gate](./audit/funding-paths-2026-09-13.md) —
@@ -256,6 +281,8 @@ document is updated accordingly.
   one reproducible receipt/upstream/summary result, readable report, and unselected attribution policies.
 - [Integrated candidate evidence results](./audit/candidate-evidence-2026-09-11.md) —
   real 2024 reports, complete joined-source checks and exact JSON/Markdown replay.
+- [Candidate dossier gate](./audit/candidate-dossier-2026-09-20.md) —
+  compact receipt/path/outside-spending views, exact lineage and non-additive endpoint evidence.
 - [Positive remaining receipt-family witnesses](./audit/positive-receipt-families-v2-2026-09-11.md) —
   all new source shapes, real metadata binding and a shared zero-numbered-header blocker.
 - [Remaining receipt-family comparison gate](./audit/receipt-families-v2-2026-09-11.md) —

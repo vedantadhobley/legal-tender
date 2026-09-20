@@ -1,0 +1,18 @@
+{
+  "schema_version": "legal-tender.contract.fec.committee-flow-comparison-candidates.v1",
+  "contract": "fec/committee-flow-comparison-candidates",
+  "contract_version": "1.0.0",
+  "method_version": "legal-tender.fec.committee-flow-pair-comparison-method.v1",
+  "candidate_signals": [
+    "same directed endpoints, role, and amount",
+    "same directed endpoints, role, and date",
+    "same directed endpoints, amount, and date"
+  ],
+  "invariants": [
+    "emit direct pairs before transitive component union",
+    "preserve both source observations and their independent amounts",
+    "expose date gaps and candidate degree without declaring payment identity",
+    "carry no money and perform no cross-ledger deduplication",
+    "fail rather than truncate when the operational candidate capacity is exceeded"
+  ]
+}

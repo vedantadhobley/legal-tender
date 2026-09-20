@@ -80,6 +80,7 @@ const usage = `usage:
   legal-tender pipeline fec publish-schedule-e-facts [options]
   legal-tender pipeline fec publish-effective-independent-expenditures [options]
   legal-tender pipeline fec publish-independent-expenditure-candidate-resolution [options]
+  legal-tender pipeline fec publish-independent-expenditure-candidate-interpretations [options]
   legal-tender pipeline fec publish-resolved-independent-expenditures [options]
   legal-tender pipeline fec publish-independent-expenditure-projection-bundle [options]
   legal-tender pipeline fec publish-resolved-independent-expenditure-projection-bundle [options]
@@ -129,15 +130,20 @@ const usage = `usage:
   legal-tender pipeline fec audit-schedule-ab-alignment [options]
   legal-tender pipeline fec audit-schedule-b-overlap [options]
   legal-tender pipeline fec audit-schedule-b-semantics [options]
+  legal-tender pipeline fec audit-pre-attribution-interpretations [options]
   legal-tender pipeline fec calculate-disbursement-reporting [options]
   legal-tender pipeline fec reconcile-committee-flows [options]
   legal-tender pipeline fec publish-committee-flow-reconciliation [options]
+  legal-tender pipeline fec publish-committee-flow-comparison-candidates [options]
   legal-tender pipeline fec publish-committee-flow-evidence-bundle [options]
   legal-tender pipeline fec verify-committee-flow-evidence-bundle [options]
   legal-tender pipeline fec probe-arango-committee-flow-evidence [options]
   legal-tender pipeline fec review-committee-flows [options]
   legal-tender pipeline fec trace-candidate-committee-receipts [options]
   legal-tender pipeline fec build-candidate-evidence [options]
+  legal-tender pipeline fec build-candidate-dossier [options]
+  legal-tender pipeline fec compare-terminal-policies [options]
+  legal-tender pipeline fec calculate-direct-source-attribution [options]
   legal-tender pipeline fec inspect-candidate-connection [options]
   legal-tender pipeline fec benchmark-receipt-reference-index [options]
   legal-tender pipeline fec join-receipt-references [options]
@@ -255,6 +261,12 @@ func RunContext(ctx context.Context, args []string, stdout, stderr io.Writer) in
 		return runCandidateUpstream(ctx, args[3:], stdout, stderr)
 	case "build-candidate-evidence":
 		return runCandidateEvidence(ctx, args[3:], stdout, stderr)
+	case "build-candidate-dossier":
+		return runCandidateDossier(ctx, args[3:], stdout, stderr)
+	case "compare-terminal-policies":
+		return runTerminalPolicyComparison(ctx, args[3:], stdout, stderr)
+	case "calculate-direct-source-attribution":
+		return runDirectSourceAttribution(ctx, args[3:], stdout, stderr)
 	case "inspect-candidate-connection":
 		return runCandidateConnection(ctx, args[3:], stdout, stderr)
 	case "benchmark-receipt-reference-index":
@@ -349,6 +361,8 @@ func RunContext(ctx context.Context, args []string, stdout, stderr io.Writer) in
 		return runPublishEffectiveIndependentExpenditures(ctx, args[3:], stdout, stderr)
 	case "publish-independent-expenditure-candidate-resolution":
 		return runPublishIndependentExpenditureCandidateResolution(ctx, args[3:], stdout, stderr)
+	case "publish-independent-expenditure-candidate-interpretations":
+		return runPublishCandidateInterpretations(ctx, args[3:], stdout, stderr)
 	case "publish-resolved-independent-expenditures":
 		return runPublishResolvedIndependentExpenditures(ctx, args[3:], stdout, stderr)
 	case "publish-independent-expenditure-projection-bundle":
@@ -405,12 +419,16 @@ func RunContext(ctx context.Context, args []string, stdout, stderr io.Writer) in
 		return runAuditScheduleBOverlap(ctx, args[3:], stdout, stderr)
 	case "audit-schedule-b-semantics":
 		return runAuditScheduleBSemantics(ctx, args[3:], stdout, stderr)
+	case "audit-pre-attribution-interpretations":
+		return runAuditPreAttributionInterpretations(ctx, args[3:], stdout, stderr)
 	case "calculate-disbursement-reporting":
 		return calculateDisbursementReporting(ctx, args[3:], stdout, stderr)
 	case "reconcile-committee-flows":
 		return runReconcileCommitteeFlows(ctx, args[3:], stdout, stderr)
 	case "publish-committee-flow-reconciliation":
 		return runCommitteeFlowCalculation(ctx, args[3:], stdout, stderr, true)
+	case "publish-committee-flow-comparison-candidates":
+		return runPublishCommitteeFlowComparisonCandidates(ctx, args[3:], stdout, stderr)
 	case "publish-committee-flow-evidence-bundle":
 		return runCommitteeFlowBundle(ctx, args[3:], stdout, stderr, false)
 	case "verify-committee-flow-evidence-bundle":

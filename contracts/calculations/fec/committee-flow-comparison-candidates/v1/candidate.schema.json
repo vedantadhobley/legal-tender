@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/calculations/fec/committee-flow-comparison-candidates/v1/candidate.schema.json",
+  "title": "Direct Schedule A/B committee-flow comparison candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "candidate_id", "calculation_set_id", "cycle",
+    "sender_committee_id", "recipient_committee_id", "schedule_a_ordinal",
+    "schedule_b_ordinal", "schedule_a_sub_id", "schedule_b_sub_id",
+    "schedule_a_role", "schedule_b_role", "schedule_a_type", "schedule_b_type",
+    "schedule_a_date_days", "schedule_b_date_days",
+    "schedule_a_reported_amount_minor_units", "schedule_b_reported_amount_minor_units",
+    "signals", "state", "date_gap_days", "absolute_date_gap_days",
+    "date_gap_band", "schedule_a_candidate_count", "schedule_b_candidate_count",
+    "ambiguity", "financial_effect"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.fec.committee-flow-comparison-candidate.v1"},
+    "candidate_id": {"$ref": "#/$defs/digest"},
+    "calculation_set_id": {"$ref": "#/$defs/digest"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "sender_committee_id": {"$ref": "#/$defs/committee"},
+    "recipient_committee_id": {"$ref": "#/$defs/committee"},
+    "schedule_a_ordinal": {"type": "integer", "minimum": 1},
+    "schedule_b_ordinal": {"type": "integer", "minimum": 1},
+    "schedule_a_sub_id": {"type": "string", "minLength": 1},
+    "schedule_b_sub_id": {"type": "string", "minLength": 1},
+    "schedule_a_role": {"$ref": "#/$defs/role"},
+    "schedule_b_role": {"$ref": "#/$defs/role"},
+    "schedule_a_type": {"type": "string"},
+    "schedule_b_type": {"type": "string"},
+    "schedule_a_date_days": {"type": ["integer", "null"]},
+    "schedule_b_date_days": {"type": ["integer", "null"]},
+    "schedule_a_reported_amount_minor_units": {"$ref": "#/$defs/signed_integer"},
+    "schedule_b_reported_amount_minor_units": {"$ref": "#/$defs/signed_integer"},
+    "signals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["same_role", "same_amount", "same_date"],
+      "properties": {
+        "same_role": {"type": "boolean"},
+        "same_amount": {"type": "boolean"},
+        "same_date": {"type": "boolean"}
+      }
+    },
+    "state": {"enum": ["exact_signature", "role_amount_date_disagreement", "role_amount_missing_date", "role_date_amount_conflict", "amount_date_role_conflict"]},
+    "date_gap_days": {"type": ["integer", "null"]},
+    "absolute_date_gap_days": {"type": ["integer", "null"], "minimum": 0},
+    "date_gap_band": {"enum": ["same_day", "1_to_3_days", "4_to_10_days", "11_to_30_days", "31_to_90_days", "over_90_days", "unknown"]},
+    "schedule_a_candidate_count": {"type": "integer", "minimum": 1},
+    "schedule_b_candidate_count": {"type": "integer", "minimum": 1},
+    "ambiguity": {"enum": ["mutual_one_to_one", "competing_candidates"]},
+    "financial_effect": {"const": "none"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "committee": {"type": "string", "pattern": "^C[0-9]{8}$"},
+    "signed_integer": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)$"},
+    "role": {"enum": ["contribution", "in_kind", "affiliated_transfer", "refund_or_repayment", "loan"]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"date_gap_band": {"const": "unknown"}}, "required": ["date_gap_band"]},
+      "then": {"properties": {"date_gap_days": {"type": "null"}, "absolute_date_gap_days": {"type": "null"}}},
+      "else": {"properties": {"date_gap_days": {"type": "integer"}, "absolute_date_gap_days": {"type": "integer", "minimum": 0}}}
+    },
+    {
+      "if": {"properties": {"ambiguity": {"const": "mutual_one_to_one"}}, "required": ["ambiguity"]},
+      "then": {"properties": {"schedule_a_candidate_count": {"const": 1}, "schedule_b_candidate_count": {"const": 1}}}
+    }
+  ]
+}

@@ -1,5 +1,13 @@
 # Go rewrite as-built ledger
 
+## Current checkpoint
+
+The [2026-09-20 high-level inventory](./audit/go-rewrite-inventory-2026-09-20.md)
+is the concise current status. The ledger below preserves detailed implementation
+history and evidence, but its reverse-chronological experiments do not define the
+next work item. The rewrite is a verified FEC evidence/calculation development
+system, not yet a unified or deployed investigative product.
+
 The [offline occurrence/group boundary](./design/prose-referents-and-corrections.md#offline-occurrence-group-and-canonical-candidate-boundary--2026-09-19)
 now preserves literal name occurrences, requires explicit unverified mention groups
 for role referents and admits source-pinned canonical candidates only through a
@@ -565,6 +573,35 @@ the expected report ID, exact published ancestry and complete observation equali
 all source fields remain intact. Parent reports are not recalculated or modified.
 The [drilldown gate](./audit/candidate-connection-2026-09-11.md) passes physical-row
 readback, independent membership checks and byte-identical replay.
+
+`build-candidate-dossier` now creates the first compact product-shaped candidate
+slice from a pinned v2 report and the complete candidate-interpretation publication.
+Candidate-linked receipts, support, opposition, representative committee paths,
+reported endpoints, safe defaults and alternative endpoints remain separate. The
+four Schedule E views overlap and are not additive. Exact Schedule A,
+committee-flow and Schedule E release IDs are disclosed instead of forced equal.
+The [2024 dossier gate](./audit/candidate-dossier-2026-09-20.md) passes for both
+retained candidates. Terminal and allocation fields remain null.
+
+`compare-terminal-policies` authenticates one dossier and compares six explicit
+receipt-allocation scenarios over its disjoint candidate-linked components. Memo
+subtotals remain visible outside the numeric input. Direct, explicitly earmarked,
+proportional and unresolved buckets conserve every included row and known signed
+cent. Blocked pro-rata and FIFO methods emit no modeled dollars. The
+[comparison contract](./design/terminal-policy-comparison.md) and
+[2024 gate](./audit/terminal-policy-comparison-2026-09-20.md) pass for both retained
+candidates; every scenario remains unselected and terminal eligibility remains false.
+
+`calculate-direct-source-attribution` applies the subsequently accepted narrow
+boundary across one complete immutable Schedule A participant publication. It
+verifies the exact Schedule A ancestry and candidate-receipt fact bundle, routes
+only uniquely authorized committees, and partitions candidate-linked occurrences
+into direct, explicitly earmarked, unresolved and memo-evidence populations. It
+does not allocate committee chains or resolve source identities. The
+[calculation contract](./design/direct-source-attribution.md) and
+[complete 2024 gate](./audit/direct-source-attribution-2026-09-20.md) pass exact
+cycle/candidate conservation and byte-identical eight/four-worker replay. Durable
+publication, Dagster wiring and graph projection remain unimplemented.
 
 The [positive remaining receipt-family gate](./audit/positive-receipt-families-v2-2026-09-11.md)
 now checks all seven new form/category combinations against bounded originals,
@@ -1497,6 +1534,25 @@ partitioned Dagster asset depends on the effective cycle plus coordinated
 classic facts and invokes only this Go command. See the
 [candidate-resolution audit](./audit/independent-expenditure-candidate-resolution-2026-08-31.md).
 
+The accepted interpretation boundary now has a separate additive publisher:
+
+```text
+legal-tender pipeline fec publish-independent-expenditure-candidate-interpretations \
+  --storage-root /storage --cycle 2024 \
+  --candidate-resolution <exact-or-current-resolution-manifest> \
+  --run-id <stable-run-id>
+```
+
+It preserves one row per existing decision and the full reported candidate
+assertion. A unique exact-context alternative is separate: `inferred` means the
+reported ID is absent from the pinned master, while `conflicting` means the reported
+ID exists but disagrees with context. Only `confirmed` agreement supplies a safe
+default endpoint. The complete 2024 publication conserves all 58,288 decisions and
+$4,337,242,339.31, including 757 inferred and 1,054 conflicting rows. Semantic
+replay decodes every row and recomputes all state counts and amounts. It does not
+change the old resolution aggregate or graph. See the
+[accepted publication gate](./audit/pre-attribution-interpretation-publications-2026-09-20.md).
+
 `publish-resolved-independent-expenditures` reads only those dense decisions.
 It groups confirmed, resolved, and unverified rows by spender, resolved
 candidate, and stance while retaining state-specific counts and signed
@@ -1931,6 +1987,47 @@ to stderr. The 2024 gate profiled 166 shapes and reviewed 76 source rows in
 21.778 seconds; complete review replay produced identical JSON in 19.166
 seconds. See the [source review](./audit/committee-flow-source-review-2026-09-08.md)
 and [implemented graph contract](./design/arango-committee-flow-evidence.md).
+
+The pre-attribution interpretation audit composes that replay with the exact
+candidate-resolution decisions, receiver-flow exceptions and complete Schedule B
+semantics profile:
+
+```text
+legal-tender pipeline fec audit-pre-attribution-interpretations \
+  --storage-root /storage \
+  --candidate-resolution <candidate-resolution-manifest> \
+  --receiver-flows <receiver-flow-manifest> \
+  --schedule-b-semantics <complete-schedule-b-semantics-result> \
+  --committee-flow-result <saved-reconciliation-result.json> \
+  --committee-flow-evidence-root <root-of-its-evidence-artifacts> \
+  [--output <immutable-result-path>]
+```
+
+It is diagnostic only. It verifies exact lineage and complete backing, profiles
+reported-versus-inferred Schedule E endpoints, classifies one-sided committee IDs,
+and emits A/B date-gap bands. It changes no policy, current pointer, graph or money.
+The measured 2024 result and recommendations are in the
+[pre-attribution validation](./audit/pre-attribution-interpretation-validation-2026-09-20.md).
+
+The accepted A/B replacement is also an additive immutable calculation:
+
+```text
+legal-tender pipeline fec publish-committee-flow-comparison-candidates \
+  --storage-root /storage --cycle 2024 \
+  --reconciliation <exact-or-current-reconciliation-manifest> \
+  --run-id <stable-run-id> \
+  --max-candidate-pairs 10000000
+```
+
+It emits direct candidate pairs before transitive component union. Every row keeps
+both source ordinals, sub-IDs, roles, types, dates and reported amounts; it adds
+exact match signals, signed and absolute date gaps, a gap band and both candidate
+degrees. The 2024 publication contains 471,229 pairs: 155,364 mutual one-to-one and
+315,865 with competing candidates. Its operational capacity is fail-closed and
+never filters output. Every pair has `financial_effect=none`; no amount is combined,
+deduplicated or made graph-eligible. Fresh semantic replay validates every row and
+recomputes the complete census. See the
+[accepted publication gate](./audit/pre-attribution-interpretation-publications-2026-09-20.md).
 
 The immutable publisher and exact observation-readiness commands now exist:
 

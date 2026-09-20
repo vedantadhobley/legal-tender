@@ -1,8 +1,10 @@
 # Integrated candidate evidence view
 
 Status: implemented as `build-candidate-evidence`, a read-only Go command with
-JSON output and an optional readable report. The milestone is one reproducible
-candidate evidence result, not terminal classification or pooled-dollar allocation.
+JSON output and an optional readable report. The compact `build-candidate-dossier`
+presentation now joins that pinned report to accepted independent-expenditure
+interpretations. The milestone is reproducible candidate evidence, not terminal
+classification or pooled-dollar allocation.
 Those remain independent,
 versioned policies. This view builds on the [upstream trace](./candidate-upstream.md),
 [receipt inventory](./committee-funding-basis.md), and
@@ -150,6 +152,31 @@ amendments, memo meaning, donor identity or cash availability. Its connection ID
 binds the lookup executable, parent document digest, source ancestry and returned
 row. The [drilldown gate](../audit/candidate-connection-2026-09-11.md) records exact
 physical-row readback, preserved parents and byte-identical replay.
+
+## Compact candidate dossier (v1)
+
+```bash
+legal-tender pipeline fec build-candidate-dossier \
+  --storage-root /storage --candidate-report <retained-v2-json> \
+  --expected-report-id <report-id> \
+  --candidate-interpretations <exact-manifest-or-verified-current-pointer>
+```
+
+The dossier verifies the exact parent report and complete candidate-interpretation
+artifact. It keeps candidate-linked receipt populations, representative committee
+paths and source-backed names while omitting the parent's thousands of upstream
+committee populations. It adds four separate Schedule E views: reported endpoint,
+safe default, inferred alternative and conflicting alternative. Each relevant
+interpretation is stored once with all applicable roles. The view subtotals overlap
+and are explicitly non-additive; support and opposition remain separate.
+
+The two evidence domains must share a cycle. They need not claim the same source
+release. The dossier records the exact Schedule A, committee-flow and Schedule E
+release IDs and reports whether receipt and independent-spending snapshots match.
+It does not silently align or replace either source. Terminal policy, allocation,
+person/corporation identity, lobbying and legislative evidence remain unset. The
+[real 2024 dossier gate](../audit/candidate-dossier-2026-09-20.md) passes for both
+retained candidates.
 
 ## Acceptance
 

@@ -1,0 +1,22 @@
+{
+  "schema_version": "legal-tender.contract.fec.independent-expenditure-candidate-interpretations.v1",
+  "contract": "fec/independent-expenditure-candidate-interpretations",
+  "contract_version": "1.0.0",
+  "method_version": "legal-tender.fec.independent-expenditure-candidate-interpretation-method.v1",
+  "input": "one verified fec/independent-expenditure-candidate-resolution 1.0.0 publication using method v2",
+  "states": [
+    "confirmed",
+    "inferred",
+    "conflicting",
+    "unverified",
+    "ambiguous",
+    "unresolved"
+  ],
+  "invariants": [
+    "preserve every reported candidate assertion and source decision identity",
+    "publish a unique exact-context candidate as a separate alternative endpoint",
+    "distinguish absent-master inference from a present-ID context conflict",
+    "supply a safe default endpoint only for exact reported-ID and context agreement",
+    "carry each source amount exactly once and add no money for an alternative endpoint"
+  ]
+}

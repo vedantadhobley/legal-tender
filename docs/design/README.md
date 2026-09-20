@@ -5,11 +5,15 @@ implementation informed by the existing Python system, not a mechanical port.
 
 ## Current authority
 
-Current work is [relationship-data exploration](./relationship-exploration.md),
-not another automatic implementation step. Review retained structured examples,
-source meanings, dates and query behavior first. Donor matching and money remain
-separate. Recovery/exact-build campaigns are parked; ordinary provenance, dependency
-locks and development tests remain. The note records the partial cleanup accurately.
+The [2026-09-20 inventory](../audit/go-rewrite-inventory-2026-09-20.md)
+owns the current implemented/experimental/missing boundary. The accepted
+[direct source-appearance calculation](./direct-source-attribution.md) is
+reproducible without a durable publisher. Choose the next domain slice through
+the candidate-shaped evidence; deterministic identity resolution is the leading
+slice, while committee-chain allocation remains separate. Relationship and model
+work below is retained research, not the automatic implementation sequence.
+Recovery/exact-build campaigns remain parked; ordinary provenance, dependency
+locks and development tests remain.
 
 The [company-page reader](./company-page-evidence.md) now extracts text, metadata
 and JSON-LD evidence from the retained HTML with exact byte locations. All three
@@ -85,8 +89,11 @@ without name merging or inferred employment/ownership. Its
 The user requires an [interpretation review](./pre-attribution-review.md)
 before terminal definitions or allocation. The first
 [code-backed packet and evidence pins](../audit/pre-attribution-review-2026-09-14.md)
-are prepared; user acceptance remains open. Full operational recovery is a
-separate deferred requirement, not part of accepting the interpretation review.
+and the [focused validation](../audit/pre-attribution-interpretation-validation-2026-09-20.md)
+support the four accepted boundaries. Separate
+[2024 publications](../audit/pre-attribution-interpretation-publications-2026-09-20.md)
+now preserve reported/inferred candidate endpoints and direct A/B pair evidence.
+Full operational recovery is a separate deferred requirement.
 
 The [receipt-role profiler](./terminal-receipt-roles.md) joins full compact-index
 role evidence and exact reported committee IDs to the boundary assessment.
@@ -99,6 +106,20 @@ provisional topology hypotheses across complete selected A/B endpoint population
 It retains missing identity, absent-ledger and cyclic states without classifying
 origins or allocating dollars. The [live gate](../audit/terminal-source-assessment-2026-09-13.md)
 records population results and exact replay status.
+
+The [terminal-policy comparison](./terminal-policy-comparison.md) now applies six
+explicit allocation scenarios to the same authenticated candidate-dossier receipt
+population. It shows which occurrence-grain amounts are supportable, keeps blocked
+pooled/FIFO methods wholly unresolved, and adopts no terminal or allocation policy.
+The [2024 gate](../audit/terminal-policy-comparison-2026-09-20.md) records both real
+candidate results and exact conservation.
+
+The [direct source-appearance attribution](./direct-source-attribution.md) applies
+the accepted partial boundary cycle-wide. Direct and explicit-earmark occurrences
+remain exclusive; memo evidence is non-additive and committee-chain amounts remain
+unresolved. Its [complete 2024 gate](../audit/direct-source-attribution-2026-09-20.md)
+passes exact conservation and worker-varied replay without entity resolution or
+graph mutation.
 
 The [generation-bound typed path reader](./funding-paths.md) adds receipt or conduit
 entry, separate selected-ledger committee chains and authorized/support/opposition

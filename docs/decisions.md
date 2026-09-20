@@ -6067,3 +6067,130 @@ overlapping groups, changed digests and model-supplied canonical source candidat
 Retained person-surname, organization-short-name and two-person surname cases prove
 the representation offline. They are fixture annotations, not runtime exceptions.
 No prompt, model call, source adapter or production package changed.
+
+## 2026-09-20 — Accept separate pre-attribution evidence families
+
+The user accepted the four boundaries supported by the
+[focused 2024 validation](./audit/pre-attribution-interpretation-validation-2026-09-20.md).
+The prior implementation was deterministic but mixed reported candidate assertions
+with inferred replacements and exposed transitive Schedule A/B comparison
+components that hid direct ambiguity.
+
+Decision:
+
+1. Preserve the filer-reported Schedule E candidate assertion separately from an
+   exact-context alternative. Call a reported ID and exact context agreement
+   `confirmed`; call a unique alternative for an absent reported master ID
+   `inferred`; and call a unique alternative that disagrees with a present reported
+   ID `conflicting`. Keep unverified, ambiguous and unresolved states explicit.
+   Only confirmed agreement supplies a safe default endpoint. An alternative does
+   not create another expenditure amount.
+2. Retain strict raw/clean counterparty-ID agreement for countable Schedule A and
+   Schedule B committee flows. The complete inspected one-sided populations are
+   raw-only self references. Preserve them as evidence; do not manufacture fallback
+   self-flow edges.
+3. Retain exact-reference conduit pair/star associations with zero financial
+   effect. Do not require amount or date equality. A conduit association is
+   reported context, not another payment, origin proof or allocation.
+4. Publish direct Schedule A/B comparison pairs before transitive component union.
+   Preserve both independent observations, exact signals, signed and absolute date
+   gaps, evidence bands and both candidate degrees. Comparison carries no money and
+   performs no cross-ledger deduplication. A later product may apply an adjustable
+   date filter, but a date threshold is not payment identity.
+
+Implement these as additive, immutable calculations. Do not rewrite the retained
+candidate-resolution decisions, reconciliation components, graph generations or
+financial totals. The strict committee-flow and conduit rules already satisfy their
+accepted boundaries; they need no replacement calculation. The new
+candidate-interpretation and direct-pair calculations pass their
+[complete 2024 publication gate](./audit/pre-attribution-interpretation-publications-2026-09-20.md).
+
+Still open: the product-shaped candidate view, graph/presentation consumers,
+Dagster wiring, additional-cycle publication, terminal-source definitions and any
+dollar-allocation method.
+
+## 2026-09-20 — Present candidate evidence without cross-domain collapse
+
+The user authorized the first product-shaped candidate slice after accepting the
+pre-attribution evidence families. Implement the slice as a versioned read-only
+dossier over one exact candidate-evidence v2 report and one complete published
+candidate-interpretation set.
+
+Decision:
+
+1. Keep candidate-linked receipt evidence separate from independent
+   expenditures. They are different reporting domains and are never added.
+2. Within independent expenditures, publish reported endpoint, corroborated safe
+   default, inferred alternative and conflicting alternative as overlapping,
+   explicitly non-additive views. Store each source interpretation once and list
+   every role it supports.
+3. Preserve support and opposition separately. Preserve signed, positive,
+   negative and zero measures in integer minor units.
+4. Require cycle agreement and exact immutable input identities. Do not require
+   different evidence domains to carry one source-release ID. Record the exact
+   Schedule A, committee-flow and Schedule E release IDs and disclose their
+   alignment state.
+5. Keep terminal, allocation, person/corporation, lobbying and legislative-action
+   policy outside this presentation contract.
+
+The [two-candidate 2024 gate](./audit/candidate-dossier-2026-09-20.md) passes. The
+view changes no source fact, calculation, graph, current pointer or prior report.
+Terminal definitions and allocation methods remain the next product decision.
+
+## 2026-09-20 — Accept partial direct and earmarked source-appearance attribution
+
+The user accepted the narrow boundary recommended by the
+[terminal-policy comparison](./design/terminal-policy-comparison.md). Implement a
+separate production calculation over the complete receipt-participant publication;
+do not promote dossier diagnostic output.
+
+Decision:
+
+1. Attribute a known nonmemo `itemized_individual_only` occurrence directly to
+   its reported source appearance. Keep an explicit earmark in a separate,
+   exclusive bucket.
+2. Treat this endpoint as one reported source appearance, not a resolved or
+   deduplicated person or organization. Employer and occupation text do not
+   establish corporate affiliation.
+3. Leave every committee-chain amount unresolved. Do not use a topology
+   frontier, immediate committee stop, pooled pro-rata, FIFO or path replication
+   as the upstream economic origin.
+4. Exclude memo subtotal appearances from counted money while preserving them as
+   evidence. A conduit association adds no second amount.
+5. Route occurrences to a candidate only through one uniquely accepted same-cycle
+   candidate–committee authorization. Shared and unresolved authorization carries
+   no candidate money.
+6. Preserve exact rows, signs, unknown amounts, immutable input identities and a
+   versioned source-membership predicate. Require candidate and cycle-level
+   conservation and deterministic replay.
+
+The [complete 2024 gate](./audit/direct-source-attribution-2026-09-20.md)
+passes all 264,085,606 participant occurrences and byte-identical eight/four-worker
+replay. The result contains 7,470 candidate aggregates. It does not publish a
+durable artifact, update ArangoDB, resolve entities, allocate committee chains or
+combine candidate receipts with independent expenditures. Those remain separate
+boundaries.
+
+## 2026-09-20 — Do not make derived publication the automatic next step
+
+The high-level inventory found that the accepted direct source-appearance
+calculation is deterministic, schema-validated and byte-identical across worker
+counts even though its complete result currently lives under `/tmp`. Reproducible
+calculation and durable operational publication are separate concerns.
+
+Decision:
+
+1. Keep immutable acquired sources, normalized facts, lineage, conservation gates
+   and existing calculation publications. They are the justified evidence core.
+2. Do not add a content-addressed publisher, Dagster asset or ArangoDB projection
+   to every accepted derived result by default.
+3. Add operational publication only when a concrete downstream graph, API,
+   schedule or product query needs durable discovery and lifecycle management.
+4. Review and land or remove the current worktree before starting another large
+   feature slice. Then use the candidate-shaped evidence to choose the next domain
+   boundary; identity resolution and committee-chain allocation remain separate.
+
+This corrects sequencing. It does not weaken source/fact immutability, provenance,
+dependency locks, replay tests or the integrity of publications that already have
+real consumers. See the
+[2026-09-20 inventory](./audit/go-rewrite-inventory-2026-09-20.md).

@@ -158,12 +158,30 @@ func publishResolutionFixture(t *testing.T, ctx context.Context, storageRoot str
 }
 
 func fixtureDecision(calculationSetID, label, amount, state, method, reportedID, resolvedID string, candidateFactIDs []string) Decision {
+	evidenceCodes := []string{"fixture_" + label}
+	switch state {
+	case StateConfirmed:
+		evidenceCodes = append(evidenceCodes, "reported_id_present_in_candidate_master", "exact_name_office_context")
+	case StateResolved:
+		evidenceCodes = append(evidenceCodes, "unique_exact_name_office_context")
+		if strings.HasPrefix(reportedID, "H4AA999") {
+			evidenceCodes = append(evidenceCodes, "reported_id_absent_from_candidate_master")
+		} else {
+			evidenceCodes = append(evidenceCodes, "reported_id_context_conflict")
+		}
+	case StateUnverified:
+		evidenceCodes = append(evidenceCodes, "reported_id_present_in_candidate_master", "no_exact_name_office_candidate")
+	case StateAmbiguous:
+		evidenceCodes = append(evidenceCodes, "reported_id_absent_from_candidate_master", "multiple_exact_name_office_candidates")
+	case StateUnresolved:
+		evidenceCodes = append(evidenceCodes, "reported_id_absent_from_candidate_master", "no_exact_name_office_candidate")
+	}
 	decision := Decision{
 		SchemaVersion: DecisionSchemaVersion, CalculationSetID: calculationSetID,
 		FactID: digestParts("fact-" + label), NaturalKey: "fec:schedule-e:2024:" + label,
 		Cycle: "2024", SpenderCommitteeID: "C00000001", SupportOppose: "S", AmountMinorUnits: amount,
 		ReportedCandidate: ReportedCandidate{CandidateID: reportedID}, State: state, Method: method,
-		CandidateFactIDs: candidateFactIDs, EvidenceCodes: []string{"fixture_" + label},
+		CandidateFactIDs: candidateFactIDs, EvidenceCodes: evidenceCodes,
 	}
 	if resolvedID != "" {
 		decision.ResolvedCandidateID = &resolvedID

@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-tender.local/contracts/audits/fec/pre-attribution-interpretations/v1/result.schema.json",
+  "title": "FEC pre-attribution interpretation audit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "status", "cycle", "inputs", "candidate_resolution",
+    "committee_identities", "schedule_a_b_comparison", "policy_changed",
+    "graph_eligible", "checks"
+  ],
+  "properties": {
+    "schema_version": {"const": "legal-tender.audit.fec.pre-attribution-interpretations.v1"},
+    "status": {"const": "complete_diagnostic"},
+    "cycle": {"type": "string", "pattern": "^[0-9]{4}$"},
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "sha256", "identity"],
+        "properties": {
+          "role": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "identity": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "candidate_resolution": {"$ref": "#/$defs/candidateResolution"},
+    "committee_identities": {"$ref": "#/$defs/committeeIdentities"},
+    "schedule_a_b_comparison": {"$ref": "#/$defs/scheduleAB"},
+    "policy_changed": {"type": "boolean"},
+    "graph_eligible": {"type": "boolean"},
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "passed", "severity", "detail"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "passed": {"type": "boolean"},
+          "severity": {"enum": ["block", "warn"]},
+          "detail": {"type": "string"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "count": {"type": "integer", "minimum": 0},
+    "money": {"type": "string", "pattern": "^-?[0-9]+$"},
+    "candidateResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resolved_rows", "resolved_amount_minor_units", "same_endpoint_rows", "cohorts"],
+      "properties": {
+        "resolved_rows": {"$ref": "#/$defs/count"},
+        "resolved_amount_minor_units": {"$ref": "#/$defs/money"},
+        "same_endpoint_rows": {"$ref": "#/$defs/count"},
+        "cohorts": {"type": "array", "items": {"$ref": "#/$defs/candidateCohort"}}
+      }
+    },
+    "candidateCohort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "rows", "amount_minor_units", "blank_reported_id_rows", "distinct_reported_ids", "distinct_resolved_ids", "distinct_endpoint_pairs", "examples"],
+      "properties": {
+        "state": {"enum": ["reported_id_absent_from_candidate_master", "reported_id_context_conflict"]},
+        "rows": {"$ref": "#/$defs/count"},
+        "amount_minor_units": {"$ref": "#/$defs/money"},
+        "blank_reported_id_rows": {"$ref": "#/$defs/count"},
+        "distinct_reported_ids": {"$ref": "#/$defs/count"},
+        "distinct_resolved_ids": {"$ref": "#/$defs/count"},
+        "distinct_endpoint_pairs": {"$ref": "#/$defs/count"},
+        "examples": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "committeeIdentities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schedule_a_one_sided_rows", "schedule_a_conflict_rows", "schedule_b_one_sided_rows", "schedule_b_conflict_rows", "cohorts"],
+      "properties": {
+        "schedule_a_one_sided_rows": {"$ref": "#/$defs/count"},
+        "schedule_a_conflict_rows": {"$ref": "#/$defs/count"},
+        "schedule_b_one_sided_rows": {"$ref": "#/$defs/count"},
+        "schedule_b_conflict_rows": {"$ref": "#/$defs/count"},
+        "cohorts": {"type": "array", "items": {"$ref": "#/$defs/identityCohort"}}
+      }
+    },
+    "identityCohort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["side", "state", "rows", "amount_minor_units", "self_recipient_rows"],
+      "properties": {
+        "side": {"enum": ["schedule_a", "schedule_b"]},
+        "state": {"enum": ["raw_committee_id_only", "clean_committee_id_only", "conflicting_committee_ids"]},
+        "rows": {"$ref": "#/$defs/count"},
+        "amount_minor_units": {"$ref": "#/$defs/money"},
+        "non_memo_rows": {"$ref": "#/$defs/count"},
+        "non_memo_amount_minor_units": {"$ref": "#/$defs/money"},
+        "self_recipient_rows": {"$ref": "#/$defs/count"},
+        "distinct_committee_ids": {"$ref": "#/$defs/count"},
+        "receipt_types": {"type": "array", "items": {"$ref": "#/$defs/namedCount"}},
+        "example": {"type": "object"}
+      }
+    },
+    "namedCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "rows"],
+      "properties": {"name": {"type": "string"}, "rows": {"$ref": "#/$defs/count"}}
+    },
+    "scheduleAB": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["components", "ambiguous_components", "dated_one_to_one_components", "date_disagreement_components", "a_minus_b_negative_components", "a_minus_b_positive_components", "maximum_absolute_gap_days", "absolute_date_gap_bands", "date_disagreement_shapes"],
+      "properties": {
+        "components": {"$ref": "#/$defs/count"},
+        "ambiguous_components": {"$ref": "#/$defs/count"},
+        "dated_one_to_one_components": {"$ref": "#/$defs/count"},
+        "date_disagreement_components": {"$ref": "#/$defs/count"},
+        "a_minus_b_negative_components": {"$ref": "#/$defs/count"},
+        "a_minus_b_positive_components": {"$ref": "#/$defs/count"},
+        "maximum_absolute_gap_days": {"$ref": "#/$defs/count"},
+        "absolute_date_gap_bands": {"type": "array", "items": {"$ref": "#/$defs/namedComponents"}},
+        "date_disagreement_shapes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["schedule_a_types", "schedule_b_types", "components"],
+            "properties": {
+              "schedule_a_types": {"type": "string"},
+              "schedule_b_types": {"type": "string"},
+              "components": {"$ref": "#/$defs/count"}
+            }
+          }
+        },
+        "largest_gap_example": {"type": "object"}
+      }
+    },
+    "namedComponents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "components"],
+      "properties": {"name": {"type": "string"}, "components": {"$ref": "#/$defs/count"}}
+    }
+  }
+}

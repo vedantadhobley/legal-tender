@@ -6,8 +6,27 @@ import (
 	"path/filepath"
 	"reflect"
 
+	fecoccurrence "github.com/vedantadhobley/legal-tender/internal/source/fec/occurrence"
 	storageartifact "github.com/vedantadhobley/legal-tender/internal/storage/artifact"
 )
+
+// LoadPublishedLinkageFacts verifies one immutable candidate-committee linkage
+// publication and decodes every preserved fact through the shared receipt
+// calculation adapter.
+func LoadPublishedLinkageFacts(ctx context.Context, storageRoot, path string) ([]LinkageFact, fecoccurrence.ClassicFactManifest, string, error) {
+	manifest, digest, err := loadClassicFactManifest(storageRoot, path, "candidate-committee-linkage")
+	if err != nil {
+		return nil, fecoccurrence.ClassicFactManifest{}, "", err
+	}
+	facts, err := loadLinkages(ctx, storageRoot, manifest)
+	if err != nil {
+		return nil, fecoccurrence.ClassicFactManifest{}, "", err
+	}
+	if uint64(len(facts)) != manifest.Counts.Facts {
+		return nil, fecoccurrence.ClassicFactManifest{}, "", fmt.Errorf("candidate-committee linkage population differs from manifest")
+	}
+	return facts, manifest, digest, nil
+}
 
 // LoadPublishedFactBundle reads and validates one immutable-ready receipt fact
 // bundle. The returned digest identifies the exact manifest bytes supplied by
